@@ -23,7 +23,8 @@ không cần train: ghi chuyển động bằng tay leader, dạy camera cần n
 soạn khối.
 
 Station chạy trên PC hoặc mini PC x86_64 (có thể có GPU NVIDIA), NVIDIA Jetson Orin (JetPack 6) hoặc
-Raspberry Pi 5, cài bằng image Docker hoặc gói Python (wheel).
+Raspberry Pi 5, cài bằng image Docker hoặc gói Python (wheel); trên Windows 10/11 và macOS thì cài
+bằng wheel.
 
 ## Station làm được gì
 
@@ -64,8 +65,13 @@ Raspberry Pi 5, cài bằng image Docker hoặc gói Python (wheel).
 
 ## Bắt đầu nhanh
 
-Chi tiết trong [docs/deploy.md](docs/deploy.md) (tiếng Anh). Trên máy cắm robot, chạy bằng tài khoản
-thường của bạn:
+Station chạy trên **Linux** (Docker hoặc gói Python), **Windows 10/11** và macOS (gói Python, xem
+[Windows](#windows-1011) bên dưới). Cách cài bằng Docker chỉ dành cho Linux: Docker Desktop trên
+Windows hay macOS không chuyển được cổng serial USB vào container (trừ khi dùng usbipd + WSL), nên
+ở đó hãy dùng wheel.
+
+Chi tiết trong [docs/deploy.md](docs/deploy.md) (tiếng Anh). Trên máy Linux cắm robot, chạy bằng tài
+khoản thường của bạn:
 
 ```bash
 curl -fsSLO https://raw.githubusercontent.com/Bigkatoan/hibiscus-station/main/deploy/install.sh
@@ -74,10 +80,10 @@ less install.sh && bash install.sh
 
 | Máy của bạn | `install.sh` chọn | Danh sách kiểm tra lần đầu |
 |---|---|---|
-| PC / mini PC x86_64 | `ghcr.io/bigkatoan/hibiscus-station:0.2.0-cpu` | - |
-| x86_64 + GPU NVIDIA | `…:0.2.0-cuda` (cần NVIDIA Container Toolkit) | - |
-| Jetson Orin, JetPack 6 | `…:0.2.0-jetson` (runtime NVIDIA) | [first-boot-jetson.md](docs/first-boot-jetson.md) |
-| Raspberry Pi 5 | `…:0.2.0-cpu` (arm64) | [first-boot-pi5.md](docs/first-boot-pi5.md) |
+| PC / mini PC x86_64 | `ghcr.io/bigkatoan/hibiscus-station:0.2.1-cpu` | - |
+| x86_64 + GPU NVIDIA | `…:0.2.1-cuda` (cần NVIDIA Container Toolkit) | - |
+| Jetson Orin, JetPack 6 | `…:0.2.1-jetson` (runtime NVIDIA) | [first-boot-jetson.md](docs/first-boot-jetson.md) |
+| Raspberry Pi 5 | `…:0.2.1-cpu` (arm64) | [first-boot-pi5.md](docs/first-boot-pi5.md) |
 
 Sau đó mở đường link được in ra trên chính máy đó (`hibiscus-station-ctl url` in lại link). Từ
 laptop: `ssh -N -L 18210:127.0.0.1:18210 ban@may-robot` rồi mở cùng link đó. Station chỉ nghe trên
@@ -86,13 +92,39 @@ laptop: `ssh -N -L 18210:127.0.0.1:18210 ban@may-robot` rồi mở cùng link đ
 Không dùng Docker (Python 3.12 qua [uv](https://docs.astral.sh/uv/)):
 
 ```bash
-uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.0/hibiscus_station-0.2.0-py3-none-any.whl
+uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.1/hibiscus_station-0.2.1-py3-none-any.whl
 # không có GPU NVIDIA (Pi 5, đa số mini PC): thêm --torch-backend cpu
 hibiscus-station --mock          # thử khi chưa có robot
 hibiscus-station                 # khi đã cắm tay robot
 ```
 
 File dịch vụ systemd cho cách cài này nằm ở [deploy/systemd/](deploy/systemd/hibiscus-station.service).
+
+### Windows 10/11
+
+Trong PowerShell (x64, không cần quyền admin):
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"   # cài uv, một lần
+uv tool install --python 3.12 https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.1/hibiscus_station-0.2.1-py3-none-any.whl
+# không có GPU NVIDIA: thêm --torch-backend cpu
+hibiscus-station --mock          # thử khi chưa có robot
+hibiscus-station                 # khi đã cắm tay robot; trình duyệt tự mở
+```
+
+* **Tắt LeLab (và mọi script lerobot) trước.** Trên Windows mỗi cổng COM và mỗi camera chỉ có một
+  chương trình được mở: khi chương trình khác đang giữ, Station báo cổng đang bận.
+* **Driver serial.** Bo mạch servo của SO-100/SO-101 dùng chip USB-serial WCH CH340 hoặc CH343. Nếu cắm
+  bo vào mà Device Manager không hiện mục mới trong *Ports (COM & LPT)*, cài driver của WCH (CH341SER
+  cho CH340, CH343SER cho CH343) từ wch-ic.com rồi cắm lại.
+* **Cổng tên là `COM3`, `COM4`...** Dùng *Robot → Tìm cổng* (rút cáp) để phân biệt tay leader và
+  follower. Số cổng gắn với bộ chuyển đổi (hoặc với khe USB); muốn cố định thì vào Device Manager →
+  cổng đó → Port Settings → Advanced → COM Port Number.
+* **Camera là số** (`0`, `1`, ...; webcam của laptop thường là `0`) và có thể đổi khi cắm camera sang
+  khe USB khác: xem lại ở trang Camera sau khi cắm lại. Tắt các ứng dụng đang dùng camera (Camera,
+  Teams, OBS) và bật *Settings → Privacy → Camera → desktop apps*.
+* Dữ liệu nằm ở `%USERPROFILE%\.hibiscus\station`; calibration ở
+  `%USERPROFILE%\.cache\huggingface\lerobot\calibration`, dùng chung với LeLab và lerobot.
 
 Dùng hằng ngày với Docker:
 

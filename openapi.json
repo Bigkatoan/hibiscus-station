@@ -13160,7 +13160,7 @@
   "info": {
     "description": "Local robot agent API (docs/spec/station.md \u00a75). Bound to 127.0.0.1 unless LAN mode is enabled with a fixed token and allowed host names (\u00a78.1).",
     "title": "Hibiscus Station",
-    "version": "0.2.0"
+    "version": "0.2.1"
   },
   "openapi": "3.1.0",
   "paths": {

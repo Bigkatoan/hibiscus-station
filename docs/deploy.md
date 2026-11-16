@@ -9,12 +9,14 @@ Station runs on the computer the arms and cameras are plugged into. Supported ha
 | NVIDIA Jetson Orin Nano / NX / AGX | `jetson` | JetPack 6.x (L4T R36). See [first-boot-jetson.md](first-boot-jetson.md) |
 | Raspberry Pi 5 (4 or 8 GB) | `cpu` (arm64) | 64-bit Raspberry Pi OS (Bookworm). See [first-boot-pi5.md](first-boot-pi5.md) |
 
-Images: `ghcr.io/bigkatoan/hibiscus-station:<version>-<variant>`, e.g. `0.2.0-cpu` (multi-arch:
-linux/amd64 and linux/arm64), `0.2.0-cuda` (amd64), `0.2.0-jetson` (arm64). Each also has the
+Images: `ghcr.io/bigkatoan/hibiscus-station:<version>-<variant>`, e.g. `0.2.1-cpu` (multi-arch:
+linux/amd64 and linux/arm64), `0.2.1-cuda` (amd64), `0.2.1-jetson` (arm64). Each also has the
 floating tags `<major>.<minor>-<variant>` and `<variant>` (latest release).
 
-There are two ways to install: **Docker** (recommended, below) and the **Python wheel with a
-systemd user service** (at the end).
+There are two ways to install on Linux: **Docker** (recommended, below) and the **Python wheel with a
+systemd user service** (at the end). **Windows 10/11 and macOS use the wheel** ([below](#windows-1011-and-macos-wheel)):
+the Docker deploy is Linux only, because Docker Desktop cannot hand a USB serial port to a container
+(short of usbipd + WSL, which this guide does not cover).
 
 ## Docker install
 
@@ -168,15 +170,32 @@ groups (install the udev rule above as well).
 
 ```bash
 # x86_64 with an NVIDIA GPU (CUDA wheels from PyPI):
-uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.0/hibiscus_station-0.2.0-py3-none-any.whl
+uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.1/hibiscus_station-0.2.1-py3-none-any.whl
 # CPU only (Raspberry Pi 5, PCs without NVIDIA, Jetson without the GPU): CPU PyTorch, much smaller
-uv tool install --torch-backend cpu https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.0/hibiscus_station-0.2.0-py3-none-any.whl
+uv tool install --torch-backend cpu https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.1/hibiscus_station-0.2.1-py3-none-any.whl
 
 hibiscus-station --mock          # try it; Ctrl+C to stop
 ```
 
 On a Jetson the wheel install can only use the CPU (there is no CUDA PyTorch for Python 3.12 on
 JetPack 6 outside NVIDIA's containers): use the Docker image for the GPU.
+
+## Windows 10/11 and macOS (wheel)
+
+The same wheel, installed with uv (x64 Windows 10/11, Apple silicon or Intel macOS):
+
+```powershell
+# Windows, PowerShell; macOS: curl -LsSf https://astral.sh/uv/install.sh | sh
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+uv tool install --python 3.12 --torch-backend cpu https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.1/hibiscus_station-0.2.1-py3-none-any.whl
+hibiscus-station --mock          # try it; Ctrl+C to stop
+```
+
+Drop `--torch-backend cpu` on a Windows PC with an NVIDIA GPU to get CUDA PyTorch. Windows notes
+(driver for the CH340/CH343 USB-serial chip of the servo board, `COM3`-style port names, camera
+numbers, closing LeLab first) are in the [README](../README.md#windows-1011). There is no udev rule
+or systemd unit on these systems: start `hibiscus-station` yourself (or from Task Scheduler / a
+launchd agent). Data lives in `~/.hibiscus/station` (`%USERPROFILE%\.hibiscus\station`).
 
 Run it as a user service that starts at boot:
 

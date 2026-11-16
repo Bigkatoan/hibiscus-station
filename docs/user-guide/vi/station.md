@@ -27,14 +27,18 @@ Có hai cách, chi tiết trong [hướng dẫn triển khai](../../deploy.md):
   bash install.sh
   ```
 
-* **Gói Python (wheel)** (Linux bất kỳ có Python 3.12, qua [uv](https://docs.astral.sh/uv/)):
+* **Gói Python (wheel)** (Linux, Windows 10/11 hoặc macOS có Python 3.12, qua [uv](https://docs.astral.sh/uv/)):
 
   ```bash
-  uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.0/hibiscus_station-0.2.0-py3-none-any.whl
+  uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.1/hibiscus_station-0.2.1-py3-none-any.whl
   hibiscus-station                  # mở giao diện
   ```
 
   Máy không có GPU NVIDIA thì thêm `--torch-backend cpu` để khỏi tải thư viện CUDA.
+
+* **Windows 10/11 và macOS**: dùng cùng wheel đó (Docker chỉ dành cho Linux). Trên Windows cổng của
+  tay robot là `COM3`, `COM4`... còn camera là số (`0`, `1`...); bo servo có thể cần driver WCH
+  CH340/CH343. Xem [README](../../../README.vi.md#windows-1011).
 
 Station chạy ở `http://127.0.0.1:18210` và tự mở trình duyệt. Nó chỉ nhận kết nối từ chính máy đó.
 Nếu trình duyệt không mở, chạy `hibiscus-station url` (Docker: `hibiscus-station-ctl url`) và mở

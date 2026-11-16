@@ -28,14 +28,18 @@ Two ways, both described in the [deploy guide](../../deploy.md):
   bash install.sh
   ```
 
-* **Python wheel** (any Linux with Python 3.12 through [uv](https://docs.astral.sh/uv/)):
+* **Python wheel** (Linux, Windows 10/11 or macOS with Python 3.12 through [uv](https://docs.astral.sh/uv/)):
 
   ```bash
-  uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.0/hibiscus_station-0.2.0-py3-none-any.whl
+  uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.1/hibiscus_station-0.2.1-py3-none-any.whl
   hibiscus-station
   ```
 
   On a machine without an NVIDIA GPU add `--torch-backend cpu` to skip the CUDA libraries.
+
+* **Windows 10/11 and macOS**: the same wheel (Docker is Linux only). On Windows the arm's ports are
+  `COM3`, `COM4`... and cameras are numbers (`0`, `1`...); the servo board may need the WCH
+  CH340/CH343 driver. See the [README](../../../README.md#windows-1011).
 
 Station starts on `http://127.0.0.1:18210` and opens your browser. It only accepts connections from
 the same computer. If the browser does not open, run `hibiscus-station url` (Docker:

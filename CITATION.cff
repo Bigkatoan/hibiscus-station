@@ -13,7 +13,7 @@ authors:
   - name: "The Hibiscus contributors"
 repository-code: "https://github.com/Bigkatoan/hibiscus-station"
 license: AGPL-3.0-or-later
-version: "0.2.0"
+version: "0.2.1"
 date-released: "2026-11-16"
 keywords:
   - robotics

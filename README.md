@@ -23,7 +23,8 @@ program the arm without training at all: record motions with the leader arm, tea
 to look for, and chain them in a block editor.
 
 It runs on an x86_64 PC or mini PC (optionally with an NVIDIA GPU), an NVIDIA Jetson Orin
-(JetPack 6) or a Raspberry Pi 5, from a Docker image or a Python wheel.
+(JetPack 6) or a Raspberry Pi 5, from a Docker image or a Python wheel, and on Windows 10/11 and
+macOS from the wheel.
 
 ## What it does
 
@@ -64,7 +65,12 @@ It runs on an x86_64 PC or mini PC (optionally with an NVIDIA GPU), an NVIDIA Je
 
 ## Quick start
 
-Read [docs/deploy.md](docs/deploy.md) for the details. On the robot computer, as your normal user:
+Station runs on **Linux** (Docker or the Python package), **Windows 10/11** and macOS (the Python
+package, see [Windows](#windows-1011) below). The Docker deploy is Linux only: Docker Desktop on
+Windows or macOS cannot hand a USB serial port to a container (short of usbipd + WSL), so use the
+wheel there.
+
+Read [docs/deploy.md](docs/deploy.md) for the details. On a Linux robot computer, as your normal user:
 
 ```bash
 curl -fsSLO https://raw.githubusercontent.com/Bigkatoan/hibiscus-station/main/deploy/install.sh
@@ -73,10 +79,10 @@ less install.sh && bash install.sh
 
 | Your machine | What `install.sh` picks | First-boot checklist |
 |---|---|---|
-| x86_64 PC / mini PC | `ghcr.io/bigkatoan/hibiscus-station:0.2.0-cpu` | - |
-| x86_64 + NVIDIA GPU | `…:0.2.0-cuda` (needs the NVIDIA Container Toolkit) | - |
-| Jetson Orin, JetPack 6 | `…:0.2.0-jetson` (NVIDIA runtime) | [first-boot-jetson.md](docs/first-boot-jetson.md) |
-| Raspberry Pi 5 | `…:0.2.0-cpu` (arm64) | [first-boot-pi5.md](docs/first-boot-pi5.md) |
+| x86_64 PC / mini PC | `ghcr.io/bigkatoan/hibiscus-station:0.2.1-cpu` | - |
+| x86_64 + NVIDIA GPU | `…:0.2.1-cuda` (needs the NVIDIA Container Toolkit) | - |
+| Jetson Orin, JetPack 6 | `…:0.2.1-jetson` (NVIDIA runtime) | [first-boot-jetson.md](docs/first-boot-jetson.md) |
+| Raspberry Pi 5 | `…:0.2.1-cpu` (arm64) | [first-boot-pi5.md](docs/first-boot-pi5.md) |
 
 Then open the printed link on that machine (`hibiscus-station-ctl url` prints it again). From a
 laptop: `ssh -N -L 18210:127.0.0.1:18210 you@robot-pc` and open the same link. Station listens on
@@ -85,13 +91,39 @@ laptop: `ssh -N -L 18210:127.0.0.1:18210 you@robot-pc` and open the same link. S
 Without Docker (Python 3.12 via [uv](https://docs.astral.sh/uv/)):
 
 ```bash
-uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.0/hibiscus_station-0.2.0-py3-none-any.whl
+uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.1/hibiscus_station-0.2.1-py3-none-any.whl
 # no NVIDIA GPU (Pi 5, most mini PCs): add --torch-backend cpu
 hibiscus-station --mock          # demo without hardware
 hibiscus-station                 # with the arms plugged in
 ```
 
 A systemd user unit for this install is in [deploy/systemd/](deploy/systemd/hibiscus-station.service).
+
+### Windows 10/11
+
+In PowerShell (x64, no admin rights needed):
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"   # uv, once
+uv tool install --python 3.12 https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.1/hibiscus_station-0.2.1-py3-none-any.whl
+# no NVIDIA GPU: add --torch-backend cpu
+hibiscus-station --mock          # demo without hardware
+hibiscus-station                 # with the arms plugged in; the browser opens by itself
+```
+
+* **Close LeLab (and any lerobot script) first.** On Windows a COM port and a camera have one owner:
+  while another program holds them Station reports the port as busy.
+* **Serial driver.** The SO-100/SO-101 servo boards use a WCH CH340 or CH343 USB-serial chip. When
+  Device Manager shows no new *Ports (COM & LPT)* entry after plugging the board in, install the WCH
+  driver (CH341SER for CH340, CH343SER for CH343) from wch-ic.com and plug it in again.
+* **Ports are `COM3`, `COM4`...** Use *Robots → Find port* (unplug flow) to tell the leader from the
+  follower. The number sticks to the adapter (or the USB socket); to pin one, Device Manager → the
+  port → Port Settings → Advanced → COM Port Number.
+* **Cameras are numbers** (`0`, `1`, ...; a laptop webcam is usually `0`) and can change when you plug
+  cameras into other USB sockets: check them on the Cameras page after re-plugging. Close apps that
+  use the camera (Camera, Teams, OBS) and allow *Settings → Privacy → Camera → desktop apps*.
+* Data lives in `%USERPROFILE%\.hibiscus\station`; calibration in
+  `%USERPROFILE%\.cache\huggingface\lerobot\calibration`, shared with LeLab and lerobot.
 
 Day to day with Docker:
 
