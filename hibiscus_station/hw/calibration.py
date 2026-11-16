@@ -2,7 +2,11 @@
 
 Same semantics as ``SerialMotorsBus.record_calibration`` (``motors_bus.py:931-1008``) without
 ``input()``: torque off, position mode, Feetech drive mode 0 (software), ``set_half_turn_homings``
-at "Set home", then min/max of raw positions per motor; ``wrist_roll`` is full-turn (whole encoder).
+at "Set home", then min/max of raw positions per motor.
+
+Like LeLab (``app/calibrating.py``), EVERY motor's range is recorded, ``wrist_roll`` included
+(lerobot's own CLI treats ``wrist_roll`` as full-turn; the owner chose LeLab's behaviour so the
+roll joint gets real limits). Glitched reads outside 0..resolution are ignored, as LeLab does.
 Runs only in the hardware-owner thread.
 """
 
@@ -13,7 +17,8 @@ from typing import Any
 
 from lerobot.motors import MotorCalibration
 
-FULL_TURN_MOTORS = ("wrist_roll",)
+#: Motors given the whole encoder instead of a recorded range. Empty = LeLab behaviour.
+FULL_TURN_MOTORS: tuple[str, ...] = ()
 MIN_RANGE_STEPS = 100
 
 
@@ -49,6 +54,8 @@ class CalibrationProcess:
             for m, v in self.pos.items():
                 if m in FULL_TURN_MOTORS:
                     continue
+                if not 0 <= v < self.bus.resolution(self.bus.motors[m].model):
+                    continue  # glitched read (LeLab skips these too)
                 self.mins[m] = min(self.mins.get(m, v), v)
                 self.maxes[m] = max(self.maxes.get(m, v), v)
         return self.pos

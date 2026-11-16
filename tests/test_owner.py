@@ -48,7 +48,9 @@ def test_calibration_files_are_loadable_by_lerobot(station: Station, tmp_path) -
         "wrist_roll",
         "gripper",
     }
-    assert f.calibration["wrist_roll"].range_min == 0 and f.calibration["wrist_roll"].range_max == 4095
+    # LeLab behaviour: wrist_roll gets its RECORDED range, not the whole encoder.
+    wr = f.calibration["wrist_roll"]
+    assert 0 <= wr.range_min < wr.range_max <= 4095 and (wr.range_min, wr.range_max) != (0, 4095)
     assert f.calibration["elbow_flex"].range_max - f.calibration["elbow_flex"].range_min >= 100
     lead = SOLeader(
         SOLeaderTeleopConfig(

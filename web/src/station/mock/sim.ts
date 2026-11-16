@@ -443,7 +443,7 @@ export class MockStation {
       arm,
       step: "home",
       motors: Object.fromEntries(
-        fx.MOTORS.map((m) => [m, { min: 2048, pos: 2048, max: 2048, full_turn: m === "wrist_roll" }]),
+        fx.MOTORS.map((m) => [m, { min: 2048, pos: 2048, max: 2048, full_turn: false }]),
       ),
       warnings: [],
     };

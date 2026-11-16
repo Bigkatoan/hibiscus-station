@@ -11,6 +11,14 @@ repository (`station/`); 0.2.0 is the first release of this standalone repositor
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-11-16
+
+### Changed
+- Calibration follows LeLab: `wrist_roll` is recorded through its range like every other joint
+  instead of being given the whole encoder ("full turn, nothing to record"). Glitched position
+  reads outside the encoder range are ignored while recording, as LeLab does. Existing calibration
+  files keep working; recalibrate (or reuse a LeLab file) to get a recorded wrist_roll range.
+
 ## [0.2.3] - 2026-11-16
 
 ### Fixed
