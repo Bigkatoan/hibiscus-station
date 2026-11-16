@@ -92,7 +92,7 @@ laptop: `ssh -N -L 18210:127.0.0.1:18210 ban@may-robot` rồi mở cùng link đ
 Không dùng Docker (Python 3.12 qua [uv](https://docs.astral.sh/uv/)):
 
 ```bash
-uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.5/hibiscus_station-0.2.5-py3-none-any.whl
+uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.6/hibiscus_station-0.2.6-py3-none-any.whl
 # không có GPU NVIDIA (Pi 5, đa số mini PC): thêm --torch-backend cpu
 hibiscus-station --mock          # thử khi chưa có robot
 hibiscus-station                 # khi đã cắm tay robot
@@ -106,7 +106,7 @@ Trong PowerShell (x64, không cần quyền admin):
 
 ```powershell
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"   # cài uv, một lần
-uv tool install --python 3.12 https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.5/hibiscus_station-0.2.5-py3-none-any.whl
+uv tool install --python 3.12 https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.6/hibiscus_station-0.2.6-py3-none-any.whl
 # không có GPU NVIDIA: thêm --torch-backend cpu
 hibiscus-station --mock          # thử khi chưa có robot
 hibiscus-station                 # khi đã cắm tay robot; trình duyệt tự mở

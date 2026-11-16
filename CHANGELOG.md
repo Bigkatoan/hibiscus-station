@@ -11,6 +11,41 @@ repository (`station/`); 0.2.0 is the first release of this standalone repositor
 
 ## [Unreleased]
 
+## [0.2.6] - 2026-11-16
+
+### Fixed
+- **Teleop lag** (field report: the follower trails the leader, LeLab's does not). Measured on the
+  STS3215 emulator with real wire timing (`tests/teleop_bench.py`: 1 Mbaud, return delays, 1 ms USB
+  latency timer, ~300 deg/s servos), leader moving at up to 94 deg/s: 0.2.4 ran at 30 Hz and its 5 deg
+  relative cap (against the observation read at the start of the tick) clipped every tick, so the
+  follower chased the leader **127 ms** behind (186 ms on a quick 340 deg/s move); LeLab's loop trails
+  by the servo's own 54 ms. 0.2.6: **55 ms** (54 ms on the quick move), 229 Hz, nothing clipped; the
+  pose sent to the follower is 4.6 ms old (LeLab 4.0 ms, 0.2.4 19.5 ms). With an 8 ms USB adapter:
+  65 ms (LeLab 67 ms, 0.2.4 188 ms).
+  - Teleop runs a lean tick: e-stop check, leader read, safety filter, goal write. The follower
+    observation and camera frames follow the write at 30 Hz (at most every other tick), telemetry
+    on the other ticks. Default 250 Hz (`TeleopRequest.fps`, up to 300); a slower bus just runs
+    slower.
+  - Leader-driven sessions (teleop, record) use the new `safety.teleop_max_relative_target`
+    (30 deg) instead of the 5 deg cap meant for policies. The calibrated-range clamp, the thermal
+    guard and the one-tick e-stop are unchanged. If the cap still clips more than 20 % of the ticks,
+    a "follower cannot keep up" warning says so.
+- **Leader and follower swapped** when the arm found by "find by moving" was not the one the slot
+  expected. Each slot now has its own "Find the follower arm" / "Find the leader arm" buttons
+  (move or unplug); the port found goes into that slot, and moving detection never offers the port
+  already given to the other arm. A swap button exchanges the two ports; calibration ids stay with
+  their role.
+
+### Added
+- `POST /ports/probe`: read-only supply voltage, model and firmware of each free port, with a role
+  hint (~5 V: usually the leader; >= 6.5 V: usually the follower). The robot form shows the hint
+  under each port and warns when the follower reads ~5 V or the leader >= 7 V. It never swaps by
+  itself.
+- Measured leader -> follower latency and loop rate: `joints.loop.latency_ms_p50/p95` and
+  `clip_fraction`, the session summary (`loop.fps`, `loop.latency_ms_p50/p95`), the Teleop screen
+  ("latency ~X ms, Y Hz") and `hibiscus-station doctor` (last session, plus an estimate from the
+  timed bus reads with a slow-adapter warning: set the USB latency timer to 1 ms).
+
 ## [0.2.5] - 2026-11-16
 
 ### Fixed
