@@ -65,6 +65,14 @@ STATUS_ELECTRICAL: Final = frozenset({"overcurrent"})
 GRASP_MOTORS: Final = frozenset({"gripper"})
 
 DEFAULT_MAX_TEMPERATURE_C: Final = 70.0
+#: Readings outside these ranges are not real temperatures (an unpowered servo, a bus
+#: adapter that answers with zero bytes, a clone without the sensor): treat them as unknown.
+PLAUSIBLE_TEMP_C: Final = (1.0, 150.0)
+PLAUSIBLE_MAX_TEMP_C: Final = (40.0, 150.0)
+
+
+def plausible_temperature(value: float) -> bool:
+    return PLAUSIBLE_TEMP_C[0] <= value <= PLAUSIBLE_TEMP_C[1]
 
 
 def decode_temperature(raw: int) -> float:

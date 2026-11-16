@@ -30,7 +30,7 @@ Có hai cách, chi tiết trong [hướng dẫn triển khai](../../deploy.md):
 * **Gói Python (wheel)** (Linux, Windows 10/11 hoặc macOS có Python 3.12, qua [uv](https://docs.astral.sh/uv/)):
 
   ```bash
-  uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.2/hibiscus_station-0.2.2-py3-none-any.whl
+  uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.3/hibiscus_station-0.2.3-py3-none-any.whl
   hibiscus-station                  # mở giao diện
   ```
 

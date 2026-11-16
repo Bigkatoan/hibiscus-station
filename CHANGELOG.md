@@ -11,6 +11,14 @@ repository (`station/`); 0.2.0 is the first release of this standalone repositor
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-11-16
+
+### Fixed
+- A real arm whose servos report 0 °C (temperature or `Max_Temperature_Limit`) no longer lowers every
+  thermal threshold to -3 °C and stops both arms as "critical". Implausible temperatures (outside
+  1-150 °C) and limits (outside 40-150 °C) are ignored with a warning; when no motor reports a real
+  temperature the read counts as failed (telemetry degraded warning), not as overheating.
+
 ## [0.2.2] - 2026-11-16
 
 First field report on a real SO-101 (Windows): Station listed the arm's port, but calibrate, teleop,

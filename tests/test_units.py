@@ -6,7 +6,7 @@ import random
 import time
 import zipfile
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import numpy as np
 import pytest
@@ -498,3 +498,42 @@ def test_mock_leader_hand_can_mirror_the_follower() -> None:
     time.sleep(0.05)
     leader.step()
     assert {round(s.actual) for s in leader.servos.values()} != {2600}
+
+
+class _ZeroTempBus:
+    """A follower whose servos answer 0 for temperature and for Max_Temperature_Limit (field report)."""
+
+    motors: ClassVar[dict[str, None]] = dict.fromkeys(("shoulder_pan", "shoulder_lift", "gripper"))
+
+    def sync_read(self, reg: str, normalize: bool = False, num_retry: int = 0) -> dict[str, int]:
+        if reg == feetech.REG_TEMPERATURE:
+            return {"shoulder_pan": 0, "shoulder_lift": 0, "gripper": 35}
+        if reg == feetech.REG_MAX_TEMPERATURE:
+            return dict.fromkeys(self.motors, 0)
+        return dict.fromkeys(self.motors, 0)
+
+
+def test_zero_temperature_readings_never_trip_the_thermal_guard() -> None:
+    from hibiscus_station.settings import TelemetrySettings, Thresholds
+
+    sched = TelemetryScheduler(TelemetrySettings())
+    sched.add_arm("follower", _ZeroTempBus())
+    lim = sched.read_limits("follower")
+    assert lim.max_temp_c == feetech.DEFAULT_MAX_TEMPERATURE_C  # 0 C limit ignored
+    r = sched._read(sched.arms["follower"], "temp_c", forced=False)
+    assert r.ok and r.values == {"gripper": 35.0}  # implausible 0 C dropped
+    g = ThermalGuard(Thresholds())
+    assert not [a for a in g.update(r, lim) if getattr(a, "level", "") == "critical"]
+
+
+def test_all_zero_temperatures_are_a_failed_read_not_a_critical() -> None:
+    from hibiscus_station.settings import TelemetrySettings
+
+    class AllZero(_ZeroTempBus):
+        def sync_read(self, reg: str, normalize: bool = False, num_retry: int = 0) -> dict[str, int]:
+            return dict.fromkeys(self.motors, 0)
+
+    sched = TelemetryScheduler(TelemetrySettings())
+    sched.add_arm("follower", AllZero())
+    r = sched._read(sched.arms["follower"], "temp_c", forced=False)
+    assert not r.ok and "implausible" in (r.error or "")

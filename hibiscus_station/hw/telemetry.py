@@ -67,6 +67,7 @@ class ArmTelemetry:
         self.last_attempt: dict[str, float] = dict.fromkeys(self.values, -math.inf)
         self.fails: dict[str, int] = dict.fromkeys(self.values, 0)
         self.limits = ArmLimits()
+        self.implausible_temp = 0
 
     def stale_groups(self) -> list[str]:
         return [g for g, n in self.fails.items() if n > 0]
@@ -117,8 +118,17 @@ class TelemetryScheduler:
         lim = ArmLimits()
         try:
             temps = at.bus.sync_read(feetech.REG_MAX_TEMPERATURE, normalize=False, num_retry=2)
-            if temps:
-                lim.max_temp_c = float(min(temps.values()))
+            lo, hi = feetech.PLAUSIBLE_MAX_TEMP_C
+            good = [float(v) for v in temps.values() if lo <= float(v) <= hi]
+            if good:
+                lim.max_temp_c = min(good)
+            if len(good) < len(temps):
+                log.warning(
+                    "%s: ignoring implausible Max_Temperature_Limit %s; using %s C",
+                    arm,
+                    {m: v for m, v in temps.items() if not lo <= float(v) <= hi},
+                    lim.max_temp_c,
+                )
         except Exception as exc:
             log.warning("%s: cannot read Max_Temperature_Limit (%s); assuming %s C", arm, exc, lim.max_temp_c)
         try:
@@ -159,6 +169,26 @@ class TelemetryScheduler:
                 error=str(exc)[:200],
             )
         decoded = {m: feetech.decode(group, int(v)) for m, v in raw.items()}
+        bad: dict[str, Any] = {}
+        if group == "temp_c":
+            bad = {m: v for m, v in decoded.items() if not feetech.plausible_temperature(float(v))}  # type: ignore[arg-type]
+            if bad:
+                decoded = {m: v for m, v in decoded.items() if m not in bad}
+                at.implausible_temp += 1
+                if at.implausible_temp in (1, DEGRADED_AFTER) or at.implausible_temp % 300 == 0:
+                    log.warning("%s: implausible temperature %s C ignored (no sensor value)", at.arm, bad)
+            if not decoded:
+                at.fails[group] += 1
+                return TelemetryRead(
+                    at.arm,
+                    group,
+                    now,
+                    False,
+                    {},
+                    forced=forced,
+                    degraded=at.fails[group] == DEGRADED_AFTER,
+                    error=f"implausible temperature {bad}"[:200],
+                )
         at.values[group] = decoded
         at.last_ok[group] = now
         at.fails[group] = 0
