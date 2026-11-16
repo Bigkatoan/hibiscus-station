@@ -75,7 +75,7 @@ jobs:
       - run: pnpm coverage
       - name: Build (fails on eval / new Function in the bundle)
         run: pnpm build
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with: {name: web-dist, path: web/dist, retention-days: 7}
 
   e2e:
@@ -88,7 +88,7 @@ jobs:
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
           df -h /
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v8
         with: {name: web-dist, path: web/dist}
       - uses: astral-sh/setup-uv@v10.3.3
         with:
@@ -97,7 +97,7 @@ jobs:
           cache-dependency-glob: "uv.lock"
       - run: uv sync --locked --python "$PYTHON_VERSION" && uv run playwright install --with-deps chromium
       - run: uv run pytest -q tests/e2e -m e2e
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         if: always()
         with: {name: e2e-screenshots, path: screenshots/e2e, retention-days: 7, if-no-files-found: ignore}
 
@@ -107,7 +107,7 @@ jobs:
     needs: [web]
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v8
         with: {name: web-dist, path: web/dist}
       - uses: astral-sh/setup-uv@v10.3.3
         with: {version: "${{ env.UV_VERSION }}"}
@@ -120,7 +120,7 @@ jobs:
           for _ in $(seq 60); do hibiscus-station health --home "$RUNNER_TEMP/station" && break; sleep 2; done
           curl -fsS http://127.0.0.1:18210/ | grep -q "<title>Hibiscus Station</title>"
           kill %1
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with: {name: dist, path: dist, retention-days: 7}
 
   windows:
@@ -131,7 +131,7 @@ jobs:
       run: {shell: pwsh}
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v8
         with: {name: web-dist, path: web/dist}
       - uses: astral-sh/setup-uv@v10.3.3
         with:
@@ -175,7 +175,7 @@ jobs:
           hibiscus-station url --home "$home_" | Select-String "auth\?t="
           Stop-Process -Id $proc.Id -Force
           Get-Content $out, $err -ErrorAction SilentlyContinue
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with: {name: dist-windows, path: dist, retention-days: 7}
 
   macos:
@@ -183,7 +183,7 @@ jobs:
     runs-on: macos-latest
     needs: [wheel]
     steps:
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v8
         with: {name: dist, path: dist}
       - uses: astral-sh/setup-uv@v10.3.3
         with: {version: "${{ env.UV_VERSION }}"}
