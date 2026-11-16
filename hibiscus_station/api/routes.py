@@ -62,6 +62,10 @@ class CalibrationStart(BaseModel):
     )
 
 
+class ReconnectRequest(BaseModel):
+    timeout_s: float = Field(30.0, gt=0, le=120, description="how long to wait for the port to come back")
+
+
 class CalibrationStep(BaseModel):
     action: Literal["set_home", "finish_ranges", "cancel"]
 
@@ -185,6 +189,14 @@ def build_router() -> APIRouter:
         st.owner.call("disconnect", relax=bool(body and body.relax), timeout=30.0)
         return _out(wire.Status, st.status())
 
+    @r.post("/robots/reconnect", tags=["robots"])
+    def reconnect(request: Request, body: ReconnectRequest | None = None) -> wire.ReconnectResult:
+        """After ``device_lost``: wait for the USB serial adapter to come back (same serial number,
+        by-id path or VID:PID, maybe under a new COM name), then connect again (calibration files
+        are written to the motors again)."""
+        st = station(request)
+        return _out(wire.ReconnectResult, st.reconnect(timeout_s=(body or ReconnectRequest()).timeout_s))
+
     @r.post("/robots/torque", tags=["robots"])
     def torque(request: Request, body: TorqueRequest) -> wire.Status:
         st = station(request)
@@ -199,6 +211,16 @@ def build_router() -> APIRouter:
     @r.get("/calibrations", tags=["calibration"])
     def get_calibrations(request: Request) -> wire.CalibrationFiles:
         return _out(wire.CalibrationFiles, {"files": calibration_files(station(request).cal_root)})
+
+    @r.get("/calibration/check", tags=["calibration"])
+    def calibration_check(request: Request) -> wire.CalibrationCheck:
+        """Per connected arm: calibrated? which calibration file on disk its motors carry now?"""
+        return _out(wire.CalibrationCheck, station(request).owner.call("calibration_check", timeout=10.0))
+
+    @r.get("/calibration/compare", tags=["calibration"])
+    def calibration_compare(request: Request) -> wire.PoseCompare:
+        """Leader held in the follower's pose: per-joint difference (> 20 deg: wrong file or roles)."""
+        return _out(wire.PoseCompare, station(request).owner.call("pose_compare", timeout=10.0))
 
     @r.post("/calibration/start", tags=["calibration"])
     def calibration_start(request: Request, body: CalibrationStart) -> wire.Status:

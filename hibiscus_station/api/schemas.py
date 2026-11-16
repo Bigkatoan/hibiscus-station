@@ -229,6 +229,32 @@ class SessionEnd(Session):
     max_temp_c: dict[str, float] = Field(description='peak temperature per "arm.motor"')
 
 
+class PortIdentity(Out):
+    device: str
+    stable_path: str | None = None
+    vid_pid: str | None = None
+    serial_number: str | None = None
+    description: str = ""
+
+
+class DeviceLost(Out):
+    """A serial device that went away while connected (unplugged, USB reset, brown-out, selective
+    suspend, or another program took the port): state ``error``, reason ``device_lost``."""
+
+    arm: Arm
+    port: str
+    error: str = Field(description='what the OS said, e.g. "Access is denied." or "I/O error"')
+    identity: PortIdentity | None = Field(None, description="the USB adapter, to find it again")
+    robot: str | None = None
+    during: str = Field(description="session kind or state when it happened")
+    after_torque_on: bool = Field(
+        description="lost within seconds of the follower's torque coming on or a session start: a "
+        "far jump may have browned out the follower supply"
+    )
+    t: float
+    detail: str
+
+
 class Status(Out):
     station: StationInfo
     state: StationState
@@ -244,6 +270,7 @@ class Status(Out):
     server: ServerStatus
     loaded_model: str | None
     program: ProgramState | None = Field(None, description="the current program run (programming only)")
+    lost: DeviceLost | None = Field(None, description="the serial device that was lost (state error)")
 
 
 # --------------------------------------------------------------------------- calibration
@@ -252,6 +279,7 @@ class CalibrationMotor(Out):
     pos: int | None
     max: int | None
     full_turn: bool
+    ok: bool = Field(False, description="moved through at least min_range steps (ranges step)")
 
 
 class CalibrationView(Out):
@@ -260,6 +288,8 @@ class CalibrationView(Out):
     motors: dict[str, CalibrationMotor]
     warnings: list[str]
     path: str | None = Field(None, description="written calibration file (step done)")
+    min_range: int = Field(100, description="steps each joint must move before Save (LeLab's rule)")
+    ready: bool = Field(False, description="every joint moved enough: Save is allowed")
 
 
 class CalibrationStepResponse(Status):
@@ -278,6 +308,62 @@ class CalibrationFile(Out):
 
 class CalibrationFiles(Out):
     files: list[CalibrationFile]
+
+
+class CalibrationCandidate(CalibrationFile):
+    own: bool = Field(description="the file this profile's calibration id reads")
+    valid: bool = Field(description="a lerobot calibration json")
+    matches_motors: bool = Field(description="this arm's motors carry exactly this calibration now")
+    matches_other_arm: bool = Field(description="the OTHER arm's motors carry it: never use it here")
+
+
+class ArmCalibrationCheck(Out):
+    arm: Arm
+    state: Literal["ok", "adopt", "mismatch", "needs_calibration"] = Field(
+        description="ok: calibrated; adopt: the motors carry another file (e.g. LeLab's), use it; "
+        "mismatch: the own file exists but the motors do not keep it; needs_calibration: no file"
+    )
+    calibrated: bool
+    calibration_id: str
+    file: str
+    file_exists: bool
+    suggestion: CalibrationCandidate | None = None
+    files: list[CalibrationCandidate]
+    issue: str | None = None
+
+
+class CalibrationCheckArms(Out):
+    follower: ArmCalibrationCheck | None = None
+    leader: ArmCalibrationCheck | None = None
+
+
+class CalibrationCheck(Out):
+    arms: CalibrationCheckArms
+
+
+class PoseJoint(Out):
+    joint: str
+    follower: float
+    leader: float
+    diff: float
+    unit: Literal["deg", "%"]
+    ok: bool
+
+
+class PoseCompare(Out):
+    """Leader held in the follower's pose: per-joint difference after calibration."""
+
+    joints: list[PoseJoint]
+    threshold: float
+    ok: bool
+    off: list[str] = Field(description="joints further apart than the threshold")
+    worst: str | None
+    max_diff: float
+
+
+class ReconnectResult(Status):
+    ports: dict[str, str] = Field(description="arm -> serial device now")
+    port_changes: dict[str, str] = Field(description="arms whose device name changed (new COM number)")
 
 
 # --------------------------------------------------------------------------- ports & robots

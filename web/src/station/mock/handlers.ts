@@ -134,6 +134,10 @@ export function stationHandlers(sim: MockStation, base = `${window.location.orig
       guard(() => sim.disconnect()),
     ),
     http.post(
+      u("/robots/reconnect"),
+      guard(() => sim.reconnect()),
+    ),
+    http.post(
       u("/robots/torque"),
       guard(async ({ request }) => {
         const b = await json<{ enabled: boolean }>(request);
@@ -148,8 +152,16 @@ export function stationHandlers(sim: MockStation, base = `${window.location.orig
       u("/calibration/start"),
       guard(async ({ request }) => {
         const b = await json<{ arm: Arm; keep_existing?: boolean; source?: string }>(request);
-        return sim.calibrationStart(b.arm, Boolean(b.keep_existing) || Boolean(b.source));
+        return sim.calibrationStart(b.arm, Boolean(b.keep_existing) || Boolean(b.source), b.source);
       }),
+    ),
+    http.get(
+      u("/calibration/check"),
+      guard(() => sim.calibrationCheck()),
+    ),
+    http.get(
+      u("/calibration/compare"),
+      guard(() => sim.poseCompare()),
     ),
     http.post(
       u("/calibration/step"),

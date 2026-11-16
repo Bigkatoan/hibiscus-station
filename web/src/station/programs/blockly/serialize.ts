@@ -151,7 +151,20 @@ export function slugify(name: string): string {
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "")
     .slice(0, 64);
-  return ID_RE.test(s) ? s : "";
+  if (ID_RE.test(s)) return s;
+  // A name with no Latin letter or digit (日本語, Русский, emoji…) still gets a valid, stable id.
+  const trimmed = name.trim();
+  return trimmed ? `program_${hash36(trimmed)}` : "";
+}
+
+/** FNV-1a 32-bit of the name, base 36: the same name always gives the same fallback id. */
+function hash36(text: string): string {
+  let h = 0x811c9dc5;
+  for (const ch of text) {
+    h ^= ch.codePointAt(0) ?? 0;
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(36);
 }
 
 export function isItemId(id: string): boolean {

@@ -7,7 +7,11 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-libra
 import userEvent from "@testing-library/user-event";
 import axe from "axe-core";
 import * as Blockly from "blockly/core";
+import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { server } from "@/test/server";
+import { stationBase } from "./api/client";
+import { slugify } from "./programs/blockly/serialize";
 import { advance, renderStation, settle, setupStation, type StationHarness } from "./test/utils";
 import { createRuntime } from "./ws/StationProvider";
 
@@ -334,5 +338,80 @@ describe("Program editor and run panel", () => {
       expect(document.querySelector('[data-id="start"]')).not.toBeNull();
     });
     expect(document.querySelector('[data-id="play_a"]')).toBeNull();
+  });
+
+  it("a name with no Latin letters still gets a valid id (field report 0.2.6)", async () => {
+    expect(slugify("ロボット")).toMatch(/^program_[a-z0-9]+$/);
+    expect(slugify("ロボット")).toBe(slugify("ロボット"));
+    expect(slugify("ロボット")).not.toBe(slugify("Робот"));
+    expect(slugify("   ")).toBe("");
+    const h = setupStation();
+    const user = userEvent.setup();
+    await openEditor(h);
+    await user.click(screen.getByRole("button", { name: "New program" }));
+    await user.type(
+      screen.getByLabelText("Name", { selector: "input:not([value='Sort cubes A/B'])" }),
+      "ロボット",
+    );
+    await user.click(screen.getByRole("button", { name: "Create" }));
+    await waitFor(() => {
+      expect(h.sim.programs.programs.some((p) => p.id === slugify("ロボット"))).toBe(true);
+    });
+  });
+
+  it("a failed create shows the server's detail, also for a non-Problem error", async () => {
+    const h = setupStation();
+    let calls = 0;
+    server.use(
+      http.put(`${stationBase()}/programs/:id`, () => {
+        calls += 1;
+        return calls === 1
+          ? HttpResponse.json(
+              {
+                type: "x",
+                title: "Internal error",
+                status: 500,
+                code: "internal_error",
+                detail: "PermissionError: [WinError 5] Access is denied: 'C:\\Users\\u\\programs'",
+                request_id: "r1",
+              },
+              { status: 500 },
+            )
+          : new HttpResponse("Bad Gateway from the proxy", { status: 502 });
+      }),
+    );
+    const user = userEvent.setup();
+    await openEditor(h);
+    await user.click(screen.getByRole("button", { name: "New program" }));
+    await user.type(
+      screen.getByLabelText("Name", { selector: "input:not([value='Sort cubes A/B'])" }),
+      "Hello",
+    );
+    await user.click(screen.getByRole("button", { name: "Create" }));
+    expect(await screen.findByTestId("error-detail")).toHaveTextContent("WinError 5");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+    await waitFor(() => {
+      expect(screen.getByTestId("error-detail")).toHaveTextContent("HTTP 502: Bad Gateway from the proxy");
+    });
+  });
+
+  it("explains that a program needs a robot profile when none is active", async () => {
+    const h = setupStation({ connected: false });
+    h.sim.profiles = [];
+    await openTab(h, "programs");
+    await userEvent.setup().click(await screen.findByRole("button", { name: "New program" }));
+    expect(await screen.findByTestId("program-no-profile")).toHaveTextContent("No robot profile is active");
+  });
+
+  it("says which profile a program is saved for when it is not connected", async () => {
+    const h = setupStation({ connected: false });
+    h.sim.activeId = "desk_so101";
+    const user = userEvent.setup();
+    await openTab(h, "programs");
+    const btn = await screen.findByRole("button", { name: "New program" });
+    await user.click(btn);
+    expect(await screen.findByTestId("program-profile-note")).toHaveTextContent(
+      "Saved for the robot profile",
+    );
   });
 });

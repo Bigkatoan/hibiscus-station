@@ -10,6 +10,10 @@ writes and torque switches are idempotent, so a retry after a lost *answer* is h
 Each failed attempt is logged at DEBUG (``--verbose``) with the operation, register and motor ids,
 and counted in :attr:`StationMotorsBus.errors` (shown by ``hibiscus-station doctor`` and the
 status). Telemetry passes ``num_retry=0`` explicitly: a failed telemetry read is never retried.
+
+A device that is gone (Windows "Access is denied", Linux EIO: :mod:`hibiscus_station.hw.portloss`)
+is never retried: the first such error marks the bus :attr:`StationMotorsBus.lost` and every later
+call raises :class:`DeviceLostError` at once, without touching the port (no torque-off storm).
 """
 
 from __future__ import annotations
@@ -22,6 +26,8 @@ from typing import Any, TypeVar
 
 from lerobot.motors import Motor, MotorCalibration, SerialMotorsBus
 from lerobot.utils.errors import DeviceAlreadyConnectedError, DeviceNotConnectedError
+
+from hibiscus_station.hw.portloss import DeviceLostError, is_device_lost
 
 log = logging.getLogger(__name__)
 
@@ -47,6 +53,7 @@ class StationMotorsBus(SerialMotorsBus):  # type: ignore[misc]
         self.retried = 0  # calls that failed at least once and then went through
         self.last_error: str | None = None
         self.last_error_t: float | None = None
+        self.lost: str | None = None  # why the serial device is gone (no call reaches the port then)
 
     # ------------------------------------------------------------------ bookkeeping
     def _names(self, motors: Any) -> str:
@@ -58,6 +65,8 @@ class StationMotorsBus(SerialMotorsBus):  # type: ignore[misc]
         return ",".join(str(i) for i in ids) if ids else str(motors)
 
     def _attempt(self, op: str, register: str, motors: Any, num_retry: int | None, fn: Callable[[], T]) -> T:
+        if self.lost is not None:
+            raise DeviceLostError(self.arm, self.port, self.lost)
         tries = (self.min_retry if num_retry is None else max(0, num_retry)) + 1
         for i in range(tries):
             try:
@@ -65,6 +74,9 @@ class StationMotorsBus(SerialMotorsBus):  # type: ignore[misc]
             except (DeviceNotConnectedError, DeviceAlreadyConnectedError):
                 raise
             except (ConnectionError, RuntimeError, OSError) as exc:
+                if is_device_lost(exc):
+                    self._mark_lost(op, register, exc)
+                    raise DeviceLostError(self.arm, self.port, self.lost or str(exc)) from exc
                 ids = self._names(motors)
                 key = f"{op} {register} [{ids}]"
                 self.errors[key] += 1
@@ -91,6 +103,21 @@ class StationMotorsBus(SerialMotorsBus):  # type: ignore[misc]
                 self.retried += 1
             return out
         raise AssertionError("unreachable")  # pragma: no cover
+
+    def _mark_lost(self, op: str, register: str, exc: BaseException) -> None:
+        cause = str(exc.__cause__ or exc).strip()[:200] or type(exc).__name__
+        self.lost = cause
+        self.errors[f"{op} {register} [device lost]"] += 1
+        self.last_error = f"{self.arm or self.port}: serial device lost during {op} {register}: {cause}"
+        self.last_error_t = time.time()
+        log.warning(
+            "serial device %s (%s) lost during %s %s, not retrying: %s",
+            self.port,
+            self.arm,
+            op,
+            register,
+            cause,
+        )
 
     def error_summary(self) -> dict[str, Any]:
         return {

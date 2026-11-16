@@ -8,7 +8,10 @@
 import type {
   AlertMsg,
   Arm,
+  ArmCalibrationCheck,
+  CalibrationCheck,
   CalibrationMsg,
+  DeviceLost,
   FrameHeader,
   Job,
   Level,
@@ -18,6 +21,8 @@ import type {
   RecordRequest,
   RobotProfile,
   Phase,
+  PoseCompare,
+  ReconnectResult,
   RunRequest,
   ServerLink,
   Session,
@@ -84,7 +89,16 @@ export interface MockOptions {
   frameSource?: FrameSource;
   datasets?: LocalDatasetDetail[];
   models?: ModelEntry[];
+  /** Calibration scenario: "ok" (both arms calibrated), "lelab" (the motors carry LeLab's files),
+   *  "fresh" (no calibration at all). */
+  calib?: "ok" | "lelab" | "fresh";
+  /** The pose check finds elbow_flex 35° apart (a wrong calibration file). */
+  poseOff?: boolean;
+  /** Start in the "device lost" error (the follower's USB adapter went away after torque-on). */
+  lost?: boolean;
 }
+
+const MIN_RANGE = 100;
 
 const OPEN = 1;
 
@@ -169,6 +183,10 @@ export class MockStation {
   levels: Record<string, Level> = {};
   alerts = new Map<string, AlertMsg>();
   calib: CalibrationMsg | null = null;
+  calibT0 = 0;
+  calibScenario: "ok" | "lelab" | "fresh" = "ok";
+  poseOff = false;
+  lost: DeviceLost | null = null;
   t = 0;
   tick = 0;
   heatRate: number;
@@ -200,7 +218,11 @@ export class MockStation {
       this.server = {
         ...pairedLink("https://hibiscus.example.org"),
       };
+    this.calibScenario = opts.calib ?? "ok";
+    this.poseOff = opts.poseOff ?? false;
+    if (this.calibScenario !== "ok") this.calibrated = { follower: false, leader: false };
     if (opts.connected) this.doConnect("desk_so101");
+    if (opts.connected && opts.lost) this.loseDevice("follower", true);
   }
 
   // ------------------------------------------------------------------ sockets
@@ -345,6 +367,7 @@ export class MockStation {
       server: { paired: this.server.paired, url: this.server.web_url, workspace: this.server.workspace },
       loaded_model: this.loaded,
       program: this.programs.current(),
+      lost: this.lost,
     };
   }
 
@@ -402,6 +425,113 @@ export class MockStation {
     if (hot.length) throw new MockProblem(409, "motor_hot", { motors: hot });
   }
 
+  calibrationCheck(): CalibrationCheck {
+    if (this.state === "disconnected" || this.state === "error") throw new MockProblem(409, "not_connected");
+    const p = this.profile;
+    const arm = (a: Arm): ArmCalibrationCheck | null => {
+      const id = a === "follower" ? p?.follower.calibration_id : p?.leader?.calibration_id;
+      if (!p || !id) return null;
+      const own = fx.calibrations.find((c) => c.arm === a && c.id === id);
+      const lelab = this.calibScenario === "lelab";
+      const files = fx.calibrations
+        .filter((c) => c.arm === a)
+        .filter((c) => this.calibScenario !== "fresh" || (c.dir ?? "").startsWith("so1"))
+        .filter((c) => c !== own || this.calibScenario === "ok")
+        .map((c) => ({
+          ...c,
+          own: c === own,
+          valid: true,
+          matches_motors: (c === own && this.calibrated[a]) || (lelab && (c.dir ?? "").startsWith("so101")),
+          matches_other_arm: false,
+        }));
+      const suggestion = files.find((f) => f.matches_motors && !f.own) ?? null;
+      const state = this.calibrated[a] ? "ok" : suggestion ? "adopt" : "needs_calibration";
+      return {
+        arm: a,
+        state,
+        calibrated: this.calibrated[a],
+        calibration_id: id,
+        file: own?.path ?? `~/.cache/huggingface/lerobot/calibration/${a}/${id}.json`,
+        file_exists: Boolean(own) && this.calibScenario === "ok",
+        suggestion: state === "adopt" ? suggestion : null,
+        files,
+        issue: this.calibrated[a] ? null : `no calibration file for ${id}`,
+      };
+    };
+    return { arms: { follower: arm("follower"), leader: arm("leader") } };
+  }
+
+  poseCompare(): PoseCompare {
+    this.requireIdle();
+    for (const a of ["follower", "leader"] as const)
+      if (!this.calibrated[a]) throw new MockProblem(409, "not_calibrated", { arm: a });
+    const joints = fx.MOTORS.map((m, i) => {
+      const f = this.pos(i);
+      const off = this.poseOff && m === "elbow_flex" ? 35.2 : ((i * 7) % 5) * 0.6;
+      const l = Math.round((f + off) * 10) / 10;
+      const diff = Math.round(Math.abs(l - f) * 10) / 10;
+      return {
+        joint: m,
+        follower: f,
+        leader: l,
+        diff,
+        unit: m === "gripper" ? "%" : "deg",
+        ok: diff <= 20,
+      } as const;
+    });
+    const off = joints.filter((j) => !j.ok).map((j) => j.joint);
+    const worst = joints.reduce((a, b) => (b.diff > a.diff ? b : a));
+    return {
+      joints: [...joints],
+      threshold: 20,
+      ok: off.length === 0,
+      off,
+      worst: off.length ? worst.joint : null,
+      max_diff: worst.diff,
+    };
+  }
+
+  /** The follower's (or leader's) USB adapter went away (unplug, brown-out, selective suspend). */
+  loseDevice(arm: Arm, afterTorqueOn: boolean): void {
+    const p = this.profile;
+    if (!p) return;
+    const port = arm === "follower" ? p.follower.port : (p.leader?.port ?? "");
+    if (this.session) this.session = null;
+    this.torque = false;
+    const detail = `${arm}: the serial device ${port} was lost (Access is denied.)`;
+    this.lost = {
+      arm,
+      port,
+      error: "Access is denied.",
+      identity: {
+        device: port,
+        vid_pid: "1a86:55d3",
+        serial_number: "5A7A018791",
+        description: "USB Single Serial",
+      },
+      robot: p.id,
+      during: "teleop",
+      after_torque_on: afterTorqueOn,
+      t: Date.now() / 1000,
+      detail,
+    };
+    this.setState("error", { reason: "device_lost", detail });
+  }
+
+  reconnect(): ReconnectResult {
+    if (this.state !== "error" || !this.activeId) throw new MockProblem(409, "busy", { state: this.state });
+    const p = this.profile;
+    this.lost = null;
+    this.torque = true;
+    this.setState("idle");
+    const ports: Record<string, string> = {};
+    if (p) {
+      ports.follower = p.follower.port;
+      if (p.leader) ports.leader = p.leader.port;
+    }
+    return { ...this.status(), ports, port_changes: {} };
+  }
+
   doConnect(id: string): Status {
     const p = this.profiles.find((x) => x.id === id);
     if (!p) throw new MockProblem(404, "not_found");
@@ -431,21 +561,26 @@ export class MockStation {
     return this.status();
   }
 
-  calibrationStart(arm: Arm, keep: boolean): Status {
+  calibrationStart(arm: Arm, keep: boolean, source?: string): Status {
     this.requireIdle();
     if (keep) {
+      const own = fx.calibrations.some((c) => c.arm === arm && (c.dir ?? "").startsWith("so_"));
+      if (!source && this.calibScenario === "fresh" && !own) throw new MockProblem(404, "not_found", { arm });
       this.calibrated[arm] = true;
       this.broadcast({ type: "state", ...this.status() });
       return this.status();
     }
+    this.calibT0 = this.t;
     this.calib = {
       type: "calibration",
       arm,
       step: "home",
       motors: Object.fromEntries(
-        fx.MOTORS.map((m) => [m, { min: 2048, pos: 2048, max: 2048, full_turn: false }]),
+        fx.MOTORS.map((m) => [m, { min: 2048, pos: 2048, max: 2048, full_turn: false, ok: false }]),
       ),
       warnings: [],
+      min_range: MIN_RANGE,
+      ready: false,
     };
     this.torque = false;
     this.setState("calibrating", { sub: "home" });
@@ -460,10 +595,18 @@ export class MockStation {
       this.calib = null;
       this.setState("idle");
     } else if (action === "set_home") {
-      this.calib = { ...this.calib, step: "ranges" };
+      this.calibT0 = this.t;
+      this.calib = {
+        ...this.calib,
+        step: "ranges",
+        motors: Object.fromEntries(
+          Object.entries(this.calib.motors).map(([m, r]) => [m, { ...r, min: r.pos, max: r.pos }]),
+        ),
+      };
       this.setState("calibrating", { sub: "ranges" });
       this.broadcast(this.calib);
     } else {
+      if (!this.calib.ready) throw new MockProblem(422, "validation_failed");
       const arm = this.calib.arm;
       this.calibrated[arm] = true;
       this.calib = {
@@ -844,11 +987,17 @@ export class MockStation {
         ...this.calib,
         motors: Object.fromEntries(
           Object.entries(this.calib.motors).map(([m, r], i) => {
-            const pos = Math.round(2048 + Math.sin(this.t * 1.3 + i) * 900);
-            return [m, { ...r, pos, min: Math.min(r.min ?? pos, pos), max: Math.max(r.max ?? pos, pos) }];
+            // The demo hand moves one joint after the other, as the wizard asks.
+            const since = this.t - this.calibT0 - i * 1.4;
+            const amp = since <= 0 ? 0 : Math.min(900, since * 700);
+            const pos = Math.round(2048 + Math.sin(since * 2.2) * amp);
+            const min = Math.min(r.min ?? pos, pos);
+            const max = Math.max(r.max ?? pos, pos);
+            return [m, { ...r, pos, min, max, ok: max - min >= MIN_RANGE }];
           }),
         ),
       };
+      this.calib.ready = Object.values(this.calib.motors).every((r) => r.ok);
       this.broadcast(this.calib);
     }
     const subs = [...this.video.values()];

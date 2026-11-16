@@ -10,6 +10,7 @@ import { PxIcon, Sprite } from "@/hibiscus/PixelAnim";
 import type { AlertMsg, Status } from "../api/types";
 import { DEFAULT_THRESHOLDS, coolingEtaS, levelCss } from "../health";
 import { useStation } from "../ws/StationProvider";
+import { DeviceLostBanner } from "./DeviceLost";
 import type { StationSnapshot } from "../ws/store";
 
 const THERMAL_REASONS = ["thermal", "electrical"];
@@ -112,7 +113,13 @@ export function SafetyBanners() {
           </div>
         </div>
       ) : null}
-      {!critical && status && (status.state === "error" || (status.state === "estopped" && status.detail)) ? (
+      {status?.state === "error" && status.reason === "device_lost" ? (
+        <DeviceLostBanner status={status} />
+      ) : null}
+      {!critical &&
+      status &&
+      status.reason !== "device_lost" &&
+      (status.state === "error" || (status.state === "estopped" && status.detail)) ? (
         <div
           role="alert"
           data-testid="state-banner"

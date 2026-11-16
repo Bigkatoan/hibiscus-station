@@ -13,6 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input, NativeSelect } from "@/components/ui/input";
+import { Alert, AlertTitle } from "@/components/ui/misc";
+import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import {
@@ -24,6 +26,7 @@ import {
   useProgram,
   usePrograms,
   useProgramStateQuery,
+  useRobots,
   useStationMutation,
   useTrajectories,
 } from "../../api/hooks";
@@ -135,6 +138,25 @@ function NewProgramForm({ existing, onCreated }: { existing: string[]; onCreated
     [qk.programs],
   );
   const taken = existing.includes(id);
+  // Programs belong to a robot profile: the connected one, else the active one (the Station's rule).
+  const status = useStatus();
+  const robots = useRobots();
+  const profileId = status?.robot?.id ?? robots.data?.active ?? null;
+  const profile = robots.data?.robots.find((r) => r.id === profileId) ?? null;
+  const noProfile = robots.isSuccess && profile === null;
+  if (noProfile) {
+    return (
+      <Alert variant="warning" data-testid="program-no-profile">
+        <AlertTitle>{t("programs.editor.no_profile")}</AlertTitle>
+        <p className="mt-1 text-sm">
+          {t("programs.editor.no_profile_hint")}{" "}
+          <Link to="/robot" className="underline">
+            {t("nav.robot")}
+          </Link>
+        </p>
+      </Alert>
+    );
+  }
   return (
     <form
       className="flex flex-wrap items-end gap-2"
@@ -164,6 +186,11 @@ function NewProgramForm({ existing, onCreated }: { existing: string[]; onCreated
       <Button type="submit" disabled={!id || taken || create.isPending}>
         <PxIcon name="plus" /> {t("programs.editor.create")}
       </Button>
+      {profile && !status?.robot?.connected ? (
+        <p className="w-full text-xs text-muted-foreground" data-testid="program-profile-note">
+          {t("programs.editor.for_profile", { name: profile.name || profile.id })}
+        </p>
+      ) : null}
       <StationError error={create.error} className="w-full" />
     </form>
   );

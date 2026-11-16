@@ -36,6 +36,13 @@ export type CalibrationFile = S["CalibrationFile"];
 export type CalibrationView = S["CalibrationView"];
 export type CalibrationMotor = S["CalibrationMotor"];
 export type CalibrationStepResponse = S["CalibrationStepResponse"];
+export type CalibrationCandidate = S["CalibrationCandidate"];
+export type ArmCalibrationCheck = S["ArmCalibrationCheck"];
+export type CalibrationCheck = S["CalibrationCheck"];
+export type PoseCompare = S["PoseCompare"];
+export type PoseJoint = S["PoseJoint"];
+export type DeviceLost = S["DeviceLost"];
+export type ReconnectResult = S["ReconnectResult"];
 
 export type RecordRequest = S["RecordRequest"];
 export type RunRequest = S["RunRequest"];

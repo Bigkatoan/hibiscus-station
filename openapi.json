@@ -373,6 +373,85 @@
         "title": "Arith",
         "type": "object"
       },
+      "ArmCalibrationCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "arm": {
+            "enum": [
+              "follower",
+              "leader"
+            ],
+            "title": "Arm",
+            "type": "string"
+          },
+          "calibrated": {
+            "title": "Calibrated",
+            "type": "boolean"
+          },
+          "calibration_id": {
+            "title": "Calibration Id",
+            "type": "string"
+          },
+          "file": {
+            "title": "File",
+            "type": "string"
+          },
+          "file_exists": {
+            "title": "File Exists",
+            "type": "boolean"
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/CalibrationCandidate"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "issue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issue"
+          },
+          "state": {
+            "description": "ok: calibrated; adopt: the motors carry another file (e.g. LeLab's), use it; mismatch: the own file exists but the motors do not keep it; needs_calibration: no file",
+            "enum": [
+              "ok",
+              "adopt",
+              "mismatch",
+              "needs_calibration"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "suggestion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CalibrationCandidate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "arm",
+          "state",
+          "calibrated",
+          "calibration_id",
+          "file",
+          "file_exists",
+          "files"
+        ],
+        "title": "ArmCalibrationCheck",
+        "type": "object"
+      },
       "ArmStatus": {
         "additionalProperties": false,
         "properties": {
@@ -856,6 +935,109 @@
         "title": "ButtonPressed",
         "type": "object"
       },
+      "CalibrationCandidate": {
+        "additionalProperties": false,
+        "properties": {
+          "arm": {
+            "enum": [
+              "follower",
+              "leader"
+            ],
+            "title": "Arm",
+            "type": "string"
+          },
+          "dir": {
+            "default": "so_follower",
+            "description": "lerobot's folder: so_follower, so_leader or a legacy so101_*",
+            "title": "Dir",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "matches_motors": {
+            "description": "this arm's motors carry exactly this calibration now",
+            "title": "Matches Motors",
+            "type": "boolean"
+          },
+          "matches_other_arm": {
+            "description": "the OTHER arm's motors carry it: never use it here",
+            "title": "Matches Other Arm",
+            "type": "boolean"
+          },
+          "modified_at": {
+            "title": "Modified At",
+            "type": "string"
+          },
+          "own": {
+            "description": "the file this profile's calibration id reads",
+            "title": "Own",
+            "type": "boolean"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "valid": {
+            "description": "a lerobot calibration json",
+            "title": "Valid",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "arm",
+          "id",
+          "path",
+          "modified_at",
+          "own",
+          "valid",
+          "matches_motors",
+          "matches_other_arm"
+        ],
+        "title": "CalibrationCandidate",
+        "type": "object"
+      },
+      "CalibrationCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "arms": {
+            "$ref": "#/components/schemas/CalibrationCheckArms"
+          }
+        },
+        "required": [
+          "arms"
+        ],
+        "title": "CalibrationCheck",
+        "type": "object"
+      },
+      "CalibrationCheckArms": {
+        "additionalProperties": false,
+        "properties": {
+          "follower": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArmCalibrationCheck"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "leader": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArmCalibrationCheck"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "CalibrationCheckArms",
+        "type": "object"
+      },
       "CalibrationFile": {
         "additionalProperties": false,
         "properties": {
@@ -941,6 +1123,12 @@
             ],
             "title": "Min"
           },
+          "ok": {
+            "default": false,
+            "description": "moved through at least min_range steps (ranges step)",
+            "title": "Ok",
+            "type": "boolean"
+          },
           "pos": {
             "anyOf": [
               {
@@ -973,6 +1161,12 @@
             "title": "Arm",
             "type": "string"
           },
+          "min_range": {
+            "default": 100,
+            "description": "steps each joint must move before Save (LeLab's rule)",
+            "title": "Min Range",
+            "type": "integer"
+          },
           "motors": {
             "additionalProperties": {
               "$ref": "#/components/schemas/CalibrationMotor"
@@ -992,6 +1186,12 @@
             "default": null,
             "description": "written calibration file (step done)",
             "title": "Path"
+          },
+          "ready": {
+            "default": false,
+            "description": "every joint moved enough: Save is allowed",
+            "title": "Ready",
+            "type": "boolean"
           },
           "step": {
             "enum": [
@@ -1151,6 +1351,17 @@
             ],
             "title": "Loaded Model"
           },
+          "lost": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeviceLost"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the serial device that was lost (state error)"
+          },
           "program": {
             "anyOf": [
               {
@@ -1277,6 +1488,12 @@
             "title": "Arm",
             "type": "string"
           },
+          "min_range": {
+            "default": 100,
+            "description": "steps each joint must move before Save (LeLab's rule)",
+            "title": "Min Range",
+            "type": "integer"
+          },
           "motors": {
             "additionalProperties": {
               "$ref": "#/components/schemas/CalibrationMotor"
@@ -1295,6 +1512,12 @@
             ],
             "description": "written calibration file (step done)",
             "title": "Path"
+          },
+          "ready": {
+            "default": false,
+            "description": "every joint moved enough: Save is allowed",
+            "title": "Ready",
+            "type": "boolean"
           },
           "step": {
             "enum": [
@@ -3120,6 +3343,80 @@
           "detectors"
         ],
         "title": "Detectors",
+        "type": "object"
+      },
+      "DeviceLost": {
+        "additionalProperties": false,
+        "description": "A serial device that went away while connected (unplugged, USB reset, brown-out, selective\nsuspend, or another program took the port): state ``error``, reason ``device_lost``.",
+        "properties": {
+          "after_torque_on": {
+            "description": "lost within seconds of the follower's torque coming on or a session start: a far jump may have browned out the follower supply",
+            "title": "After Torque On",
+            "type": "boolean"
+          },
+          "arm": {
+            "enum": [
+              "follower",
+              "leader"
+            ],
+            "title": "Arm",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "during": {
+            "description": "session kind or state when it happened",
+            "title": "During",
+            "type": "string"
+          },
+          "error": {
+            "description": "what the OS said, e.g. \"Access is denied.\" or \"I/O error\"",
+            "title": "Error",
+            "type": "string"
+          },
+          "identity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PortIdentity"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the USB adapter, to find it again"
+          },
+          "port": {
+            "title": "Port",
+            "type": "string"
+          },
+          "robot": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Robot"
+          },
+          "t": {
+            "title": "T",
+            "type": "number"
+          }
+        },
+        "required": [
+          "arm",
+          "port",
+          "error",
+          "during",
+          "after_torque_on",
+          "t",
+          "detail"
+        ],
+        "title": "DeviceLost",
         "type": "object"
       },
       "DisconnectRequest": {
@@ -6541,6 +6838,58 @@
         "title": "Port",
         "type": "object"
       },
+      "PortIdentity": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "device": {
+            "title": "Device",
+            "type": "string"
+          },
+          "serial_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Serial Number"
+          },
+          "stable_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stable Path"
+          },
+          "vid_pid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vid Pid"
+          }
+        },
+        "required": [
+          "device"
+        ],
+        "title": "PortIdentity",
+        "type": "object"
+      },
       "Ports": {
         "additionalProperties": false,
         "properties": {
@@ -6620,6 +6969,60 @@
         "title": "Pose",
         "type": "object"
       },
+      "PoseCompare": {
+        "additionalProperties": false,
+        "description": "Leader held in the follower's pose: per-joint difference after calibration.",
+        "properties": {
+          "joints": {
+            "items": {
+              "$ref": "#/components/schemas/PoseJoint"
+            },
+            "title": "Joints",
+            "type": "array"
+          },
+          "max_diff": {
+            "title": "Max Diff",
+            "type": "number"
+          },
+          "off": {
+            "description": "joints further apart than the threshold",
+            "items": {
+              "type": "string"
+            },
+            "title": "Off",
+            "type": "array"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "threshold": {
+            "title": "Threshold",
+            "type": "number"
+          },
+          "worst": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Worst"
+          }
+        },
+        "required": [
+          "joints",
+          "threshold",
+          "ok",
+          "off",
+          "worst",
+          "max_diff"
+        ],
+        "title": "PoseCompare",
+        "type": "object"
+      },
       "PoseInput": {
         "additionalProperties": false,
         "properties": {
@@ -6664,6 +7067,49 @@
           "positions"
         ],
         "title": "PoseInput",
+        "type": "object"
+      },
+      "PoseJoint": {
+        "additionalProperties": false,
+        "properties": {
+          "diff": {
+            "title": "Diff",
+            "type": "number"
+          },
+          "follower": {
+            "title": "Follower",
+            "type": "number"
+          },
+          "joint": {
+            "title": "Joint",
+            "type": "string"
+          },
+          "leader": {
+            "title": "Leader",
+            "type": "number"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "unit": {
+            "enum": [
+              "deg",
+              "%"
+            ],
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "joint",
+          "follower",
+          "leader",
+          "diff",
+          "unit",
+          "ok"
+        ],
+        "title": "PoseJoint",
         "type": "object"
       },
       "Poses": {
@@ -8368,6 +8814,217 @@
           "high"
         ],
         "title": "RandomInt",
+        "type": "object"
+      },
+      "ReconnectRequest": {
+        "properties": {
+          "timeout_s": {
+            "default": 30.0,
+            "description": "how long to wait for the port to come back",
+            "exclusiveMinimum": 0.0,
+            "maximum": 120.0,
+            "title": "Timeout S",
+            "type": "number"
+          }
+        },
+        "title": "ReconnectRequest",
+        "type": "object"
+      },
+      "ReconnectResult": {
+        "additionalProperties": false,
+        "properties": {
+          "alerts": {
+            "description": "active alerts",
+            "items": {
+              "$ref": "#/components/schemas/Alert"
+            },
+            "title": "Alerts",
+            "type": "array"
+          },
+          "cameras": {
+            "items": {
+              "$ref": "#/components/schemas/CameraStatus"
+            },
+            "title": "Cameras",
+            "type": "array"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "health": {
+            "$ref": "#/components/schemas/Health"
+          },
+          "last_session": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionEnd"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "loaded_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loaded Model"
+          },
+          "lost": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeviceLost"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the serial device that was lost (state error)"
+          },
+          "port_changes": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "arms whose device name changed (new COM number)",
+            "title": "Port Changes",
+            "type": "object"
+          },
+          "ports": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "arm -> serial device now",
+            "title": "Ports",
+            "type": "object"
+          },
+          "program": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProgramState"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the current program run (programming only)"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "robot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RobotStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "server": {
+            "$ref": "#/components/schemas/ServerStatus"
+          },
+          "session": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Session"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "enum": [
+              "disconnected",
+              "connecting",
+              "idle",
+              "calibrating",
+              "teleop",
+              "recording",
+              "replaying",
+              "inferring",
+              "recording_traj",
+              "playing",
+              "programming",
+              "stopping",
+              "estopped",
+              "error"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "station": {
+            "$ref": "#/components/schemas/StationInfo"
+          },
+          "sub": {
+            "anyOf": [
+              {
+                "enum": [
+                  "home",
+                  "ranges",
+                  "approach",
+                  "teleop",
+                  "replay",
+                  "countdown",
+                  "warmup",
+                  "episode",
+                  "saving",
+                  "reset",
+                  "capture",
+                  "running",
+                  "waiting",
+                  "paused",
+                  "done"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub"
+          }
+        },
+        "required": [
+          "station",
+          "state",
+          "sub",
+          "reason",
+          "detail",
+          "robot",
+          "cameras",
+          "health",
+          "alerts",
+          "session",
+          "last_session",
+          "server",
+          "loaded_model",
+          "ports",
+          "port_changes"
+        ],
+        "title": "ReconnectResult",
         "type": "object"
       },
       "RecordRequest": {
@@ -11041,6 +11698,18 @@
             ],
             "title": "Loaded Model"
           },
+          "lost": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeviceLost"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "the serial device that was lost (state error)"
+          },
           "program": {
             "anyOf": [
               {
@@ -11256,6 +11925,17 @@
               }
             ],
             "title": "Loaded Model"
+          },
+          "lost": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeviceLost"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the serial device that was lost (state error)"
           },
           "program": {
             "anyOf": [
@@ -13240,6 +13920,70 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/calibration/check": {
+      "get": {
+        "description": "Per connected arm: calibrated? which calibration file on disk its motors carry now?",
+        "operationId": "calibration_check_api_v1_calibration_check_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalibrationCheck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem (spec \u00a75.1)"
+          }
+        },
+        "summary": "Calibration Check",
+        "tags": [
+          "calibration"
+        ]
+      }
+    },
+    "/api/v1/calibration/compare": {
+      "get": {
+        "description": "Leader held in the follower's pose: per-joint difference (> 20 deg: wrong file or roles).",
+        "operationId": "calibration_compare_api_v1_calibration_compare_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PoseCompare"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem (spec \u00a75.1)"
+          }
+        },
+        "summary": "Calibration Compare",
+        "tags": [
+          "calibration"
+        ]
+      }
+    },
     "/api/v1/calibration/start": {
       "post": {
         "operationId": "calibration_start_api_v1_calibration_start_post",
@@ -15265,6 +16009,55 @@
           }
         },
         "summary": "Disconnect",
+        "tags": [
+          "robots"
+        ]
+      }
+    },
+    "/api/v1/robots/reconnect": {
+      "post": {
+        "description": "After ``device_lost``: wait for the USB serial adapter to come back (same serial number,\nby-id path or VID:PID, maybe under a new COM name), then connect again (calibration files\nare written to the motors again).",
+        "operationId": "reconnect_api_v1_robots_reconnect_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ReconnectRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconnectResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem (spec \u00a75.1)"
+          }
+        },
+        "summary": "Reconnect",
         "tags": [
           "robots"
         ]

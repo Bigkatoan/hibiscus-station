@@ -28,6 +28,7 @@ STATUS = {
     "server_error": 502,
     "hardware_timeout": 504,
     "bus_error": 502,
+    "device_lost": 503,
     "demo_profile": 409,
     "internal_error": 500,
     # station-programs.md
@@ -60,6 +61,7 @@ TITLES = {
     "server_error": "Hibiscus server error",
     "hardware_timeout": "Hardware did not answer in time",
     "bus_error": "A motor did not answer on the serial bus",
+    "device_lost": "The serial device was lost (unplugged, reset or taken by another program)",
     "demo_profile": "This profile drives simulated arms",
     "internal_error": "Internal error",
     "not_implemented": "Not implemented yet",

@@ -170,13 +170,30 @@ describe("Teleop (§6.5)", () => {
   });
 });
 
-describe("Calibrate (§6.3)", () => {
-  it("guides Home → Ranges → Done with live range bars", async () => {
+describe("Calibrate (§6.3, LeLab-simple)", () => {
+  it("says a calibrated arm is ready to use, and walks follower → leader → check", async () => {
     const h = setupStation();
     const user = userEvent.setup();
     renderStation("/calibrate", h);
     await settle();
-    await user.click(await screen.findByRole("button", { name: "Recalibrate" }));
+    // Both arms calibrated: the flow opens on the pose check.
+    expect(await screen.findByTestId("pose-check")).toBeInTheDocument();
+    await user.click(screen.getByTestId("cal-step-follower"));
+    expect(await screen.findByTestId("cal-ok-follower")).toHaveTextContent(
+      "Follower arm is calibrated: ready to use",
+    );
+    await user.click(screen.getByRole("button", { name: /Next: leader arm/ }));
+    expect(await screen.findByTestId("cal-ok-leader")).toBeInTheDocument();
+    expect(screen.getByTestId("cal-now-leader")).toHaveTextContent("Done! Now the Leader arm.");
+  });
+
+  it("guides Home → Ranges with a tick per joint; Save only when every joint moved", async () => {
+    const h = setupStation({ calib: "fresh" });
+    const user = userEvent.setup();
+    renderStation("/calibrate", h);
+    await settle();
+    expect(await screen.findByTestId("cal-needs-follower")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Start calibration/ }));
     expect(await screen.findByTestId("cal-home")).toBeInTheDocument();
     expect(
       screen.getByRole("img", { name: "SO-101 arm with every joint in the middle of its range" }),
@@ -184,22 +201,29 @@ describe("Calibrate (§6.3)", () => {
     expect(screen.getByText("The follower is limp: hold it.")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Set home" }));
     await screen.findByTestId("cal-ranges");
-    await advance(h.sim, 3);
+    await advance(h.sim, 1.2);
     await waitFor(() => {
       expect(screen.getByTestId("range-shoulder_pan")).toHaveAttribute("data-ok", "true");
     });
-    // LeLab-style: wrist_roll is recorded like every joint, never "full turn".
+    expect(screen.getByTestId("range-gripper")).toHaveAttribute("data-ok", "false");
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    // wrist_roll is recorded like every joint (LeLab), never "full turn".
     expect(
       within(screen.getByTestId("range-wrist_roll")).queryByText("full turn, nothing to record"),
     ).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Finish and save" }));
-    expect(await screen.findByTestId("cal-done")).toHaveTextContent("so_follower/desk_follower.json");
-    expect(screen.getByRole("link", { name: "Next: Cameras" })).toHaveAttribute("href", "/cameras");
+    await advance(h.sim, 8);
+    await waitFor(() => {
+      expect(screen.getByTestId("cal-progress")).toHaveTextContent("6 / 6 joints done");
+    });
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    // Then the leader, automatically.
+    expect(await screen.findByTestId("cal-now-leader")).toBeInTheDocument();
+    expect(await screen.findByTestId("cal-needs-leader")).toBeInTheDocument();
+    expect(h.sim.calibrated.follower).toBe(true);
   });
 
-  it("offers calibration files written under another name (LeLab) and uses one", async () => {
-    const h = setupStation();
-    h.sim.calibrated.follower = false;
+  it("adopts the file the motors already carry (LeLab) in one click, never another arm's file", async () => {
+    const h = setupStation({ calib: "lelab" });
     let sent: unknown = null;
     server.use(
       http.post(`${stationBase()}/calibration/start`, async ({ request }) => {
@@ -211,14 +235,50 @@ describe("Calibrate (§6.3)", () => {
     const user = userEvent.setup();
     renderStation("/calibrate", h);
     await settle();
-    const others = await screen.findByTestId("cal-others-follower");
-    expect(others).toHaveTextContent("my_follower");
-    expect(others).toHaveTextContent("so101_follower");
-    await user.click(within(others).getByRole("button", { name: "Use this file" }));
+    const box = await screen.findByTestId("cal-adopt-follower");
+    expect(box).toHaveTextContent("This arm already uses the calibration from LeLab: my_follower.json");
+    const files = within(screen.getByTestId("cal-advanced-follower")).getByTestId("cal-files-follower");
+    expect(files).not.toHaveTextContent("my_leader");
+    await user.click(within(box).getByRole("button", { name: /Use it/ }));
     await waitFor(() => {
       expect(sent).toMatchObject({ arm: "follower" });
       expect((sent as { source?: string } | null)?.source).toContain("so101_follower/my_follower.json");
     });
+    expect(await screen.findByTestId("cal-adopt-leader")).toHaveTextContent("my_leader.json");
+  });
+
+  it("compares both arms in the same pose and warns about a wrong file before teleop", async () => {
+    const h = setupStation({ poseOff: true });
+    const user = userEvent.setup();
+    renderStation("/calibrate", h);
+    await settle();
+    await user.click(await screen.findByRole("button", { name: /^Check$/ }));
+    expect(await screen.findByTestId("pose-bad")).toHaveTextContent("elbow_flex: more than 20° apart");
+    expect(screen.getByTestId("pose-elbow_flex")).toHaveAttribute("data-ok", "false");
+    expect(screen.queryByRole("link", { name: /^Try teleop$/ })).toBeNull();
+    h.sim.poseOff = false;
+    await user.click(screen.getByRole("button", { name: /Check again/ }));
+    expect(await screen.findByTestId("pose-ok")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Try teleop/ })).toHaveAttribute("href", "/teleop");
+  });
+});
+
+describe("Device lost (field report 0.2.5: Access is denied)", () => {
+  it("explains a lost USB device with a checklist, hints at a jump, and reconnects", async () => {
+    const h = setupStation({ lost: true });
+    const user = userEvent.setup();
+    renderStation("/teleop", h);
+    await settle();
+    const banner = await screen.findByTestId("device-lost");
+    expect(banner).toHaveTextContent("Lost the USB connection to the Follower arm");
+    expect(banner).toHaveTextContent("Close LeLab, lerobot");
+    expect(within(banner).getByTestId("lost-jump-hint")).toBeInTheDocument();
+    expect(banner).toHaveTextContent("Access is denied.");
+    await user.click(within(banner).getByRole("button", { name: /Reconnect/ }));
+    await waitFor(() => {
+      expect(screen.queryByTestId("device-lost")).toBeNull();
+    });
+    expect(h.sim.state).toBe("idle");
   });
 });
 

@@ -4,6 +4,7 @@ import { useRuntime } from "../ws/StationProvider";
 import { api } from "./client";
 import type {
   BlockCatalog,
+  CalibrationCheck,
   CalibrationFile,
   CompatReport,
   Detector,
@@ -40,6 +41,7 @@ export const qk = {
   robots: ["station", "robots"],
   ports: ["station", "ports"],
   calibrations: ["station", "calibrations"],
+  calibrationCheck: ["station", "calibrations", "check"],
   discover: ["station", "cameras", "discover"],
   datasets: ["station", "datasets"],
   dataset: (name: string) => ["station", "datasets", name],
@@ -87,6 +89,15 @@ export const useRobots = () =>
 
 export const usePorts = () =>
   useQuery({ queryKey: qk.ports, queryFn: () => api.get<{ ports: Port[] }>("/ports") });
+
+/** Per connected arm: calibrated? which file on disk do its motors carry? (reads the EEPROM) */
+export const useCalibrationCheck = (enabled: boolean) =>
+  useQuery({
+    queryKey: qk.calibrationCheck,
+    queryFn: () => api.get<CalibrationCheck>("/calibration/check"),
+    enabled,
+    retry: false,
+  });
 
 export const useCalibrations = () =>
   useQuery({

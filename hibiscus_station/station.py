@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Literal
 
@@ -33,6 +34,7 @@ from hibiscus_station.sessions.teleop import TeleopSession
 from hibiscus_station.settings import Settings, StationPaths, calibration_root
 
 log = logging.getLogger(__name__)
+RECONNECT_TRIES = 3
 
 
 class TeleopRequest(BaseModel):
@@ -205,6 +207,65 @@ class Station:
             raise StationError("busy", "disconnect this robot first", params={"state": self.owner.state})
         if not self.profiles.delete(robot_id):
             raise StationError("not_found", f"no robot {robot_id}")
+
+    def reconnect(
+        self, timeout_s: float = 30.0, lister: Callable[[], list[dict[str, Any]]] | None = None
+    ) -> dict[str, Any]:
+        """After a lost serial device (state ``error``, reason ``device_lost``): wait until every arm's
+        USB adapter is listed again (same serial number / by-id path / VID:PID, maybe a new COM
+        name), point the profile at the new names, and connect. Connecting writes each arm's
+        calibration file to its motors again."""
+        from hibiscus_station.hw import ports as hwports
+        from hibiscus_station.hw.portloss import wait_for_ports
+
+        lost = self.owner.lost
+        robot_id = (lost or {}).get("robot") or (self.owner.profile.id if self.owner.profile else None)
+        if self.owner.state not in ("error", "disconnected") or robot_id is None:
+            raise StationError("busy", "nothing to reconnect", params={"state": self.owner.state})
+        profile = self.profiles.get(robot_id)
+        if profile is None:
+            raise StationError("not_found", f"no robot profile {robot_id!r}")
+        ids = self.owner.port_ids
+        wanted: dict[str, tuple[str, dict[str, Any] | None]] = {
+            "follower": (profile.follower.port, ids.get("follower"))
+        }
+        if profile.leader is not None:
+            wanted["leader"] = (profile.leader.port, ids.get("leader"))
+        if all(p.startswith("mock://") for p, _ in wanted.values()):
+            found: dict[str, str] | None = {a: p for a, (p, _) in wanted.items()}
+        else:
+            found = wait_for_ports(
+                wanted, lister or (lambda: hwports.list_ports(usb_only=False)), timeout_s=timeout_s
+            )
+        if found is None:
+            missing = ", ".join(f"{a} ({p})" for a, (p, _) in wanted.items())
+            raise StationError(
+                "device_lost",
+                f"the USB serial adapter did not come back within {timeout_s:.0f} s: {missing}",
+                params={
+                    "arm": (lost or {}).get("arm"),
+                    "port": (lost or {}).get("port"),
+                    "waited_s": timeout_s,
+                },
+            )
+        changes = {a: d for a, d in found.items() if d != wanted[a][0]}
+        if changes:
+            update: dict[str, Any] = {}
+            for arm, dev in changes.items():
+                part = profile.follower if arm == "follower" else profile.leader
+                if part is not None:
+                    update[arm] = part.model_copy(update={"port": dev})
+                log.info("%s: the serial adapter is back as %s (was %s)", arm, dev, wanted[arm][0])
+            profile = self.profiles.put(profile.model_copy(update=update))
+        for attempt in range(RECONNECT_TRIES):  # a re-plugged adapter may need a moment to open
+            try:
+                self.owner.call("connect", robot_id=profile.id, timeout=30.0)
+                break
+            except StationError as exc:
+                if exc.code not in ("port_busy", "bus_error") or attempt == RECONNECT_TRIES - 1:
+                    raise
+                time.sleep(1.0)
+        return {**self.status(), "ports": found, "port_changes": changes}
 
     # ------------------------------------------------------------------ sessions
     def _profile(self) -> RobotProfile:

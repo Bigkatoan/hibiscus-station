@@ -4,6 +4,46 @@
  */
 
 export interface paths {
+  "/api/v1/calibration/check": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Calibration Check
+     * @description Per connected arm: calibrated? which calibration file on disk its motors carry now?
+     */
+    get: operations["calibration_check_api_v1_calibration_check_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/calibration/compare": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Calibration Compare
+     * @description Leader held in the follower's pose: per-joint difference (> 20 deg: wrong file or roles).
+     */
+    get: operations["calibration_compare_api_v1_calibration_compare_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/calibration/start": {
     parameters: {
       query?: never;
@@ -785,6 +825,28 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/robots/reconnect": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Reconnect
+     * @description After ``device_lost``: wait for the USB serial adapter to come back (same serial number,
+     *     by-id path or VID:PID, maybe under a new COM name), then connect again (calibration files
+     *     are written to the motors again).
+     */
+    post: operations["reconnect_api_v1_robots_reconnect_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/robots/rest-pose": {
     parameters: {
       query?: never;
@@ -1411,6 +1473,33 @@ export interface components {
         | components["schemas"]["DetectorConfidence"]
         | components["schemas"]["SignalValue"];
     };
+    /** ArmCalibrationCheck */
+    ArmCalibrationCheck: {
+      /**
+       * Arm
+       * @enum {string}
+       */
+      arm: "follower" | "leader";
+      /** Calibrated */
+      calibrated: boolean;
+      /** Calibration Id */
+      calibration_id: string;
+      /** File */
+      file: string;
+      /** File Exists */
+      file_exists: boolean;
+      /** Files */
+      files: components["schemas"]["CalibrationCandidate"][];
+      /** Issue */
+      issue?: string | null;
+      /**
+       * State
+       * @description ok: calibrated; adopt: the motors carry another file (e.g. LeLab's), use it; mismatch: the own file exists but the motors do not keep it; needs_calibration: no file
+       * @enum {string}
+       */
+      state: "ok" | "adopt" | "mismatch" | "needs_calibration";
+      suggestion?: components["schemas"]["CalibrationCandidate"] | null;
+    };
     /** ArmStatus */
     ArmStatus: {
       /**
@@ -1627,6 +1716,55 @@ export interface components {
        */
       kind: "button_pressed";
     };
+    /** CalibrationCandidate */
+    CalibrationCandidate: {
+      /**
+       * Arm
+       * @enum {string}
+       */
+      arm: "follower" | "leader";
+      /**
+       * Dir
+       * @description lerobot's folder: so_follower, so_leader or a legacy so101_*
+       * @default so_follower
+       */
+      dir?: string;
+      /** Id */
+      id: string;
+      /**
+       * Matches Motors
+       * @description this arm's motors carry exactly this calibration now
+       */
+      matches_motors: boolean;
+      /**
+       * Matches Other Arm
+       * @description the OTHER arm's motors carry it: never use it here
+       */
+      matches_other_arm: boolean;
+      /** Modified At */
+      modified_at: string;
+      /**
+       * Own
+       * @description the file this profile's calibration id reads
+       */
+      own: boolean;
+      /** Path */
+      path: string;
+      /**
+       * Valid
+       * @description a lerobot calibration json
+       */
+      valid: boolean;
+    };
+    /** CalibrationCheck */
+    CalibrationCheck: {
+      arms: components["schemas"]["CalibrationCheckArms"];
+    };
+    /** CalibrationCheckArms */
+    CalibrationCheckArms: {
+      follower?: components["schemas"]["ArmCalibrationCheck"] | null;
+      leader?: components["schemas"]["ArmCalibrationCheck"] | null;
+    };
     /** CalibrationFile */
     CalibrationFile: {
       /**
@@ -1660,6 +1798,12 @@ export interface components {
       max: number | null;
       /** Min */
       min: number | null;
+      /**
+       * Ok
+       * @description moved through at least min_range steps (ranges step)
+       * @default false
+       */
+      ok?: boolean;
       /** Pos */
       pos: number | null;
     };
@@ -1670,6 +1814,12 @@ export interface components {
        * @enum {string}
        */
       arm: "follower" | "leader";
+      /**
+       * Min Range
+       * @description steps each joint must move before Save (LeLab's rule)
+       * @default 100
+       */
+      min_range?: number;
       /** Motors */
       motors: {
         [key: string]: components["schemas"]["CalibrationMotor"];
@@ -1680,6 +1830,12 @@ export interface components {
        * @default null
        */
       path?: string | null;
+      /**
+       * Ready
+       * @description every joint moved enough: Save is allowed
+       * @default false
+       */
+      ready?: boolean;
       /**
        * Step
        * @enum {string}
@@ -1737,6 +1893,8 @@ export interface components {
       last_session: components["schemas"]["SessionEnd"] | null;
       /** Loaded Model */
       loaded_model: string | null;
+      /** @description the serial device that was lost (state error) */
+      lost?: components["schemas"]["DeviceLost"] | null;
       /** @description the current program run (programming only) */
       program?: components["schemas"]["ProgramState"] | null;
       /** Reason */
@@ -1792,6 +1950,12 @@ export interface components {
        * @enum {string}
        */
       arm: "follower" | "leader";
+      /**
+       * Min Range
+       * @description steps each joint must move before Save (LeLab's rule)
+       * @default 100
+       */
+      min_range?: number;
       /** Motors */
       motors: {
         [key: string]: components["schemas"]["CalibrationMotor"];
@@ -1801,6 +1965,12 @@ export interface components {
        * @description written calibration file (step done)
        */
       path?: string | null;
+      /**
+       * Ready
+       * @description every joint moved enough: Save is allowed
+       * @default false
+       */
+      ready?: boolean;
       /**
        * Step
        * @enum {string}
@@ -2519,6 +2689,43 @@ export interface components {
     Detectors: {
       /** Detectors */
       detectors: components["schemas"]["Detector"][];
+    };
+    /**
+     * DeviceLost
+     * @description A serial device that went away while connected (unplugged, USB reset, brown-out, selective
+     *     suspend, or another program took the port): state ``error``, reason ``device_lost``.
+     */
+    DeviceLost: {
+      /**
+       * After Torque On
+       * @description lost within seconds of the follower's torque coming on or a session start: a far jump may have browned out the follower supply
+       */
+      after_torque_on: boolean;
+      /**
+       * Arm
+       * @enum {string}
+       */
+      arm: "follower" | "leader";
+      /** Detail */
+      detail: string;
+      /**
+       * During
+       * @description session kind or state when it happened
+       */
+      during: string;
+      /**
+       * Error
+       * @description what the OS said, e.g. "Access is denied." or "I/O error"
+       */
+      error: string;
+      /** @description the USB adapter, to find it again */
+      identity?: components["schemas"]["PortIdentity"] | null;
+      /** Port */
+      port: string;
+      /** Robot */
+      robot?: string | null;
+      /** T */
+      t: number;
     };
     /** DisconnectRequest */
     DisconnectRequest: {
@@ -3818,6 +4025,22 @@ export interface components {
       /** Vid Pid */
       vid_pid: string | null;
     };
+    /** PortIdentity */
+    PortIdentity: {
+      /**
+       * Description
+       * @default
+       */
+      description?: string;
+      /** Device */
+      device: string;
+      /** Serial Number */
+      serial_number?: string | null;
+      /** Stable Path */
+      stable_path?: string | null;
+      /** Vid Pid */
+      vid_pid?: string | null;
+    };
     /** Ports */
     Ports: {
       /** Ports */
@@ -3849,6 +4072,27 @@ export interface components {
       /** Trajectory */
       trajectory?: string | null;
     };
+    /**
+     * PoseCompare
+     * @description Leader held in the follower's pose: per-joint difference after calibration.
+     */
+    PoseCompare: {
+      /** Joints */
+      joints: components["schemas"]["PoseJoint"][];
+      /** Max Diff */
+      max_diff: number;
+      /**
+       * Off
+       * @description joints further apart than the threshold
+       */
+      off: string[];
+      /** Ok */
+      ok: boolean;
+      /** Threshold */
+      threshold: number;
+      /** Worst */
+      worst: string | null;
+    };
     /** PoseInput */
     PoseInput: {
       /** Name */
@@ -3865,6 +4109,24 @@ export interface components {
       source?: "live" | "trajectory_start" | "trajectory_end" | "manual";
       /** Trajectory */
       trajectory?: string | null;
+    };
+    /** PoseJoint */
+    PoseJoint: {
+      /** Diff */
+      diff: number;
+      /** Follower */
+      follower: number;
+      /** Joint */
+      joint: string;
+      /** Leader */
+      leader: number;
+      /** Ok */
+      ok: boolean;
+      /**
+       * Unit
+       * @enum {string}
+       */
+      unit: "deg" | "%";
     };
     /**
      * Poses
@@ -4603,6 +4865,94 @@ export interface components {
         | components["schemas"]["MotorTemp"]
         | components["schemas"]["DetectorConfidence"]
         | components["schemas"]["SignalValue"];
+    };
+    /** ReconnectRequest */
+    ReconnectRequest: {
+      /**
+       * Timeout S
+       * @description how long to wait for the port to come back
+       * @default 30
+       */
+      timeout_s?: number;
+    };
+    /** ReconnectResult */
+    ReconnectResult: {
+      /**
+       * Alerts
+       * @description active alerts
+       */
+      alerts: components["schemas"]["Alert"][];
+      /** Cameras */
+      cameras: components["schemas"]["CameraStatus"][];
+      /** Detail */
+      detail: string | null;
+      health: components["schemas"]["Health"];
+      last_session: components["schemas"]["SessionEnd"] | null;
+      /** Loaded Model */
+      loaded_model: string | null;
+      /** @description the serial device that was lost (state error) */
+      lost?: components["schemas"]["DeviceLost"] | null;
+      /**
+       * Port Changes
+       * @description arms whose device name changed (new COM number)
+       */
+      port_changes: {
+        [key: string]: string;
+      };
+      /**
+       * Ports
+       * @description arm -> serial device now
+       */
+      ports: {
+        [key: string]: string;
+      };
+      /** @description the current program run (programming only) */
+      program?: components["schemas"]["ProgramState"] | null;
+      /** Reason */
+      reason: string | null;
+      robot: components["schemas"]["RobotStatus"] | null;
+      server: components["schemas"]["ServerStatus"];
+      session: components["schemas"]["Session"] | null;
+      /**
+       * State
+       * @enum {string}
+       */
+      state:
+        | "disconnected"
+        | "connecting"
+        | "idle"
+        | "calibrating"
+        | "teleop"
+        | "recording"
+        | "replaying"
+        | "inferring"
+        | "recording_traj"
+        | "playing"
+        | "programming"
+        | "stopping"
+        | "estopped"
+        | "error";
+      station: components["schemas"]["StationInfo"];
+      /** Sub */
+      sub:
+        | (
+            | "home"
+            | "ranges"
+            | "approach"
+            | "teleop"
+            | "replay"
+            | "countdown"
+            | "warmup"
+            | "episode"
+            | "saving"
+            | "reset"
+            | "capture"
+            | "running"
+            | "waiting"
+            | "paused"
+            | "done"
+          )
+        | null;
     };
     /** RecordRequest */
     RecordRequest: {
@@ -5659,6 +6009,11 @@ export interface components {
       /** Loaded Model */
       loaded_model: string | null;
       /**
+       * @description the serial device that was lost (state error)
+       * @default null
+       */
+      lost?: components["schemas"]["DeviceLost"] | null;
+      /**
        * @description the current program run (programming only)
        * @default null
        */
@@ -5748,6 +6103,8 @@ export interface components {
       last_session: components["schemas"]["SessionEnd"] | null;
       /** Loaded Model */
       loaded_model: string | null;
+      /** @description the serial device that was lost (state error) */
+      lost?: components["schemas"]["DeviceLost"] | null;
       /** @description the current program run (programming only) */
       program?: components["schemas"]["ProgramState"] | null;
       /** Reason */
@@ -6687,6 +7044,64 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  calibration_check_api_v1_calibration_check_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalibrationCheck"];
+        };
+      };
+      /** @description RFC 9457 problem (spec §5.1) */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Problem"];
+        };
+      };
+    };
+  };
+  calibration_compare_api_v1_calibration_compare_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PoseCompare"];
+        };
+      };
+      /** @description RFC 9457 problem (spec §5.1) */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Problem"];
+        };
+      };
+    };
+  };
   calibration_start_api_v1_calibration_start_post: {
     parameters: {
       query?: never;
@@ -8213,6 +8628,39 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Status"];
+        };
+      };
+      /** @description RFC 9457 problem (spec §5.1) */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Problem"];
+        };
+      };
+    };
+  };
+  reconnect_api_v1_robots_reconnect_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["ReconnectRequest"] | null;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ReconnectResult"];
         };
       };
       /** @description RFC 9457 problem (spec §5.1) */

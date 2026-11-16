@@ -108,6 +108,13 @@ export const calibrations: CalibrationFile[] = [
     modified_at: "2026-10-02T15:40:00Z",
     dir: "so101_follower",
   },
+  {
+    arm: "leader",
+    id: "my_leader",
+    path: "~/.cache/huggingface/lerobot/calibration/teleoperators/so101_leader/my_leader.json",
+    modified_at: "2026-10-02T15:44:00Z",
+    dir: "so101_leader",
+  },
 ];
 
 export const discovered: DiscoveredCamera[] = [

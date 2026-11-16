@@ -21,8 +21,10 @@ export function errorText(t: TFunction<"station">, error: unknown): string {
 
 /** The server's own explanation (which motor, which port, which file), when it says more than the code. */
 export function errorDetail(error: unknown): string | null {
-  if (!(error instanceof StationApiError)) return null;
+  if (!(error instanceof StationApiError))
+    return error instanceof Error && error.message ? error.message : null;
   const problem = error.problem;
+  if (!problem && error.status > 0) return `HTTP ${error.status}${error.raw ? `: ${error.raw}` : ""}`;
   const raw: unknown = problem?.detail; // a hand-written Problem may lack it
   const detail = typeof raw === "string" ? raw.trim() : "";
   if (!detail || detail === problem?.title || detail === error.code) return null;

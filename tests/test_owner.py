@@ -196,7 +196,7 @@ def test_bus_disconnect_goes_to_error(connected: Station) -> None:
     st.start_teleop(TeleopRequest(fps=30))
     get_world("mock://follower").inject(disconnect_after_s=0.2)
     wait_for(lambda: st.owner.state == "error", 4)
-    assert st.owner.reason == "bus_lost"
+    assert st.owner.reason == "device_lost"  # the mock unplug: a device that went away
 
 
 def test_telemetry_failure_is_not_fatal(connected: Station, events: Events) -> None:

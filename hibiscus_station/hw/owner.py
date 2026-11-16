@@ -27,6 +27,7 @@ from hibiscus_station.hw.cameras import CameraHub, FrameSet
 from hibiscus_station.hw.factory import build_follower, build_leader, calibration_files
 from hibiscus_station.hw.locks import DeviceBusyError, DeviceLock
 from hibiscus_station.hw.loop import Deadline, LoopStats
+from hibiscus_station.hw.portloss import DeviceLostError, port_identity
 from hibiscus_station.hw.safety import EStop, SafetyFilter, Watchdog
 from hibiscus_station.hw.telemetry import (
     Alert,
@@ -68,6 +69,9 @@ MOTION_STATES = {
 #: replay and trajectories do not (LeLab teleoperates without cameras too).
 CAMERA_SESSIONS = frozenset({"record", "run", "program"})
 BUS_FAIL_LIMIT = 3
+#: A device lost this soon after the follower's torque came on (or a session started) gets the
+#: "big jump / brown-out" hint: the current spike of a far move can reset the follower's supply.
+LOST_AFTER_TORQUE_S = 5.0
 MONITOR_HZ = 10.0
 CALIBRATION_HZ = 50.0
 
@@ -165,6 +169,9 @@ class HardwareOwner:
         self._last_cal_emit = 0.0
         self._camera_alerted: set[str] = set()
         self.ident: int | None = None
+        self.lost: dict[str, Any] | None = None  # the serial device that went away (state error)
+        self.port_ids: dict[str, dict[str, Any] | None] = {}  # arm -> USB identity at connect
+        self._torque_on_t = 0.0
 
     # ================================================================== lifecycle (any thread)
     def start(self) -> None:
@@ -313,6 +320,7 @@ class HardwareOwner:
             "session": sess.view() if sess is not None else None,
             "last_session": self.last_session_summary,
             "loaded_model": self.loaded_model,
+            "lost": self.lost,
         }
         if self.status_hook is not None:  # the Station adds device, home, server (same on REST and WS)
             self.status_hook(out)
@@ -370,6 +378,13 @@ class HardwareOwner:
             return handler(**kwargs)
         except StationError:
             raise
+        except DeviceLostError as exc:
+            self._fail("device_lost", str(exc)[:200])
+            raise StationError(
+                "device_lost",
+                str(exc),
+                params={"command": name, "arm": exc.arm, "port": exc.port, "error": exc.cause[:300]},
+            ) from exc
         except (ConnectionError, RuntimeError, OSError) as exc:
             # A motor that did not answer: say which one and what, never a bare "internal error".
             log.warning("%s failed on the motor bus: %s", name, exc)
@@ -425,7 +440,7 @@ class HardwareOwner:
         except (ConnectionError, RuntimeError, OSError) as exc:
             self.bus_failures += 1
             log.warning("follower read failed (%d): %s", self.bus_failures, exc)
-            if self.bus_failures >= BUS_FAIL_LIMIT:
+            if self.bus_failures >= BUS_FAIL_LIMIT or isinstance(exc, DeviceLostError):
                 self._fail("bus_lost", str(exc)[:200])
             return None
         self.bus_failures = 0
@@ -443,7 +458,7 @@ class HardwareOwner:
                 act = {f"{m}.pos": float(v) for m, v in raw.items()}
         except (ConnectionError, RuntimeError, OSError) as exc:
             self.bus_failures += 1
-            if self.bus_failures >= BUS_FAIL_LIMIT:
+            if self.bus_failures >= BUS_FAIL_LIMIT or isinstance(exc, DeviceLostError):
                 self._fail("bus_lost", f"leader: {exc}"[:200])
             return None
         self.last_leader = {k: float(v) for k, v in act.items()}
@@ -464,6 +479,9 @@ class HardwareOwner:
     def _torque_off(self) -> None:
         if self.follower is None:
             return
+        if getattr(self.follower.bus, "lost", None):
+            self.follower_torque = False  # the device is gone (unpowered or unplugged): nothing to send
+            return
         try:
             self.follower.bus.disable_torque(num_retry=5)
             self.follower_torque = False
@@ -476,6 +494,7 @@ class HardwareOwner:
         bus.sync_write("Goal_Position", {m: int(v) for m, v in raw.items()}, normalize=False)
         bus.enable_torque(num_retry=2)
         self.follower_torque = True
+        self._torque_on_t = time.monotonic()
 
     def _park(self, duration_s: float) -> bool:
         """Smooth move to the profile's rest pose (each step through the SafetyFilter)."""
@@ -648,7 +667,7 @@ class HardwareOwner:
             proc.sample()
         except (ConnectionError, RuntimeError, OSError) as exc:
             self.bus_failures += 1
-            if self.bus_failures >= BUS_FAIL_LIMIT:
+            if self.bus_failures >= BUS_FAIL_LIMIT or isinstance(exc, DeviceLostError):
                 self._fail("bus_lost", str(exc)[:200])
             return
         self.bus_failures = 0
@@ -854,7 +873,38 @@ class HardwareOwner:
         if self.state == "stopping":
             self._set_state("idle", reason=None)
 
+    def _lost_view(self, detail: str) -> dict[str, Any] | None:
+        """Which arm's serial device is gone (its bus is marked lost), with what the UI needs."""
+        p = self.profile
+        for arm, dev in (("follower", self.follower), ("leader", self.leader)):
+            cause = getattr(getattr(dev, "bus", None), "lost", None)
+            if dev is None or not cause:
+                continue
+            port = dev.bus.port
+            started = max(self._torque_on_t, self.session.t0 if self.session is not None else 0.0)
+            since = time.monotonic() - started if started else None
+            return {
+                "arm": arm,
+                "port": port,
+                "error": str(cause)[:300],
+                "identity": self.port_ids.get(arm),
+                "robot": p.id if p else None,
+                "during": self.session.kind if self.session is not None else self.state,
+                # torque-on or a session start just before: a far first move may have browned out
+                # the follower supply
+                "after_torque_on": since is not None
+                and since <= LOST_AFTER_TORQUE_S
+                and self.follower_torque,
+                "t": time.time(),
+                "detail": detail,
+            }
+        return None
+
     def _fail(self, reason: str, detail: str) -> None:
+        lost = self._lost_view(detail)
+        if lost is not None:
+            reason = "device_lost"
+            self.lost = lost
         log.error("hardware error (%s): %s", reason, detail)
         self.estop.press(reason, detail=detail)
         try:
@@ -869,10 +919,13 @@ class HardwareOwner:
         for dev, kind in ((self.follower, "follower"), (self.leader, "leader")):
             if dev is None:
                 continue
+            lost = getattr(dev.bus, "lost", None)
             try:
-                dev.bus.disconnect(disable_torque=kind == "follower" and self._disable_on_disconnect())
+                dev.bus.disconnect(
+                    disable_torque=kind == "follower" and not lost and self._disable_on_disconnect()
+                )
             except Exception as exc:
-                log.warning("%s disconnect: %s", kind, exc)
+                (log.info if lost else log.warning)("%s disconnect: %s", kind, exc)
         self.follower = None
         self.leader = None
         self.follower_calibrated = self.leader_calibrated = False
@@ -919,6 +972,7 @@ class HardwareOwner:
             )
         self.profile = p
         self.estop.clear()
+        self.lost = None
         self._set_state("connecting")
         try:
             self._connect(p)
@@ -1017,6 +1071,10 @@ class HardwareOwner:
         self._lock_port(p.follower.port)
         if p.leader is not None:
             self._lock_port(p.leader.port)
+        # USB identities, to find the adapters again if one goes away (maybe under a new COM name)
+        self.port_ids = {"follower": port_identity(p.follower.port)}
+        if p.leader is not None:
+            self.port_ids["leader"] = port_identity(p.leader.port)
         follower = build_follower(p.follower, self.cal_root)
         self._open_device(follower, p.follower.port, "follower")
         self.follower = follower
@@ -1169,6 +1227,8 @@ class HardwareOwner:
             dev.world.sweep_hold_mid = True  # ...after holding it mid-range for Home
         try:
             proc.start()
+        except DeviceLostError:
+            raise
         except (ConnectionError, RuntimeError, OSError) as exc:
             # Some motors may already be limp: put the arm back as lerobot leaves it after connect.
             try:
@@ -1274,6 +1334,91 @@ class HardwareOwner:
             self._set_state("idle")
             return self.status()
         raise StationError("validation_failed", f"unknown calibration action {action!r}")
+
+    def _cmd_calibration_check(self) -> dict[str, Any]:
+        """Per arm: is it calibrated, and which calibration file on disk do its motors carry now?
+
+        Reads every connected arm's EEPROM (homing offset, limits) and compares it with every
+        calibration file lerobot / LeLab left for SO arms, so the UI can say "this arm already uses
+        LeLab's so_101_follower.json" instead of asking the user to pick among file names. A file
+        found in one arm's folder that matches the *other* arm's motors is flagged, never offered.
+        """
+        self._require("idle", "estopped")
+        files = calibration_files(self.cal_root)
+        cals = {f["path"]: calib.load_file(f["path"]) for f in files}
+        devs = {a: d for a, d in (("follower", self.follower), ("leader", self.leader)) if d is not None}
+        if not devs:
+            raise StationError("not_connected", "connect a robot first", params={"state": self.state})
+        eeprom = {a: d.bus.read_calibration() for a, d in devs.items()}
+        out: dict[str, Any] = {}
+        for arm, dev in devs.items():
+            other = "leader" if arm == "follower" else "follower"
+            own = Path(dev.calibration_fpath)
+            rows = []
+            for f in files:
+                if f["arm"] != arm:
+                    continue
+                c = cals[f["path"]]
+                rows.append(
+                    {
+                        **f,
+                        "own": Path(f["path"]).resolve() == own.resolve(),
+                        "valid": c is not None,
+                        "matches_motors": calib.eeprom_matches(eeprom[arm], c),
+                        "matches_other_arm": other in eeprom and calib.eeprom_matches(eeprom[other], c),
+                    }
+                )
+            rows.sort(key=lambda r: str(r["modified_at"]), reverse=True)
+            rows.sort(key=lambda r: (not r["own"], not r["matches_motors"]))
+            calibrated = self.follower_calibrated if arm == "follower" else self.leader_calibrated
+            own_row = next((r for r in rows if r["own"]), None)
+            carried = sorted(
+                (r for r in rows if r["matches_motors"] and not r["own"] and not r["matches_other_arm"]),
+                key=lambda r: str(r["modified_at"]),
+                reverse=True,
+            )
+            if calibrated:
+                state = "ok"
+            elif carried:
+                state = "adopt"
+            elif own_row is not None:
+                state = "mismatch"
+            else:
+                state = "needs_calibration"
+            out[arm] = {
+                "arm": arm,
+                "state": state,
+                "calibrated": calibrated,
+                "calibration_id": own.stem,
+                "file": str(own),
+                "file_exists": own_row is not None,
+                "suggestion": carried[0] if state == "adopt" else None,
+                "files": rows,
+                "issue": None if calibrated else self.cal_issue.get(arm),
+            }
+        return {"arms": out}
+
+    def _cmd_pose_compare(self, threshold: float = calib.POSE_MATCH_DEG) -> dict[str, Any]:
+        """Both arms' calibrated positions (degrees; gripper in percent) with the user holding the
+        leader in the follower's pose: a joint more than ``threshold`` apart means a wrong file or
+        swapped roles, and teleop would make the follower jump."""
+        self._require("idle")
+        if self.follower is None:
+            raise StationError("not_connected", "connect a robot first", params={"state": self.state})
+        if self.leader is None:
+            raise StationError("not_connected", "this check needs a leader arm", params={"arm": "leader"})
+        for arm, ok in (("follower", self.follower_calibrated), ("leader", self.leader_calibrated)):
+            if not ok:
+                raise StationError("not_calibrated", f"calibrate the {arm} first", params={"arm": arm})
+        fol = self.follower.bus.sync_read("Present_Position", num_retry=2)
+        lea = self.leader.bus.sync_read("Present_Position", num_retry=2)
+        from lerobot.motors import MotorNormMode
+
+        units = {
+            m: "%" if motor.norm_mode is MotorNormMode.RANGE_0_100 else "deg"
+            for m, motor in self.follower.bus.motors.items()
+        }
+        return calib.pose_compare(fol, lea, units, threshold)
 
     # ---- sessions
     def _start_checks(self, kind: str, needs_leader: bool) -> None:

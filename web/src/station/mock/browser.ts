@@ -4,7 +4,9 @@
  * clickable without a backend or a robot. Never part of the production bundle.
  *
  * Query switches (remembered for the tab): ?mock_connected=1, ?mock_paired=1, ?mock_heat=2
- * (°C/s on follower elbow_flex while the arm moves: shows warn → hot → critical safe stop).
+ * (°C/s on follower elbow_flex while the arm moves: shows warn → hot → critical safe stop),
+ * ?mock_calib=ok|lelab|fresh (calibration scenario), ?mock_pose_off=1 (the pose check finds a
+ * wrong file), ?mock_lost=1 (the follower's USB adapter went away: device_lost).
  */
 import { setupWorker } from "msw/browser";
 import type { SocketFactory } from "../ws/control";
@@ -57,6 +59,9 @@ export async function startStationMock(): Promise<SocketFactory> {
     paired: flag("mock_paired", "1") === "1",
     heatRate: Number(flag("mock_heat", "0.6")),
     deadman: true,
+    calib: flag("mock_calib", "ok") as "ok" | "lelab" | "fresh",
+    poseOff: flag("mock_pose_off", "0") === "1",
+    lost: flag("mock_lost", "0") === "1",
     frameSource: canvasFrames(),
   });
   const worker = setupWorker(...stationHandlers(sim));

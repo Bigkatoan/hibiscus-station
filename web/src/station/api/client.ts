@@ -19,13 +19,16 @@ export class StationApiError extends Error {
   readonly status: number;
   readonly code: string;
   readonly problem: Problem | null;
+  /** The response body when it was not a Problem (a proxy page, FastAPI's `{"detail": ...}`). */
+  readonly raw: string;
 
-  constructor(status: number, problem: Problem | null, fallbackCode = "unknown_error") {
+  constructor(status: number, problem: Problem | null, fallbackCode = "unknown_error", raw = "") {
     super(problem?.detail ?? problem?.title ?? `HTTP ${status}`);
     this.name = "StationApiError";
     this.status = status;
     this.problem = problem;
     this.code = problem?.code ?? fallbackCode;
+    this.raw = raw;
   }
 
   get params(): Record<string, unknown> {
@@ -83,7 +86,12 @@ export async function stationFetch<T>(
       data = null;
     }
   }
-  if (!res.ok) throw new StationApiError(res.status, isProblem(data) ? data : null);
+  if (!res.ok) {
+    if (isProblem(data)) throw new StationApiError(res.status, data);
+    const d = (data as { detail?: unknown } | null)?.detail;
+    const raw = typeof d === "string" ? d : d !== undefined ? JSON.stringify(d) : text;
+    throw new StationApiError(res.status, null, "unknown_error", raw.slice(0, 500));
+  }
   return data as T;
 }
 
