@@ -1,0 +1,48 @@
+# Hibiscus Station on the computer next to the robot. Written by deploy/install.sh together with
+# .env (see .env.example); start with `docker compose up -d` in this folder or `hibiscus-station-ctl up`.
+#
+# Network: host networking. Station binds 127.0.0.1:18210 on the host itself, exactly like the
+# Python install, so its security model is unchanged: loopback only, a login token, a Host/Origin
+# allow-list. Opening it on the LAN is opt-in (STATION_BIND + HIBISCUS_STATION_TOKEN +
+# HIBISCUS_STATION_ALLOWED_HOSTS in .env, see docs/deploy.md "Open Station on the LAN").
+#
+# Devices: /dev is bind-mounted and access is granted per device class with cgroup rules instead
+# of a fixed `devices:` list, because robot USB devices come and go: an arm unplugged at boot must
+# not stop the container from starting, "find the port by unplugging" must see the port vanish
+# and come back, and the stable /dev/serial/by-id and /dev/v4l/by-id links must resolve. The
+# rules allow only USB serial adapters (ttyACM 166, ttyUSB 188), cameras (video4linux 81) and raw
+# USB (189, Intel RealSense); every other device node stays inaccessible to the container.
+name: hibiscus-station
+
+services:
+  station:
+    image: ${STATION_IMAGE:-ghcr.io/bigkatoan/hibiscus-station}:${STATION_TAG:?set STATION_TAG in .env, e.g. 0.2.0-cpu}
+    container_name: ${STATION_CONTAINER:-hibiscus-station}
+    restart: unless-stopped
+    network_mode: host
+    # The host user that owns the data folders; the serial/camera device groups of the host.
+    user: "${PUID:-1000}:${PGID:-1000}"
+    group_add:
+      - "${DIALOUT_GID:-20}"
+      - "${VIDEO_GID:-44}"
+    environment:
+      HIBISCUS_STATION_TOKEN: ${HIBISCUS_STATION_TOKEN:-}
+      HIBISCUS_STATION_ALLOWED_HOSTS: ${HIBISCUS_STATION_ALLOWED_HOSTS:-}
+      TZ: ${TZ:-Etc/UTC}
+    command: "--no-browser --host ${STATION_BIND:-127.0.0.1} --port ${STATION_PORT:-18210} ${STATION_EXTRA_ARGS:-}"
+    volumes:
+      - ${STATION_DATA:?set STATION_DATA in .env}:/data
+      - ${STATION_CALIBRATION:?set STATION_CALIBRATION in .env}:/calibration
+      - /dev:/dev
+      - /run/udev:/run/udev:ro
+    device_cgroup_rules:
+      - "c 166:* rmw"
+      - "c 188:* rmw"
+      - "c 81:* rmw"
+      - "c 189:* rmw"
+    # Station's shutdown holds the arm, parks it at the rest pose and turns the torque off: give it
+    # time before Docker kills the process.
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}

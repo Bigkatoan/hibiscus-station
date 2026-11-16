@@ -1,0 +1,82 @@
+import { useCallback } from "react";
+import { useTranslation } from "react-i18next";
+import { Progress } from "@/components/ui/misc";
+import { api } from "../api/client";
+import type { Job } from "../api/types";
+import { useRuntime, useStation } from "../ws/StationProvider";
+import type { StationSnapshot } from "../ws/store";
+
+/** Session control (next / rerecord / stop): WS first (no HTTP round trip), REST fallback. */
+export function useSessionControl(): (action: "next" | "rerecord" | "stop") => void {
+  const { control } = useRuntime();
+  return useCallback(
+    (action) => {
+      if (!control.send({ type: "control", action })) {
+        void api.post("/sessions/current/control", { action }).catch(() => undefined);
+      }
+    },
+    [control],
+  );
+}
+
+/** True while a critical condition holds (critical alert active or thermal/electrical latch). */
+export function useCritical(): boolean {
+  return useStation(
+    (s: StationSnapshot) =>
+      s.alerts.some((a) => a.level === "critical") ||
+      (s.status?.state === "estopped" && ["thermal", "electrical"].includes(s.status.reason ?? "")),
+  );
+}
+
+/** Display a loosely typed job result value. */
+export function scalar(v: unknown): string {
+  return typeof v === "string" || typeof v === "number" || typeof v === "boolean" ? String(v) : "?";
+}
+
+export function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  const units = ["KiB", "MiB", "GiB", "TiB"];
+  let v = n / 1024;
+  let i = 0;
+  while (v >= 1024 && i < units.length - 1) {
+    v /= 1024;
+    i += 1;
+  }
+  return `${v.toFixed(v >= 100 ? 0 : 1)} ${units[i] ?? "GiB"}`;
+}
+
+/** Progress of one job (upload / pull / import / load) with its phase. */
+export function JobProgress({ job }: { job: Job }) {
+  const { t } = useTranslation("station");
+  const p = job.progress;
+  const pct = p.total > 0 ? (p.done / p.total) * 100 : job.status === "succeeded" ? 100 : 0;
+  return (
+    <div className="flex flex-col gap-1" data-testid={`job-${job.id}`} data-status={job.status}>
+      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+        <span>
+          {t(`jobs.kind_${job.kind}`)} · {t(`jobs.status_${job.status}`)}
+          {` · ${t(`jobs.phase_${p.phase}`, { defaultValue: p.phase })}`}
+        </span>
+        <span className="tabular-nums text-xs">
+          {p.unit === "bytes" ? `${formatBytes(p.done)} / ${formatBytes(p.total)}` : `${p.done} / ${p.total}`}{" "}
+          · {pct.toFixed(0)}%
+        </span>
+      </div>
+      <Progress value={pct} aria-label={t(`jobs.kind_${job.kind}`)} />
+      {job.error ? (
+        <p className="text-sm text-destructive">
+          {t(`errors.${job.error.code}`, { defaultValue: t("errors.unknown_error") })}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/** Latest job of a kind for a subject (dataset name / model key), from the live store. */
+export function useLatestJob(kind: Job["kind"], subject?: string | null): Job | null {
+  const jobs = useStation((s: StationSnapshot) => s.jobs);
+  const list = Object.values(jobs).filter(
+    (j) => j.kind === kind && (subject === undefined || j.subject === subject || subject === null),
+  );
+  return list[list.length - 1] ?? null;
+}

@@ -1,0 +1,379 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hibiscus.local/api/policy-schemas/diffusion.json",
+  "title": "DiffusionConfig (diffusion)",
+  "description": "Configuration class for DiffusionPolicy.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "n_obs_steps": {
+      "type": "integer",
+      "default": 2,
+      "description": "Number of environment steps worth of observations to pass to the policy (takes the current step and additional steps going back).",
+      "minimum": 1,
+      "x-hibiscus-group": "basic",
+      "x-hibiscus-cli": "--policy.n_obs_steps"
+    },
+    "horizon": {
+      "type": "integer",
+      "default": 64,
+      "description": "Diffusion model action prediction size as detailed in `DiffusionPolicy.select_action`.",
+      "x-hibiscus-group": "basic",
+      "x-hibiscus-cli": "--policy.horizon"
+    },
+    "n_action_steps": {
+      "type": "integer",
+      "default": 32,
+      "description": "The number of action steps to run in the environment for one invocation of the policy. See `DiffusionPolicy.select_action` for more details.",
+      "minimum": 1,
+      "x-hibiscus-group": "basic",
+      "x-hibiscus-cli": "--policy.n_action_steps"
+    },
+    "normalization_mapping": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "enum": [
+          "MIN_MAX",
+          "MEAN_STD",
+          "IDENTITY",
+          "QUANTILES",
+          "QUANTILE10"
+        ]
+      },
+      "default": {
+        "VISUAL": "MEAN_STD",
+        "STATE": "MIN_MAX",
+        "ACTION": "MIN_MAX"
+      },
+      "description": "A dictionary that maps from a str value of FeatureType (e.g., \"STATE\", \"VISUAL\") to a corresponding NormalizationMode (e.g., NormalizationMode.MIN_MAX)",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.normalization_mapping"
+    },
+    "drop_n_last_frames": {
+      "type": "integer",
+      "default": 7,
+      "description": "The original implementation doesn't sample frames for the last 7 steps, which avoids excessive padding and leads to improved training results.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.drop_n_last_frames"
+    },
+    "vision_backbone": {
+      "type": "string",
+      "default": "resnet18",
+      "description": "Name of the torchvision resnet backbone to use for encoding images.",
+      "pattern": "^resnet",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.vision_backbone"
+    },
+    "resize_shape": {
+      "anyOf": [
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "(H, W) shape to resize images to as a preprocessing step for the vision backbone. If None, no resizing is done and the original image resolution is used.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.resize_shape"
+    },
+    "crop_ratio": {
+      "type": "number",
+      "default": 1.0,
+      "description": "Ratio in (0, 1] used to derive the crop size from resize_shape (crop_h = int(resize_shape[0] * crop_ratio), likewise for width). Set to 1.0 to disable cropping. Only takes effect when resize_shape is not None.",
+      "exclusiveMinimum": 0,
+      "maximum": 1,
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.crop_ratio"
+    },
+    "crop_shape": {
+      "anyOf": [
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "(H, W) shape to crop images to. When resize_shape is set and crop_ratio < 1.0, this is computed automatically. Can also be set directly for legacy configs that use crop-only (without resize). If None and no derivation applies, no cropping is done.",
+      "x-hibiscus-group": "basic",
+      "x-hibiscus-cli": "--policy.crop_shape"
+    },
+    "crop_is_random": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether the crop should be random at training time (it's always a center crop in eval mode).",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.crop_is_random"
+    },
+    "pretrained_backbone_weights": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "default": "ResNet18_Weights.IMAGENET1K_V1",
+      "description": "Pretrained weights from torchvision to initialize the backbone. `None` means no pretrained weights.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.pretrained_backbone_weights"
+    },
+    "use_group_norm": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether to replace batch normalization with group normalization in the backbone. The group sizes are set to be about 16 (to be precise, feature_dim // 16).",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.use_group_norm"
+    },
+    "spatial_softmax_num_keypoints": {
+      "type": "integer",
+      "default": 32,
+      "description": "Number of keypoints for SpatialSoftmax.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.spatial_softmax_num_keypoints"
+    },
+    "use_separate_rgb_encoder_per_camera": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether to use a separate RGB encoder for each camera view.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.use_separate_rgb_encoder_per_camera"
+    },
+    "down_dims": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      },
+      "default": [
+        512,
+        1024,
+        2048
+      ],
+      "description": "Feature dimension for each stage of temporal downsampling in the diffusion modeling Unet. You may provide a variable number of dimensions, therefore also controlling the degree of downsampling.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.down_dims"
+    },
+    "kernel_size": {
+      "type": "integer",
+      "default": 5,
+      "description": "The convolutional kernel size of the diffusion modeling Unet.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.kernel_size"
+    },
+    "n_groups": {
+      "type": "integer",
+      "default": 8,
+      "description": "Number of groups used in the group norm of the Unet's convolutional blocks.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.n_groups"
+    },
+    "diffusion_step_embed_dim": {
+      "type": "integer",
+      "default": 128,
+      "description": "The Unet is conditioned on the diffusion timestep via a small non-linear network. This is the output dimension of that network, i.e., the embedding dimension.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.diffusion_step_embed_dim"
+    },
+    "use_film_scale_modulation": {
+      "type": "boolean",
+      "default": true,
+      "description": "FiLM (https://huggingface.co/papers/1709.07871) is used for the Unet conditioning. Bias modulation is used be default, while this parameter indicates whether to also use scale modulation.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.use_film_scale_modulation"
+    },
+    "gradient_checkpointing": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether to checkpoint the Unet residual blocks during training. This reduces activation memory at the cost of recomputing those blocks during the backward pass.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.gradient_checkpointing"
+    },
+    "noise_scheduler_type": {
+      "type": "string",
+      "default": "DDPM",
+      "description": "Name of the noise scheduler to use. Supported options: [\"DDPM\", \"DDIM\"].",
+      "enum": [
+        "DDPM",
+        "DDIM"
+      ],
+      "x-hibiscus-group": "basic",
+      "x-hibiscus-cli": "--policy.noise_scheduler_type"
+    },
+    "num_train_timesteps": {
+      "type": "integer",
+      "default": 100,
+      "description": "Number of diffusion steps for the forward diffusion schedule.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.num_train_timesteps"
+    },
+    "beta_schedule": {
+      "type": "string",
+      "default": "squaredcos_cap_v2",
+      "description": "Name of the diffusion beta schedule as per DDPMScheduler from Hugging Face diffusers.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.beta_schedule"
+    },
+    "beta_start": {
+      "type": "number",
+      "default": 0.0001,
+      "description": "Beta value for the first forward-diffusion step.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.beta_start"
+    },
+    "beta_end": {
+      "type": "number",
+      "default": 0.02,
+      "description": "Beta value for the last forward-diffusion step.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.beta_end"
+    },
+    "prediction_type": {
+      "type": "string",
+      "default": "epsilon",
+      "description": "The type of prediction that the diffusion modeling Unet makes. Choose from \"epsilon\" or \"sample\". These have equivalent outcomes from a latent variable modeling perspective, but \"epsilon\" has been shown to work better in many deep neural network settings.",
+      "enum": [
+        "epsilon",
+        "sample"
+      ],
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.prediction_type"
+    },
+    "clip_sample": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether to clip the sample to [-`clip_sample_range`, +`clip_sample_range`] for each denoising step at inference time. WARNING: you will need to make sure your action-space is normalized to fit within this range.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.clip_sample"
+    },
+    "clip_sample_range": {
+      "type": "number",
+      "default": 1.0,
+      "description": "The magnitude of the clipping range as described above.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.clip_sample_range"
+    },
+    "num_inference_steps": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "default": null,
+      "description": "Number of reverse diffusion steps to use at inference time (steps are evenly spaced). If not provided, this defaults to be the same as `num_train_timesteps`.",
+      "x-hibiscus-group": "basic",
+      "x-hibiscus-cli": "--policy.num_inference_steps"
+    },
+    "do_mask_loss_for_padding": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether to mask the loss when there are copy-padded actions. See `LeRobotDataset` and `load_previous_and_future_frames` for more information. Note, this defaults to False as the original Diffusion Policy implementation does the same.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.do_mask_loss_for_padding"
+    },
+    "optimizer_lr": {
+      "type": "number",
+      "default": 0.0001,
+      "description": "Training presets",
+      "exclusiveMinimum": 0,
+      "x-hibiscus-group": "basic",
+      "x-hibiscus-cli": "--policy.optimizer_lr"
+    },
+    "optimizer_betas": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 2,
+      "maxItems": 2,
+      "default": [
+        0.95,
+        0.999
+      ],
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.optimizer_betas"
+    },
+    "optimizer_eps": {
+      "type": "number",
+      "default": 1e-08,
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.optimizer_eps"
+    },
+    "optimizer_weight_decay": {
+      "type": "number",
+      "default": 1e-06,
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.optimizer_weight_decay"
+    },
+    "scheduler_name": {
+      "type": "string",
+      "default": "cosine",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.scheduler_name"
+    },
+    "scheduler_warmup_steps": {
+      "type": "integer",
+      "default": 500,
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.scheduler_warmup_steps"
+    }
+  },
+  "x-hibiscus": {
+    "policy_type": "diffusion",
+    "config_class": "lerobot.policies.diffusion.configuration_diffusion.DiffusionConfig",
+    "lerobot_version": "0.7.1",
+    "generator_version": "1",
+    "cli_prefix": "--policy.",
+    "basic_order": [
+      "horizon",
+      "n_action_steps",
+      "n_obs_steps",
+      "noise_scheduler_type",
+      "num_inference_steps",
+      "crop_shape",
+      "optimizer_lr"
+    ],
+    "excluded": {
+      "input_features": "derived from the dataset version schema by the worker",
+      "output_features": "derived from the dataset version schema by the worker",
+      "device": "always 'cuda'; the GPU is chosen by the scheduler (CUDA_VISIBLE_DEVICES)",
+      "dtype": "torch.dtype is not JSON-serialisable; precision is controlled by train.mixed_precision",
+      "use_amp": "deprecated in 0.7.1; use train.mixed_precision (--accelerator.mixed_precision)",
+      "use_peft": "set implicitly when train.peft is provided",
+      "push_to_hub": "always false; Hub push is a separate Hibiscus action on a model",
+      "repo_id": "Hub push is a separate Hibiscus action",
+      "private": "Hub push is a separate Hibiscus action",
+      "tags": "Hub push is a separate Hibiscus action",
+      "license": "Hub push is a separate Hibiscus action",
+      "pretrained_path": "set from RunCreate.init_from (model or checkpoint) by the worker",
+      "pretrained_revision": "set from RunCreate.init_from by the worker",
+      "compile_model": "torch.compile is disabled on the 2-GPU box (P40 unsupported by inductor)",
+      "compile_mode": "torch.compile is disabled on the 2-GPU box"
+    },
+    "cross_field_rules": [
+      {
+        "rule": "n_action_steps <= horizon - n_obs_steps + 1",
+        "code": "policy_config_invalid"
+      }
+    ]
+  }
+}

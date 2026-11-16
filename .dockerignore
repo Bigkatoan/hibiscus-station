@@ -1,0 +1,20 @@
+# Only what the image build needs goes into the context (docker/Dockerfile, docker/Dockerfile.jetson).
+**
+!pyproject.toml
+!uv.lock
+!hatch_build.py
+!README.md
+!LICENSE
+!ASSETS-LICENSE
+!NOTICE
+!openapi.json
+!hibiscus_station/**
+!web/**
+!docker/**
+web/node_modules
+web/dist
+web/dist-mock
+web/coverage
+**/__pycache__
+**/*.pyc
+hibiscus_station/static

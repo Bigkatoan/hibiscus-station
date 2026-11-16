@@ -1,0 +1,1101 @@
+{
+  "version": 1,
+  "blocks": [
+    {
+      "type": "hb_start",
+      "category": "start",
+      "output": "hat",
+      "ast": "program",
+      "fields": [],
+      "inputs": [
+        {
+          "name": "DO",
+          "kind": "statement",
+          "check": null,
+          "optional": false,
+          "repeated": false
+        }
+      ]
+    },
+    {
+      "type": "hb_play_trajectory",
+      "category": "motion",
+      "output": "statement",
+      "ast": "play_trajectory",
+      "fields": [
+        {
+          "name": "TRAJECTORY",
+          "kind": "trajectory",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        },
+        {
+          "name": "SPEED",
+          "kind": "number",
+          "options": null,
+          "min": 10.0,
+          "max": 150.0,
+          "default": 100.0,
+          "optional": false
+        }
+      ],
+      "inputs": []
+    },
+    {
+      "type": "hb_move_to_pose",
+      "category": "motion",
+      "output": "statement",
+      "ast": "move_to_pose",
+      "fields": [
+        {
+          "name": "POSE",
+          "kind": "pose",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        },
+        {
+          "name": "SPEED",
+          "kind": "number",
+          "options": null,
+          "min": 1.0,
+          "max": 90.0,
+          "default": 30.0,
+          "optional": false
+        }
+      ],
+      "inputs": []
+    },
+    {
+      "type": "hb_gripper",
+      "category": "motion",
+      "output": "statement",
+      "ast": "gripper",
+      "fields": [
+        {
+          "name": "ACTION",
+          "kind": "dropdown",
+          "options": ["open", "close", "set"],
+          "min": null,
+          "max": null,
+          "default": "open",
+          "optional": false
+        },
+        {
+          "name": "PERCENT",
+          "kind": "number",
+          "options": null,
+          "min": 0.0,
+          "max": 100.0,
+          "default": 50.0,
+          "optional": true
+        }
+      ],
+      "inputs": []
+    },
+    {
+      "type": "hb_go_home",
+      "category": "motion",
+      "output": "statement",
+      "ast": "go_home",
+      "fields": [],
+      "inputs": []
+    },
+    {
+      "type": "hb_relax_arm",
+      "category": "motion",
+      "output": "statement",
+      "ast": "relax_arm",
+      "fields": [],
+      "inputs": []
+    },
+    {
+      "type": "hb_run_model_for",
+      "category": "ai",
+      "output": "statement",
+      "ast": "run_model",
+      "fields": [
+        {
+          "name": "MODEL",
+          "kind": "model",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        },
+        {
+          "name": "TASK",
+          "kind": "text",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": "",
+          "optional": true
+        },
+        {
+          "name": "SECONDS",
+          "kind": "number",
+          "options": null,
+          "min": 0.1,
+          "max": 600.0,
+          "default": 10.0,
+          "optional": false
+        }
+      ],
+      "inputs": []
+    },
+    {
+      "type": "hb_run_model_until",
+      "category": "ai",
+      "output": "statement",
+      "ast": "run_model",
+      "fields": [
+        {
+          "name": "MODEL",
+          "kind": "model",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        },
+        {
+          "name": "TASK",
+          "kind": "text",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": "",
+          "optional": true
+        },
+        {
+          "name": "TIMEOUT",
+          "kind": "number",
+          "options": null,
+          "min": 0.1,
+          "max": 86400.0,
+          "default": 30.0,
+          "optional": true
+        }
+      ],
+      "inputs": [
+        {
+          "name": "UNTIL",
+          "kind": "condition",
+          "check": null,
+          "optional": false,
+          "repeated": false
+        },
+        {
+          "name": "ON_TIMEOUT",
+          "kind": "statement",
+          "check": null,
+          "optional": true,
+          "repeated": false
+        }
+      ]
+    },
+    {
+      "type": "controls_if",
+      "category": "control",
+      "output": "statement",
+      "ast": "if",
+      "fields": [],
+      "inputs": [
+        {
+          "name": "IF",
+          "kind": "condition",
+          "check": null,
+          "optional": false,
+          "repeated": true
+        },
+        {
+          "name": "DO",
+          "kind": "statement",
+          "check": null,
+          "optional": false,
+          "repeated": true
+        },
+        {
+          "name": "ELSE",
+          "kind": "statement",
+          "check": null,
+          "optional": true,
+          "repeated": false
+        }
+      ]
+    },
+    {
+      "type": "controls_repeat_ext",
+      "category": "control",
+      "output": "statement",
+      "ast": "repeat",
+      "fields": [],
+      "inputs": [
+        {
+          "name": "TIMES",
+          "kind": "value",
+          "check": "number",
+          "optional": false,
+          "repeated": false
+        },
+        {
+          "name": "DO",
+          "kind": "statement",
+          "check": null,
+          "optional": false,
+          "repeated": false
+        }
+      ]
+    },
+    {
+      "type": "hb_repeat_forever",
+      "category": "control",
+      "output": "statement",
+      "ast": "forever",
+      "fields": [],
+      "inputs": [
+        {
+          "name": "DO",
+          "kind": "statement",
+          "check": null,
+          "optional": false,
+          "repeated": false
+        }
+      ]
+    },
+    {
+      "type": "controls_whileUntil",
+      "category": "control",
+      "output": "statement",
+      "ast": "while",
+      "fields": [
+        {
+          "name": "MODE",
+          "kind": "dropdown",
+          "options": ["WHILE", "UNTIL"],
+          "min": null,
+          "max": null,
+          "default": "WHILE",
+          "optional": false
+        }
+      ],
+      "inputs": [
+        {
+          "name": "BOOL",
+          "kind": "condition",
+          "check": null,
+          "optional": false,
+          "repeated": false
+        },
+        {
+          "name": "DO",
+          "kind": "statement",
+          "check": null,
+          "optional": false,
+          "repeated": false
+        }
+      ]
+    },
+    {
+      "type": "hb_wait",
+      "category": "control",
+      "output": "statement",
+      "ast": "wait",
+      "fields": [],
+      "inputs": [
+        {
+          "name": "SECONDS",
+          "kind": "value",
+          "check": "number",
+          "optional": false,
+          "repeated": false
+        }
+      ]
+    },
+    {
+      "type": "hb_wait_until",
+      "category": "control",
+      "output": "statement",
+      "ast": "wait_until",
+      "fields": [
+        {
+          "name": "TIMEOUT",
+          "kind": "number",
+          "options": null,
+          "min": 0.1,
+          "max": 86400.0,
+          "default": 30.0,
+          "optional": true
+        }
+      ],
+      "inputs": [
+        {
+          "name": "COND",
+          "kind": "condition",
+          "check": null,
+          "optional": false,
+          "repeated": false
+        },
+        {
+          "name": "ON_TIMEOUT",
+          "kind": "statement",
+          "check": null,
+          "optional": true,
+          "repeated": false
+        }
+      ]
+    },
+    {
+      "type": "hb_stop_program",
+      "category": "control",
+      "output": "statement",
+      "ast": "stop",
+      "fields": [],
+      "inputs": []
+    },
+    {
+      "type": "logic_operation",
+      "category": "conditions",
+      "output": "boolean",
+      "ast": "logic",
+      "fields": [
+        {
+          "name": "OP",
+          "kind": "dropdown",
+          "options": ["AND", "OR"],
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        }
+      ],
+      "inputs": [
+        {
+          "name": "A",
+          "kind": "condition",
+          "check": null,
+          "optional": false,
+          "repeated": false
+        },
+        {
+          "name": "B",
+          "kind": "condition",
+          "check": null,
+          "optional": false,
+          "repeated": false
+        }
+      ]
+    },
+    {
+      "type": "logic_negate",
+      "category": "conditions",
+      "output": "boolean",
+      "ast": "not",
+      "fields": [],
+      "inputs": [
+        {
+          "name": "BOOL",
+          "kind": "condition",
+          "check": null,
+          "optional": false,
+          "repeated": false
+        }
+      ]
+    },
+    {
+      "type": "logic_boolean",
+      "category": "conditions",
+      "output": "boolean",
+      "ast": "bool",
+      "fields": [
+        {
+          "name": "BOOL",
+          "kind": "dropdown",
+          "options": ["TRUE", "FALSE"],
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        }
+      ],
+      "inputs": []
+    },
+    {
+      "type": "logic_compare",
+      "category": "conditions",
+      "output": "boolean",
+      "ast": "compare",
+      "fields": [
+        {
+          "name": "OP",
+          "kind": "dropdown",
+          "options": ["EQ", "NEQ", "LT", "LTE", "GT", "GTE"],
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        }
+      ],
+      "inputs": [
+        {
+          "name": "A",
+          "kind": "value",
+          "check": "any",
+          "optional": false,
+          "repeated": false
+        },
+        {
+          "name": "B",
+          "kind": "value",
+          "check": "any",
+          "optional": false,
+          "repeated": false
+        }
+      ]
+    },
+    {
+      "type": "hb_camera_sees",
+      "category": "conditions",
+      "output": "boolean",
+      "ast": "camera_sees",
+      "fields": [
+        {
+          "name": "CAMERA",
+          "kind": "camera",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": true
+        },
+        {
+          "name": "DETECTOR",
+          "kind": "detector",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        },
+        {
+          "name": "LABEL",
+          "kind": "label",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        }
+      ],
+      "inputs": []
+    },
+    {
+      "type": "hb_detector_confidence",
+      "category": "conditions",
+      "output": "number",
+      "ast": "detector_confidence",
+      "fields": [
+        {
+          "name": "CAMERA",
+          "kind": "camera",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": true
+        },
+        {
+          "name": "DETECTOR",
+          "kind": "detector",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        },
+        {
+          "name": "LABEL",
+          "kind": "label",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": true
+        }
+      ],
+      "inputs": []
+    },
+    {
+      "type": "hb_button_pressed",
+      "category": "operator",
+      "output": "boolean",
+      "ast": "button_pressed",
+      "fields": [
+        {
+          "name": "BUTTON",
+          "kind": "button",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        }
+      ],
+      "inputs": []
+    },
+    {
+      "type": "hb_key_pressed",
+      "category": "operator",
+      "output": "boolean",
+      "ast": "key_pressed",
+      "fields": [
+        {
+          "name": "KEY",
+          "kind": "key",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        }
+      ],
+      "inputs": []
+    },
+    {
+      "type": "hb_ask_operator",
+      "category": "operator",
+      "output": "statement",
+      "ast": "ask",
+      "fields": [
+        {
+          "name": "QUESTION",
+          "kind": "text",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        },
+        {
+          "name": "CHOICES",
+          "kind": "text",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": "yes,no",
+          "optional": false
+        },
+        {
+          "name": "VAR",
+          "kind": "variable",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        },
+        {
+          "name": "TIMEOUT",
+          "kind": "number",
+          "options": null,
+          "min": 0.1,
+          "max": 86400.0,
+          "default": null,
+          "optional": true
+        }
+      ],
+      "inputs": []
+    },
+    {
+      "type": "hb_gripper_holding",
+      "category": "conditions",
+      "output": "boolean",
+      "ast": "gripper_holding",
+      "fields": [],
+      "inputs": []
+    },
+    {
+      "type": "hb_joint_compare",
+      "category": "conditions",
+      "output": "boolean",
+      "ast": "compare",
+      "fields": [
+        {
+          "name": "JOINT",
+          "kind": "joint",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        },
+        {
+          "name": "OP",
+          "kind": "dropdown",
+          "options": ["LT", "GT"],
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        },
+        {
+          "name": "DEG",
+          "kind": "number",
+          "options": null,
+          "min": -360.0,
+          "max": 360.0,
+          "default": 0.0,
+          "optional": false
+        }
+      ],
+      "inputs": []
+    },
+    {
+      "type": "hb_joint_value",
+      "category": "conditions",
+      "output": "number",
+      "ast": "joint_value",
+      "fields": [
+        {
+          "name": "JOINT",
+          "kind": "joint",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        }
+      ],
+      "inputs": []
+    },
+    {
+      "type": "hb_near_pose",
+      "category": "conditions",
+      "output": "boolean",
+      "ast": "near_pose",
+      "fields": [
+        {
+          "name": "POSE",
+          "kind": "pose",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        },
+        {
+          "name": "TOLERANCE",
+          "kind": "number",
+          "options": null,
+          "min": 0.1,
+          "max": 45.0,
+          "default": 3.0,
+          "optional": false
+        }
+      ],
+      "inputs": []
+    },
+    {
+      "type": "hb_motor_temp_compare",
+      "category": "conditions",
+      "output": "boolean",
+      "ast": "compare",
+      "fields": [
+        {
+          "name": "MOTOR",
+          "kind": "motor",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": "any",
+          "optional": false
+        },
+        {
+          "name": "OP",
+          "kind": "dropdown",
+          "options": ["GT", "LT"],
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        },
+        {
+          "name": "TEMP",
+          "kind": "number",
+          "options": null,
+          "min": 0.0,
+          "max": 100.0,
+          "default": 50.0,
+          "optional": false
+        }
+      ],
+      "inputs": []
+    },
+    {
+      "type": "hb_motor_temp",
+      "category": "conditions",
+      "output": "number",
+      "ast": "motor_temp",
+      "fields": [
+        {
+          "name": "MOTOR",
+          "kind": "motor",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": "any",
+          "optional": false
+        }
+      ],
+      "inputs": []
+    },
+    {
+      "type": "hb_signal_equals",
+      "category": "conditions",
+      "output": "boolean",
+      "ast": "signal_equals",
+      "fields": [
+        {
+          "name": "NAME",
+          "kind": "signal",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        },
+        {
+          "name": "VALUE",
+          "kind": "text",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        }
+      ],
+      "inputs": []
+    },
+    {
+      "type": "hb_signal_value",
+      "category": "conditions",
+      "output": "number",
+      "ast": "signal_value",
+      "fields": [
+        {
+          "name": "NAME",
+          "kind": "signal",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        }
+      ],
+      "inputs": []
+    },
+    {
+      "type": "hb_message_received",
+      "category": "conditions",
+      "output": "boolean",
+      "ast": "message_received",
+      "fields": [
+        {
+          "name": "SOURCE",
+          "kind": "dropdown",
+          "options": ["http", "mqtt"],
+          "min": null,
+          "max": null,
+          "default": "http",
+          "optional": false
+        },
+        {
+          "name": "NAME",
+          "kind": "text",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        }
+      ],
+      "inputs": []
+    },
+    {
+      "type": "math_number",
+      "category": "data",
+      "output": "number",
+      "ast": "number",
+      "fields": [
+        {
+          "name": "NUM",
+          "kind": "number",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        }
+      ],
+      "inputs": []
+    },
+    {
+      "type": "math_arithmetic",
+      "category": "data",
+      "output": "number",
+      "ast": "arith",
+      "fields": [
+        {
+          "name": "OP",
+          "kind": "dropdown",
+          "options": ["ADD", "MINUS", "MULTIPLY", "DIVIDE", "POWER"],
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        }
+      ],
+      "inputs": [
+        {
+          "name": "A",
+          "kind": "value",
+          "check": "number",
+          "optional": false,
+          "repeated": false
+        },
+        {
+          "name": "B",
+          "kind": "value",
+          "check": "number",
+          "optional": false,
+          "repeated": false
+        }
+      ]
+    },
+    {
+      "type": "math_modulo",
+      "category": "data",
+      "output": "number",
+      "ast": "arith",
+      "fields": [],
+      "inputs": [
+        {
+          "name": "DIVIDEND",
+          "kind": "value",
+          "check": "number",
+          "optional": false,
+          "repeated": false
+        },
+        {
+          "name": "DIVISOR",
+          "kind": "value",
+          "check": "number",
+          "optional": false,
+          "repeated": false
+        }
+      ]
+    },
+    {
+      "type": "math_random_int",
+      "category": "data",
+      "output": "number",
+      "ast": "random_int",
+      "fields": [],
+      "inputs": [
+        {
+          "name": "FROM",
+          "kind": "value",
+          "check": "number",
+          "optional": false,
+          "repeated": false
+        },
+        {
+          "name": "TO",
+          "kind": "value",
+          "check": "number",
+          "optional": false,
+          "repeated": false
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "category": "data",
+      "output": "text",
+      "ast": "text",
+      "fields": [
+        {
+          "name": "TEXT",
+          "kind": "text",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        }
+      ],
+      "inputs": []
+    },
+    {
+      "type": "text_join",
+      "category": "data",
+      "output": "text",
+      "ast": "join",
+      "fields": [],
+      "inputs": [
+        {
+          "name": "ADD",
+          "kind": "value",
+          "check": "any",
+          "optional": false,
+          "repeated": true
+        }
+      ]
+    },
+    {
+      "type": "variables_get",
+      "category": "data",
+      "output": "number",
+      "ast": "var",
+      "fields": [
+        {
+          "name": "VAR",
+          "kind": "variable",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        }
+      ],
+      "inputs": []
+    },
+    {
+      "type": "variables_set",
+      "category": "data",
+      "output": "statement",
+      "ast": "set_var",
+      "fields": [
+        {
+          "name": "VAR",
+          "kind": "variable",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        }
+      ],
+      "inputs": [
+        {
+          "name": "VALUE",
+          "kind": "value",
+          "check": "any",
+          "optional": false,
+          "repeated": false
+        }
+      ]
+    },
+    {
+      "type": "math_change",
+      "category": "data",
+      "output": "statement",
+      "ast": "change_var",
+      "fields": [
+        {
+          "name": "VAR",
+          "kind": "variable",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        }
+      ],
+      "inputs": [
+        {
+          "name": "DELTA",
+          "kind": "value",
+          "check": "number",
+          "optional": false,
+          "repeated": false
+        }
+      ]
+    },
+    {
+      "type": "hb_log",
+      "category": "output",
+      "output": "statement",
+      "ast": "log",
+      "fields": [],
+      "inputs": [
+        {
+          "name": "TEXT",
+          "kind": "value",
+          "check": "any",
+          "optional": false,
+          "repeated": false
+        }
+      ]
+    },
+    {
+      "type": "hb_notify",
+      "category": "output",
+      "output": "statement",
+      "ast": "notify",
+      "fields": [
+        {
+          "name": "WEBHOOK",
+          "kind": "checkbox",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": false,
+          "optional": false
+        }
+      ],
+      "inputs": [
+        {
+          "name": "TEXT",
+          "kind": "value",
+          "check": "any",
+          "optional": false,
+          "repeated": false
+        }
+      ]
+    },
+    {
+      "type": "hb_set_signal",
+      "category": "output",
+      "output": "statement",
+      "ast": "set_signal",
+      "fields": [
+        {
+          "name": "NAME",
+          "kind": "signal",
+          "options": null,
+          "min": null,
+          "max": null,
+          "default": null,
+          "optional": false
+        }
+      ],
+      "inputs": [
+        {
+          "name": "VALUE",
+          "kind": "value",
+          "check": "any",
+          "optional": false,
+          "repeated": false
+        }
+      ]
+    }
+  ]
+}

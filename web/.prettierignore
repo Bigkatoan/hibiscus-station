@@ -1,0 +1,9 @@
+dist
+dist-mock
+coverage
+node_modules
+pnpm-lock.yaml
+# synced from hibiscus-assets (scripts/sync-assets.sh) — never hand-edit
+src/hibiscus
+public/pixel
+public/icons

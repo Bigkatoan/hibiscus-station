@@ -1,0 +1,35 @@
+/* Hibiscus colour + type tokens. Day = parchment garden, night = indigo night garden (flat indigo frames).
+   Fonts: Nunito everywhere (readability first). Import css/fonts.css for the @font-face rules. */
+:root {
+  --bg: #f3dfb2; --surface: #fff6dc; --surface-2: #ecd5a4; --border: #c99a62; --frame: #3b2027;
+  --text: #3b2027; --muted: #6b4433;
+  --accent: #2f6b3a; --accent-soft: #dde8bd; --accent-text: #fff6dc;
+  --ok: #2f6b3a; --ok-soft: #dde8bd; --warn: #8a4a0c; --warn-soft: #fbdca8;
+  --danger: #8c1c3a; --danger-soft: #f6d0d0; --info: #2f6f9f; --info-soft: #d3e4ee;
+  --brand: #d7263d; --ring: #5ef1e3;
+  --sidebar-bg: #c99a62; --header-bg: #6b4433; --header-text: #fff6dc;
+  --hard: rgb(59 32 39 / 25%);
+  --font-body: 'Nunito', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #161a2e; --surface: #222842; --surface-2: #2b3253; --border: #3d4566; --frame: #0c0e1f;
+    --text: #f4ecd6; --muted: #aeb9d0;
+    --accent: #9bd35a; --accent-soft: #2d3d2c; --accent-text: #161a2e;
+    --ok: #9bd35a; --ok-soft: #26382a; --warn: #ffc531; --warn-soft: #3d3420;
+    --danger: #ff9eb5; --danger-soft: #45243a; --info: #6fb7e8; --info-soft: #1f3450;
+    --brand: #f2606f; --sidebar-bg: #1b2038; --header-bg: #11142a; --header-text: #f4ecd6;
+    --hard: rgb(0 0 0 / 45%);
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #161a2e; --surface: #222842; --surface-2: #2b3253; --border: #3d4566; --frame: #0c0e1f;
+  --text: #f4ecd6; --muted: #aeb9d0;
+  --accent: #9bd35a; --accent-soft: #2d3d2c; --accent-text: #161a2e;
+  --ok: #9bd35a; --ok-soft: #26382a; --warn: #ffc531; --warn-soft: #3d3420;
+  --danger: #ff9eb5; --danger-soft: #45243a; --info: #6fb7e8; --info-soft: #1f3450;
+  --brand: #f2606f; --sidebar-bg: #1b2038; --header-bg: #11142a; --header-text: #f4ecd6;
+  --hard: rgb(0 0 0 / 45%);
+}

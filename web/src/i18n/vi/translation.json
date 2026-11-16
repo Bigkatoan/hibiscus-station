@@ -1,0 +1,15 @@
+{
+  "chart": {
+    "no_data": "Chưa có dữ liệu",
+    "summary": "Biểu đồ {{title}}. Giá trị mới nhất: {{summary}}"
+  },
+  "common": {
+    "cancel": "Hủy",
+    "close": "Đóng",
+    "loading": "Đang tải…"
+  },
+  "errors": {
+    "request_id": "Mã yêu cầu: {{id}}",
+    "unknown_error": "Có lỗi xảy ra. Hãy thử lại."
+  }
+}

@@ -1,0 +1,74 @@
+/* Hibiscus motion + pixel unit.
+   PIXEL UNIT RULE: one art pixel = var(--px-unit) CSS px (= 2) for EVERY sprite, glyph, frame,
+   rim, shadow offset and movement step. Size things by drawing at a different resolution
+   (e.g. hibi 48x48 vs hibi_mini 24x24), never by scaling one sprite differently.
+   Strip animation (React: <PixelAnim/>, <Hibi/>):
+     <span class="px-anim" style="--src:url(/pixel/anim/hibi_idle.png);--w:48;--h:48;--n:8;--dur:1.6s"></span>
+   Hover-only (icons): wrap in .px-hover — plays while hovered/focused (add .px-play to force it on). */
+:root { --px-unit: 2; --px: calc(var(--px-unit) * 1px); --px-rim: #5b6796; }
+
+.px-anim {
+  display: inline-block; flex: 0 0 auto; vertical-align: middle;
+  width: calc(var(--w) * var(--px)); height: calc(var(--h) * var(--px));
+  background-image: var(--src); background-repeat: no-repeat; background-position: 0 0;
+  background-size: calc(var(--w) * var(--n) * var(--px)) calc(var(--h) * var(--px));
+  image-rendering: pixelated;
+  animation: px-play var(--dur) steps(var(--n)) infinite;
+}
+@keyframes px-play { to { background-position: calc(var(--w) * var(--n) * var(--px) * -1) 0; } }
+.px-hover .px-anim { animation-name: none; }
+.px-hover:hover .px-anim, .px-hover:focus-visible .px-anim, .px-anim.px-play { animation-name: px-play; }
+
+/* 8x8 glyphs (<PxIcon/>): 16 px, painted with currentColor */
+.px-icon { width: calc(8 * var(--px)); height: calc(8 * var(--px)); flex: 0 0 auto; vertical-align: -3px; shape-rendering: crispEdges; }
+
+/* busy indicator: <PxIcon name="spinner" className="px-spin" /> turns in four 90° steps (stays pixel-crisp) */
+.px-spin { animation: px-spin 1s steps(4, end) infinite; }
+@keyframes px-spin { to { transform: rotate(360deg); } }
+
+/* hop of exactly one art pixel when an icon is hovered */
+.px-hover:hover .px-hop, .px-hover:focus-visible .px-hop { animation: px-hop .36s steps(1, end) 1; }
+@keyframes px-hop { 33%, 66% { transform: translateY(calc(var(--px) * -1)); } }
+
+/* ---------- garden strip: grass tiles + swaying tufts + mini Hibi + a butterfly.
+   Every height is a multiple of the unit; movement is split into per-axis animations whose
+   step size is a whole number of art pixels. */
+.px-garden { position: relative; height: calc(30 * var(--px)); overflow: hidden; image-rendering: pixelated; }
+.px-garden::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: calc(12 * var(--px));
+  background: url('/pixel/tile_grass.png') repeat-x 0 0 / calc(16 * var(--px)) calc(16 * var(--px));
+  border-top: var(--px) solid var(--frame, #3b2027);
+}
+.px-garden .px-tufts { position: absolute; left: 0; right: 0; bottom: calc(12 * var(--px)); height: calc(6 * var(--px)); display: flex; justify-content: space-around; z-index: 1; }
+.px-garden .px-tufts .px-anim:nth-child(2n) { animation-delay: -.4s; }
+.px-garden .px-tufts .px-anim:nth-child(3n) { animation-delay: -.9s; }
+.px-garden .px-hibi { position: absolute; right: calc(5 * var(--px)); bottom: calc(10 * var(--px)); z-index: 2; }
+/* butterfly: x travels 160 art px in 80 steps (2 art px each), y bobs 4 art px in 4 steps */
+.px-fly-x { position: absolute; left: calc(-10 * var(--px)); top: calc(4 * var(--px)); z-index: 3; animation: px-fly-x 16s steps(80) infinite; }
+.px-fly-y { display: inline-block; animation: px-fly-y 1.6s steps(4) infinite alternate; }
+@keyframes px-fly-x { to { transform: translateX(calc(160 * var(--px))); } }
+@keyframes px-fly-y { to { transform: translateY(calc(4 * var(--px))); } }
+
+/* ---------- falling petals: y falls 560 art px in 140 steps (4 each), x sways 6 art px in 6 steps */
+.px-petals { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.px-petals .px-fall { position: absolute; top: calc(-8 * var(--px)); animation: px-fall var(--fall, 11s) steps(140) infinite; animation-delay: var(--delay, 0s); }
+.px-petals .px-sway { display: inline-block; animation: px-sway 1.8s steps(6) infinite alternate; }
+@keyframes px-fall { to { transform: translateY(calc(560 * var(--px))); } }
+@keyframes px-sway { to { transform: translateX(calc(6 * var(--px))); } }
+
+/* Night: the warm-brown outline disappears on navy, so sprites get a one-art-pixel moonlight rim. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .px-anim:not(.px-norim), :root:not([data-theme='light']) img.pixelated:not(.px-norim) {
+    filter: drop-shadow(var(--px) 0 0 var(--px-rim)) drop-shadow(calc(var(--px) * -1) 0 0 var(--px-rim))
+      drop-shadow(0 var(--px) 0 var(--px-rim)) drop-shadow(0 calc(var(--px) * -1) 0 var(--px-rim));
+  }
+}
+:root[data-theme='dark'] .px-anim:not(.px-norim), :root[data-theme='dark'] img.pixelated:not(.px-norim) {
+  filter: drop-shadow(var(--px) 0 0 var(--px-rim)) drop-shadow(calc(var(--px) * -1) 0 0 var(--px-rim))
+    drop-shadow(0 var(--px) 0 var(--px-rim)) drop-shadow(0 calc(var(--px) * -1) 0 var(--px-rim));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .px-anim, .px-hover:hover .px-anim, .px-hop, .px-spin, .px-fly-x, .px-fly-y, .px-petals .px-fall, .px-petals .px-sway { animation: none !important; }
+  .px-petals, .px-fly-x { display: none; }
+}

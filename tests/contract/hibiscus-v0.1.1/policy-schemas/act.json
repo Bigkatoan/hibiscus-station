@@ -1,0 +1,253 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hibiscus.local/api/policy-schemas/act.json",
+  "title": "ACTConfig (act)",
+  "description": "Configuration class for the Action Chunking Transformers policy.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "n_obs_steps": {
+      "type": "integer",
+      "default": 1,
+      "description": "Number of environment steps worth of observations to pass to the policy (takes the current step and additional steps going back).",
+      "minimum": 1,
+      "const": 1,
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.n_obs_steps"
+    },
+    "chunk_size": {
+      "type": "integer",
+      "default": 100,
+      "description": "The size of the action prediction \"chunks\" in units of environment steps.",
+      "minimum": 1,
+      "x-hibiscus-group": "basic",
+      "x-hibiscus-cli": "--policy.chunk_size"
+    },
+    "n_action_steps": {
+      "type": "integer",
+      "default": 100,
+      "description": "The number of action steps to run in the environment for one invocation of the policy. This should be no greater than the chunk size. For example, if the chunk size size 100, you may set this to 50. This would mean that the model predicts 100 steps worth of actions, runs 50 in the environment, and throws the other 50 out.",
+      "minimum": 1,
+      "x-hibiscus-group": "basic",
+      "x-hibiscus-cli": "--policy.n_action_steps"
+    },
+    "normalization_mapping": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "enum": [
+          "MIN_MAX",
+          "MEAN_STD",
+          "IDENTITY",
+          "QUANTILES",
+          "QUANTILE10"
+        ]
+      },
+      "default": {
+        "VISUAL": "MEAN_STD",
+        "STATE": "MEAN_STD",
+        "ACTION": "MEAN_STD"
+      },
+      "description": "A dictionary that maps from a str value of FeatureType (e.g., \"STATE\", \"VISUAL\") to a corresponding NormalizationMode (e.g., NormalizationMode.MIN_MAX)",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.normalization_mapping"
+    },
+    "vision_backbone": {
+      "type": "string",
+      "default": "resnet18",
+      "description": "Name of the torchvision resnet backbone to use for encoding images.",
+      "pattern": "^resnet",
+      "x-hibiscus-group": "basic",
+      "x-hibiscus-cli": "--policy.vision_backbone"
+    },
+    "pretrained_backbone_weights": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "default": "ResNet18_Weights.IMAGENET1K_V1",
+      "description": "Pretrained weights from torchvision to initialize the backbone. `None` means no pretrained weights.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.pretrained_backbone_weights"
+    },
+    "replace_final_stride_with_dilation": {
+      "type": [
+        "boolean",
+        "integer"
+      ],
+      "default": false,
+      "description": "Whether to replace the ResNet's final 2x2 stride with a dilated convolution.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.replace_final_stride_with_dilation"
+    },
+    "pre_norm": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether to use \"pre-norm\" in the transformer blocks.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.pre_norm"
+    },
+    "dim_model": {
+      "type": "integer",
+      "default": 512,
+      "description": "The transformer blocks' main hidden dimension.",
+      "x-hibiscus-group": "basic",
+      "x-hibiscus-cli": "--policy.dim_model"
+    },
+    "n_heads": {
+      "type": "integer",
+      "default": 8,
+      "description": "The number of heads to use in the transformer blocks' multi-head attention.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.n_heads"
+    },
+    "dim_feedforward": {
+      "type": "integer",
+      "default": 3200,
+      "description": "The dimension to expand the transformer's hidden dimension to in the feed-forward layers.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.dim_feedforward"
+    },
+    "feedforward_activation": {
+      "type": "string",
+      "default": "relu",
+      "description": "The activation to use in the transformer block's feed-forward layers.",
+      "enum": [
+        "relu",
+        "gelu",
+        "glu"
+      ],
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.feedforward_activation"
+    },
+    "n_encoder_layers": {
+      "type": "integer",
+      "default": 4,
+      "description": "The number of transformer layers to use for the transformer encoder.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.n_encoder_layers"
+    },
+    "n_decoder_layers": {
+      "type": "integer",
+      "default": 1,
+      "description": "The number of transformer layers to use for the transformer decoder.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.n_decoder_layers"
+    },
+    "use_vae": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether to use a variational objective during training. This introduces another transformer which is used as the VAE's encoder (not to be confused with the transformer encoder - see documentation in the policy class).",
+      "x-hibiscus-group": "basic",
+      "x-hibiscus-cli": "--policy.use_vae"
+    },
+    "latent_dim": {
+      "type": "integer",
+      "default": 32,
+      "description": "The VAE's latent dimension.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.latent_dim"
+    },
+    "n_vae_encoder_layers": {
+      "type": "integer",
+      "default": 4,
+      "description": "The number of transformer layers to use for the VAE's encoder.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.n_vae_encoder_layers"
+    },
+    "temporal_ensemble_coeff": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "default": null,
+      "description": "Coefficient for the exponential weighting scheme to apply for temporal ensembling. Defaults to None which means temporal ensembling is not used. `n_action_steps` must be 1 when using this feature, as inference needs to happen at every step to form an ensemble. For more information on how ensembling works, please see `ACTTemporalEnsembler`.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.temporal_ensemble_coeff"
+    },
+    "dropout": {
+      "type": "number",
+      "default": 0.1,
+      "description": "Dropout to use in the transformer layers (see code for details).",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.dropout"
+    },
+    "kl_weight": {
+      "type": "number",
+      "default": 10.0,
+      "description": "The weight to use for the KL-divergence component of the loss if the variational objective is enabled. Loss is then calculated as: `reconstruction_loss + kl_weight * kld_loss`.",
+      "x-hibiscus-group": "basic",
+      "x-hibiscus-cli": "--policy.kl_weight"
+    },
+    "optimizer_lr": {
+      "type": "number",
+      "default": 1e-05,
+      "description": "Training preset",
+      "exclusiveMinimum": 0,
+      "x-hibiscus-group": "basic",
+      "x-hibiscus-cli": "--policy.optimizer_lr"
+    },
+    "optimizer_weight_decay": {
+      "type": "number",
+      "default": 0.0001,
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.optimizer_weight_decay"
+    },
+    "optimizer_lr_backbone": {
+      "type": "number",
+      "default": 1e-05,
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.optimizer_lr_backbone"
+    },
+    "optimizer_fused": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "default": null,
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--policy.optimizer_fused"
+    }
+  },
+  "x-hibiscus": {
+    "policy_type": "act",
+    "config_class": "lerobot.policies.act.configuration_act.ACTConfig",
+    "lerobot_version": "0.7.1",
+    "generator_version": "1",
+    "cli_prefix": "--policy.",
+    "basic_order": [
+      "chunk_size",
+      "n_action_steps",
+      "use_vae",
+      "kl_weight",
+      "dim_model",
+      "optimizer_lr",
+      "vision_backbone"
+    ],
+    "excluded": {
+      "input_features": "derived from the dataset version schema by the worker",
+      "output_features": "derived from the dataset version schema by the worker",
+      "device": "always 'cuda'; the GPU is chosen by the scheduler (CUDA_VISIBLE_DEVICES)",
+      "dtype": "torch.dtype is not JSON-serialisable; precision is controlled by train.mixed_precision",
+      "use_amp": "deprecated in 0.7.1; use train.mixed_precision (--accelerator.mixed_precision)",
+      "use_peft": "set implicitly when train.peft is provided",
+      "push_to_hub": "always false; Hub push is a separate Hibiscus action on a model",
+      "repo_id": "Hub push is a separate Hibiscus action",
+      "private": "Hub push is a separate Hibiscus action",
+      "tags": "Hub push is a separate Hibiscus action",
+      "license": "Hub push is a separate Hibiscus action",
+      "pretrained_path": "set from RunCreate.init_from (model or checkpoint) by the worker",
+      "pretrained_revision": "set from RunCreate.init_from by the worker"
+    },
+    "cross_field_rules": [
+      {
+        "rule": "n_action_steps <= chunk_size",
+        "code": "policy_config_invalid"
+      },
+      {
+        "rule": "temporal_ensemble_coeff == null or n_action_steps == 1",
+        "code": "policy_config_invalid"
+      }
+    ]
+  }
+}

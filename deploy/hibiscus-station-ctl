@@ -1,0 +1,247 @@
+#!/usr/bin/env bash
+# hibiscus-station-ctl: run, update and roll back the Hibiscus Station container.
+#
+#   hibiscus-station-ctl status            container state, image tag and health
+#   hibiscus-station-ctl up | down | restart
+#   hibiscus-station-ctl logs [-f]
+#   hibiscus-station-ctl url               the login link (open it on this machine)
+#   hibiscus-station-ctl health            exit 0 when Station answers
+#   hibiscus-station-ctl ports             USB serial adapters and their stable names
+#   hibiscus-station-ctl backup [--full]   tarball of the Station data (see below)
+#   hibiscus-station-ctl restore FILE      put a backup back (Station is stopped meanwhile)
+#   hibiscus-station-ctl update [TAG]      backup, pull TAG (default: the current tag), restart,
+#                                          health check, automatic rollback when unhealthy
+#   hibiscus-station-ctl rollback          go back to the tag that ran before the last update
+#
+# Backups hold what you cannot download again: robot profiles and settings, calibration files,
+# trajectories, poses, detectors, programs and their run logs, the server pairing. --full adds
+# datasets, models and session logs (can be large). Files land in $STATION_BACKUPS (0600).
+#
+# Configuration: the .env next to compose.yml in $STATION_DIR (default ~/.config/hibiscus-station,
+# written by install.sh). Options for update/rollback: --no-pull (use a local image only),
+# --timeout SECONDS (health wait, default 240).
+set -euo pipefail
+
+STATION_DIR="${STATION_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/hibiscus-station}"
+ENV_FILE="$STATION_DIR/.env"
+HEALTH_TIMEOUT=240
+PULL=1
+
+die() { echo "hibiscus-station-ctl: $*" >&2; exit 1; }
+say() { echo "==> $*" >&2; }
+
+case "${1:-}" in
+  -h|--help|help) sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+esac
+[ -f "$ENV_FILE" ] || die "no $ENV_FILE (run deploy/install.sh, or set STATION_DIR)"
+
+env_get() { # KEY -> value from .env (last assignment wins), without sourcing the file
+  local line
+  line="$(grep -E "^$1=" "$ENV_FILE" | tail -n 1 || true)"
+  printf '%s' "${line#*=}"
+}
+
+env_set() { # KEY VALUE: replace or append, keeping the file private
+  local tmp
+  tmp="$(mktemp "$ENV_FILE.XXXXXX")"
+  if grep -qE "^$1=" "$ENV_FILE"; then
+    awk -v k="$1" -v v="$2" 'BEGIN { FS = OFS = "=" } $1 == k { print k "=" v; next } { print }' "$ENV_FILE" > "$tmp"
+  else
+    cat "$ENV_FILE" > "$tmp"
+    printf '%s=%s\n' "$1" "$2" >> "$tmp"
+  fi
+  chmod 600 "$tmp"
+  mv "$tmp" "$ENV_FILE"
+}
+
+compose() { (cd "$STATION_DIR" && docker compose --env-file "$ENV_FILE" "$@"); }
+container() { env_get STATION_CONTAINER | grep . || echo hibiscus-station; }
+image_ref() { echo "$(env_get STATION_IMAGE | grep . || echo ghcr.io/bigkatoan/hibiscus-station):$1"; }
+
+health_state() {
+  docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' \
+    "$(container)" 2>/dev/null || echo missing
+}
+
+wait_healthy() { # -> 0 healthy, 1 not healthy within HEALTH_TIMEOUT
+  local deadline state
+  deadline=$((SECONDS + HEALTH_TIMEOUT))
+  while [ "$SECONDS" -lt "$deadline" ]; do
+    state="$(health_state)"
+    case "$state" in
+      healthy) say "healthy"; return 0 ;;
+      unhealthy|exited|dead|missing) say "container is $state"; return 1 ;;
+    esac
+    sleep 3
+  done
+  say "not healthy after ${HEALTH_TIMEOUT}s (last state: $(health_state))"
+  return 1
+}
+
+backup() { # [--full] -> prints the tarball path
+  local full=0 data cal dest stamp tag out meta
+  [ "${1:-}" = "--full" ] && full=1
+  data="$(env_get STATION_DATA)"
+  cal="$(env_get STATION_CALIBRATION)"
+  dest="$(env_get STATION_BACKUPS | grep . || echo "$HOME/.local/share/hibiscus-station/backups")"
+  [ -d "$data" ] || die "STATION_DATA $data does not exist"
+  mkdir -p "$dest"
+  chmod 700 "$dest"
+  stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+  tag="$(env_get STATION_TAG)"
+  out="$dest/station-$stamp-${tag:-unknown}.tar.gz"
+  # Archive layout: data/<items> and calibration/<lerobot calibration tree>, plus BACKUP_INFO.
+  local -a members=()
+  local name
+  for name in robots.yaml settings.yaml server.json robots runs hibiscus-cli; do
+    [ -e "$data/$name" ] && members+=("$name")
+  done
+  if [ "$full" = 1 ]; then
+    for name in datasets models sessions; do
+      [ -e "$data/$name" ] && members+=("$name")
+    done
+  fi
+  [ "${#members[@]}" -gt 0 ] || die "nothing to back up in $data"
+  meta="$(mktemp -d)"
+  printf 'tag=%s\ncreated=%s\nfull=%s\n' "$tag" "$stamp" "$full" > "$meta/BACKUP_INFO"
+  local -a cal_args=()
+  [ -d "$cal" ] && cal_args=(-C "$cal" --transform 's,^\.,calibration,' .)
+  (umask 077 && tar -czf "$out" --exclude=hibiscus-cli/state \
+      -C "$meta" BACKUP_INFO \
+      -C "$data" --transform 's,^\(robots\.yaml\|settings\.yaml\|server\.json\|robots\|runs\|hibiscus-cli\|datasets\|models\|sessions\),data/\1,' \
+      "${members[@]}" "${cal_args[@]+"${cal_args[@]}"}") || { rm -rf "$meta"; die "backup failed"; }
+  rm -rf "$meta"
+  chmod 600 "$out"
+  say "backup: $out ($(du -h "$out" | cut -f1))"
+  printf '%s\n' "$out"
+}
+
+restore() { # FILE
+  local file="$1" data cal tmp
+  [ -f "$file" ] || die "no backup $file"
+  data="$(env_get STATION_DATA)"
+  cal="$(env_get STATION_CALIBRATION)"
+  tmp="$(mktemp -d)"
+  tar -C "$tmp" -xzf "$file"
+  [ -f "$tmp/BACKUP_INFO" ] || { rm -rf "$tmp"; die "$file is not a Station backup"; }
+  say "stopping Station"
+  compose stop station >/dev/null 2>&1 || true
+  if [ -d "$tmp/data" ]; then mkdir -p "$data" && cp -a "$tmp/data/." "$data/"; fi
+  if [ -d "$tmp/calibration" ]; then mkdir -p "$cal" && cp -a "$tmp/calibration/." "$cal/"; fi
+  rm -rf "$tmp"
+  say "restored $file"
+  compose up -d
+  wait_healthy
+}
+
+pull() { # TAG
+  [ "$PULL" = 1 ] || { docker image inspect "$(image_ref "$1")" >/dev/null 2>&1 || die "no local image $(image_ref "$1")"; return 0; }
+  say "pulling $(image_ref "$1")"
+  if ! docker pull "$(image_ref "$1")"; then
+    docker image inspect "$(image_ref "$1")" >/dev/null 2>&1 || die "cannot pull $(image_ref "$1")"
+    say "pull failed, using the local image"
+  fi
+}
+
+switch_to() { # TAG: write .env and recreate the container
+  env_set STATION_TAG "$1"
+  compose up -d --force-recreate station
+}
+
+update() { # [TAG]
+  local current new previous_id old_previous
+  current="$(env_get STATION_TAG)"
+  new="${1:-$current}"
+  old_previous="$(env_get STATION_PREVIOUS_TAG)"
+  [ -n "$current" ] || die "STATION_TAG is empty in $ENV_FILE"
+  # The image that runs now (a floating tag may already point elsewhere), else the tag's image.
+  previous_id="$(docker inspect --format '{{.Image}}' "$(container)" 2>/dev/null \
+    || docker image inspect --format '{{.Id}}' "$(image_ref "$current")" 2>/dev/null || true)"
+  backup >/dev/null
+  pull "$new"
+  if [ "$new" = "$current" ] && [ -n "$previous_id" ] \
+     && [ "$(docker image inspect --format '{{.Id}}' "$(image_ref "$new")")" = "$previous_id" ]; then
+    say "already up to date ($new)"
+    return 0
+  fi
+  local back="$current"
+  if [ "$new" = "$current" ] && [ -n "$previous_id" ]; then
+    # Same floating tag, new image: keep the old one reachable under a rollback tag.
+    back="$current-rollback"
+    docker tag "$previous_id" "$(image_ref "$back")"
+  fi
+  env_set STATION_PREVIOUS_TAG "$back"
+  say "starting $new"
+  switch_to "$new"
+  if wait_healthy; then
+    say "updated to $new (undo: hibiscus-station-ctl rollback)"
+    return 0
+  fi
+  say "$new is not healthy: rolling back to $back"
+  compose logs --tail 40 station >&2 || true
+  switch_to "$back"
+  env_set STATION_PREVIOUS_TAG "$old_previous"
+  wait_healthy || die "$back is not healthy either: check 'hibiscus-station-ctl logs'"
+  say "rolled back to $back; the data backup from before the update is in $(env_get STATION_BACKUPS)"
+  return 1
+}
+
+rollback_now() { # swap STATION_TAG and STATION_PREVIOUS_TAG (rolling back twice rolls forward)
+  local previous current
+  previous="$(env_get STATION_PREVIOUS_TAG)"
+  current="$(env_get STATION_TAG)"
+  [ -n "$previous" ] || die "no previous tag recorded (STATION_PREVIOUS_TAG)"
+  docker image inspect "$(image_ref "$previous")" >/dev/null 2>&1 || die "previous image $(image_ref "$previous") is not on this machine"
+  env_set STATION_PREVIOUS_TAG "$current"
+  switch_to "$previous"
+  if wait_healthy; then
+    say "running $previous again (data backups: $(env_get STATION_BACKUPS))"
+  else
+    die "$previous is not healthy either: check 'hibiscus-station-ctl logs'"
+  fi
+}
+
+ports() {
+  local dev link
+  for dev in /dev/ttyACM* /dev/ttyUSB*; do
+    [ -e "$dev" ] || continue
+    printf '%s' "$dev"
+    for link in /dev/serial/by-id/* /dev/hibiscus/*; do
+      [ -L "$link" ] && [ "$(readlink -f "$link")" = "$dev" ] && printf '  %s' "$link"
+    done
+    printf '\n'
+  done
+}
+
+cmd="${1:-status}"
+shift || true
+args=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --no-pull) PULL=0 ;;
+    --timeout) HEALTH_TIMEOUT="$2"; shift ;;
+    *) args+=("$1") ;;
+  esac
+  shift
+done
+set -- "${args[@]+"${args[@]}"}"
+
+case "$cmd" in
+  status)
+    echo "image:  $(image_ref "$(env_get STATION_TAG)")"
+    echo "health: $(health_state)"
+    echo "data:   $(env_get STATION_DATA)"
+    ;;
+  up) compose up -d && wait_healthy ;;
+  down) compose down ;;
+  restart) compose restart station && wait_healthy ;;
+  logs) compose logs "$@" station ;;
+  url) docker exec "$(container)" hibiscus-station url ;;
+  health) docker exec "$(container)" hibiscus-station health ;;
+  ports) ports ;;
+  backup) backup "$@" ;;
+  restore) [ $# -eq 1 ] || die "usage: restore FILE"; restore "$1" ;;
+  update) update "$@" ;;
+  rollback) rollback_now ;;
+  *) die "unknown command $cmd (see --help)" ;;
+esac

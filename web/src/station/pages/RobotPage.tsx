@@ -1,0 +1,528 @@
+/**
+ * Robot (§6.2): profiles, port picker with "find by unplugging" / "find by moving", connect, and,
+ * once connected, live joints and the motor health panel (the first place users see temperatures).
+ */
+import { PxIcon } from "@/hibiscus/PixelAnim";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { PageHeader } from "@/components/common";
+import { Field } from "@/components/Field";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input, NativeSelect } from "@/components/ui/input";
+import { api } from "../api/client";
+import { qk, usePorts, useRobots, useStationMutation } from "../api/hooks";
+import type { Port, RobotProfile, Status } from "../api/types";
+import { JointPanel } from "../components/JointPanel";
+import { MotorHealthPanel } from "../components/MotorHealthPanel";
+import { StationError } from "../components/StationError";
+import { Sprite } from "@/hibiscus/PixelAnim";
+import { useStation, useStatus } from "../ws/StationProvider";
+import type { StationSnapshot } from "../ws/store";
+
+export function slugify(name: string): string {
+  return (
+    name
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/đ/g, "d")
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 40) || "robot"
+  );
+}
+
+function portLabel(p: Port): string {
+  return `${p.stable_path ?? p.device}${p.description ? ` · ${p.description}` : ""}${p.vid_pid ? ` (${p.vid_pid})` : ""}`;
+}
+
+function FindPortDialog({
+  method,
+  open,
+  onOpenChange,
+  onFound,
+}: {
+  method: "unplug" | "motion";
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  onFound: (p: Port) => void;
+}) {
+  const { t } = useTranslation("station");
+  const [before, setBefore] = useState<string[] | null>(null);
+  const [found, setFound] = useState<Port | null>(null);
+  const snap = useStationMutation(() =>
+    api.post<{ ports_before: string[] }>("/ports/detect", { method: "unplug" }),
+  );
+  const detect = useStationMutation((body: { method: string; ports_before?: string[] }) =>
+    api.post<{ port: Port }>("/ports/detect", { ...body, timeout_s: 15 }),
+  );
+  const reset = () => {
+    setBefore(null);
+    setFound(null);
+    snap.reset();
+    detect.reset();
+  };
+  const run = () => {
+    if (method === "motion") {
+      detect.mutate(
+        { method: "motion" },
+        {
+          onSuccess: (r) => {
+            setFound(r.port);
+          },
+        },
+      );
+    } else if (before === null) {
+      snap.mutate(undefined, {
+        onSuccess: (r) => {
+          setBefore(r.ports_before);
+          detect.mutate(
+            { method: "unplug", ports_before: r.ports_before },
+            {
+              onSuccess: (x) => {
+                setFound(x.port);
+              },
+            },
+          );
+        },
+      });
+    }
+  };
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) reset();
+        onOpenChange(o);
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t(method === "unplug" ? "robot.find_unplug" : "robot.find_motion")}</DialogTitle>
+          <DialogDescription>
+            {t(method === "unplug" ? "robot.find_unplug_desc" : "robot.find_motion_desc")}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex items-center gap-3">
+          <Sprite name="icon_plug" />
+          <p className="text-sm" role="status">
+            {found
+              ? t("robot.found", { port: found.stable_path ?? found.device })
+              : detect.isPending
+                ? t(method === "unplug" ? "robot.unplug_now" : "robot.move_now")
+                : t("robot.find_ready")}
+          </p>
+        </div>
+        <StationError error={snap.error ?? detect.error} />
+        <DialogFooter>
+          {found ? (
+            <Button
+              onClick={() => {
+                onFound(found);
+                reset();
+                onOpenChange(false);
+              }}
+            >
+              {t("robot.use_port")}
+            </Button>
+          ) : (
+            <Button onClick={run} disabled={detect.isPending || snap.isPending}>
+              {t("robot.find_start")}
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PortPicker({
+  label,
+  value,
+  onChange,
+  optional,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  optional?: boolean;
+}) {
+  const { t } = useTranslation("station");
+  const ports = usePorts();
+  const [dialog, setDialog] = useState<"unplug" | "motion" | null>(null);
+  const list = ports.data?.ports ?? [];
+  const known = list.some((p) => (p.stable_path ?? p.device) === value);
+  return (
+    <div className="flex flex-col gap-2">
+      <Field label={label}>
+        <NativeSelect
+          value={value}
+          onChange={(e) => {
+            onChange(e.target.value);
+          }}
+        >
+          <option value="">{optional ? t("robot.no_leader") : t("robot.pick_port")}</option>
+          {!known && value ? <option value={value}>{value}</option> : null}
+          {list.map((p) => (
+            <option key={p.device} value={p.stable_path ?? p.device} disabled={p.in_use_by !== null}>
+              {portLabel(p)}
+              {p.in_use_by ? ` — ${t("robot.in_use", { by: p.in_use_by })}` : ""}
+            </option>
+          ))}
+        </NativeSelect>
+      </Field>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            setDialog("unplug");
+          }}
+        >
+          {t("robot.find_unplug")}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            setDialog("motion");
+          }}
+        >
+          {t("robot.find_motion")}
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => void ports.refetch()}>
+          {t("robot.refresh_ports")}
+        </Button>
+      </div>
+      <FindPortDialog
+        method={dialog ?? "unplug"}
+        open={dialog !== null}
+        onOpenChange={(o) => {
+          if (!o) setDialog(null);
+        }}
+        onFound={(p) => {
+          onChange(p.stable_path ?? p.device);
+        }}
+      />
+    </div>
+  );
+}
+
+function emptyProfile(): RobotProfile {
+  return {
+    id: "",
+    name: "",
+    follower: {
+      type: "so101_follower",
+      port: "",
+      calibration_id: "",
+      max_relative_target: 5,
+      rest_pose: null,
+      on_session_end: "hold",
+      disable_torque_on_disconnect: true,
+      allow_fast_replay: false,
+      grip_hold: { gap_min: 3, load_min_pct: 15 },
+    },
+    leader: null,
+    cameras: {},
+    thresholds: null,
+    safety_ack: false,
+  };
+}
+
+function ProfileForm({ initial, onDone }: { initial: RobotProfile | null; onDone: () => void }) {
+  const { t } = useTranslation("station");
+  const [p, setP] = useState<RobotProfile>(initial ?? emptyProfile());
+  const [leaderPort, setLeaderPort] = useState(initial?.leader?.port ?? "");
+  const isNew = initial === null;
+  const save = useStationMutation(
+    (prof: RobotProfile) => api.put<RobotProfile>(`/robots/${encodeURIComponent(prof.id)}`, prof),
+    [qk.robots],
+  );
+  const kind = p.follower.type === "so100_follower" ? "so100" : "so101";
+  return (
+    <form
+      className="grid gap-3 sm:grid-cols-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const id = isNew ? slugify(p.name) : p.id;
+        const prof: RobotProfile = {
+          ...p,
+          id,
+          follower: { ...p.follower, calibration_id: p.follower.calibration_id || `${id}_follower` },
+          leader: leaderPort
+            ? {
+                type: kind === "so100" ? "so100_leader" : "so101_leader",
+                port: leaderPort,
+                calibration_id: p.leader?.calibration_id ?? `${id}_leader`,
+              }
+            : null,
+        };
+        save.mutate(prof, { onSuccess: onDone });
+      }}
+    >
+      <Field label={t("robot.name")} required>
+        <Input
+          value={p.name}
+          onChange={(e) => {
+            setP({ ...p, name: e.target.value });
+          }}
+          placeholder="Desk SO-101"
+        />
+      </Field>
+      <Field label={t("robot.type")}>
+        <NativeSelect
+          value={kind}
+          onChange={(e) => {
+            setP({
+              ...p,
+              follower: {
+                ...p.follower,
+                type: e.target.value === "so100" ? "so100_follower" : "so101_follower",
+              },
+            });
+          }}
+        >
+          <option value="so101">SO-101</option>
+          <option value="so100">SO-100</option>
+        </NativeSelect>
+      </Field>
+      <PortPicker
+        label={t("robot.follower_port")}
+        value={p.follower.port}
+        onChange={(v) => {
+          setP({ ...p, follower: { ...p.follower, port: v } });
+        }}
+      />
+      <PortPicker label={t("robot.leader_port")} value={leaderPort} onChange={setLeaderPort} optional />
+      <Field label={t("robot.on_end")}>
+        <NativeSelect
+          value={p.follower.on_session_end}
+          onChange={(e) => {
+            setP({ ...p, follower: { ...p.follower, on_session_end: e.target.value as "hold" | "relax" } });
+          }}
+        >
+          <option value="hold">{t("robot.on_end_hold")}</option>
+          <option value="relax">{t("robot.on_end_relax")}</option>
+        </NativeSelect>
+      </Field>
+      <StationError error={save.error} className="sm:col-span-2" />
+      <div className="flex gap-2 sm:col-span-2">
+        <Button type="submit" disabled={!p.name.trim() || !p.follower.port || save.isPending}>
+          {t("common.save")}
+        </Button>
+        <Button type="button" variant="outline" onClick={onDone}>
+          {t("common.cancel")}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+const selFollowerJoints = (s: StationSnapshot) => s.joints?.arms.follower;
+
+function ConnectedPanel({ profile }: { profile: RobotProfile }) {
+  const { t } = useTranslation("station");
+  const status = useStatus();
+  const joints = useStation(selFollowerJoints);
+  const restPose = useStationMutation(
+    (pose: Record<string, number>) =>
+      api.put<RobotProfile>(`/robots/${encodeURIComponent(profile.id)}`, {
+        ...profile,
+        follower: { ...profile.follower, rest_pose: pose },
+      }),
+    [qk.robots],
+  );
+  const torque = useStationMutation((enabled: boolean) =>
+    api.post<Status>("/robots/torque", {
+      arm: "follower",
+      enabled,
+      confirm: !profile.follower.rest_pose ? true : undefined,
+    }),
+  );
+  const torqueOn = status?.robot?.follower_torque ?? false;
+  const canTorque = status?.state === "idle" || status?.state === "estopped";
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("joints.title")}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <JointPanel />
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!joints || restPose.isPending}
+              onClick={() => {
+                if (joints) restPose.mutate({ ...joints });
+              }}
+            >
+              {t("robot.set_rest")}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!canTorque || torque.isPending}
+              onClick={() => {
+                if (torqueOn && !profile.follower.rest_pose && !window.confirm(t("robot.relax_confirm")))
+                  return;
+                torque.mutate(!torqueOn);
+              }}
+            >
+              {torqueOn ? t("robot.torque_off") : t("robot.torque_on")}
+            </Button>
+          </div>
+          {profile.follower.rest_pose ? (
+            <p className="text-xs text-muted-foreground">{t("robot.rest_saved")}</p>
+          ) : null}
+          <StationError error={restPose.error ?? torque.error} />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("health.title")}</CardTitle>
+          <CardDescription>{t("robot.health_desc")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <MotorHealthPanel />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+export function RobotPage() {
+  const { t } = useTranslation("station");
+  const status = useStatus();
+  const robots = useRobots();
+  const [editing, setEditing] = useState<RobotProfile | "new" | null>(null);
+  const connect = useStationMutation((id: string) =>
+    api.post<Status>(`/robots/${encodeURIComponent(id)}/connect`, {}),
+  );
+  const disconnect = useStationMutation(() => api.post<Status>("/robots/disconnect", {}));
+  const list = robots.data?.robots ?? [];
+  const connectedId = status?.robot?.connected ? status.robot.id : null;
+  const connected = list.find((r) => r.id === connectedId);
+  const busy =
+    status?.state !== "idle" &&
+    status?.state !== "disconnected" &&
+    status?.state !== "error" &&
+    status?.state !== "estopped";
+
+  return (
+    <div className="flex flex-col gap-4">
+      <PageHeader
+        title={t("robot.title")}
+        description={t("robot.desc")}
+        actions={
+          <Button
+            onClick={() => {
+              setEditing("new");
+            }}
+            disabled={editing !== null}
+          >
+            {t("robot.new")}
+          </Button>
+        }
+      />
+      {editing ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              {editing === "new" ? t("robot.new") : t("robot.edit", { name: editing.name })}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ProfileForm
+              initial={editing === "new" ? null : editing}
+              onDone={() => {
+                setEditing(null);
+              }}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
+      {status?.state === "connecting" ? (
+        <p role="status" className="border-2 border-frame bg-card p-2 text-sm">
+          {t("robot.connecting")} {status.detail ?? ""}
+        </p>
+      ) : null}
+      <StationError error={connect.error ?? disconnect.error} />
+      <ul className="grid gap-3 md:grid-cols-2">
+        {list.map((r) => {
+          const isConn = r.id === connectedId;
+          return (
+            <li key={r.id}>
+              <Card>
+                <CardContent className="flex flex-col gap-2 pt-3 sm:pt-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-extrabold text-base">{r.name}</span>
+                    <Badge variant="outline">
+                      {r.follower.type.startsWith("so100") ? "SO-100" : "SO-101"}
+                    </Badge>
+                    {isConn ? <Badge variant="success">{t("robot.connected")}</Badge> : null}
+                  </div>
+                  <p className="break-all text-xs text-muted-foreground">
+                    {t("arm.follower")}: {r.follower.port}
+                    <br />
+                    {t("arm.leader")}: {r.leader?.port ?? t("robot.no_leader")}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {isConn ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={busy || disconnect.isPending}
+                        onClick={() => {
+                          disconnect.mutate(undefined);
+                        }}
+                      >
+                        <PxIcon name="plug" /> {t("robot.disconnect")}
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        disabled={connectedId !== null || connect.isPending}
+                        onClick={() => {
+                          connect.mutate(r.id);
+                        }}
+                      >
+                        <PxIcon name="plug" /> {t("robot.connect")}
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={isConn && busy}
+                      onClick={() => {
+                        setEditing(r);
+                      }}
+                    >
+                      {t("common.edit")}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </li>
+          );
+        })}
+      </ul>
+      {list.length === 0 && !editing ? (
+        <p className="text-sm text-muted-foreground">{t("robot.empty")}</p>
+      ) : null}
+      {connected ? <ConnectedPanel profile={connected} /> : null}
+    </div>
+  );
+}

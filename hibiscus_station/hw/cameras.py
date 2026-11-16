@@ -1,0 +1,394 @@
+"""CameraHub (one owner per camera) and PreviewEncoder (R2, spec §4.6, §5.4).
+
+The control loop calls :meth:`CameraHub.read_latest_all` and then :meth:`CameraHub.publish` with
+the *same* arrays it merged into the observation (no copy). The preview encoder only ever encodes
+the latest published :class:`FrameSet`, so the UI shows exactly what the policy / dataset received,
+tagged with the tick number.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import logging
+import struct
+import threading
+import time
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+from numpy.typing import NDArray
+
+from hibiscus_station.hw.locks import DeviceBusyError, DeviceLock
+from hibiscus_station.profiles import CameraProfile
+
+log = logging.getLogger(__name__)
+
+MAGIC = b"HSF1"
+
+
+# --------------------------------------------------------------------------- wire format §5.4
+def pack_frame(header: dict[str, Any], jpeg: bytes) -> bytes:
+    h = json.dumps(header, separators=(",", ":")).encode()
+    return MAGIC + struct.pack(">H", len(h)) + h + jpeg
+
+
+def unpack_frame(msg: bytes) -> tuple[dict[str, Any], bytes]:
+    if msg[:4] != MAGIC:
+        raise ValueError("bad magic")
+    (n,) = struct.unpack(">H", msg[4:6])
+    header = json.loads(msg[6 : 6 + n])
+    if not isinstance(header, dict):
+        raise ValueError("bad header")
+    return header, msg[6 + n :]
+
+
+def encode_preview(frame: NDArray[Any], width: int, quality: int) -> tuple[bytes, int, int]:
+    """Resize (INTER_AREA, aspect kept) and JPEG-encode an RGB frame."""
+    import cv2
+
+    h, w = frame.shape[:2]
+    width = max(16, min(int(width), w))
+    height = max(1, round(h * width / w))
+    img = (
+        frame
+        if (width == w and height == h)
+        else cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
+    )
+    ok, buf = cv2.imencode(
+        ".jpg", cv2.cvtColor(img, cv2.COLOR_RGB2BGR), [cv2.IMWRITE_JPEG_QUALITY, int(quality)]
+    )
+    if not ok:  # pragma: no cover
+        raise RuntimeError("jpeg encode failed")
+    return bytes(buf), width, height
+
+
+@dataclass
+class FrameSet:
+    tick: int
+    t: float
+    frames: dict[str, NDArray[Any]]
+    policy_input: bool = False
+    stale: list[str] = field(default_factory=list)
+
+
+# --------------------------------------------------------------------------- hub
+@dataclass
+class _Cam:
+    name: str
+    profile: CameraProfile
+    camera: Any
+    lock: DeviceLock | None
+    stale_since: float | None = None
+    error: str | None = None
+
+
+def device_key(p: CameraProfile) -> str:
+    if p.type == "realsense":
+        return f"realsense:{p.serial_number_or_name}"
+    return str(p.index_or_path)
+
+
+def build_camera(name: str, p: CameraProfile) -> Any:
+    if p.type == "mock":
+        from hibiscus_station.mock.camera import MockCamera, MockCameraConfig
+
+        return MockCamera(MockCameraConfig(name=name, fps=p.fps, width=p.width, height=p.height))
+    if p.type == "realsense":  # pragma: no cover - needs pyrealsense2
+        from lerobot.cameras.realsense import RealSenseCamera, RealSenseCameraConfig
+
+        return RealSenseCamera(
+            RealSenseCameraConfig(
+                serial_number_or_name=str(p.serial_number_or_name), fps=p.fps, width=p.width, height=p.height
+            )
+        )
+    from lerobot.cameras import Cv2Rotation
+    from lerobot.cameras.opencv import OpenCVCamera, OpenCVCameraConfig
+
+    iop: int | Path = p.index_or_path if isinstance(p.index_or_path, int) else Path(str(p.index_or_path))
+    return OpenCVCamera(
+        OpenCVCameraConfig(
+            index_or_path=iop,
+            fps=p.fps,
+            width=p.width,
+            height=p.height,
+            rotation=Cv2Rotation(p.rotation),
+            fourcc=p.fourcc,
+        )
+    )
+
+
+class CameraHub:
+    def __init__(
+        self, locks_dir: Path, *, factory: Callable[[str, CameraProfile], Any] = build_camera
+    ) -> None:
+        self.locks_dir = locks_dir
+        self.factory = factory
+        self._cams: dict[str, _Cam] = {}
+        self._lock = threading.RLock()
+        self._latest: FrameSet | None = None
+        self._latest_lock = threading.Lock()
+        self.loop_active = False  # the control loop publishes; otherwise previews read themselves
+        self._idle_tick = 0
+
+    # ------------------------------------------------------------------ lifecycle
+    def configure(self, cams: dict[str, CameraProfile]) -> dict[str, str]:
+        """Open every configured camera (keeping the ones already open); returns errors by name."""
+        errors: dict[str, str] = {}
+        with self._lock:
+            for name in list(self._cams):
+                c = self._cams[name]
+                if name not in cams or cams[name] != c.profile:
+                    self._close(name)
+            for name, p in cams.items():
+                if name in self._cams:
+                    continue
+                err = self._open(name, p)
+                if err:
+                    errors[name] = err
+        return errors
+
+    def _open(self, name: str, p: CameraProfile) -> str | None:
+        lock = None
+        if p.type != "mock":
+            lock = DeviceLock(self.locks_dir, device_key(p))
+            try:
+                lock.acquire()
+            except DeviceBusyError as exc:
+                return f"camera_busy: held by pid {exc.holder}"
+        try:
+            cam = self.factory(name, p)
+            cam.connect(warmup=True)
+        except Exception as exc:
+            if lock:
+                lock.release()
+            log.warning("camera %s failed to open: %s", name, exc)
+            return f"camera_unavailable: {exc}"[:300]
+        self._cams[name] = _Cam(name, p, cam, lock)
+        return None
+
+    def _close(self, name: str) -> None:
+        c = self._cams.pop(name, None)
+        if c is None:
+            return
+        try:
+            c.camera.disconnect()
+        except Exception as exc:  # pragma: no cover
+            log.warning("camera %s disconnect: %s", name, exc)
+        if c.lock:
+            c.lock.release()
+
+    def close_all(self) -> None:
+        with self._lock:
+            for name in list(self._cams):
+                self._close(name)
+        with self._latest_lock:
+            self._latest = None
+
+    # ------------------------------------------------------------------ access
+    @property
+    def names(self) -> list[str]:
+        return list(self._cams)
+
+    def camera(self, name: str) -> Any:
+        return self._cams[name].camera
+
+    def shapes(self) -> dict[str, tuple[int, int, int]]:
+        return {n: (c.profile.height, c.profile.width, 3) for n, c in self._cams.items()}
+
+    def holders(self) -> dict[str, str]:
+        return {device_key(c.profile): n for n, c in self._cams.items()}
+
+    def read_latest_all(
+        self, max_age_ms: float, now: float | None = None
+    ) -> tuple[dict[str, Any], list[str]]:
+        """``{name: HxWx3 RGB}`` + names of stale cameras (their last good frame is NOT returned)."""
+        now = time.monotonic() if now is None else now
+        frames: dict[str, Any] = {}
+        stale: list[str] = []
+        for name, c in list(self._cams.items()):
+            try:
+                frames[name] = c.camera.read_latest(max_age_ms=int(max(1, max_age_ms)))
+                c.stale_since = None
+                c.error = None
+            except (TimeoutError, RuntimeError, ConnectionError, OSError) as exc:
+                if c.stale_since is None:
+                    c.stale_since = now
+                c.error = str(exc)[:200]
+                stale.append(name)
+        return frames, stale
+
+    def stale_for(self, name: str, now: float | None = None) -> float:
+        c = self._cams.get(name)
+        if c is None or c.stale_since is None:
+            return 0.0
+        return (time.monotonic() if now is None else now) - c.stale_since
+
+    def publish(self, fs: FrameSet) -> None:
+        with self._latest_lock:
+            self._latest = fs
+
+    def latest(self) -> FrameSet | None:
+        """Latest FrameSet: the control loop's when it runs, else a fresh idle read."""
+        if not self.loop_active and self._cams:
+            frames, stale = self.read_latest_all(max_age_ms=1000)
+            self._idle_tick += 1
+            fs = FrameSet(tick=-1, t=time.monotonic(), frames=frames, stale=stale)
+            with self._latest_lock:
+                self._latest = fs
+            return fs
+        with self._latest_lock:
+            return self._latest
+
+    def status(self) -> list[dict[str, Any]]:
+        out = []
+        for n, c in self._cams.items():
+            out.append(
+                {
+                    "name": n,
+                    "type": c.profile.type,
+                    "streaming": bool(getattr(c.camera, "is_connected", False)) and c.stale_since is None,
+                    "width": c.profile.width,
+                    "height": c.profile.height,
+                    "fps": c.profile.fps,
+                    "stale": c.stale_since is not None,
+                    "error": c.error,
+                }
+            )
+        return out
+
+
+# --------------------------------------------------------------------------- preview encoder
+class VideoClient:
+    """One ``/ws/video`` subscriber. Latest frame wins per camera: video never queues."""
+
+    def __init__(self, loop: asyncio.AbstractEventLoop | None = None) -> None:
+        self.loop = loop
+        self.cameras: list[str] = []
+        self.width = 320
+        self.fps = 12.0
+        self._slot: dict[str, bytes] = {}
+        self._errors: dict[str, str] = {}
+        self._lock = threading.Lock()
+        self.event = asyncio.Event() if loop else None
+        self.next_due = 0.0
+        self.last_tick: dict[str, int] = {}
+        self.replaced = 0
+
+    def subscribe(self, cameras: list[str], width: int, fps: float) -> None:
+        with self._lock:
+            self.cameras = list(cameras)
+            self.width = max(160, min(640, int(width)))
+            self.fps = max(1.0, min(30.0, float(fps)))
+            self._slot = {k: v for k, v in self._slot.items() if k in self.cameras}
+
+    def offer(self, cam: str, msg: bytes) -> None:
+        with self._lock:
+            if cam in self._slot:
+                self.replaced += 1
+            self._slot[cam] = msg
+        self._notify()
+
+    def offer_error(self, cam: str, code: str) -> None:
+        with self._lock:
+            self._errors[cam] = code
+        self._notify()
+
+    def _notify(self) -> None:
+        if self.loop is not None and self.event is not None:
+            try:
+                self.loop.call_soon_threadsafe(self.event.set)
+            except RuntimeError:  # loop closed
+                pass
+
+    def take(self) -> tuple[dict[str, bytes], dict[str, str]]:
+        with self._lock:
+            out, self._slot = self._slot, {}
+            errs, self._errors = self._errors, {}
+            return out, errs
+
+
+class PreviewEncoder:
+    """One thread: resize + JPEG at each client's fps, from the latest FrameSet only."""
+
+    def __init__(self, hub: CameraHub, quality: int = 70, max_fps: float = 30.0) -> None:
+        self.hub = hub
+        self.quality = quality
+        self.max_fps = max_fps
+        self.clients: set[VideoClient] = set()
+        self._lock = threading.Lock()
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
+        self.encoded = 0
+        self.t0 = time.monotonic()
+
+    def add(self, c: VideoClient) -> None:
+        with self._lock:
+            self.clients.add(c)
+
+    def remove(self, c: VideoClient) -> None:
+        with self._lock:
+            self.clients.discard(c)
+
+    def start(self) -> None:
+        if self._thread is None:
+            self._thread = threading.Thread(target=self._run, name="preview-encoder", daemon=True)
+            self._thread.start()
+
+    def stop(self) -> None:
+        self._stop.set()
+        if self._thread:
+            self._thread.join(timeout=2)
+        self._thread = None
+
+    def _run(self) -> None:
+        while not self._stop.is_set():
+            self.step()
+            self._stop.wait(1.0 / self.max_fps)
+
+    def step(self, now: float | None = None) -> int:
+        """Encode for every due client. Returns the number of messages offered."""
+        now = time.monotonic() if now is None else now
+        with self._lock:
+            clients = [c for c in self.clients if c.cameras and now >= c.next_due]
+        if not clients:
+            return 0
+        fs = self.hub.latest()
+        if fs is None:
+            return 0
+        cache: dict[tuple[str, int], tuple[bytes, int, int]] = {}
+        sent = 0
+        for c in clients:
+            c.next_due = now + 1.0 / c.fps
+            for cam in c.cameras:
+                frame = fs.frames.get(cam)
+                if frame is None:
+                    if cam in fs.stale or cam in self.hub.names:
+                        c.offer_error(cam, "camera_stale")
+                    continue
+                if fs.tick >= 0 and c.last_tick.get(cam) == fs.tick:
+                    continue  # nothing new for this client
+                key = (cam, c.width)
+                if key not in cache:
+                    cache[key] = encode_preview(np.asarray(frame), c.width, self.quality)
+                    self.encoded += 1
+                jpeg, w, h = cache[key]
+                src_h, src_w = frame.shape[:2]
+                header = {
+                    "cam": cam,
+                    "tick": fs.tick,
+                    "t": round(fs.t - self.t0, 3),
+                    "w": w,
+                    "h": h,
+                    "src_w": int(src_w),
+                    "src_h": int(src_h),
+                    "policy_input": fs.policy_input,
+                    "stale": cam in fs.stale,
+                }
+                c.last_tick[cam] = fs.tick
+                c.offer(cam, pack_frame(header, jpeg))
+                sent += 1
+        return sent

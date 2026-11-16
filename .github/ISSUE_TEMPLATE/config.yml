@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: ❓ Question or help
+    url: https://github.com/Bigkatoan/hibiscus-station/discussions
+    about: Ask usage questions and share your setups in GitHub Discussions.
+  - name: 🔒 Security vulnerability
+    url: https://github.com/Bigkatoan/hibiscus-station/security/advisories/new
+    about: Report vulnerabilities privately. Never open a public issue for them.
+  - name: 🌺 Hibiscus server (training platform)
+    url: https://github.com/Bigkatoan/Hibiscus/issues
+    about: Problems with datasets, training runs or model bundles on the server belong there.

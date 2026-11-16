@@ -1,0 +1,44 @@
+{
+  "schema_version": "1",
+  "description": "Hand-maintained presets (owner A1/A4). Applied as: schema defaults <- preset.train/policy <- user values. Validated by backend/tests/contract.",
+  "presets": [
+    {
+      "id": "quick",
+      "label_key": "preset.quick",
+      "requires_init_from": false,
+      "train": {"steps": 10000, "save_freq": 5000, "log_freq": 100, "batch_size": 8},
+      "policy": {},
+      "per_policy": {
+        "smolvla": {"train": {"batch_size": 4}},
+        "pi0": {"train": {"batch_size": 1, "steps": 2000, "save_freq": 1000}, "policy": {"gradient_checkpointing": true}},
+        "pi05": {"train": {"batch_size": 1, "steps": 2000, "save_freq": 1000}, "policy": {"gradient_checkpointing": true}}
+      }
+    },
+    {
+      "id": "standard",
+      "label_key": "preset.standard",
+      "requires_init_from": false,
+      "train": {"steps": 100000, "save_freq": 10000, "log_freq": 200, "batch_size": 8},
+      "policy": {},
+      "per_policy": {
+        "diffusion": {"train": {"batch_size": 32}},
+        "vqbet": {"train": {"batch_size": 32}},
+        "smolvla": {"train": {"steps": 20000, "save_freq": 5000, "batch_size": 8}},
+        "pi0": {"train": {"batch_size": 1, "steps": 10000, "save_freq": 2000}, "policy": {"gradient_checkpointing": true}},
+        "pi05": {"train": {"batch_size": 1, "steps": 10000, "save_freq": 2000}, "policy": {"gradient_checkpointing": true}}
+      }
+    },
+    {
+      "id": "finetune",
+      "label_key": "preset.finetune",
+      "requires_init_from": true,
+      "train": {"steps": 20000, "save_freq": 5000, "log_freq": 200},
+      "policy": {},
+      "per_policy": {
+        "smolvla": {"train": {"batch_size": 8}, "policy": {"freeze_vision_encoder": true, "train_expert_only": true}},
+        "pi0": {"train": {"batch_size": 1, "steps": 5000, "save_freq": 1000, "peft": {"method_type": "LORA", "r": 16}}, "policy": {"gradient_checkpointing": true}},
+        "pi05": {"train": {"batch_size": 1, "steps": 5000, "save_freq": 1000, "peft": {"method_type": "LORA", "r": 16}}, "policy": {"gradient_checkpointing": true}}
+      }
+    }
+  ]
+}

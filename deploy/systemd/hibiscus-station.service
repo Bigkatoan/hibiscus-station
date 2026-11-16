@@ -1,0 +1,33 @@
+# Hibiscus Station as a systemd *user* service (the Python wheel install, without Docker).
+#
+#   uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.0/hibiscus_station-0.2.0-py3-none-any.whl
+#   install -Dm644 deploy/systemd/hibiscus-station.service ~/.config/systemd/user/hibiscus-station.service
+#   systemctl --user daemon-reload && systemctl --user enable --now hibiscus-station
+#   sudo loginctl enable-linger "$USER"        # start at boot, without a desktop login
+#   hibiscus-station url                       # the login link (open it on this machine)
+#
+# Optional settings (LAN mode, extra arguments) go in ~/.config/hibiscus-station/station.env, e.g.
+#   HIBISCUS_STATION_TOKEN=...   HIBISCUS_STATION_ALLOWED_HOSTS=robot-pi.local
+#   STATION_ARGS=--host 0.0.0.0
+# The service user must be in the `dialout` and `video` groups (deploy/udev/ rule recommended).
+[Unit]
+Description=Hibiscus Station (robot-side app for SO-100/SO-101 arms)
+Documentation=https://github.com/Bigkatoan/hibiscus-station
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=PYTHONUNBUFFERED=1
+Environment=STATION_ARGS=
+EnvironmentFile=-%h/.config/hibiscus-station/station.env
+ExecStart=%h/.local/bin/hibiscus-station --no-browser $STATION_ARGS
+ExecStartPost=/bin/sh -c 'for i in $$(seq 60); do %h/.local/bin/hibiscus-station health --timeout 2 >/dev/null 2>&1 && exit 0; sleep 2; done; exit 1'
+# SIGTERM runs Station's safe shutdown: hold, park at the rest pose, torque off.
+KillSignal=SIGTERM
+TimeoutStopSec=30
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

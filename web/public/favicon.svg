@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="t">
+  <title id="t">Hibiscus</title>
+  <defs>
+    <radialGradient id="petal" cx="256" cy="256" r="230" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7A0B2E"/>
+      <stop offset="0.22" stop-color="#B3123A"/>
+      <stop offset="0.62" stop-color="#E8344E"/>
+      <stop offset="1" stop-color="#FF6B6B"/>
+    </radialGradient>
+    <linearGradient id="column" x1="256" y1="256" x2="368" y2="128" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFB3C1"/>
+      <stop offset="1" stop-color="#FFE3E8"/>
+    </linearGradient>
+    <!-- one petal pointing up; notched, slightly asymmetric tip like a real hibiscus -->
+    <path id="p" d="M256 256
+      C 214 214, 150 150, 160 92
+      C 168 46, 214 30, 240 52
+      C 248 59, 252 66, 256 74
+      C 262 64, 270 56, 280 50
+      C 312 32, 356 52, 352 100
+      C 346 158, 294 214, 256 256 Z"/>
+    <path id="vein" d="M256 236 C 252 180, 236 128, 206 84 M256 236 C 262 180, 282 126, 314 88 M256 236 L 257 96"/>
+  </defs>
+
+  <g transform="rotate(-8 256 256)">
+    <!-- petals -->
+    <g fill="url(#petal)" stroke="#9E0F33" stroke-opacity="0.55" stroke-width="4" stroke-linejoin="round">
+      <use href="#p"/>
+      <use href="#p" transform="rotate(72 256 256)"/>
+      <use href="#p" transform="rotate(144 256 256)"/>
+      <use href="#p" transform="rotate(216 256 256)"/>
+      <use href="#p" transform="rotate(288 256 256)"/>
+    </g>
+    <!-- subtle petal overlaps / veins -->
+    <g fill="none" stroke="#FFFFFF" stroke-opacity="0.16" stroke-width="5" stroke-linecap="round">
+      <use href="#vein"/>
+      <use href="#vein" transform="rotate(72 256 256)"/>
+      <use href="#vein" transform="rotate(144 256 256)"/>
+      <use href="#vein" transform="rotate(216 256 256)"/>
+      <use href="#vein" transform="rotate(288 256 256)"/>
+    </g>
+    <!-- dark eye -->
+    <circle cx="256" cy="256" r="44" fill="#5E0822"/>
+    <circle cx="256" cy="256" r="26" fill="#7A0B2E"/>
+  </g>
+
+  <!-- staminal column: the hibiscus signature, drawn like a jointed arm -->
+  <path d="M256 256 C 288 232, 318 196, 352 150" fill="none" stroke="#7A0B2E" stroke-opacity="0.45" stroke-width="20" stroke-linecap="round"/>
+  <path d="M256 256 C 288 232, 318 196, 352 150" fill="none" stroke="url(#column)" stroke-width="12" stroke-linecap="round"/>
+  <!-- pollen -->
+  <g fill="#FFC531">
+    <circle cx="364" cy="128" r="15"/>
+    <circle cx="340" cy="132" r="10"/>
+    <circle cx="384" cy="150" r="10"/>
+    <circle cx="378" cy="108" r="9"/>
+    <circle cx="352" cy="108" r="8"/>
+  </g>
+  <g fill="#FF8A1F">
+    <circle cx="364" cy="128" r="6"/>
+  </g>
+</svg>

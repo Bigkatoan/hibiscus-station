@@ -1,0 +1,31 @@
+# Hibiscus Station: USB serial adapters of Feetech STS3215 servo buses (SO-100 / SO-101 arms).
+# Installed by deploy/install.sh to /etc/udev/rules.d/ (then: sudo udevadm control --reload &&
+# sudo udevadm trigger). What it does:
+#   * the servo bus adapters are readable by the `dialout` group (mode 0660), so neither Station
+#     nor its container needs root;
+#   * ModemManager leaves them alone (it probes new ttyACM devices and can garble the first
+#     packets of a session);
+#   * each adapter gets a stable name that survives replugging and reboots:
+#       /dev/hibiscus/arm-<serial number>        (CH343 boards report a unique serial)
+#       /dev/hibiscus/arm-<usb path>             (CH340 boards have none: tied to the USB port)
+#
+# Adapters seen on SO-ARM100/101 kits: Waveshare "Bus Servo Adapter" (CH343, 1a86:55d3, ttyACM)
+# and boards with a CH340 (1a86:7523, ttyUSB). Feetech's own FE-URT-1 uses a CH343 as well.
+
+ACTION=="remove", GOTO="hibiscus_station_end"
+SUBSYSTEM!="tty", GOTO="hibiscus_station_end"
+
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="55d3", ENV{HIBISCUS_ARM}="1"
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", ENV{HIBISCUS_ARM}="1"
+ENV{HIBISCUS_ARM}!="1", GOTO="hibiscus_station_end"
+
+MODE="0660", GROUP="dialout", ENV{ID_MM_DEVICE_IGNORE}="1"
+ENV{ID_SERIAL_SHORT}=="?*", SYMLINK+="hibiscus/arm-$env{ID_SERIAL_SHORT}", GOTO="hibiscus_station_end"
+ENV{ID_PATH_TAG}=="?*", SYMLINK+="hibiscus/arm-$env{ID_PATH_TAG}"
+
+# Optional fixed role names: put the serial numbers of YOUR adapters here (`hibiscus-station-ctl
+# ports` or `udevadm info -q property -n /dev/ttyACM0 | grep ID_SERIAL_SHORT`), uncomment, reload.
+# ENV{ID_SERIAL_SHORT}=="5A46000001", SYMLINK+="hibiscus/so101-follower"
+# ENV{ID_SERIAL_SHORT}=="5A46000002", SYMLINK+="hibiscus/so101-leader"
+
+LABEL="hibiscus_station_end"

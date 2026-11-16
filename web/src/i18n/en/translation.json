@@ -1,0 +1,15 @@
+{
+  "chart": {
+    "no_data": "No data yet",
+    "summary": "{{title}} chart. Latest values: {{summary}}"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "close": "Close",
+    "loading": "Loading…"
+  },
+  "errors": {
+    "request_id": "Request id: {{id}}",
+    "unknown_error": "Something went wrong. Try again."
+  }
+}

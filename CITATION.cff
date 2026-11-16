@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+message: "If you use Hibiscus Station in your research, please cite it as below."
+type: software
+title: "Hibiscus Station: the robot-side app for LeRobot SO-100/SO-101 arms"
+abstract: >-
+  Hibiscus Station runs next to a LeRobot SO-100/SO-101 arm: calibration, cameras, teleoperation,
+  dataset recording with per-motor health telemetry and a thermal safe stop, upload to a Hibiscus
+  training server, running trained policies with live camera feeds, and block programs built from
+  recorded trajectories and camera detectors. It ships as Docker images for PCs, NVIDIA Jetson and
+  Raspberry Pi 5, and as a Python package.
+authors:
+  - alias: Bigkatoan
+  - name: "The Hibiscus contributors"
+repository-code: "https://github.com/Bigkatoan/hibiscus-station"
+license: AGPL-3.0-or-later
+version: "0.2.0"
+date-released: "2026-11-16"
+keywords:
+  - robotics
+  - imitation learning
+  - lerobot
+  - so-101
+  - teleoperation
+  - motor telemetry
+references:
+  - type: software
+    title: "LeRobot: State-of-the-art Machine Learning for Real-World Robotics in Pytorch"
+    authors:
+      - name: "Hugging Face"
+    repository-code: "https://github.com/huggingface/lerobot"
+    license: Apache-2.0
+  - type: software
+    title: "Hibiscus: a self-hosted training platform for LeRobot policies"
+    authors:
+      - alias: Bigkatoan
+    repository-code: "https://github.com/Bigkatoan/Hibiscus"
+    license: AGPL-3.0-only

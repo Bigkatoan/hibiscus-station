@@ -1,0 +1,316 @@
+/*
+ * Hibiscus design system (synced from hibiscus-assets into src/hibiscus/ — never edit those copies):
+ *   fonts.css  Nunito @font-face (self-hosted, Vietnamese subset)
+ *   motion.css pixel unit (1 art px = 2 CSS px), sprite-strip animation, garden, petals, night rim
+ * The app keeps its own skin (shadcn/Tailwind tokens below) instead of tokens.css/components.css;
+ * the values match tokens.css and src/lib/pixelTheme.ts (pixelTheme.test.ts checks all three and
+ * WCAG 2.1 AA for every text/surface pair).
+ */
+@import "./hibiscus/fonts.css";
+@import "./hibiscus/motion.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Day: parchment garden, wood frames */
+  :root {
+    --background: 243 223 178; /* #f3dfb2 */
+    --foreground: 59 32 39; /* #3b2027 */
+    --card: 255 246 220; /* #fff6dc */
+    --card-foreground: 59 32 39; /* #3b2027 */
+    --popover: 255 246 220; /* #fff6dc */
+    --popover-foreground: 59 32 39; /* #3b2027 */
+    --primary: 47 107 58; /* #2f6b3a */
+    --primary-foreground: 255 246 220; /* #fff6dc */
+    --secondary: 201 154 98; /* #c99a62 */
+    --secondary-foreground: 59 32 39; /* #3b2027 */
+    --muted: 243 223 178; /* #f3dfb2 */
+    --muted-foreground: 107 68 51; /* #6b4433 */
+    --accent: 236 213 164; /* #ecd5a4 */
+    --accent-foreground: 59 32 39; /* #3b2027 */
+    --destructive: 140 28 58; /* #8c1c3a */
+    --destructive-foreground: 255 246 220; /* #fff6dc */
+    --success: 47 107 58; /* #2f6b3a */
+    --success-foreground: 255 246 220; /* #fff6dc */
+    --warning: 138 74 12; /* #8a4a0c */
+    --warning-foreground: 255 246 220; /* #fff6dc */
+    --info: 47 111 159; /* #2f6f9f */
+    --info-foreground: 255 246 220; /* #fff6dc */
+    --border: 201 154 98; /* #c99a62 */
+    --input: 59 32 39; /* #3b2027 */
+    --ring: 94 241 227; /* #5ef1e3 */
+    --frame: 59 32 39; /* #3b2027 */
+    --header: 107 68 51; /* #6b4433 */
+    --header-foreground: 255 246 220; /* #fff6dc */
+    --sidebar: 201 154 98; /* #c99a62 */
+    --sidebar-foreground: 59 32 39; /* #3b2027 */
+    --chart-1: 47 111 159; /* #2f6f9f */
+    --chart-2: 215 38 61; /* #d7263d */
+    --chart-3: 47 107 58; /* #2f6b3a */
+    --chart-4: 123 91 181; /* #7b5bb5 */
+    --chart-5: 107 68 51; /* #6b4433 */
+    --chart-6: 140 28 58; /* #8c1c3a */
+    --chart-7: 74 83 104; /* #4a5368 */
+    --chart-8: 240 138 36; /* #f08a24 */
+    --hard-shadow: 59 32 39;
+    --hard-shadow-alpha: 0.25;
+    --font-body: "Nunito", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+
+  /* Night: indigo sky, flat indigo frames + hard shadows (never wood) */
+  .dark {
+    --background: 22 26 46; /* #161a2e */
+    --foreground: 244 236 214; /* #f4ecd6 */
+    --card: 34 40 66; /* #222842 */
+    --card-foreground: 244 236 214; /* #f4ecd6 */
+    --popover: 34 40 66; /* #222842 */
+    --popover-foreground: 244 236 214; /* #f4ecd6 */
+    --primary: 155 211 90; /* #9bd35a */
+    --primary-foreground: 22 26 46; /* #161a2e */
+    --secondary: 58 67 112; /* #3a4370 */
+    --secondary-foreground: 244 236 214; /* #f4ecd6 */
+    --muted: 43 50 83; /* #2b3253 */
+    --muted-foreground: 174 185 208; /* #aeb9d0 */
+    --accent: 43 50 83; /* #2b3253 */
+    --accent-foreground: 244 236 214; /* #f4ecd6 */
+    --destructive: 255 158 181; /* #ff9eb5 */
+    --destructive-foreground: 22 26 46; /* #161a2e */
+    --success: 155 211 90; /* #9bd35a */
+    --success-foreground: 22 26 46; /* #161a2e */
+    --warning: 255 197 49; /* #ffc531 */
+    --warning-foreground: 22 26 46; /* #161a2e */
+    --info: 111 183 232; /* #6fb7e8 */
+    --info-foreground: 22 26 46; /* #161a2e */
+    --border: 61 69 102; /* #3d4566 */
+    --input: 139 155 180; /* #8b9bb4 */
+    --ring: 94 241 227; /* #5ef1e3 */
+    --frame: 12 14 31; /* #0c0e1f */
+    --header: 17 20 42; /* #11142a */
+    --header-foreground: 244 236 214; /* #f4ecd6 */
+    --sidebar: 27 32 56; /* #1b2038 */
+    --sidebar-foreground: 244 236 214; /* #f4ecd6 */
+    --chart-1: 111 183 232; /* #6fb7e8 */
+    --chart-2: 255 158 181; /* #ff9eb5 */
+    --chart-3: 155 211 90; /* #9bd35a */
+    --chart-4: 179 156 230; /* #b39ce6 */
+    --chart-5: 255 197 49; /* #ffc531 */
+    --chart-6: 94 241 227; /* #5ef1e3 */
+    --chart-7: 199 211 227; /* #c7d3e3 */
+    --chart-8: 240 138 36; /* #f08a24 */
+    --hard-shadow: 0 0 0;
+    --hard-shadow-alpha: 0.45;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    accent-color: rgb(var(--primary));
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Readability first: Nunito for every heading too (no pixel fonts). */
+  h1,
+  h2,
+  h3 {
+    font-weight: 800;
+    letter-spacing: 0;
+  }
+
+  /* Focus: dark 2px ring + 3px screen-glow ring, visible on parchment, wood and night. */
+  :focus-visible {
+    outline: 3px solid rgb(var(--ring));
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px rgb(var(--frame));
+  }
+
+  /* Links are always underlined (WCAG 1.4.1: not distinguished by colour alone). */
+  a.text-primary {
+    text-decoration-line: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+  }
+
+  ::selection {
+    background: rgb(var(--ring));
+    color: rgb(59 32 39);
+  }
+
+  img.pixelated,
+  .pixelated {
+    image-rendering: pixelated;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/*
+ * Frames follow the pixel unit: every 12×12 frame is sliced at 4 art px and drawn as an 8 px border
+ * (1 art px = 2 CSS px). Day uses the synced wood/leaf sprites; night uses flat indigo frames drawn
+ * as the same 12×12 9-slice (inline SVG), so layout is identical in both themes.
+ */
+@layer components {
+  .px-panel {
+    border: 8px solid transparent;
+    border-image: url("/pixel/ui_panel.png") 4 fill / 8px / 0 stretch;
+    image-rendering: pixelated;
+    /* Same colour as the frame centre so contrast checkers (axe) see the real surface. */
+    background-color: rgb(var(--card));
+    background-clip: padding-box;
+  }
+  .dark .px-panel {
+    border-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' shape-rendering='crispEdges'%3E%3Crect x='0' y='0' width='12' height='12' fill='%230c0e1f'/%3E%3Crect x='1' y='1' width='10' height='10' fill='%232d3456'/%3E%3Crect x='2' y='2' width='8' height='8' fill='%23222842'/%3E%3Crect x='1' y='1' width='10' height='1' fill='%233a4370'/%3E%3C/svg%3E")
+      4 fill / 8px / 0 stretch;
+  }
+
+  /* Small surfaces (menus, tooltips, bubbles): flat 2 px frame + hard shadow, both themes. */
+  .px-panel-sm {
+    border: 2px solid rgb(var(--frame));
+    background-color: rgb(var(--card));
+    box-shadow:
+      inset 0 2px 0 0 rgb(255 255 255 / 0.25),
+      4px 4px 0 0 rgb(var(--hard-shadow) / var(--hard-shadow-alpha));
+  }
+  .dark .px-panel-sm {
+    box-shadow:
+      inset 0 2px 0 0 #3a4370,
+      4px 4px 0 0 rgb(var(--hard-shadow) / var(--hard-shadow-alpha));
+  }
+
+  /* Hard 4 px (2 art px) offset shadow, never blurred. */
+  .px-shadow {
+    filter: drop-shadow(4px 4px 0 rgb(var(--hard-shadow) / var(--hard-shadow-alpha)));
+  }
+
+  /* 9-slice raised buttons. background-color = frame centre (for contrast checkers). */
+  .px-btn {
+    border: 8px solid transparent;
+    image-rendering: pixelated;
+    background-clip: padding-box;
+  }
+  .px-btn-green {
+    border-image: url("/pixel/ui_button.png") 4 fill / 8px / 0 stretch;
+    background-color: #5fa04e;
+    color: #3b2027;
+  }
+  .px-btn-wood {
+    border-image: url("/pixel/ui_button_wood.png") 4 fill / 8px / 0 stretch;
+    background-color: #c99a62;
+    color: #3b2027;
+  }
+  .px-btn-red {
+    border-image: url("/pixel/ui_button_red.png") 4 fill / 8px / 0 stretch;
+    background-color: #8c1c3a;
+    color: #fff6dc;
+  }
+  .dark .px-btn-green {
+    border-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' shape-rendering='crispEdges'%3E%3Crect x='0' y='0' width='12' height='12' fill='%230c0e1f'/%3E%3Crect x='1' y='1' width='10' height='10' fill='%235fa04e'/%3E%3Crect x='1' y='1' width='10' height='1' fill='%239bd35a'/%3E%3Crect x='1' y='9' width='10' height='2' fill='%232f6b3a'/%3E%3C/svg%3E")
+      4 fill / 8px / 0 stretch;
+    color: #161a2e;
+  }
+  .dark .px-btn-wood {
+    border-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' shape-rendering='crispEdges'%3E%3Crect x='0' y='0' width='12' height='12' fill='%230c0e1f'/%3E%3Crect x='1' y='1' width='10' height='10' fill='%233a4370'/%3E%3Crect x='1' y='1' width='10' height='1' fill='%234f5a80'/%3E%3Crect x='1' y='9' width='10' height='2' fill='%232b3253'/%3E%3C/svg%3E")
+      4 fill / 8px / 0 stretch;
+    background-color: #3a4370;
+    color: #f4ecd6;
+  }
+  .dark .px-btn-red {
+    border-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' shape-rendering='crispEdges'%3E%3Crect x='0' y='0' width='12' height='12' fill='%230c0e1f'/%3E%3Crect x='1' y='1' width='10' height='10' fill='%23a3214a'/%3E%3Crect x='1' y='1' width='10' height='1' fill='%23d7263d'/%3E%3Crect x='1' y='9' width='10' height='2' fill='%236b1530'/%3E%3C/svg%3E")
+      4 fill / 8px / 0 stretch;
+    background-color: #a3214a;
+    color: #fff6dc;
+  }
+
+  /* Sunken field: 2px outline + 2px inner shadow on the top/left (light from top-left). */
+  .px-field {
+    border: 2px solid rgb(var(--input));
+    background-color: rgb(var(--card));
+    box-shadow: inset 2px 2px 0 0 rgb(var(--hard-shadow) / 0.18);
+  }
+  .dark .px-field {
+    background-color: #1a1f36;
+  }
+
+  /* Native <select> with the chevron_down glyph (8×8 art at 2 px per art pixel). */
+  .px-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' width='16' height='16' shape-rendering='crispEdges'%3E%3Cpath fill='%233b2027' d='M0 2h2v1H0zM6 2h2v1H6zM1 3h2v1H1zM5 3h2v1H5zM2 4h4v1H2zM3 5h2v1H3z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px 16px;
+  }
+  .dark .px-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' width='16' height='16' shape-rendering='crispEdges'%3E%3Cpath fill='%23f4ecd6' d='M0 2h2v1H0zM6 2h2v1H6zM1 3h2v1H1zM5 3h2v1H5zM2 4h4v1H2zM3 5h2v1H3z'/%3E%3C/svg%3E");
+  }
+
+  /* Segmented pixel progress bar: 2px outline, 6px blocks with 2px gaps. */
+  .px-bar {
+    border: 2px solid rgb(var(--frame));
+    background-color: rgb(var(--muted));
+    box-shadow: inset 0 2px 0 0 rgb(var(--hard-shadow) / 0.25);
+  }
+  .px-bar-fill {
+    background-image: repeating-linear-gradient(90deg, rgb(var(--primary)) 0 6px, transparent 6px 8px);
+  }
+
+  /* Notched (pixel-rounded) corners for small chips. */
+  .px-notch {
+    clip-path: polygon(
+      2px 0,
+      calc(100% - 2px) 0,
+      100% 2px,
+      100% calc(100% - 2px),
+      calc(100% - 2px) 100%,
+      2px 100%,
+      0 calc(100% - 2px),
+      0 2px
+    );
+  }
+
+  /* Plain grass strip (tile_grass, 16×16 art → 32 px) where a full <Garden/> would add a 2nd mascot. */
+  .px-grass {
+    background: url("/pixel/tile_grass.png") repeat-x 0 0 / 32px 32px;
+    image-rendering: pixelated;
+  }
+
+  /* The synced garden draws its top edge with var(--frame) (a hex there, an RGB triplet here). */
+  .px-garden::after {
+    border-top-color: rgb(var(--frame));
+  }
+}
+
+/* uPlot: palette colours, Nunito tabular numbers on the axes/legend. */
+.uplot,
+.uplot * {
+  color: rgb(var(--foreground));
+}
+.uplot {
+  font-family: var(--font-body);
+}
+.uplot .u-legend .u-value,
+.uplot .u-legend th {
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+}
+.uplot .u-legend .u-marker {
+  border-radius: 0;
+}
+.uplot .u-select {
+  background: rgb(var(--ring) / 0.25);
+}

@@ -1,0 +1,35 @@
+/* Hibiscus components. Day: 9-slice wood sprites. Night: flat indigo frame + hard shadow
+   (wood frames on a night background look wrong — never use ui_panel_night for cards). */
+body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 15px; line-height: 1.55; }
+.pixelated, .px-anim { image-rendering: pixelated; }
+:focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; box-shadow: 0 0 0 2px var(--frame); }
+
+.px-panel {
+  border: 8px solid transparent; border-image: url('/pixel/ui_panel.png') 4 fill / 8px / 0 stretch;
+  background-color: var(--surface); background-clip: padding-box; filter: drop-shadow(4px 4px 0 var(--hard)); padding: 10px;
+}
+.px-panel-sm { border: 2px solid var(--frame); background: var(--surface); box-shadow: inset 0 -3px 0 rgb(59 32 39 / 12%), 3px 3px 0 var(--hard); }
+
+.px-btn {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 6px;
+  border: 8px solid transparent; border-image: url('/pixel/ui_button_wood.png') 4 fill / 8px / 0 stretch;
+  background: #c99a62; background-clip: padding-box; color: #3b2027; font: 800 14px/1 var(--font-body); cursor: pointer;
+  image-rendering: pixelated;
+}
+.px-btn:hover { filter: brightness(1.07); } .px-btn:active { transform: translateY(2px); }
+.px-btn.primary { border-image-source: url('/pixel/ui_button.png'); background-color: #5fa04e; }
+.px-btn.danger { border-image-source: url('/pixel/ui_button_red.png'); background-color: #8c1c3a; color: #fff6dc; }
+
+.px-field { border: 2px solid var(--frame); background: var(--surface); box-shadow: inset 2px 2px 0 rgb(59 32 39 / 15%); border-radius: 0; min-height: 38px; padding: 6px 10px; font: inherit; color: var(--text); }
+.px-notch { clip-path: polygon(2px 0, calc(100% - 2px) 0, 100% 2px, 100% calc(100% - 2px), calc(100% - 2px) 100%, 2px 100%, 0 calc(100% - 2px), 0 2px); }
+.px-bar { height: 14px; border: 2px solid var(--frame); background: var(--surface-2); }
+.px-bar > span { display: block; height: 100%; background: repeating-linear-gradient(90deg, var(--accent) 0 6px, transparent 6px 8px); }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .px-panel { border: 2px solid var(--frame); border-image: none; padding: 18px 20px; box-shadow: inset 0 2px 0 #3a4370, inset 0 0 0 2px #2d3456; }
+  :root:not([data-theme='light']) .px-panel-sm { box-shadow: inset 0 2px 0 #3a4370, 3px 3px 0 var(--hard); }
+  :root:not([data-theme='light']) .px-btn { border: 2px solid var(--frame); border-image: none; background: #3a4370; color: var(--text); padding: 6px 12px; box-shadow: inset 0 2px 0 rgb(255 255 255 / 12%), inset 0 -3px 0 rgb(0 0 0 / 25%); }
+  :root:not([data-theme='light']) .px-btn.primary { background: #5fa04e; color: #161a2e; }
+  :root:not([data-theme='light']) .px-btn.danger { background: #a3214a; color: #fff6dc; }
+  :root:not([data-theme='light']) .px-field { background: #1a1f36; border-color: #4f5a80; }
+}

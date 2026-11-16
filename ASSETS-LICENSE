@@ -1,0 +1,72 @@
+Hibiscus artwork and brand assets
+=================================
+
+Copyright © Bigkatoan. All rights reserved.
+
+The source code of Hibiscus Station is free software under the GNU Affero General Public License
+v3.0 (see LICENSE). The artwork and brand assets listed below are NOT covered by the AGPL-3.0: they
+are licensed separately under the terms in this file.
+
+1. Covered assets ("the Assets")
+--------------------------------
+
+* the pixel art: sprites, animation strips, tiles and frames in `web/public/pixel/`;
+* the UI glyphs in `web/public/icons/`;
+* the sprite and glyph data generated from them in `web/src/hibiscus/*.gen.ts`;
+* the mascot "Hibi" (a robot arm holding a hibiscus flower) in every pose, size and mood;
+* the hibiscus logo / mark, the "Hibiscus" lockups and the favicons (`web/public/favicon.*`,
+  `web/public/apple-touch-icon.png`);
+* the same files where a build copies them (`web/dist/`, `hibiscus_station/static/` inside the
+  wheel and the container images);
+* the screenshots in `docs/images/` insofar as they show the Assets.
+
+The Assets are produced from the private Hibiscus design system (github.com/Bigkatoan/hibiscus-assets);
+only the built files above are distributed with Hibiscus Station. The design sources are not part of
+this repository and are not licensed to you.
+
+2. What you may do
+------------------
+
+You may use, copy and redistribute the Assets **unmodified**, and only as part of running,
+building, packaging, documenting or redistributing Hibiscus Station itself (including modified
+versions of the Hibiscus Station code, as long as the Assets are used to depict Hibiscus Station).
+Screenshots, talks, articles and reviews that show Hibiscus Station as it is are welcome.
+
+3. What you may not do without written permission
+--------------------------------------------------
+
+* use the Assets, the name "Hibiscus" or the mascot "Hibi" as the brand, logo or mascot of a fork,
+  a derived product or service, or in any way that suggests endorsement by the Hibiscus project;
+* modify the Assets and distribute the modified versions;
+* use the Assets in other products, projects, games, merchandise or marketing.
+
+A fork that is distributed under another name must replace the Assets (or ask for permission).
+Permission requests: open an issue at github.com/Bigkatoan/hibiscus-station.
+
+4. Fonts
+--------
+
+Nunito (`web/public/fonts/nunito-*.woff2`) is copyright The Nunito Project Authors and is licensed
+under the SIL Open Font License, Version 1.1. The full licence text ships next to the font files as
+`web/public/fonts/OFL-Nunito.txt`. The OFL applies to the fonts only, not to the Assets.
+
+5. Third-party robot model
+--------------------------
+
+The SO-101 robot model shown by the Station 3D view (`web/src/station/twin/so101/`: the URDF
+`so101_new_calib.urdf` and the STL meshes in `assets/`) comes from the SO-ARM100 project by
+TheRobotStudio (github.com/TheRobotStudio/SO-ARM100) and is licensed under the Apache License,
+Version 2.0. The licence text ships next to the model as `LICENSE.txt`, and `NOTICE.txt` there lists
+the source commit and the changes made (the meshes were decimated). The Apache-2.0 applies to that
+model only; it is not one of the Assets and this file does not restrict it.
+
+6. Blockly media
+----------------
+
+`web/public/blockly-media/` holds unmodified media files of Blockly (Apache-2.0, © Google LLC /
+Raspberry Pi Foundation); see the README there. They are not Assets.
+
+7. No warranty
+--------------
+
+The Assets are provided "as is", without warranty of any kind.

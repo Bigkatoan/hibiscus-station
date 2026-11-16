@@ -1,0 +1,11 @@
+# Default reviewers for everything in the repository.
+*                         @Bigkatoan
+
+# Safety- and security-sensitive areas: changes always need an explicit maintainer review.
+/hibiscus_station/hw/     @Bigkatoan
+/hibiscus_station/api/security.py @Bigkatoan
+/hibiscus_station/cli.py  @Bigkatoan
+/deploy/                  @Bigkatoan
+/docker/                  @Bigkatoan
+/.github/                 @Bigkatoan
+/openapi.json             @Bigkatoan

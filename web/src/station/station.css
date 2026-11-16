@@ -1,0 +1,19 @@
+/* Hibiscus Station additions (loaded only by the station entry). */
+
+/* The big e-stop: ui_button_estop 9-slice (12×12, slice 4 → 8 px border = 1 art px per 2 CSS px). */
+.px-btn-estop {
+  border: 8px solid transparent;
+  border-image: url("/pixel/ui_button_estop.png") 4 fill / 8px / 0 stretch;
+  background-color: #d7263d;
+  background-clip: padding-box;
+  image-rendering: pixelated;
+}
+
+/* Striped overlay for a stale camera (hard 8px pixel stripes, no blur). */
+.station-stale {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgb(59 32 39 / 0.55) 0 8px,
+    rgb(255 197 49 / 0.35) 8px 16px
+  );
+}

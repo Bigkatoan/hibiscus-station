@@ -1,0 +1,80 @@
+/* Hibiscus skin for the Blockly workspace (Nunito, square corners, 2 px frames, no blur). */
+/* Blockly's toolbox and flyouts carry z-indexes up to 70: keep them inside the editor frame, under the
+   sticky app header and the e-stop, when the page scrolls. */
+.hb-blockly {
+  isolation: isolate;
+}
+/* Blockly hides closed flyouts' scrollbars with the SVG attribute display="none"; the global
+   `svg { display: block }` reset would otherwise leave a stray bar across the workspace. */
+.hb-blockly svg[display="none"] {
+  display: none;
+}
+.hb-blockly .blocklyText,
+.hb-blockly .blocklyFlyoutLabelText,
+.hb-blockly .blocklyTreeLabel,
+.hb-blockly .blocklyToolboxCategoryLabel {
+  font-family: var(--font-body, "Nunito", ui-sans-serif, system-ui, sans-serif) !important;
+}
+.hb-blockly .blocklyText {
+  fill: #fff6dc;
+}
+.hb-blockly .blocklyToolbox,
+.hb-blockly .blocklyToolboxDiv {
+  border-right: 2px solid var(--frame, #3b2027);
+}
+.hb-blockly .blocklyToolboxCategory,
+.hb-blockly .blocklyTreeRow {
+  border-radius: 0;
+  font-weight: 800;
+  min-height: 32px;
+  margin-bottom: 2px;
+}
+.hb-blockly .blocklyToolboxSelected,
+.hb-blockly .blocklyTreeSelected {
+  outline: 2px solid var(--frame, #3b2027);
+}
+.hb-blockly .blocklyFlyoutButton,
+.hb-blockly .blocklyFlyoutButtonBackground {
+  rx: 0;
+  ry: 0;
+}
+.hb-blockly .blocklyFlyoutButton .blocklyText {
+  fill: #3b2027;
+}
+.dark .hb-blockly .blocklyFlyoutButton .blocklyText {
+  fill: #f4ecd6;
+}
+.hb-blockly .blocklyFlyoutButtonBackground {
+  fill: #fff6dc;
+  stroke: #3b2027;
+  stroke-width: 2px;
+}
+.dark .hb-blockly .blocklyFlyoutButtonBackground {
+  fill: #2b3253;
+  stroke: #0c0e1f;
+}
+.hb-blockly .blocklyMainBackground {
+  stroke: none;
+}
+/* The block the program is executing (Blockly's highlightBlock) and the selected block: a thick cyan
+   outline (the focus-ring colour of the style guide) instead of Blockly's pale emboss filter. */
+.hb-blockly .blocklyHighlightedConnectionPath,
+.hb-blockly .blocklyHighlighted > .blocklyPath,
+.hb-blockly .blocklySelected > .blocklyPath,
+.hb-blockly .blocklyPathSelected {
+  stroke: #5ef1e3;
+  stroke-width: 4px;
+}
+.hb-blockly .blocklyHighlighted > .blocklyPath {
+  filter: none;
+}
+.blocklyWidgetDiv .blocklyMenu,
+.blocklyDropDownDiv {
+  border-radius: 0 !important;
+  font-family: var(--font-body, "Nunito", ui-sans-serif, system-ui, sans-serif);
+}
+@media (prefers-reduced-motion: reduce) {
+  .hb-blockly * {
+    transition: none !important;
+  }
+}

@@ -1,0 +1,11 @@
+# NVIDIA Jetson Orin on JetPack 6 (image tag *-jetson). JetPack ships the NVIDIA Container Runtime;
+# it mounts the Tegra GPU libraries into the container. Enabled by deploy/install.sh through
+# COMPOSE_FILE in .env.
+services:
+  station:
+    runtime: nvidia
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: all
+    # PyTorch data loaders and the camera pipeline use shared memory.
+    shm_size: 1g

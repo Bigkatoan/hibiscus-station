@@ -1,0 +1,231 @@
+"""Shared fixtures: an isolated Station in mock mode, an authenticated API client, helpers.
+
+Remote tests use ``FakeHibiscus`` (``tests/fake_server.py``, vendored from the Hibiscus CLI at v0.1.1)
+which checks every request against the server contract snapshot in ``tests/contract/``.
+"""
+
+from __future__ import annotations
+
+import math
+import threading
+import time
+from collections.abc import Callable, Iterator
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from hibiscus_station.mock import get_world, reset_worlds
+from hibiscus_station.profiles import CameraProfile, FollowerProfile, LeaderProfile, RobotProfile
+from hibiscus_station.station import Station
+
+PORT = 18210
+BASE = f"http://127.0.0.1:{PORT}"
+
+
+@pytest.fixture(autouse=True)
+def isolated(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
+    monkeypatch.setenv("HIBISCUS_CONFIG_DIR", str(tmp_path / "cli-config"))
+    monkeypatch.setenv("HIBISCUS_STATE_DIR", str(tmp_path / "cli-state"))
+    monkeypatch.setenv("HIBISCUS_KEYRING", "0")
+    monkeypatch.setenv("HF_LEROBOT_CALIBRATION", str(tmp_path / "calibration"))
+    monkeypatch.setenv("HIBISCUS_STATION_HOME", str(tmp_path / "station-home"))
+    for var in ("HIBISCUS_TOKEN", "HIBISCUS_SERVER", "HIBISCUS_WORKSPACE_ID"):
+        monkeypatch.delenv(var, raising=False)
+    reset_worlds()
+    yield tmp_path
+    reset_worlds()
+
+
+def mock_profile(
+    cameras: int = 1, *, leader: bool = True, size: tuple[int, int] = (128, 96), fps: int = 30
+) -> RobotProfile:
+    names = ["wrist", "front", "side"][:cameras]
+    return RobotProfile(
+        id="desk",
+        name="Desk mock",
+        follower=FollowerProfile(
+            type="hibiscus_mock_follower", port="mock://follower", calibration_id="desk_follower"
+        ),
+        leader=LeaderProfile(type="hibiscus_mock_leader", port="mock://leader", calibration_id="desk_leader")
+        if leader
+        else None,
+        cameras={n: CameraProfile(type="mock", width=size[0], height=size[1], fps=fps) for n in names},
+    )
+
+
+def fast_hand(amplitude: float = 220.0, hz: float = 2.0) -> Callable[[str, float], float]:
+    idx = {
+        "shoulder_pan": 1,
+        "shoulder_lift": 2,
+        "elbow_flex": 3,
+        "wrist_flex": 4,
+        "wrist_roll": 5,
+        "gripper": 6,
+    }
+
+    def hand(motor: str, t: float) -> float:
+        return 2048.0 + amplitude * math.sin(2 * math.pi * hz * t + idx[motor])
+
+    return hand
+
+
+def gentle_hand(motor: str, t: float) -> float:
+    return 2048.0 + 25.0 * math.sin(2 * math.pi * 0.5 * t)
+
+
+def wait_for(pred: Callable[[], Any], timeout: float = 10.0, interval: float = 0.02) -> Any:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        v = pred()
+        if v:
+            return v
+        time.sleep(interval)
+    raise AssertionError(f"condition not met within {timeout}s")
+
+
+STATION_DIR = Path(__file__).resolve().parents[1]
+
+
+def _ws_validator() -> Any:
+    """JSON-schema validator for control-socket messages, from the committed openapi.json."""
+    import json
+
+    import jsonschema
+
+    doc = json.loads((STATION_DIR / "openapi.json").read_text())
+    schema = {"$ref": "#/components/schemas/ServerMessage", "components": doc["components"]}
+    return jsonschema.Draft202012Validator(schema)
+
+
+WS_VALIDATOR = _ws_validator()
+
+
+def contract_errors(kind: str, payload: dict[str, Any]) -> list[str]:
+    """Why a control-socket message (as the hub sends it) breaks the contract (§5.3), if it does."""
+    import json
+
+    from pydantic import ValidationError
+
+    from hibiscus_station.api.schemas import SERVER_MESSAGE
+
+    msg = json.loads(json.dumps({**payload, "type": kind}, default=str))
+    out = [f"{kind}: {e.message} at {list(e.absolute_path)}" for e in WS_VALIDATOR.iter_errors(msg)][:3]
+    try:
+        SERVER_MESSAGE.validate_python(msg)
+    except ValidationError as exc:
+        out.append(f"{kind}: {str(exc)[:600]}")
+    return out
+
+
+class Events:
+    """Records owner events and checks each one against the WebSocket contract."""
+
+    def __init__(self) -> None:
+        self.items: list[tuple[float, str, dict[str, Any]]] = []
+        self.violations: list[str] = []
+        self.lock = threading.Lock()
+
+    def __call__(self, kind: str, payload: dict[str, Any]) -> None:
+        errs = contract_errors(kind, payload)
+        with self.lock:
+            self.items.append((time.monotonic(), kind, payload))
+            self.violations.extend(errs)
+
+    def of(self, kind: str) -> list[dict[str, Any]]:
+        with self.lock:
+            return [p for _, k, p in self.items if k == kind]
+
+
+class Heartbeat:
+    """Plays the UI's dead-man heartbeat (every 250 ms) while a run session is active."""
+
+    def __init__(self, station: Station) -> None:
+        self.station = station
+        self._stop = threading.Event()
+        self._t = threading.Thread(target=self._run, daemon=True)
+
+    def _run(self) -> None:
+        while not self._stop.is_set():
+            self.station.owner.heartbeat()
+            self._stop.wait(0.25)
+
+    def __enter__(self) -> Heartbeat:
+        self._t.start()
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self._stop.set()
+        self._t.join(1)
+
+
+@pytest.fixture
+def events() -> Events:
+    return Events()
+
+
+def make_station(tmp_path: Path, *, mock: bool = True) -> Station:
+    st = Station(tmp_path / "station-home", mock=mock, cal_root=tmp_path / "calibration")
+    st.settings.safety.smooth_approach_s = 0.3
+    st.import_roots = [tmp_path]
+    return st
+
+
+@pytest.fixture
+def station(tmp_path: Path, events: Events) -> Iterator[Station]:
+    st = make_station(tmp_path)
+    st.owner.add_listener(events)
+    st.start()
+    yield st
+    st.shutdown()
+    for port in ("mock://follower", "mock://leader"):
+        assert not get_world(port).owner_violations, get_world(port).owner_violations
+    assert not events.violations, "WebSocket contract violations:\n" + "\n".join(events.violations[:10])
+
+
+def calibrate(st: Station, arm: str) -> dict[str, Any]:
+    port = "mock://follower" if arm == "follower" else "mock://leader"
+    world = get_world(port)
+    world.hand = fast_hand()
+    st.owner.call("calibration_start", arm=arm)
+    time.sleep(0.1)
+    st.owner.call("calibration_step", action="set_home")
+    time.sleep(0.8)  # the "hand" sweeps every joint through > 100 steps
+    out = st.owner.call("calibration_step", action="finish_ranges")
+    world.hand = None if arm == "follower" else gentle_hand
+    world.place_all(2048.0)
+    return out  # type: ignore[no-any-return]
+
+
+def connect_calibrated(st: Station, profile: RobotProfile | None = None) -> RobotProfile:
+    profile = profile or mock_profile()
+    get_world("mock://leader").hand = gentle_hand
+    st.profiles.put(profile)
+    st.owner.call("connect", robot_id=profile.id, timeout=30)
+    calibrate(st, "follower")
+    if profile.leader is not None:
+        calibrate(st, "leader")
+    get_world("mock://follower").place_all(2048.0)
+    time.sleep(0.15)
+    return profile
+
+
+@pytest.fixture
+def connected(station: Station) -> Station:
+    connect_calibrated(station)
+    return station
+
+
+@pytest.fixture
+def client(station: Station) -> Iterator[Any]:
+    from fastapi.testclient import TestClient
+
+    from hibiscus_station.api.security import LocalAuth
+    from hibiscus_station.app import create_app
+
+    auth = LocalAuth(token="test-token-" + "a" * 32, port=PORT, extra_hosts=("testserver",))  # WS test host
+    app = create_app(station, auth, manage_lifecycle=False, static_dir=station.paths.home / "nostatic")
+    with TestClient(app, base_url=BASE) as c:
+        c.headers.update({"Authorization": f"Bearer {auth.token}", "X-Station": "1"})
+        c.auth_obj = auth  # type: ignore[attr-defined]
+        yield c

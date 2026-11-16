@@ -1,0 +1,96 @@
+# syntax=docker/dockerfile:1.7
+# Hibiscus Station for NVIDIA Jetson Orin (Orin Nano / Orin NX / AGX Orin) on JetPack 6 (L4T r36),
+# linux/arm64 only. Build context: the repository root.
+#
+# The base is NVIDIA's NGC PyTorch container for integrated GPUs ("-igpu"): Ubuntu 24.04,
+# Python 3.12, CUDA 12.9 for Tegra and a PyTorch built for the Orin GPU (TORCH_CUDA_ARCH_LIST 8.7).
+# Station keeps that PyTorch and torchvision (PyPI has no CUDA wheels for Orin) and installs every
+# other locked requirement next to them. torchcodec is left out: no build matches this PyTorch, and
+# lerobot falls back to PyAV for video decoding. Run with the NVIDIA runtime (`runtime: nvidia`,
+# deploy/compose.jetson.yml); the host needs JetPack 6.x and the NVIDIA Container Toolkit that
+# ships with it.
+
+ARG JETSON_BASE=nvcr.io/nvidia/pytorch:26.02-py3-igpu
+ARG UV_IMAGE=ghcr.io/astral-sh/uv:0.13.8
+ARG NODE_IMAGE=node:22.12-bookworm
+ARG BUILD_PYTHON_IMAGE=python:3.12.16-slim-trixie
+
+FROM ${UV_IMAGE} AS uv
+
+FROM --platform=$BUILDPLATFORM ${NODE_IMAGE} AS web
+ENV CI=true COREPACK_ENABLE_DOWNLOAD_PROMPT=0 COREPACK_HOME=/opt/corepack
+WORKDIR /src/web
+COPY web/package.json web/pnpm-lock.yaml ./
+RUN --mount=type=cache,target=/root/.cache/pnpm-store \
+    corepack pnpm@9.15.0 install --frozen-lockfile --store-dir /root/.cache/pnpm-store
+COPY openapi.json /src/openapi.json
+COPY web/ ./
+RUN corepack pnpm@9.15.0 build
+
+FROM --platform=$BUILDPLATFORM ${BUILD_PYTHON_IMAGE} AS wheel
+COPY --from=uv /uv /usr/local/bin/
+WORKDIR /src
+COPY pyproject.toml uv.lock hatch_build.py README.md LICENSE ASSETS-LICENSE NOTICE openapi.json ./
+COPY hibiscus_station/ hibiscus_station/
+COPY docker/requirements-from-lock.sh docker/
+COPY --from=web /src/web/dist web/dist
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv build --wheel --out-dir /dist \
+ && docker/requirements-from-lock.sh > /dist/requirements.txt
+
+FROM ${JETSON_BASE} AS runtime
+ARG VERSION=0.0.0-dev
+ARG VCS_REF=unknown
+LABEL org.opencontainers.image.title="hibiscus-station" \
+      org.opencontainers.image.description="Hibiscus Station: the robot-side app for SO-100/SO-101 arms (jetson)" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.source="https://github.com/Bigkatoan/hibiscus-station" \
+      org.opencontainers.image.licenses="AGPL-3.0-or-later" \
+      io.github.bigkatoan.hibiscus-station.variant="jetson"
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+ && apt-get upgrade -y --no-install-recommends \
+ && apt-get install -y --no-install-recommends ca-certificates git tini \
+ && rm -rf /var/lib/apt/lists/* \
+ && (getent passwd 1000 >/dev/null && userdel --remove "$(getent passwd 1000 | cut -d: -f1)" || true) \
+ && groupadd --system --gid 10001 station \
+ && useradd --system --uid 10001 --gid station --groups dialout,video \
+      --home-dir /home/station --create-home --shell /usr/sbin/nologin station \
+ && mkdir -p /data /calibration \
+ && chown station:station /data /calibration \
+ && chmod 1777 /home/station
+COPY --from=uv /uv /usr/local/bin/
+COPY --from=wheel /dist /dist
+# Install into the image's own Python next to NVIDIA's torch: the overrides pin torch and
+# torchvision to the versions already installed (so uv keeps them) and drop torchcodec.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    python3 -c "import importlib.metadata as m; print('\n'.join(f'{p}=={m.version(p)}' for p in ('torch', 'torchvision')))" > /dist/overrides.txt \
+ && echo "torchcodec ; sys_platform == 'never'" >> /dist/overrides.txt \
+ && cat /dist/overrides.txt \
+ && uv pip install --system --break-system-packages --override /dist/overrides.txt -r /dist/requirements.txt \
+ && uv pip install --system --break-system-packages --no-deps /dist/hibiscus_station-*.whl \
+ && rm -rf /dist \
+ && python3 -c "import hibiscus_station, lerobot, torch; print('station', hibiscus_station.__version__, 'torch', torch.__version__)"
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    HOME=/home/station \
+    HIBISCUS_STATION_HOME=/data \
+    HF_LEROBOT_CALIBRATION=/calibration \
+    HF_HOME=/data/cache/huggingface \
+    HIBISCUS_CONFIG_DIR=/data/hibiscus-cli \
+    HIBISCUS_STATE_DIR=/data/hibiscus-cli/state \
+    HIBISCUS_KEYRING=0 \
+    MPLCONFIGDIR=/tmp/matplotlib \
+    HIBISCUS_STATION_VARIANT=jetson
+
+USER 10001:10001
+WORKDIR /home/station
+EXPOSE 18210
+HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=3 \
+  CMD ["hibiscus-station", "health", "--timeout", "8"]
+# The NGC image's own entrypoint prints a banner and checks the driver; Station replaces it.
+ENTRYPOINT ["tini", "--", "hibiscus-station"]
+CMD ["--no-browser"]

@@ -1,0 +1,286 @@
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { HttpResponse, http } from "msw";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { server } from "@/test/server";
+import { stationBase } from "./api/client";
+import { advance, renderStation, settle, setupStation, type StationHarness } from "./test/utils";
+
+beforeEach(() => {
+  vi.stubGlobal(
+    "createImageBitmap",
+    vi.fn(() => Promise.resolve({ width: 320, height: 240, close: vi.fn() })),
+  );
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(
+    () => ({ drawImage: vi.fn() }) as unknown as CanvasRenderingContext2D,
+  );
+  return () => {
+    vi.unstubAllGlobals();
+  };
+});
+
+async function startRunViaUi(h: StationHarness) {
+  const user = userEvent.setup();
+  renderStation("/run", h);
+  await settle();
+  await user.click(await screen.findByRole("button", { name: /picknplace ACT/ }));
+  await user.click(await screen.findByRole("button", { name: "Load" }));
+  await advance(h.sim, 2.5);
+  await screen.findByTestId("load-result");
+  const start = await screen.findByRole("button", { name: "Run on the robot" });
+  await waitFor(() => {
+    expect(start).toBeEnabled();
+  });
+  await user.click(start);
+  await waitFor(() => {
+    expect(h.sim.state).toBe("inferring");
+  });
+  return user;
+}
+
+describe("Run model (R2)", () => {
+  it("shows every configured camera as policy input while the model runs, with joints vs commands and health", async () => {
+    const h = setupStation({ paired: true });
+    await startRunViaUi(h);
+    await advance(h.sim, 3.2); // countdown → episode
+    await screen.findByTestId("camera-grid");
+    for (const cam of ["wrist", "front"]) {
+      const tile = screen.getByTestId(`camera-${cam}`);
+      await waitFor(() => {
+        expect(within(tile).getByText("policy input · 640×480 → 320×240")).toBeInTheDocument();
+      });
+    }
+    expect(screen.getByText(/Episode 1 \/ 1 · model running/)).toBeInTheDocument();
+    const joints = screen.getByTestId("joint-panel");
+    expect(within(joints).getByRole("columnheader", { name: "Action" })).toBeInTheDocument();
+    expect(within(joints).getByRole("columnheader", { name: "Sent" })).toBeInTheDocument();
+    expect(within(screen.getByTestId("joint-wrist_flex")).getByText("clipped")).toBeInTheDocument();
+    expect(screen.getByTestId("motor-follower-elbow_flex")).toBeInTheDocument();
+    expect(within(screen.getByTestId("loop-stats")).getByText("Inference p50/p95")).toBeInTheDocument();
+    // The big e-stop is 128 px on this screen.
+    expect(screen.getByRole("button", { name: "Emergency stop (Space)" })).toHaveStyle({ width: "128px" });
+  });
+
+  it("a critical alert shows the red banner and disables the run controls", async () => {
+    const h = setupStation({ paired: true });
+    await startRunViaUi(h);
+    await advance(h.sim, 3.2);
+    const stop = await screen.findByRole("button", { name: "Stop" });
+    expect(stop).toBeEnabled();
+    act(() => {
+      h.runtime.store.handle({
+        type: "alert",
+        id: "x",
+        t: 1,
+        level: "critical",
+        kind: "temperature",
+        arm: "follower",
+        motor: "elbow_flex",
+        camera: null,
+        value: 66,
+        message_key: "motor.temp.critical",
+        params: {},
+        active: true,
+      });
+    });
+    expect(await screen.findByTestId("critical-banner")).toHaveTextContent(
+      "Motor critical: elbow_flex 66 °C. Robot stopped, torque off. Let it cool down.",
+    );
+    expect(screen.getByRole("button", { name: "Stop" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+  });
+
+  it("the thermal safe stop latches e-stop, turns torque off and offers Reset only once cool", async () => {
+    const h = setupStation({ paired: true });
+    await startRunViaUi(h);
+    h.sim.temps.follower.elbow_flex = 66;
+    await advance(h.sim, 1.1);
+    expect(h.sim.state).toBe("estopped");
+    const banner = await screen.findByTestId("critical-banner");
+    expect(banner).toHaveTextContent("elbow_flex 66 °C");
+    expect(banner).toHaveTextContent("Support the arm. Torque is off.");
+    expect(await screen.findByTestId("run-summary")).toBeInTheDocument();
+    // Cameras stay on screen after the stop.
+    expect(screen.getByTestId("camera-wrist")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "I'm clear, reset" }));
+    expect(await screen.findByText(/Motors too hot: elbow_flex/)).toBeInTheDocument();
+    expect(h.sim.state).toBe("estopped");
+  });
+});
+
+describe("Record (§6.6)", () => {
+  it("runs the episode loop with → / ← / Esc and ends on the upload card", async () => {
+    const h = setupStation({ paired: true });
+    const user = userEvent.setup();
+    renderStation("/record", h);
+    await settle();
+    await user.type(await screen.findByLabelText(/Dataset name/), "cube_demo");
+    await user.type(screen.getByLabelText(/^Task/), "Pick the cube");
+    expect(screen.getByTestId("disk-estimate")).toHaveTextContent("2 camera(s)");
+    await user.click(screen.getByRole("button", { name: "Start recording" }));
+    await waitFor(() => {
+      expect(h.sim.state).toBe("recording");
+    });
+    await advance(h.sim, 3.1);
+    expect(await screen.findByText(/Episode 1 \/ 20 · recording/)).toBeInTheDocument();
+    await advance(h.sim, 2);
+    fireEvent.keyDown(document.body, { key: "ArrowRight" });
+    await waitFor(() => {
+      expect(h.sim.session?.s.episode.phase).toBe("reset");
+    });
+    expect(h.sim.session?.s.episode.saved).toBe(1);
+    expect(await screen.findByText("#1")).toBeInTheDocument();
+    fireEvent.keyDown(document.body, { key: "ArrowLeft" });
+    await waitFor(() => {
+      expect(h.sim.session?.s.episode.saved).toBe(0);
+    });
+    expect(h.sim.session?.s.episode.phase).toBe("episode");
+    await advance(h.sim, 1);
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    await waitFor(() => {
+      expect(h.sim.state).toBe("idle");
+    });
+    const done = await screen.findByTestId("record-done");
+    expect(done).toHaveTextContent("1 episodes saved in ~/.hibiscus/station/datasets/cube_demo");
+    expect(within(done).getByRole("link", { name: "Upload" })).toHaveAttribute(
+      "href",
+      "/datasets/cube_demo?upload=1",
+    );
+  });
+});
+
+describe("Teleop (§6.5)", () => {
+  it("shows cameras, joints with leader values and motor temperatures", async () => {
+    const h = setupStation();
+    const user = userEvent.setup();
+    renderStation("/teleop", h);
+    await settle();
+    await user.click(await screen.findByRole("button", { name: "Start teleop" }));
+    await advance(h.sim, 0.6);
+    expect(await screen.findByText("Follower moving to the leader pose…")).toBeInTheDocument();
+    expect(screen.getByTestId("camera-wrist")).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("joint-panel")).getByRole("columnheader", { name: "Leader" }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("motor-leader-gripper")).toBeInTheDocument();
+    await advance(h.sim, 1.0);
+    await waitFor(() => {
+      expect(screen.queryByText("Follower moving to the leader pose…")).not.toBeInTheDocument();
+    });
+  });
+});
+
+describe("Calibrate (§6.3)", () => {
+  it("guides Home → Ranges → Done with live range bars", async () => {
+    const h = setupStation();
+    const user = userEvent.setup();
+    renderStation("/calibrate", h);
+    await settle();
+    await user.click(await screen.findByRole("button", { name: "Recalibrate" }));
+    expect(await screen.findByTestId("cal-home")).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "SO-101 arm with every joint in the middle of its range" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("The follower is limp: hold it.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Set home" }));
+    await screen.findByTestId("cal-ranges");
+    await advance(h.sim, 3);
+    await waitFor(() => {
+      expect(screen.getByTestId("range-shoulder_pan")).toHaveAttribute("data-ok", "true");
+    });
+    expect(
+      within(screen.getByTestId("range-wrist_roll")).getByText("full turn, nothing to record"),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Finish and save" }));
+    expect(await screen.findByTestId("cal-done")).toHaveTextContent("so_follower/desk_follower.json");
+    expect(screen.getByRole("link", { name: "Next: Cameras" })).toHaveAttribute("href", "/cameras");
+  });
+});
+
+describe("Upload (§6.7)", () => {
+  it("uploads with progress through hashing and uploading, then links the server version", async () => {
+    const h = setupStation({ paired: true });
+    const user = userEvent.setup();
+    renderStation("/datasets/picknplace_red?upload=1", h);
+    await settle();
+    await user.click(await screen.findByRole("button", { name: "Upload" }));
+    const job = await screen.findByTestId(/^job-/);
+    expect(job).toHaveTextContent("hashing");
+    await advance(h.sim, 2.2);
+    await waitFor(() => {
+      expect(screen.getByTestId(/^job-/)).toHaveTextContent("uploading");
+    });
+    await advance(h.sim, 2.2);
+    expect(await screen.findByTestId("upload-done")).toHaveTextContent("Uploaded as version 1.");
+  });
+
+  it("asks to pair first when there is no server", async () => {
+    const h = setupStation();
+    renderStation("/datasets/picknplace_red", h);
+    await settle();
+    expect(await screen.findByText("Pair with a Hibiscus server to upload.")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Server URL/)).toBeInTheDocument();
+  });
+});
+
+describe("Shell and robot screen", () => {
+  it("health chip shows the hottest motor; locked steps say why", async () => {
+    const h = setupStation({ connected: false });
+    renderStation("/robot", h);
+    await settle();
+    expect((await screen.findAllByText("Connect a robot first.", { selector: "p" })).length).toBeGreaterThan(
+      0,
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+    await waitFor(() => {
+      expect(h.sim.state).toBe("idle");
+    });
+    h.sim.temps.follower.elbow_flex = 52;
+    await advance(h.sim, 0.6);
+    const chip = await screen.findByTestId("health-chip");
+    await waitFor(() => {
+      expect(chip).toHaveAttribute("data-level", "warn");
+    });
+    expect(chip).toHaveTextContent("52°C");
+    expect(screen.getByTestId("hibi-alert")).toHaveTextContent("elbow_flex is getting warm (52 °C).");
+    await user.click(chip);
+    expect(await screen.findByRole("dialog")).toHaveTextContent("Last 120 s");
+  });
+
+  it("maps port_busy to a friendly message", async () => {
+    const h = setupStation({ connected: false });
+    server.use(
+      http.post(`${stationBase()}/robots/:id/connect`, () =>
+        HttpResponse.json(
+          {
+            title: "busy",
+            status: 409,
+            code: "port_busy",
+            params: { port: "/dev/ttyACM0", holder: "pid 42" },
+          },
+          { status: 409, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+    );
+    renderStation("/robot", h);
+    await settle();
+    await userEvent.click(await screen.findByRole("button", { name: "Connect" }));
+    expect(
+      await screen.findByText("Another program (LeLab? lerobot?) is using /dev/ttyACM0."),
+    ).toBeInTheDocument();
+  });
+
+  it("switches to Vietnamese", async () => {
+    const h = setupStation();
+    renderStation("/", h);
+    await settle();
+    await userEvent.click(await screen.findByRole("button", { name: /Switch language/ }));
+    expect(
+      await screen.findByText(
+        "Station chạy ngay cạnh robot của bạn. Dữ liệu nằm trên máy này cho tới khi bạn tải lên.",
+      ),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Đổi ngôn ngữ/ }));
+  });
+});

@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hibiscus.local/api/policy-schemas/train.json",
+  "title": "Hibiscus training options (subset of lerobot TrainPipelineConfig)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "steps": {
+      "type": "integer",
+      "default": 100000,
+      "x-hibiscus-group": "basic",
+      "x-hibiscus-cli": "--steps",
+      "minimum": 1,
+      "maximum": 2000000
+    },
+    "batch_size": {
+      "type": "integer",
+      "default": 8,
+      "x-hibiscus-group": "basic",
+      "x-hibiscus-cli": "--batch_size",
+      "minimum": 1,
+      "maximum": 512
+    },
+    "seed": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "default": 1000,
+      "description": "`seed` is used for training (eg: model initialization, dataset shuffling) AND for the evaluation environments.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--seed"
+    },
+    "num_workers": {
+      "type": "integer",
+      "default": 4,
+      "description": "Number of workers for the dataloader.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--num_workers",
+      "minimum": 0,
+      "maximum": 8
+    },
+    "log_freq": {
+      "type": "integer",
+      "default": 200,
+      "description": "0 or negative disables periodic logging",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--log_freq",
+      "minimum": 10,
+      "maximum": 10000
+    },
+    "save_freq": {
+      "type": "integer",
+      "default": 10000,
+      "description": "Checkpoint is saved every `save_freq` training iterations and after the last training step. A non-positive value disables periodic saving, keeping only the final checkpoint.",
+      "x-hibiscus-group": "basic",
+      "x-hibiscus-cli": "--save_freq",
+      "minimum": 100
+    },
+    "use_policy_training_preset": {
+      "type": "boolean",
+      "default": true,
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--use_policy_training_preset"
+    },
+    "cudnn_deterministic": {
+      "type": "boolean",
+      "default": false,
+      "description": "Set to True to use deterministic cuDNN algorithms for reproducibility. This disables cudnn.benchmark and may reduce training speed by ~10-20 percent.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--cudnn_deterministic"
+    },
+    "tf32": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "default": true,
+      "description": "TF32 in float32 matmuls and cuDNN convolutions on Ampere and newer GPUs.",
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--tf32"
+    },
+    "mixed_precision": {
+      "type": "string",
+      "default": "no",
+      "x-hibiscus-group": "basic",
+      "x-hibiscus-cli": "--accelerator.mixed_precision",
+      "enum": [
+        "no",
+        "fp16",
+        "bf16"
+      ],
+      "description": "Accelerate mixed precision. Forced to 'no' on GPUs without bf16/fast fp16 (Tesla P40); the run records the effective value."
+    },
+    "grad_accum_steps": {
+      "type": "integer",
+      "default": 1,
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--accelerator.gradient_accumulation.steps",
+      "minimum": 1,
+      "maximum": 64
+    },
+    "image_transforms": {
+      "type": "boolean",
+      "default": false,
+      "description": "Set this flag to `true` to enable transforms during training",
+      "x-hibiscus-group": "basic",
+      "x-hibiscus-cli": "--dataset.image_transforms.enable"
+    },
+    "peft": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "target_modules": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "PEFT offers many fine-tuning methods, layer adapters being the most common and currently also the most effective methods so we'll focus on those in this high-level config interface. Either a string (module name suffix or 'all-linear'), a list of module name suffixes or a regular expression describing module names to target with the configured PEFT method. Some policies have a default value for this so that you don't *have* to choose which layers to adapt but it might still be worthwhile depending on your case."
+            },
+            "full_training_modules": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Names/suffixes of modules to fully fine-tune and store alongside adapter weights. Useful for layers that are not part of a pre-trained model (e.g., action state projections). Depending on the policy this defaults to layers that are newly created in pre-trained policies. If you're fine-tuning an already trained policy you might want to set this to `[]`. Corresponds to PEFT's `modules_to_save`."
+            },
+            "method_type": {
+              "type": "string",
+              "default": "LORA",
+              "description": "The PEFT (adapter) method to apply to the policy. Needs to be a valid PEFT type."
+            },
+            "init_type": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null,
+              "description": "Adapter initialization method. Look at the specific PEFT adapter documentation for defaults."
+            },
+            "r": {
+              "type": "integer",
+              "default": 16,
+              "description": "We expect that all PEFT adapters are in some way doing rank-decomposition therefore this parameter specifies the rank used for the adapter. In general a higher rank means more trainable parameters and closer to full fine-tuning."
+            },
+            "lora_alpha": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "default": null,
+              "description": "Alpha parameter for LoRA scaling (scaling = lora_alpha / r). In general, a higher alpha means stronger adaptation signal. If None, the PEFT library defaults to alpha=8, which may dampen high-rank adapters. Common values are r (alpha == rank) or 2*r."
+            }
+          },
+          "description": "PEFT/LoRA adapter config (--peft.*). Required for pi0/pi05 (full fine-tune blocked).",
+          "x-hibiscus-group": "advanced",
+          "x-hibiscus-cli": "--peft."
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "x-hibiscus-group": "advanced",
+      "x-hibiscus-cli": "--peft."
+    }
+  },
+  "x-hibiscus": {
+    "config_class": "lerobot.configs.train.TrainPipelineConfig",
+    "lerobot_version": "0.7.1",
+    "generator_version": "1",
+    "managed_by_hibiscus": {
+      "--dataset.repo_id": "local/<dataset_version_id>",
+      "--dataset.root": "worker-local cache path of the dataset version",
+      "--dataset.episodes": "train split episode indices (held-out removed)",
+      "--output_dir": "/scratch/runs/<run_id>/output",
+      "--job_name": "<run_id>",
+      "--trackio.enable": "false",
+      "--save_checkpoint": "true",
+      "--policy.device": "cuda",
+      "--policy.push_to_hub": "false"
+    }
+  }
+}

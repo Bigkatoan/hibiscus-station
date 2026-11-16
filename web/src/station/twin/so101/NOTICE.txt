@@ -1,0 +1,18 @@
+SO-101 robot model (Hibiscus Station 3D twin)
+==============================================
+
+The URDF and meshes in this folder are from the SO-ARM100 project by TheRobotStudio
+(https://github.com/TheRobotStudio/SO-ARM100), Simulation/SO101, commit a758567c39,
+licensed under the Apache License, Version 2.0 (LICENSE.txt in this folder).
+
+Copyright TheRobotStudio and the SO-ARM100 contributors.
+
+Changes made for Hibiscus Station:
+* only the follower model `so101_new_calib.urdf` and the meshes it references are included
+  (the URDF is unchanged);
+* every mesh in `assets/` was decimated (vertex clustering on a 1 mm grid, then quadric
+  simplification to at most 1500 triangles) with `tools/so101_meshes.py`, so the files are
+  smaller and coarser than the originals.
+
+The Hibiscus Station code that displays this model is licensed under the AGPL-3.0 (see the
+repository LICENSE); this model keeps its Apache-2.0 licence.

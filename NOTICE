@@ -1,0 +1,20 @@
+Hibiscus Station
+Copyright (C) 2026 Bigkatoan
+
+Hibiscus Station is free software: you can redistribute it and/or modify it under the terms of the
+GNU Affero General Public License as published by the Free Software Foundation, either version 3 of
+the License, or (at your option) any later version (see LICENSE).
+
+Not covered by the AGPL-3.0:
+
+* The Hibiscus artwork, mascot, logo and favicons: © Bigkatoan, all rights reserved; see
+  ASSETS-LICENSE.
+* Nunito font (web/public/fonts/): SIL Open Font License 1.1, see web/public/fonts/OFL-Nunito.txt.
+* SO-101 robot model (web/src/station/twin/so101/): from TheRobotStudio SO-ARM100, Apache License
+  2.0, see web/src/station/twin/so101/LICENSE.txt and NOTICE.txt (meshes decimated with
+  tools/so101_meshes.py).
+* Blockly media (web/public/blockly-media/): Apache License 2.0, © Google LLC / Raspberry Pi
+  Foundation.
+
+Third-party Python and JavaScript dependencies keep their own licences (uv.lock, web/pnpm-lock.yaml).
+In particular LeRobot (Apache-2.0, Hugging Face) is installed as a dependency, never vendored.

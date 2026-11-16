@@ -1,0 +1,370 @@
+/**
+ * Station shell (§6.0): top bar (robot chip with Hibi mood, motor-health chip → health drawer,
+ * server chip, language/theme), wizard rail with prerequisites, banners and the e-stop dock.
+ */
+import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import type { HibiMood } from "@/lib/hibi";
+import { Garden, PixelAnim, PxIcon, Sprite } from "@/hibiscus/PixelAnim";
+import type { AnimName, SpriteName } from "@/hibiscus/sprites.gen";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { setLanguage } from "@/lib/i18n";
+import { useTheme } from "@/lib/theme";
+import { cn } from "@/lib/utils";
+import { useDatasets, useModels, useRobots, useStatusQuery } from "./api/hooks";
+import type { Level, Status } from "./api/types";
+import { SafetyBanners } from "./components/Banners";
+import { EStopButton } from "./components/EStopButton";
+import { MotorHealthPanel, useThresholds } from "./components/MotorHealthPanel";
+import { levelCss, motorLevel, worstLevel } from "./health";
+import { TwinDock, TwinSection } from "./twin/TwinDock";
+import { useStation } from "./ws/StationProvider";
+import type { StationSnapshot } from "./ws/store";
+
+export function hibiMood(status: Status | null): HibiMood | "hot" {
+  if (!status) return "sleep";
+  if (status.health.level === "warn" || status.health.level === "hot" || status.health.level === "critical")
+    return status.state === "estopped" ? "sad" : "hot";
+  switch (status.state) {
+    case "disconnected":
+      return "sleep";
+    case "estopped":
+    case "error":
+      return "sad";
+    case "idle":
+    case "connecting":
+    case "stopping":
+      return "idle";
+    case "programming":
+      // programs §8: Hibi sleeps while the program waits for a condition (wait, wait until, ask).
+      return status.sub === "waiting" || status.sub === "paused" ? "sleep" : "working";
+    default:
+      return "working";
+  }
+}
+
+/** The garden's mini Hibi: "hot" becomes the wilting (sad) mood. */
+function gardenMood(status: Status | null): HibiMood {
+  const m = hibiMood(status);
+  return m === "hot" ? "sad" : m;
+}
+
+export interface Step {
+  to: string;
+  key: string;
+  icon: AnimName;
+  done: boolean;
+  lock: string | null;
+}
+
+export function wizardSteps(
+  status: Status | null,
+  info: { robots: number; datasets: { episodes: number; uploaded: boolean }[]; models: number },
+): Step[] {
+  const robot = status?.robot ?? null;
+  const connected = Boolean(robot?.connected);
+  const follower = robot?.arms.follower;
+  const leader = robot?.arms.leader;
+  const calibrated = Boolean(follower?.calibrated) && (!leader || leader.calibrated);
+  const needConnect = connected ? null : "connect_first";
+  const needCal = needConnect ?? (follower?.calibrated ? null : "calibrate_first");
+  const needLeader = needCal ?? (leader ? (leader.calibrated ? null : "calibrate_leader") : "needs_leader");
+  const recorded = info.datasets.some((d) => d.episodes > 0);
+  return [
+    { to: "/robot", key: "robot", icon: "icon_robot_arm", done: info.robots > 0, lock: null },
+    {
+      to: "/calibrate",
+      key: "calibrate",
+      icon: "icon_calibrate",
+      done: connected && calibrated,
+      lock: needConnect,
+    },
+    {
+      to: "/cameras",
+      key: "cameras",
+      icon: "icon_camera",
+      done: (status?.cameras ?? []).some((c) => c.streaming),
+      lock: needConnect,
+    },
+    { to: "/teleop", key: "teleop", icon: "icon_teleop", done: false, lock: needLeader },
+    { to: "/record", key: "record", icon: "icon_dataset", done: recorded, lock: needLeader },
+    {
+      to: "/upload",
+      key: "upload",
+      icon: "icon_upload",
+      done: info.datasets.some((d) => d.uploaded),
+      lock: recorded ? null : "record_first",
+    },
+    {
+      to: "/train",
+      key: "train",
+      icon: "icon_train",
+      done: false,
+      lock: status?.server.paired ? null : "pair_first",
+    },
+    { to: "/run", key: "run", icon: "icon_model", done: info.models > 0, lock: needCal },
+  ];
+}
+
+const EXTRA: { to: string; key: string }[] = [
+  { to: "/programs", key: "programs" },
+  { to: "/datasets", key: "datasets" },
+  { to: "/models", key: "models" },
+  { to: "/sessions", key: "sessions" },
+  { to: "/settings", key: "settings" },
+];
+
+function WizardRail({ steps, onNavigate }: { steps: Step[]; onNavigate?: () => void }) {
+  const { t } = useTranslation("station");
+  return (
+    <nav aria-label={t("nav.wizard")} className="flex gap-1 overflow-x-auto md:flex-col md:overflow-visible">
+      <ol className="flex gap-1 md:flex-col">
+        {steps.map((s, i) => (
+          <li key={s.key} className="shrink-0">
+            <NavLink
+              to={s.to}
+              onClick={onNavigate}
+              className={({ isActive }) =>
+                cn(
+                  "px-hover flex items-center gap-2 border-2 border-transparent px-2 py-1 text-sm hover:border-frame",
+                  isActive && "border-frame bg-card font-bold",
+                  s.lock && "opacity-70",
+                )
+              }
+              title={s.lock ? t(`lock.${s.lock}`) : undefined}
+            >
+              <span className="w-4 text-right tabular-nums text-xs text-muted-foreground">{i + 1}</span>
+              <PixelAnim name={s.icon} />
+              <span className="whitespace-nowrap">{t(`nav.${s.key}`)}</span>
+              {s.done ? <PxIcon name="check" className="text-success" label={t("nav.done")} /> : null}
+              {s.lock ? <PxIcon name="lock" /> : null}
+            </NavLink>
+            {s.lock ? (
+              <p className="hidden pl-8 text-xs text-muted-foreground md:block">{t(`lock.${s.lock}`)}</p>
+            ) : null}
+          </li>
+        ))}
+      </ol>
+      <ul className="flex gap-1 border-frame/40 md:mt-3 md:flex-col md:border-t-2 md:pt-3">
+        {EXTRA.map((x) => (
+          <li key={x.key} className="shrink-0">
+            <NavLink
+              to={x.to}
+              onClick={onNavigate}
+              className={({ isActive }) =>
+                cn(
+                  "block whitespace-nowrap border-2 border-transparent px-2 py-1 text-sm hover:border-frame",
+                  isActive && "border-frame bg-card font-bold",
+                )
+              }
+            >
+              {t(`nav.${x.key}`)}
+            </NavLink>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
+const selTelemetry = (s: StationSnapshot) => s.telemetry;
+const selStatus = (s: StationSnapshot) => s.status;
+
+/** Hottest motor across arms, from live telemetry (falls back to the status snapshot). */
+export function useHottest(): { level: Level; motor: string | null; temp: number | null } {
+  const telemetry = useStation(selTelemetry);
+  const status = useStation(selStatus);
+  const th = useThresholds();
+  return useMemo(() => {
+    let best: { level: Level; motor: string | null; temp: number | null } = {
+      level: "ok",
+      motor: null,
+      temp: null,
+    };
+    for (const motors of Object.values(telemetry)) {
+      for (const [m, s] of Object.entries(motors)) {
+        if (s.temp_c !== null && (best.temp === null || s.temp_c > best.temp))
+          best = { level: best.level, motor: m, temp: s.temp_c };
+      }
+    }
+    const levels = Object.values(telemetry).flatMap((motors) =>
+      Object.values(motors).map((s) => motorLevel(s, th)),
+    );
+    const level = worstLevel([...levels, status?.health.level ?? "ok"]);
+    if (best.motor === null && status?.health.hottest)
+      return { level, motor: status.health.hottest.motor, temp: status.health.hottest.temp_c };
+    return { ...best, level };
+  }, [telemetry, status, th]);
+}
+
+function HealthChip() {
+  const { t } = useTranslation("station");
+  const hot = useHottest();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setOpen(true);
+        }}
+        className="flex h-9 items-center gap-1 border-2 px-2 tabular-nums text-sm"
+        style={levelCss(hot.level)}
+        data-testid="health-chip"
+        data-level={hot.level}
+        aria-label={t("health.chip", {
+          motor: hot.motor ?? "–",
+          temp: hot.temp ?? "–",
+          level: t(`level.${hot.level}`),
+        })}
+      >
+        <PxIcon name="thermo" />
+        <span className="hidden sm:inline">{hot.motor ?? t("health.title")}</span>
+        <span>{hot.temp !== null ? `${hot.temp}°C` : "–"}</span>
+      </button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t("health.drawer_title")}</DialogTitle>
+            <DialogDescription>{t("health.drawer_desc")}</DialogDescription>
+          </DialogHeader>
+          <MotorHealthPanel variant="large" />
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+/** The robot chip is 32 px tall, so it shows a 16×16 state icon (the mascot lives on the pages). */
+const CHIP_SPRITE: Record<HibiMood | "hot", SpriteName> = {
+  idle: "icon_robot_arm",
+  wave: "icon_robot_arm",
+  working: "icon_robot_arm",
+  happy: "icon_heart",
+  sleep: "icon_plug",
+  sad: "icon_warning",
+  hot: "icon_thermo_hot",
+};
+
+function TopBar() {
+  const { t, i18n } = useTranslation("station");
+  const status = useStation(selStatus);
+  const { preference, setPreference } = useTheme();
+  const mood = hibiMood(status);
+  const nextTheme = preference === "light" ? "dark" : preference === "dark" ? "system" : "light";
+  const themeGlyph = preference === "light" ? "sun" : preference === "dark" ? "moon" : "theme_auto";
+  return (
+    <header className="sticky top-0 z-40 border-b-4 border-frame bg-header text-header-foreground">
+      <div className="flex h-14 items-center gap-2 px-2 sm:px-4">
+        <Link to="/" className="px-hover flex shrink-0 items-center gap-2" aria-label="Hibiscus Station">
+          <PixelAnim name="hibiscus_sparkle" />
+          <span className="hidden text-xl font-extrabold sm:inline">Hibiscus</span>
+          <span className="hidden text-base font-extrabold text-[#9bd35a] md:inline">{t("app.station")}</span>
+        </Link>
+        <div className="ml-auto flex min-w-0 items-center gap-1 sm:gap-2">
+          <Link
+            to="/robot"
+            className="flex h-9 min-w-0 items-center gap-1 border-2 border-[#c99a62] dark:border-[#4f5a80] px-1 text-sm"
+            data-testid="robot-chip"
+            aria-label={t("chip.robot", {
+              robot: status?.robot?.id ?? t("chip.no_robot"),
+              state: t(`state.${status?.state ?? "disconnected"}`),
+            })}
+          >
+            <span className="flex shrink-0" data-mood={mood}>
+              <Sprite name={CHIP_SPRITE[mood]} />
+            </span>
+            <span className="hidden max-w-[8rem] truncate md:inline">
+              {status?.robot?.id ?? t("chip.no_robot")}
+            </span>
+            <span className="truncate font-extrabold">{t(`state.${status?.state ?? "disconnected"}`)}</span>
+          </Link>
+          <HealthChip />
+          <Link
+            to="/settings"
+            className="hidden h-9 items-center border-2 border-[#c99a62] dark:border-[#4f5a80] px-2 text-sm lg:flex"
+            data-testid="server-chip"
+          >
+            {status?.server.paired
+              ? t("chip.server", { ws: status.server.workspace ?? "" })
+              : t("chip.offline")}
+          </Link>
+          <button
+            type="button"
+            className="flex h-9 w-9 items-center justify-center border-2 border-transparent hover:border-[#c99a62] dark:hover:border-[#4f5a80]"
+            aria-label={t("chip.language")}
+            onClick={() => {
+              setLanguage(i18n.language === "vi" ? "en" : "vi");
+            }}
+          >
+            <PxIcon name="language" />
+            <span className="sr-only">{i18n.language}</span>
+          </button>
+          <button
+            type="button"
+            className="flex h-9 w-9 items-center justify-center border-2 border-transparent hover:border-[#c99a62] dark:hover:border-[#4f5a80]"
+            aria-label={t("chip.theme", { mode: t(`theme.${preference}`) })}
+            onClick={() => {
+              setPreference(nextTheme);
+            }}
+          >
+            <PxIcon name={themeGlyph} />
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+export function StationShell() {
+  const { t } = useTranslation("station");
+  useStatusQuery();
+  const status = useStation(selStatus);
+  const robots = useRobots();
+  const datasets = useDatasets();
+  const models = useModels();
+  const loc = useLocation();
+  const steps = wizardSteps(status, {
+    robots: robots.data?.robots.length ?? 0,
+    datasets: (datasets.data?.datasets ?? []).map((d) => ({
+      episodes: d.episodes,
+      uploaded: d.uploaded !== null,
+    })),
+    models: models.data?.models.length ?? 0,
+  });
+  return (
+    <div className="min-h-screen">
+      <a
+        href="#station-main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50 focus:bg-primary focus:px-3 focus:py-2 focus:text-primary-foreground"
+      >
+        {t("nav.skip")}
+      </a>
+      <TopBar />
+      <div className="md:flex">
+        <aside className="border-b-4 border-frame bg-sidebar text-sidebar-foreground md:sticky md:top-[60px] md:flex md:h-[calc(100vh-60px)] md:w-60 md:shrink-0 md:flex-col md:border-b-0 md:border-r-4">
+          <div className="p-2 md:min-h-0 md:flex-1 md:overflow-y-auto md:p-3">
+            <WizardRail steps={steps} />
+          </div>
+          <div className="hidden md:block">
+            <Garden mood={gardenMood(status)} />
+          </div>
+        </aside>
+        <main
+          id="station-main"
+          tabIndex={-1}
+          className="min-w-0 flex-1 p-4 pb-40 sm:p-6 sm:pb-40 lg:p-8 lg:pb-40"
+        >
+          <div className="mb-4">
+            <SafetyBanners />
+          </div>
+          <Outlet />
+          <TwinSection />
+        </main>
+        <TwinDock />
+      </div>
+      <EStopButton size={loc.pathname.startsWith("/run") ? 128 : 96} />
+    </div>
+  );
+}

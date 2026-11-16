@@ -1,0 +1,11 @@
+# x86_64 PC with an NVIDIA GPU (image tag *-cuda). Needs the NVIDIA driver and the NVIDIA Container
+# Toolkit on the host. Enabled by deploy/install.sh through COMPOSE_FILE in .env.
+services:
+  station:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

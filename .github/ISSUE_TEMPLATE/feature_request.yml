@@ -1,0 +1,52 @@
+name: 🌱 Feature request
+description: Suggest an idea or improvement for Hibiscus Station
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for planting an idea! 🌱 Check [existing requests](https://github.com/Bigkatoan/hibiscus-station/issues?q=is%3Aissue+label%3Aenhancement) first.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Robots and arms (new robot types, calibration)
+        - Safety and motor health
+        - Cameras and detectors
+        - Recording and datasets
+        - Running models
+        - Trajectories and block programs
+        - Robot 3D view
+        - Devices and deployment (Docker, Pi, Jetson)
+        - UI / pixel art / i18n
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do, and what makes it hard today?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What would you like Station to do? Mock-ups and examples are welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: dropdown
+    id: contribute
+    attributes:
+      label: Would you like to work on it?
+      options:
+        - "Yes, I can open a PR"
+        - "Maybe, with some guidance"
+        - "No"

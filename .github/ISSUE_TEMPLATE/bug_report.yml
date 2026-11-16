@@ -1,0 +1,86 @@
+name: 🐛 Bug report
+description: Something in Hibiscus Station does not work as expected
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! 🌺
+        **Security issues must not be reported here**: use [private vulnerability reporting](https://github.com/Bigkatoan/hibiscus-station/security/advisories/new) instead.
+        If the robot did something unsafe, say so in the title: those are fixed first.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Robot connection / ports / calibration
+        - Motor health / thermal stop / e-stop
+        - Cameras
+        - Teleop / recording / datasets
+        - Upload / pairing with a Hibiscus server
+        - Running a model
+        - Trajectories / programs / detectors
+        - Robot 3D view
+        - Install / Docker / update / rollback
+        - Web UI / translations
+        - Documentation
+        - Other / not sure
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Include the error message or the problem `code` shown in the UI.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Connect the profile, calibrate
+        2. Start a trajectory replay at 100 %
+        3. See error ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Station version and install type
+      description: "`hibiscus-station --version`, or `hibiscus-station-ctl status` for Docker."
+      placeholder: "0.2.0, Docker 0.2.0-cpu"
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Hardware
+      description: Computer (PC / Jetson / Raspberry Pi 5), OS, arms (SO-100 / SO-101, power supply), servo adapters, cameras, browser.
+      placeholder: |
+        - Raspberry Pi 5 8 GB, Raspberry Pi OS Bookworm 64-bit
+        - SO-101 follower (12 V) + leader, Waveshare bus adapters
+        - 2x USB cameras 640x480 MJPG
+        - Firefox 150 on a laptop through an SSH tunnel
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: "`hibiscus-station-ctl logs` or `~/.hibiscus/station/logs/station.log`; for motion problems the session folder `~/.hibiscus/station/sessions/<id>/`. Remove tokens and host names. This is rendered as code."
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: I removed secrets (login token, access token, .env values) from everything I pasted.
+          required: true
