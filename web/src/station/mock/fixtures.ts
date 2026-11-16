@@ -235,6 +235,7 @@ export const settings: Settings = {
   preview: { fps: 12, width: 320, quality: 70 },
   safety: {
     max_relative_target: 5,
+    teleop_max_relative_target: 30,
     deadman_timeout_s: 1,
     deadman_replay: true,
     estop_double_press_s: 2,

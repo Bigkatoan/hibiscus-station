@@ -17,7 +17,7 @@ import en from "./i18n/en.json";
 import vi_ from "./i18n/vi.json";
 import { MockStation } from "./mock/sim";
 import { wizardSteps } from "./StationShell";
-import { realArmDraft } from "./pages/RobotPage";
+import { realArmDraft, roleWarnings } from "./pages/RobotPage";
 import { ControlSocket, HEARTBEAT_MS, backoffMs } from "./ws/control";
 import { JOINT_WINDOW_S, StationStore, appendJoints } from "./ws/store";
 import { encodeFrame, parseFrame } from "./ws/video";
@@ -261,6 +261,28 @@ describe("real arm draft (field report 0.2.1: demo profile left active)", () => 
     expect(d.follower.port).toBe("COM3");
     expect(d.leader?.port).toBe("COM4");
     expect(realArmDraft([{ ...port("/dev/ttyS0"), vid_pid: null }]).follower.port).toBe("");
+  });
+});
+
+describe("leader / follower voltage hints", () => {
+  const probe = (v: number | null, hint: "leader" | "follower" | null) => ({
+    device: "COM3",
+    voltage_v: v,
+    motors: 6,
+    model_number: 777,
+    firmware: "3.10",
+    role_hint: hint,
+    error: null,
+    in_use_by: null,
+  });
+  it("warns for a ~5 V follower or a >= 7 V leader, never otherwise", () => {
+    expect(roleWarnings(probe(12.1, "follower"), probe(5.0, "leader"))).toEqual([]);
+    expect(roleWarnings(probe(5.0, "leader"), probe(7.4, "follower"))).toEqual([
+      { slot: "follower", looks_like: "leader", voltage_v: 5.0 },
+      { slot: "leader", looks_like: "follower", voltage_v: 7.4 },
+    ]);
+    expect(roleWarnings(probe(6.2, null), undefined)).toEqual([]);
+    expect(roleWarnings(probe(null, null), probe(null, null))).toEqual([]);
   });
 });
 

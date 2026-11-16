@@ -154,7 +154,8 @@
       "model_too_slow": "Model quá chậm cho fps này trên máy này. Hãy giảm fps hoặc dùng CUDA."
     },
     "safety": {
-      "clipping": "Policy đang bị bộ giới hạn an toàn chặn liên tục."
+      "clipping": "Policy đang bị bộ giới hạn an toàn chặn liên tục.",
+      "leader_clipping": "Tay follower chạy sau tay leader quá giới hạn an toàn {{max_deg}}°: nó không theo kịp tốc độ này (kiểm tra nguồn của tay follower)."
     },
     "telemetry": {
       "degraded": "Không đọc được thông số động cơ."
@@ -240,7 +241,8 @@
     "tick_p95": "Vòng lặp p95",
     "inference": "Suy luận p50/p95",
     "clipped": "Bị cắt",
-    "overruns": "Trễ nhịp"
+    "overruns": "Trễ nhịp",
+    "latency": "Độ trễ"
   },
   "controls": {
     "next": "Tiếp",
@@ -322,7 +324,24 @@
     "cal_follower": "Hiệu chuẩn tay follower",
     "cal_leader": "Hiệu chuẩn tay leader",
     "cal_new": "Hiệu chuẩn mới ({{id}})",
-    "cal_existing": "Dùng file có sẵn: {{id}}"
+    "cal_existing": "Dùng file có sẵn: {{id}}",
+    "role_follower": "tay follower",
+    "role_leader": "tay leader",
+    "find_role_motion": "Tìm {{role}} (cử động)",
+    "find_role_unplug": "Tìm {{role}} (rút cáp)",
+    "find_motion_desc_role": "Chỉ cử động {{role}} trong tối đa 15 giây, để yên tay còn lại. Cổng có vị trí động cơ thay đổi được gán vào ô {{role}}.",
+    "find_unplug_desc_role": "Station ghi nhớ các cổng đang cắm, sau đó bạn chỉ rút cáp USB của {{role}}. Cổng biến mất được gán vào ô {{role}}.",
+    "unplug_now_role": "Rút cáp USB của {{role}} ngay bây giờ…",
+    "move_now_role": "Cử động {{role}} ngay bây giờ…",
+    "found_role": "Đã tìm thấy {{role}}: {{port}}",
+    "use_port_role": "Gán làm {{role}}",
+    "probe_looks_leader": "có vẻ là tay leader ({{v}} V)",
+    "probe_looks_follower": "có vẻ là tay follower ({{v}} V)",
+    "probe_unknown": "{{v}} V: chưa rõ là tay nào",
+    "probe_none": "Không đọc được điện áp động cơ trên cổng này.",
+    "role_warning": "Cổng {{slot}} đọc {{v}} V: có vẻ đây là {{looks}}. Bấm Đổi chỗ nếu hai tay bị nhầm.",
+    "swap_arms": "Đổi chỗ follower ⇄ leader",
+    "probe_again": "Kiểm tra lại điện áp"
   },
   "calibrate": {
     "title": "Hiệu chỉnh",
@@ -377,7 +396,9 @@
     "desc": "Di chuyển tay leader; tay follower làm theo. Không ghi dữ liệu.",
     "start": "Bắt đầu điều khiển",
     "not_idle": "Robot phải được kết nối và đang sẵn sàng.",
-    "approach": "Tay follower đang di chuyển tới tư thế của leader…"
+    "approach": "Tay follower đang di chuyển tới tư thế của leader…",
+    "latency_readout": "độ trễ ~{{ms}} ms, {{hz}} Hz",
+    "fps_max": "{{fps}} (nhanh nhất)"
   },
   "replay": {
     "title": "Phát lại",

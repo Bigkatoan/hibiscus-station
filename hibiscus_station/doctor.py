@@ -247,6 +247,7 @@ def ping_arm(
             "failed": fails,
             "ms_per_read": round((time.perf_counter() - t) * 1000 / n, 2),
         }
+        out["teleop_estimate"] = teleop_estimate(out["sync_read_present_position"]["ms_per_read"])
         if calibration:
             out["calibration_vs_eeprom"] = _compare(calibration, out["motors"])
         # Which calibration file (any id, e.g. LeLab's) the motors' EEPROM carries now.
@@ -262,6 +263,33 @@ def ping_arm(
         except Exception:  # noqa: S110 - best effort close
             pass
     out["seconds"] = round(time.perf_counter() - t0, 2)
+    return out
+
+
+#: A sync read of six STS3215 at 1 Mbaud takes ~1.5-3 ms through an adapter with a 1 ms USB
+#: latency timer. Slower means a 16 ms latency timer (FTDI default on Windows) or a USB hub.
+SLOW_READ_MS = 6.0
+
+
+def teleop_estimate(ms_per_read: float | None) -> dict[str, Any] | None:
+    """Teleop rate and leader -> follower latency this bus allows: one leader read plus one goal
+    write (~1/3 of a read) per tick, a leader move waiting half a tick on average."""
+    if not ms_per_read or ms_per_read <= 0:
+        return None
+    tick = ms_per_read * 1.35 + 0.3
+    from hibiscus_station.hw.loop import TELEOP_FPS
+
+    tick = max(tick, 1000.0 / TELEOP_FPS)
+    out: dict[str, Any] = {
+        "hz": round(1000.0 / tick),
+        "latency_ms": round(ms_per_read * 1.35 + tick / 2, 1),
+    }
+    if ms_per_read > SLOW_READ_MS:
+        out["warning"] = (
+            f"slow bus ({ms_per_read} ms per read): set the USB serial adapter's latency timer to 1 ms "
+            "(Windows: Device Manager > Ports > the COM port > Port Settings > Advanced) or plug the "
+            "arm in without a hub"
+        )
     return out
 
 
@@ -481,6 +509,14 @@ def summary(report: dict[str, Any]) -> str:
                     f"    {arm}: calibrated {a.get('calibrated')} issue {a.get('issue')} "
                     f"bus errors {a.get('bus_errors')} last {a.get('last_bus_error')}"
                 )
+        last = st.get("last_session") or {}
+        lp = last.get("loop") or {}
+        if lp.get("latency_ms_p50") is not None:
+            lines.append(
+                f"  last {last.get('kind')} session: {lp.get('fps')} Hz (asked {last.get('fps')}), "
+                f"leader -> follower latency ~{lp.get('latency_ms_p50')} ms "
+                f"(p95 {lp.get('latency_ms_p95')} ms), overruns {lp.get('overruns')}"
+            )
         for al in st.get("alerts", []):
             lines.append(f"    alert {al.get('level')} {al.get('message_key')} {al.get('params')}")
     cams = report.get("cameras")
@@ -521,6 +557,13 @@ def summary(report: dict[str, Any]) -> str:
         if a.get("sync_read_present_position"):
             s = a["sync_read_present_position"]
             lines.append(f"    sync read: {s['failed']}/{s['reads']} failed, {s['ms_per_read']} ms each")
+            est = teleop_estimate(s.get("ms_per_read"))
+            if est:
+                lines.append(
+                    f"    teleop estimate: ~{est['hz']} Hz, "
+                    f"leader -> follower latency ~{est['latency_ms']} ms"
+                    + (f"  ! {est['warning']}" if est.get("warning") else "")
+                )
         if a.get("calibration_vs_eeprom"):
             lines.append(f"    calibration file vs motors: {a['calibration_vs_eeprom']}")
         if "eeprom_matches" in a:

@@ -29,6 +29,7 @@ export type Thresholds = S["Thresholds-Output"];
 export type Settings = S["Settings-Output"];
 export type SettingsInput = S["Settings-Input"];
 export type Port = S["Port"];
+export type PortProbe = S["PortProbe"];
 export type DetectResponse = S["DetectResponse"];
 export type DiscoveredCamera = S["DiscoveredCamera"];
 export type ProbeResult = S["ProbeResult"];

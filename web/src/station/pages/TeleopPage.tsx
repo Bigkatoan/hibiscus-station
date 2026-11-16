@@ -12,7 +12,7 @@ import { api } from "../api/client";
 import { useStationMutation } from "../api/hooks";
 import type { Session } from "../api/types";
 import { LiveLayout } from "../components/LiveLayout";
-import { LoopStats, SessionTimer } from "../components/SessionWidgets";
+import { LatencyReadout, LoopStats, SessionTimer } from "../components/SessionWidgets";
 import { StationError } from "../components/StationError";
 import { useCritical, useSessionControl } from "../components/controls";
 import { useStatus } from "../ws/StationProvider";
@@ -27,6 +27,7 @@ function LiveHeader({ session, extra }: { session: Session | null; extra?: React
       <CardContent className="grid gap-4 pt-3 sm:pt-4 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,14rem)]">
         <div className="min-w-0">
           {session ? <SessionTimer session={session} /> : extra}
+          {session?.kind === "teleop" ? <LatencyReadout /> : null}
           {status?.sub === "approach" ? (
             <p
               role="status"
@@ -57,10 +58,14 @@ function LiveHeader({ session, extra }: { session: Session | null; extra?: React
   );
 }
 
+/** Teleop sends the leader pose every tick (LeLab runs free at ~250 Hz); a slow bus just runs slower. */
+export const TELEOP_FPS = 250;
+const TELEOP_FPS_OPTIONS = [30, 60, 120, TELEOP_FPS];
+
 export function TeleopPage() {
   const { t } = useTranslation("station");
   const status = useStatus();
-  const [fps, setFps] = useState(30);
+  const [fps, setFps] = useState(TELEOP_FPS);
   const start = useStationMutation((f: number) => api.post<Session>("/sessions/teleop", { fps: f }));
   const session = status?.session?.kind === "teleop" ? status.session : null;
   const canStart = status?.state === "idle";
@@ -77,8 +82,11 @@ export function TeleopPage() {
                   setFps(Number(e.target.value));
                 }}
               >
-                <option value={15}>15</option>
-                <option value={30}>30</option>
+                {TELEOP_FPS_OPTIONS.map((f) => (
+                  <option key={f} value={f}>
+                    {f === TELEOP_FPS ? t("teleop.fps_max", { fps: f }) : f}
+                  </option>
+                ))}
               </NativeSelect>
             </Field>
             <Button

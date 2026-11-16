@@ -264,6 +264,7 @@ def test_doctor_reports_ports_files_and_motors_without_secrets(
     assert "so101_follower" in text and "my_follower" in text
     assert "motors carry the calibration of: ['" in text and "my_follower.json" in text
     assert "id 6: model 777 fw 3.10" in text
+    assert "teleop estimate: ~" in text
     with zipfile.ZipFile(target) as z:
         names = z.namelist()
         blob = b"".join(z.read(n) for n in names)

@@ -168,6 +168,17 @@ describe("Teleop (§6.5)", () => {
       expect(screen.queryByText("Follower moving to the leader pose…")).not.toBeInTheDocument();
     });
   });
+
+  it("starts at the fast default rate and shows the measured latency", async () => {
+    const h = setupStation();
+    const user = userEvent.setup();
+    renderStation("/teleop", h);
+    await settle();
+    expect(screen.getByRole("combobox")).toHaveValue("250");
+    await user.click(await screen.findByRole("button", { name: "Start teleop" }));
+    await advance(h.sim, 0.6);
+    expect(await screen.findByTestId("teleop-latency")).toHaveTextContent("latency ~5 ms, 250 Hz");
+  });
 });
 
 describe("Calibrate (§6.3)", () => {
@@ -310,6 +321,72 @@ describe("Shell and robot screen", () => {
     await user.click(within(banner).getByRole("button", { name: "Create a profile for the real arm" }));
     expect(await screen.findByRole("heading", { name: "New robot" })).toBeInTheDocument();
     expect(screen.getByTestId("cal-id-follower")).toBeInTheDocument();
+  });
+
+  it("identifies arms by role, hints from the voltage and never swaps by itself", async () => {
+    const h = setupStation();
+    const demo = h.sim.profiles[0]!;
+    demo.follower.type = "hibiscus_mock_follower";
+    demo.follower.port = "mock://follower";
+    const user = userEvent.setup();
+    renderStation("/robot", h);
+    await settle();
+    const banner = await screen.findByTestId("demo-banner");
+    await user.click(within(banner).getByRole("button", { name: "Create a profile for the real arm" }));
+    // the find buttons say which arm they look for
+    expect(screen.getByRole("button", { name: "Find the follower arm (move it)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Find the leader arm (unplug it)" })).toBeInTheDocument();
+    // ttyACM0 reads 12.1 V (follower), ttyACM1 5.0 V (leader): right way round, no warning
+    const hints = await screen.findAllByTestId("probe-hint");
+    expect(hints.map((x) => x.textContent)).toEqual([
+      "12.1 V: looks like a follower arm · fw 3.10",
+      "5.0 V: looks like a leader arm · fw 3.10",
+    ]);
+    expect(screen.queryByTestId("role-warning-follower")).not.toBeInTheDocument();
+    // swapped by hand: both slots warn, nothing changes until the user swaps back
+    await user.click(screen.getByTestId("swap-arms"));
+    expect(await screen.findByTestId("role-warning-follower")).toHaveTextContent(
+      "The follower arm port reads 5.0 V: it looks like the leader arm.",
+    );
+    expect(screen.getByTestId("role-warning-leader")).toBeInTheDocument();
+    await user.click(screen.getByTestId("swap-arms"));
+    await waitFor(() => {
+      expect(screen.queryByTestId("role-warning-follower")).not.toBeInTheDocument();
+    });
+  });
+
+  it("finding an arm by moving fills the slot that was asked for and excludes the other arm", async () => {
+    const h = setupStation();
+    const bodies: unknown[] = [];
+    server.use(
+      http.post(`${stationBase()}/ports/detect`, async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json({
+          port: {
+            device: "/dev/ttyACM1",
+            stable_path: null,
+            vid_pid: "1a86:55d3",
+            serial_number: null,
+            description: "",
+            in_use_by: null,
+          },
+        });
+      }),
+    );
+    const user = userEvent.setup();
+    renderStation("/robot", h);
+    await settle();
+    await user.click(screen.getByRole("button", { name: "New robot" }));
+    await user.click(await screen.findByRole("button", { name: "Find the leader arm (move it)" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(/Move ONLY the leader arm/)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Start" }));
+    await user.click(await within(dialog).findByRole("button", { name: "Use as leader arm" }));
+    expect(bodies[0]).toMatchObject({ method: "motion", exclude: [] });
+    const selects = screen.getAllByRole("combobox");
+    // follower slot untouched, leader slot filled
+    expect(selects.some((el) => (el as HTMLSelectElement).value === "/dev/ttyACM1")).toBe(true);
+    expect(screen.getByTestId("swap-arms")).toBeEnabled();
   });
 
   it("shows the server's exact reason under the friendly message", async () => {

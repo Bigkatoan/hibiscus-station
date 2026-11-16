@@ -165,6 +165,7 @@ class Alert(Out):
         "loop",
         "telemetry_degraded",
         "policy_clipping",
+        "teleop_clipping",
     ]
     arm: Arm | None
     motor: str | None
@@ -218,6 +219,9 @@ class SessionLoop(Out):
     tick_ms_p95: float
     telemetry_reads: int
     telemetry_forced: int
+    fps: float | None = Field(None, description="mean loop rate over the session")
+    latency_ms_p50: float | None = Field(None, description="leader -> follower (leader-driven sessions)")
+    latency_ms_p95: float | None = None
 
 
 class SessionEnd(Session):
@@ -299,6 +303,23 @@ class DetectResponse(Out):
 
     port: Port | None = None
     ports_before: list[str] | None = None
+
+
+class PortProbe(Out):
+    device: str
+    voltage_v: float | None = Field(description="median Present_Voltage of the motors")
+    motors: int
+    model_number: int | None
+    firmware: str | None
+    role_hint: Literal["leader", "follower"] | None = Field(
+        description="~5 V: usually the leader; >= 6.5 V: usually the follower (a hint only)"
+    )
+    error: str | None
+    in_use_by: str | None
+
+
+class PortProbes(Out):
+    ports: list[PortProbe]
 
 
 class Robots(Out):
@@ -571,6 +592,11 @@ class LoopStats(Out):
     tick_ms_p95: float
     overruns: int
     telemetry_forced: int
+    latency_ms_p50: float | None = Field(
+        None, description="leader read -> goal sent, plus half a tick (leader-driven sessions)"
+    )
+    latency_ms_p95: float | None = None
+    clip_fraction: float | None = Field(None, description="share of ticks the safety filter changed")
     inference_ms_p50: float | None = None
     inference_ms_p95: float | None = None
 

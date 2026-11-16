@@ -20,8 +20,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input, NativeSelect } from "@/components/ui/input";
 import { api } from "../api/client";
-import { qk, useCalibrations, usePorts, useRobots, useStationMutation } from "../api/hooks";
-import type { Port, RobotProfile, Status } from "../api/types";
+import { qk, useCalibrations, usePortProbe, usePorts, useRobots, useStationMutation } from "../api/hooks";
+import type { Port, PortProbe, RobotProfile, Status } from "../api/types";
 import { JointPanel } from "../components/JointPanel";
 import { MotorHealthPanel } from "../components/MotorHealthPanel";
 import { StationError } from "../components/StationError";
@@ -46,13 +46,39 @@ function portLabel(p: Port): string {
   return `${p.stable_path ?? p.device}${p.description ? ` · ${p.description}` : ""}${p.vid_pid ? ` (${p.vid_pid})` : ""}`;
 }
 
+type Role = "follower" | "leader";
+
+export interface RoleWarning {
+  slot: Role;
+  /** The role this port's voltage suggests (the other one). */
+  looks_like: Role;
+  voltage_v: number;
+}
+
+/**
+ * Voltage hints for the two slots. A slot gets a warning when its port reads like the other role
+ * (follower at ~5 V, leader at >= 7 V). The UI offers a swap; it never swaps by itself.
+ */
+export function roleWarnings(follower: PortProbe | undefined, leader: PortProbe | undefined): RoleWarning[] {
+  const out: RoleWarning[] = [];
+  if (follower?.voltage_v != null && follower.role_hint === "leader")
+    out.push({ slot: "follower", looks_like: "leader", voltage_v: follower.voltage_v });
+  if (leader?.voltage_v != null && leader.role_hint === "follower")
+    out.push({ slot: "leader", looks_like: "follower", voltage_v: leader.voltage_v });
+  return out;
+}
+
 function FindPortDialog({
+  role,
   method,
+  exclude,
   open,
   onOpenChange,
   onFound,
 }: {
+  role: Role;
   method: "unplug" | "motion";
+  exclude: string[];
   open: boolean;
   onOpenChange: (o: boolean) => void;
   onFound: (p: Port) => void;
@@ -64,8 +90,9 @@ function FindPortDialog({
     api.post<{ ports_before: string[] }>("/ports/detect", { method: "unplug" }),
   );
   const detect = useStationMutation((body: { method: string; ports_before?: string[] }) =>
-    api.post<{ port: Port }>("/ports/detect", { ...body, timeout_s: 15 }),
+    api.post<{ port: Port }>("/ports/detect", { ...body, exclude, timeout_s: 15 }),
   );
+  const roleName = t(`robot.role_${role}`);
   const reset = () => {
     setBefore(null);
     setFound(null);
@@ -108,18 +135,26 @@ function FindPortDialog({
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t(method === "unplug" ? "robot.find_unplug" : "robot.find_motion")}</DialogTitle>
+          <DialogTitle>
+            {t(method === "unplug" ? "robot.find_role_unplug" : "robot.find_role_motion", {
+              role: roleName,
+            })}
+          </DialogTitle>
           <DialogDescription>
-            {t(method === "unplug" ? "robot.find_unplug_desc" : "robot.find_motion_desc")}
+            {t(method === "unplug" ? "robot.find_unplug_desc_role" : "robot.find_motion_desc_role", {
+              role: roleName,
+            })}
           </DialogDescription>
         </DialogHeader>
         <div className="flex items-center gap-3">
           <Sprite name="icon_plug" />
           <p className="text-sm" role="status">
             {found
-              ? t("robot.found", { port: found.stable_path ?? found.device })
+              ? t("robot.found_role", { port: found.stable_path ?? found.device, role: roleName })
               : detect.isPending
-                ? t(method === "unplug" ? "robot.unplug_now" : "robot.move_now")
+                ? t(method === "unplug" ? "robot.unplug_now_role" : "robot.move_now_role", {
+                    role: roleName,
+                  })
                 : t("robot.find_ready")}
           </p>
         </div>
@@ -133,7 +168,7 @@ function FindPortDialog({
                 onOpenChange(false);
               }}
             >
-              {t("robot.use_port")}
+              {t("robot.use_port_role", { role: roleName })}
             </Button>
           ) : (
             <Button onClick={run} disabled={detect.isPending || snap.isPending}>
@@ -147,13 +182,20 @@ function FindPortDialog({
 }
 
 function PortPicker({
+  arm: role,
   label,
   value,
+  other,
+  hint,
   onChange,
   optional,
 }: {
+  arm: Role;
   label: string;
   value: string;
+  /** The port of the other arm: never offered by "find by moving" for this one. */
+  other: string;
+  hint: PortProbe | undefined;
   onChange: (v: string) => void;
   optional?: boolean;
 }) {
@@ -185,26 +227,31 @@ function PortPicker({
         <Button
           size="sm"
           variant="outline"
-          onClick={() => {
-            setDialog("unplug");
-          }}
-        >
-          {t("robot.find_unplug")}
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
+          data-testid={`find-${role}-motion`}
           onClick={() => {
             setDialog("motion");
           }}
         >
-          {t("robot.find_motion")}
+          {t("robot.find_role_motion", { role: t(`robot.role_${role}`) })}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          data-testid={`find-${role}-unplug`}
+          onClick={() => {
+            setDialog("unplug");
+          }}
+        >
+          {t("robot.find_role_unplug", { role: t(`robot.role_${role}`) })}
         </Button>
         <Button size="sm" variant="ghost" onClick={() => void ports.refetch()}>
           {t("robot.refresh_ports")}
         </Button>
       </div>
+      {value && hint ? <ProbeHint probe={hint} /> : null}
       <FindPortDialog
+        role={role}
+        exclude={other ? [other] : []}
         method={dialog ?? "unplug"}
         open={dialog !== null}
         onOpenChange={(o) => {
@@ -215,6 +262,21 @@ function PortPicker({
         }}
       />
     </div>
+  );
+}
+
+function ProbeHint({ probe }: { probe: PortProbe }) {
+  const { t } = useTranslation("station");
+  if (probe.in_use_by) return null;
+  if (probe.voltage_v == null)
+    return <p className="text-xs text-muted-foreground">{t("robot.probe_none")}</p>;
+  const fw = probe.firmware ? ` · fw ${probe.firmware}` : "";
+  const key = probe.role_hint ? `robot.probe_looks_${probe.role_hint}` : "robot.probe_unknown";
+  return (
+    <p className="text-xs text-muted-foreground" data-testid="probe-hint">
+      {t(key, { v: probe.voltage_v.toFixed(1) })}
+      {fw}
+    </p>
   );
 }
 
@@ -304,6 +366,16 @@ function ProfileForm({ initial, onDone }: { initial: RobotProfile | null; onDone
     [qk.robots],
   );
   const kind = p.follower.type === "so100_follower" ? "so100" : "so101";
+  const probePorts = [p.follower.port, leaderPort].filter((x) => x !== "");
+  const probe = usePortProbe(probePorts);
+  const probeOf = (port: string) => (port ? probe.data?.ports.find((x) => x.device === port) : undefined);
+  const warnings = roleWarnings(probeOf(p.follower.port), probeOf(leaderPort));
+  // Swap the ports only: each calibration id stays with its role (slot).
+  const swap = () => {
+    const f = p.follower.port;
+    setP({ ...p, follower: { ...p.follower, port: leaderPort } });
+    setLeaderPort(f);
+  };
   return (
     <form
       className="grid gap-3 sm:grid-cols-2"
@@ -352,13 +424,61 @@ function ProfileForm({ initial, onDone }: { initial: RobotProfile | null; onDone
         </NativeSelect>
       </Field>
       <PortPicker
+        arm="follower"
         label={t("robot.follower_port")}
         value={p.follower.port}
+        other={leaderPort}
+        hint={probeOf(p.follower.port)}
         onChange={(v) => {
           setP({ ...p, follower: { ...p.follower, port: v } });
         }}
       />
-      <PortPicker label={t("robot.leader_port")} value={leaderPort} onChange={setLeaderPort} optional />
+      <PortPicker
+        arm="leader"
+        label={t("robot.leader_port")}
+        value={leaderPort}
+        other={p.follower.port}
+        hint={probeOf(leaderPort)}
+        onChange={setLeaderPort}
+        optional
+      />
+      <div className="flex flex-col gap-2 sm:col-span-2">
+        {warnings.map((w) => (
+          <p
+            key={w.slot}
+            role="alert"
+            data-testid={`role-warning-${w.slot}`}
+            className="border-2 border-frame bg-warning px-2 py-1 text-sm text-warning-foreground"
+          >
+            {t("robot.role_warning", {
+              slot: t(`robot.role_${w.slot}`),
+              v: w.voltage_v.toFixed(1),
+              looks: t(`robot.role_${w.looks_like}`),
+            })}
+          </p>
+        ))}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant={warnings.length > 0 ? "default" : "outline"}
+            disabled={!p.follower.port && !leaderPort}
+            data-testid="swap-arms"
+            onClick={swap}
+          >
+            {t("robot.swap_arms")}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={probePorts.length === 0 || probe.isFetching}
+            onClick={() => void probe.refetch()}
+          >
+            {t("robot.probe_again")}
+          </Button>
+        </div>
+      </div>
       <CalibrationIdField
         label={t("robot.cal_follower")}
         arm="follower"

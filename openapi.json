@@ -48,7 +48,8 @@
               "camera",
               "loop",
               "telemetry_degraded",
-              "policy_clipping"
+              "policy_clipping",
+              "teleop_clipping"
             ],
             "title": "Kind",
             "type": "string"
@@ -163,7 +164,8 @@
               "camera",
               "loop",
               "telemetry_degraded",
-              "policy_clipping"
+              "policy_clipping",
+              "teleop_clipping"
             ],
             "title": "Kind",
             "type": "string"
@@ -2734,6 +2736,14 @@
       },
       "DetectRequest": {
         "properties": {
+          "exclude": {
+            "description": "motion: ports already given to the other arm (never offered for this one)",
+            "items": {
+              "type": "string"
+            },
+            "title": "Exclude",
+            "type": "array"
+          },
           "method": {
             "default": "unplug",
             "enum": [
@@ -5579,6 +5589,19 @@
       "LoopStats": {
         "additionalProperties": false,
         "properties": {
+          "clip_fraction": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "share of ticks the safety filter changed",
+            "title": "Clip Fraction"
+          },
           "fps": {
             "title": "Fps",
             "type": "number"
@@ -5606,6 +5629,31 @@
             ],
             "default": null,
             "title": "Inference Ms P95"
+          },
+          "latency_ms_p50": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "leader read -> goal sent, plus half a tick (leader-driven sessions)",
+            "title": "Latency Ms P50"
+          },
+          "latency_ms_p95": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Latency Ms P95"
           },
           "overruns": {
             "title": "Overruns",
@@ -6539,6 +6587,141 @@
           "in_use_by"
         ],
         "title": "Port",
+        "type": "object"
+      },
+      "PortProbe": {
+        "additionalProperties": false,
+        "properties": {
+          "device": {
+            "title": "Device",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "firmware": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Firmware"
+          },
+          "in_use_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "In Use By"
+          },
+          "model_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Number"
+          },
+          "motors": {
+            "title": "Motors",
+            "type": "integer"
+          },
+          "role_hint": {
+            "anyOf": [
+              {
+                "enum": [
+                  "follower",
+                  "leader"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "~5 V: usually the leader; >= 6.5 V: usually the follower (a hint only)",
+            "title": "Role Hint"
+          },
+          "voltage_v": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "median Present_Voltage of the motors",
+            "title": "Voltage V"
+          }
+        },
+        "required": [
+          "device",
+          "voltage_v",
+          "motors",
+          "model_number",
+          "firmware",
+          "role_hint",
+          "error",
+          "in_use_by"
+        ],
+        "title": "PortProbe",
+        "type": "object"
+      },
+      "PortProbeRequest": {
+        "properties": {
+          "ports": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ports to probe (default: every free USB port)",
+            "title": "Ports"
+          }
+        },
+        "title": "PortProbeRequest",
+        "type": "object"
+      },
+      "PortProbes": {
+        "additionalProperties": false,
+        "properties": {
+          "ports": {
+            "items": {
+              "$ref": "#/components/schemas/PortProbe"
+            },
+            "title": "Ports",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ports"
+        ],
+        "title": "PortProbes",
         "type": "object"
       },
       "Ports": {
@@ -9363,6 +9546,13 @@
             "default": 10.0,
             "title": "Stopping Deadline S",
             "type": "number"
+          },
+          "teleop_max_relative_target": {
+            "default": 30.0,
+            "description": "Cap on goal - present (deg) while the leader drives the follower (teleop, record). Larger than max_relative_target: a servo trails a quick human move by v x ~60 ms, and a smaller cap makes the follower chase the leader (lag). It still stops a leader reading that jumps (bad packet, wrong calibration).",
+            "exclusiveMinimum": 0.0,
+            "title": "Teleop Max Relative Target",
+            "type": "number"
           }
         },
         "title": "SafetySettings",
@@ -9426,10 +9616,18 @@
             "default": 10.0,
             "title": "Stopping Deadline S",
             "type": "number"
+          },
+          "teleop_max_relative_target": {
+            "default": 30.0,
+            "description": "Cap on goal - present (deg) while the leader drives the follower (teleop, record). Larger than max_relative_target: a servo trails a quick human move by v x ~60 ms, and a smaller cap makes the follower chase the leader (lag). It still stops a leader reading that jumps (bad packet, wrong calibration).",
+            "exclusiveMinimum": 0.0,
+            "title": "Teleop Max Relative Target",
+            "type": "number"
           }
         },
         "required": [
           "max_relative_target",
+          "teleop_max_relative_target",
           "deadman_timeout_s",
           "deadman_replay",
           "estop_double_press_s",
@@ -10140,6 +10338,41 @@
       "SessionLoop": {
         "additionalProperties": false,
         "properties": {
+          "fps": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "mean loop rate over the session",
+            "title": "Fps"
+          },
+          "latency_ms_p50": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "leader -> follower (leader-driven sessions)",
+            "title": "Latency Ms P50"
+          },
+          "latency_ms_p95": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms P95"
+          },
           "overruns": {
             "title": "Overruns",
             "type": "integer"
@@ -11668,8 +11901,8 @@
       "TeleopRequest": {
         "properties": {
           "fps": {
-            "default": 30,
-            "maximum": 60.0,
+            "default": 250,
+            "maximum": 300.0,
             "minimum": 1.0,
             "title": "Fps",
             "type": "integer"
@@ -14402,6 +14635,48 @@
           }
         },
         "summary": "Detect Port",
+        "tags": [
+          "robots"
+        ]
+      }
+    },
+    "/api/v1/ports/probe": {
+      "post": {
+        "description": "Read-only voltage / model / firmware of each free port, with the role the voltage\nsuggests (a ~5 V arm is usually the leader). Ports a robot holds are not opened.",
+        "operationId": "probe_ports_api_v1_ports_probe_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortProbeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortProbes"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem (spec \u00a75.1)"
+          }
+        },
+        "summary": "Probe Ports",
         "tags": [
           "robots"
         ]

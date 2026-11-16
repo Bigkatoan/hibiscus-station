@@ -15,6 +15,7 @@ from hibiscus_station.data import datasets as ds_catalog
 from hibiscus_station.data.sessions import prune
 from hibiscus_station.errors import StationError
 from hibiscus_station.hw.cameras import CameraHub, PreviewEncoder
+from hibiscus_station.hw.loop import TELEOP_FPS, TELEOP_MAX_FPS
 from hibiscus_station.hw.owner import HardwareOwner
 from hibiscus_station.jobs import Job, JobManager
 from hibiscus_station.models import compat, importer
@@ -36,7 +37,7 @@ log = logging.getLogger(__name__)
 
 
 class TeleopRequest(BaseModel):
-    fps: int = Field(30, ge=1, le=60)
+    fps: int = Field(TELEOP_FPS, ge=1, le=TELEOP_MAX_FPS)
 
 
 class RecordRequest(BaseModel):
@@ -226,6 +227,7 @@ class Station:
             build=build,
             needs_leader=True,
             leader_check_deg=self.settings.safety.max_approach_deg,
+            max_relative_target=self.settings.safety.teleop_max_relative_target,
             timeout=10.0,
         )
 
@@ -267,6 +269,7 @@ class Station:
             build=build,
             needs_leader=True,
             leader_check_deg=self.settings.safety.max_approach_deg,
+            max_relative_target=self.settings.safety.teleop_max_relative_target,
             timeout=20.0,
         )
 

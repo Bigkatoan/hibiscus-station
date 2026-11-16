@@ -57,6 +57,9 @@ class MotionSession:
     deadman: bool = False
     policy_input: bool = False
     uses_leader: bool = False
+    #: Leader -> follower only, nothing recorded: the owner runs the lean tick (leader read, send,
+    #: follower observation and cameras at ``LEAN_OBS_HZ``) so the bus carries what LeLab's does.
+    lean: bool = False
     episode: EpisodeInfo = field(default_factory=EpisodeInfo)
     finished: bool = False
     outcome: str = "running"

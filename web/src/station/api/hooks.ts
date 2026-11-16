@@ -13,6 +13,7 @@ import type {
   LocalDatasetDetail,
   ModelEntry,
   Port,
+  PortProbe,
   Pose,
   Program,
   ProgramRunLog,
@@ -87,6 +88,16 @@ export const useRobots = () =>
 
 export const usePorts = () =>
   useQuery({ queryKey: qk.ports, queryFn: () => api.get<{ ports: Port[] }>("/ports") });
+
+/** Read-only voltage / model / firmware of the given ports (role hints for leader vs follower). */
+export const usePortProbe = (ports: string[]) =>
+  useQuery({
+    queryKey: [...qk.ports, "probe", ...ports],
+    queryFn: () => api.post<{ ports: PortProbe[] }>("/ports/probe", { ports }),
+    enabled: ports.length > 0,
+    staleTime: 30_000,
+    retry: false,
+  });
 
 export const useCalibrations = () =>
   useQuery({
