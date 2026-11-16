@@ -1061,9 +1061,12 @@ export class MockStation {
       clipped: [],
       loop: {
         fps: this.session ? this.session.s.fps - 0.2 : 10,
-        tick_ms_p95: 21.4,
+        tick_ms_p95: this.state === "teleop" ? 3.1 : 21.4,
         overruns: 0,
         telemetry_forced: 0,
+        ...(this.state === "teleop" || this.state === "recording"
+          ? { latency_ms_p50: this.state === "teleop" ? 4.6 : 19.5, latency_ms_p95: 7.2, clip_fraction: 0 }
+          : {}),
       },
     };
     if (this.state === "teleop" || this.state === "recording") {

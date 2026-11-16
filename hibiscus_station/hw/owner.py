@@ -74,6 +74,12 @@ BUS_FAIL_LIMIT = 3
 LOST_AFTER_TORQUE_S = 5.0
 MONITOR_HZ = 10.0
 CALIBRATION_HZ = 50.0
+#: Lean (teleop) tick: follower observation and camera frames at this rate (and at most every other
+#: tick, so telemetry always has ticks of its own); the leader -> follower path itself runs at the
+#: session fps (``TeleopRequest.fps``).
+LEAN_OBS_HZ = 30.0
+#: Leader-driven sessions: warn when the relative-target cap changes this share of the ticks.
+LEADER_CLIP_WARN = 0.2
 
 
 @dataclass
@@ -161,12 +167,14 @@ class HardwareOwner:
         self.last_session_summary: dict[str, Any] | None = None
         self.loaded_model: str | None = None
         self.policy_clipping_alert = False
+        self.leader_clipping_alert = False
         self._q: queue.Queue[Command | None] = queue.Queue(maxsize=128)
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self._last_monitor_tel = 0.0
         self._last_session_emit = 0.0
         self._last_cal_emit = 0.0
+        self._last_joints_emit = 0.0
         self._camera_alerted: set[str] = set()
         self.ident: int | None = None
         self.lost: dict[str, Any] | None = None  # the serial device that went away (state error)
@@ -685,6 +693,9 @@ class HardwareOwner:
         s = self.session
         if s is None:
             return
+        if s.lean:
+            self._lean_tick(s)
+            return
         period = 1.0 / s.fps
         t_start = time.perf_counter()
         deadline = t_start + period
@@ -709,7 +720,9 @@ class HardwareOwner:
         if self.session is None:
             return
         inp = TickInput(self.tick, now, obs_full, frames, stale)
+        t_leader: float | None = None
         if s.uses_leader and self.leader is not None:
+            t_leader = time.perf_counter()
             inp.leader = self._read_leader()
         action = s.step(self, inp)
         if self.estop.is_set:  # pressed during inference: never send this action
@@ -725,6 +738,8 @@ class HardwareOwner:
                 if self.bus_failures >= BUS_FAIL_LIMIT:
                     self._fail("bus_lost", str(exc)[:200])
                     return
+            if t_leader is not None and inp.leader is not None:
+                self.stats.latency_ms(t_start, (time.perf_counter() - t_leader) * 1000.0)
             self.last_sent = safe
             self.last_action = dict(action)
             self.last_clipped = clipped
@@ -770,6 +785,107 @@ class HardwareOwner:
             return
         self._wait_until(deadline)
 
+    def _lean_tick(self, s: MotionSession) -> None:
+        """Teleop: e-stop check, leader read, safety filter, send. Nothing else sits between the
+        leader read and the goal write. The follower observation (the relative-target reference,
+        the joints view) and camera frames are read *after* the send at ``LEAN_OBS_HZ``, and
+        telemetry on the other ticks (or on observation ticks with half a tick to spare, at low
+        fps): at high fps at most one extra bus transaction per tick, so the leader -> follower
+        path runs at the session fps."""
+        period = 1.0 / s.fps
+        t_start = time.perf_counter()
+        deadline = t_start + period
+        self._drain()
+        if self.session is None:
+            return
+        if self.estop.is_set:
+            self._enter_estop()
+            return
+        now = self.session_now()
+        t_leader = time.perf_counter()
+        leader = self._read_leader() if self.leader is not None else None
+        if self.session is None:  # bus lost on the leader
+            return
+        inp = TickInput(self.tick, now, dict(self.last_obs), {}, [], leader=leader)
+        action = s.step(self, inp)
+        if self.estop.is_set:
+            self._enter_estop()
+            return
+        clipped: list[str] = []
+        if action:
+            safe, clipped = self.safety.apply(action, self.last_obs)
+            try:
+                self.follower.send_action(safe)
+            except (ConnectionError, RuntimeError, OSError) as exc:
+                self.bus_failures += 1
+                if self.bus_failures >= BUS_FAIL_LIMIT:
+                    self._fail("bus_lost", str(exc)[:200])
+                    return
+            else:
+                self.stats.latency_ms(t_start, (time.perf_counter() - t_leader) * 1000.0)
+            self.last_sent = safe
+            self.last_action = dict(action)
+            self.last_clipped = clipped
+            s.after_send(self, inp, action, safe)
+            self._clip_health(s)
+        mono = time.monotonic()
+        # At most every other tick: the ticks between carry the telemetry (thermal guard).
+        obs_every = max(2, round(s.fps / LEAN_OBS_HZ))
+        obs_read = self.tick % obs_every == 0
+        if obs_read:
+            if self._read_follower() is None and self.session is None:
+                return
+            if self.hub.has_cameras():
+                frames, stale = self.hub.read_latest_all(max_age_ms=1000.0)
+                self.hub.publish(FrameSet(self.tick, mono, frames, policy_input=False, stale=stale))
+                self._camera_health(s, stale)
+                if self.session is None:
+                    return
+        if mono - self._last_joints_emit >= 1.0 / self.settings.telemetry.joints_hz:
+            self._last_joints_emit = mono
+            self.stats.clip_fraction = self.safety.clipped_fraction(2.0)
+            arms: dict[str, Any] = {"follower": self.last_obs}
+            if leader is not None:
+                arms["leader"] = leader
+            payload: dict[str, Any] = {
+                "t": round(now, 3),
+                "tick": self.tick,
+                "arms": arms,
+                "clipped": clipped,
+                "loop": self.stats.snapshot(self.telemetry.forced),
+            }
+            if action:
+                payload["action"] = self.last_action
+                payload["sent"] = self.last_sent
+            self.emit("joints", payload)
+        slack = deadline - time.perf_counter()
+        # Observation ticks carry telemetry only with real slack (low fps), never a forced read.
+        roomy = slack * 1000.0 >= max(self.settings.telemetry.min_slack_ms, period * 500.0)
+        if not obs_read or roomy:
+            read = self.telemetry.maybe_read(slack)
+            if read is not None:
+                self._handle_read(read)
+                if self.session is None:
+                    return
+        if s.deadman and self.watchdog.expired():
+            self.press_estop(
+                "ui_lost",
+                detail=f"no heartbeat from the UI for {self.settings.safety.deadman_timeout_s:.1f} s",
+            )
+            self._enter_estop()
+            return
+        s.poll(self, self.session_now())
+        if s.phase_changed or time.monotonic() - self._last_session_emit >= 1.0:
+            s.phase_changed = False
+            self._last_session_emit = time.monotonic()
+            self.emit("session", s.view())
+        self.stats.tick(t_start, time.perf_counter() - t_start, period)
+        self.tick += 1
+        if s.finished:
+            self._stop_session(s.outcome)
+            return
+        self._wait_until(deadline)
+
     def _camera_health(self, s: MotionSession, stale: list[str]) -> None:
         if stale:
             stale_s = max(self.hub.stale_for(n) for n in stale)
@@ -794,6 +910,19 @@ class HardwareOwner:
         # Spec §R safety: a *policy* fighting the limiter. In teleop/record/replay the clipped
         # targets come from the leader or a dataset, and "the policy is fighting" would be wrong.
         fighting = s.kind == "run" and frac > 0.3 and self.session_now() > 2.0
+        chasing = s.uses_leader and s.kind != "run" and frac > LEADER_CLIP_WARN and self.session_now() > 3.0
+        if chasing != self.leader_clipping_alert:
+            # The follower trails the leader by more than the relative-target cap on many ticks:
+            # every clipped tick makes it lag further behind (the user sees a delayed follower).
+            self.leader_clipping_alert = chasing
+            cap = self.safety.max_rel if isinstance(self.safety.max_rel, float) else None
+            self.raise_alert(
+                "teleop_clipping",
+                "warn" if chasing else "info",
+                "safety.leader_clipping",
+                {"fraction": round(frac, 2), "max_deg": cap},
+                active=chasing,
+            )
         if fighting != self.policy_clipping_alert:
             self.policy_clipping_alert = fighting
             self.raise_alert(
@@ -830,6 +959,11 @@ class HardwareOwner:
         if self.policy_clipping_alert:  # the session is over: the warning must not outlive it
             self.policy_clipping_alert = False
             self.raise_alert("policy_clipping", "info", "safety.clipping", {"fraction": 0.0}, active=False)
+        if self.leader_clipping_alert:
+            self.leader_clipping_alert = False
+            self.raise_alert(
+                "teleop_clipping", "info", "safety.leader_clipping", {"fraction": 0.0}, active=False
+            )
         outcome = s.outcome if s.outcome != "running" else reason
         s.outcome = outcome
         try:
@@ -848,6 +982,7 @@ class HardwareOwner:
                 "tick_ms_p95": round(self.stats.session_p95_ms(), 2),
                 "telemetry_reads": self.telemetry.reads,
                 "telemetry_forced": self.telemetry.forced,
+                **self.stats.session_summary(),
             },
             "max_temp_c": {f"{a}.{m}": t for (a, m), t in self.guard.temps.items()},
         }
@@ -1469,6 +1604,7 @@ class HardwareOwner:
             self._torque_on()
         self._setup_safety(max_relative_target)
         self.stats = LoopStats()
+        self._last_joints_emit = 0.0
         self.telemetry.reads = 0
         self.telemetry.forced = 0
         self.tick = 0

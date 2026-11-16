@@ -173,6 +173,16 @@ class SafetySettings(BaseModel):
     model_config = ConfigDict(json_schema_serialization_defaults_required=True)
 
     max_relative_target: float = Field(5.0, gt=0)
+    teleop_max_relative_target: float = Field(
+        30.0,
+        gt=0,
+        description=(
+            "Cap on goal - present (deg) while the leader drives the follower (teleop, record). "
+            "Larger than max_relative_target: a servo trails a quick human move by v x ~60 ms, and "
+            "a smaller cap makes the follower chase the leader (lag). It still stops a leader "
+            "reading that jumps (bad packet, wrong calibration)."
+        ),
+    )
     deadman_timeout_s: float = Field(1.0, gt=0)
     deadman_replay: bool = True
     estop_double_press_s: float = 2.0

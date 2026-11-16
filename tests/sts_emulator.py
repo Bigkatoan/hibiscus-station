@@ -9,7 +9,11 @@ Feetech wire protocol, so the *real* rustypot and lerobot stack (``SOFollower`` 
   ``Homing_Offset`` (bit 11) / ``Present_Position`` (bit 15) / ``Present_Load`` (bit 10);
 * ``present = actual - homing_offset`` (rustypot ``homing_offset_sign = -1``), goals clamped to
   the position limits, torque-off joints follow a "hand" function;
-* fault injection: dropped answers, corrupted checksums, response latency, status/alarm bits.
+* fault injection: dropped answers, corrupted checksums, response latency, status/alarm bits;
+* optional wire timing (:meth:`STSEmulator.realistic`): bytes at 1 Mbaud, each servo's
+  ``Return_Delay_Time`` (register 7, 2 us units) and the USB adapter's latency in both directions,
+  plus a first-order servo response (``tau_s``, ``vmax_steps_s``) for latency measurements;
+* ``goal_log``: every Goal_Position the servos received, with its monotonic time.
 
 Used by ``tests/test_real_stack.py`` and handy for manual checks (``python tests/sts_emulator.py``
 prints a port and serves until Ctrl-C).
@@ -131,6 +135,17 @@ class STSEmulator:
         self.drop_rate = 0.0  # answer missing (timeout on the host)
         self.corrupt_rate = 0.0  # bad checksum
         self.latency_s = 0.0005
+        # wire timing (0 = off): see realistic()
+        self.baud = 0.0
+        self.usb_out_s = 0.0  # host -> adapter (USB frame)
+        self.usb_in_s = 0.0  # adapter -> host (USB latency timer)
+        self.return_delay = False  # honour register 7 (Return_Delay_Time)
+        # servo dynamics: first-order lag towards the goal, speed limited
+        self.tau_s = 0.03
+        self.vmax_steps_s = 4000.0
+        self.goal_log: list[tuple[float, int, int]] = []  # (monotonic t, id, goal in present frame)
+        self.record_goals = False
+        self.transactions = 0
         self.hand: Callable[[int, float], float | None] | None = None
         self.lock = threading.Lock()
         self.log: list[tuple[str, int, int]] = []  # (instr, id, addr)
@@ -141,6 +156,32 @@ class STSEmulator:
         self._thread.start()
 
     # ------------------------------------------------------------------ helpers for tests
+    def realistic(
+        self,
+        *,
+        usb_out_s: float = 0.0005,
+        usb_in_s: float = 0.001,
+        baud: float = 1_000_000.0,
+        tau_s: float = 0.05,
+        vmax_steps_s: float = 3400.0,
+    ) -> STSEmulator:
+        """Wire timing of a real SO-101 bus: 1 Mbaud bytes, return delays, a 1 ms USB latency timer
+        (CH34x / FTDI set to 1 ms; FTDI's Windows default is 16 ms) and a ~300 deg/s servo."""
+        self.latency_s = 0.0
+        self.baud = baud
+        self.usb_out_s = usb_out_s
+        self.usb_in_s = usb_in_s
+        self.return_delay = True
+        self.tau_s = tau_s
+        self.vmax_steps_s = vmax_steps_s
+        return self
+
+    def sample(self) -> dict[int, float]:
+        """Physics step now, then every servo's position in its present frame (steps)."""
+        with self.lock:
+            self._step()
+            return {i: s.actual - s.offset for i, s in self.servos.items()}
+
     def close(self) -> None:
         self._stop.set()
         self._thread.join(1)
@@ -182,8 +223,8 @@ class STSEmulator:
                     goal = max(lo, min(hi, goal))
                 target = goal + s.offset
                 err = target - s.actual
-                vmax = 4000 * dt
-                s.actual += max(-vmax, min(vmax, err * (1 - math.exp(-dt / 0.03))))
+                vmax = self.vmax_steps_s * dt
+                s.actual += max(-vmax, min(vmax, err * (1 - math.exp(-dt / self.tau_s))))
                 s.load_raw = sm_encode(max(-1000, min(1000, round(err * 4))), 10)
             elif self.hand is not None:
                 pos = self.hand(s.id, t)
@@ -212,6 +253,9 @@ class STSEmulator:
         return bytes(out)
 
     def _write(self, s: Servo, addr: int, data: bytes) -> None:
+        if self.record_goals and addr <= 42 < addr + len(data) - 1:
+            raw = data[42 - addr] | (data[43 - addr] << 8)
+            self.goal_log.append((time.monotonic(), s.id, sm_decode(raw, 15)))
         for i, b in enumerate(data):
             a = addr + i
             if a == 40 and b and not s.mem[40]:
@@ -294,11 +338,29 @@ class STSEmulator:
                 del buf[:total]
                 if checksum(pkt[2:-1]) != pkt[-1]:
                     continue
+                self.transactions += 1
+                if self.baud:
+                    _wait(self.usb_out_s + len(pkt) * 10 / self.baud)
                 out = self.handle(pkt[2], pkt[4], pkt[5:-1])
                 if out:
-                    if self.latency_s:
-                        time.sleep(self.latency_s)
+                    delay = self.latency_s
+                    if self.baud:
+                        delay += len(out) * 10 / self.baud + self.usb_in_s
+                    if self.return_delay:
+                        n = len(pkt[7:-1]) if pkt[4] == 0x82 else 1  # sync read: one answer per id
+                        delay += n * max(s.get(7, 1) for s in self.servos.values()) * 2e-6
+                    if delay:
+                        _wait(delay)
                     os.write(self.master, out)
+
+
+def _wait(seconds: float) -> None:
+    """Sleep with ~20 us precision (time.sleep alone overshoots sub-millisecond waits)."""
+    end = time.perf_counter() + seconds
+    if seconds > 0.0006:
+        time.sleep(seconds - 0.0005)
+    while time.perf_counter() < end:
+        pass
 
 
 def lelab_calibration(seed: int = 1) -> dict[str, dict[str, Any]]:

@@ -39,6 +39,14 @@ class DetectRequest(BaseModel):
     method: Literal["unplug", "motion"] = "unplug"
     ports_before: list[str] | None = None
     timeout_s: float = Field(15.0, gt=0, le=60)
+    exclude: list[str] = Field(
+        default_factory=list,
+        description="motion: ports already given to the other arm (never offered for this one)",
+    )
+
+
+class PortProbeRequest(BaseModel):
+    ports: list[str] | None = Field(None, description="ports to probe (default: every free USB port)")
 
 
 class DisconnectRequest(BaseModel):
@@ -145,7 +153,7 @@ def build_router() -> APIRouter:
                 return wire.DetectResponse(ports_before=lister())
             port = hwports.detect_unplug(body.ports_before, lister, timeout_s=body.timeout_s)
         else:
-            held = {normalize_device(d) for d in in_use}
+            held = {normalize_device(d) for d in [*in_use, *body.exclude]}
             candidates = [p for p in lister() if normalize_device(p) not in held]
             port = hwports.detect_motion(candidates, hwports.read_raw_positions, timeout_s=body.timeout_s)
         if port is None:
@@ -160,6 +168,28 @@ def build_router() -> APIRouter:
             "in_use_by": None,
         }
         return wire.DetectResponse(port=wire.Port.model_validate(rows.get(port, fallback)))
+
+    @r.post("/ports/probe", tags=["robots"])
+    def probe_ports(request: Request, body: PortProbeRequest) -> wire.PortProbes:
+        """Read-only voltage / model / firmware of each free port, with the role the voltage
+        suggests (a ~5 V arm is usually the leader). Ports a robot holds are not opened."""
+        st = station(request)
+        in_use = {normalize_device(k): v for k, v in _ports_in_use(st).items()}
+        ports = body.ports if body.ports is not None else [p["device"] for p in hwports.list_ports(in_use)]
+        out = []
+        for port in ports[:8]:
+            holder = in_use.get(normalize_device(port))
+            if holder is not None:
+                out.append(
+                    {
+                        **hwports.probe_skeleton(port),
+                        "in_use_by": holder,
+                        "error": f"in use by {holder}",
+                    }
+                )
+                continue
+            out.append({**hwports.probe_arm(port, mock=st.mock), "in_use_by": None})
+        return _out(wire.PortProbes, {"ports": out})
 
     @r.get("/robots", tags=["robots"])
     def get_robots(request: Request) -> wire.Robots:

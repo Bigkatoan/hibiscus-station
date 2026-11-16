@@ -286,6 +286,9 @@ class CameraHub:
     def holders(self) -> dict[str, str]:
         return {device_key(c.profile): n for n, c in self._cams.items()}
 
+    def has_cameras(self) -> bool:
+        return bool(self._cams)
+
     def read_latest_all(
         self, max_age_ms: float, now: float | None = None
     ) -> tuple[dict[str, Any], list[str]]:

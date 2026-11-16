@@ -31,7 +31,7 @@ Two ways, both described in the [deploy guide](../../deploy.md):
 * **Python wheel** (Linux, Windows 10/11 or macOS with Python 3.12 through [uv](https://docs.astral.sh/uv/)):
 
   ```bash
-  uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.5/hibiscus_station-0.2.5-py3-none-any.whl
+  uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.7/hibiscus_station-0.2.7-py3-none-any.whl
   hibiscus-station
   ```
 
@@ -53,8 +53,11 @@ Close LeLab and any `lerobot-*` command first: only one program can use a serial
 
 ## The steps
 
-1. **Robot.** Create a profile: robot type, follower port, leader port (optional). "Find by
-   unplugging" and "Find by moving" help you pick the right port. Connect. You now see the joint
+1. **Robot.** Create a profile: robot type, follower port, leader port (optional). Each slot has
+   "Find the follower arm" / "Find the leader arm" buttons (move it, or unplug it): move (or unplug)
+   only that arm and its port goes into that slot. Station reads each port's motor voltage (read
+   only) and hints which arm it is: leaders usually run at ~5 V, followers at 7.4 V or 12 V. If the
+   arms look mixed up, press "Swap follower ⇄ leader" (Station never swaps by itself). Connect. You now see the joint
    positions and motor temperatures. Use "Use current follower pose as rest pose" once the arm is in
    a safe folded pose: Station parks there before turning the torque off.
 2. **Calibrate.** For each arm: move every joint to the middle of its range, press *Set home*, then
@@ -64,7 +67,10 @@ Close LeLab and any `lerobot-*` command first: only one program can use a serial
 3. **Cameras.** Add the discovered cameras. Their names (`wrist`, `front`, ...) are the names models
    will expect (`observation.images.<name>`).
 4. **Teleop.** Move the leader, the follower follows. If the leader is far from the follower pose,
-   Station asks you to bring it closer first.
+   Station asks you to bring it closer first. Teleop runs as fast as LeLab's (250 Hz by default:
+   each tick only reads the leader and sends the follower its goal); the screen shows the measured
+   "latency ~X ms, Y Hz". If the rate is low, run `hibiscus-station doctor`: it times the bus and
+   tells you to set the USB adapter's latency timer to 1 ms (Windows).
 5. **Record.** Choose a dataset name, the task sentence, the number of episodes and their length.
    Keys: **→** next (save and continue), **←** re-record, **Esc** stop. An episode that reaches its
    time limit is saved (unlike LeLab, which silently re-records it); you can change that to

@@ -14,6 +14,7 @@ import type {
   LocalDatasetDetail,
   ModelEntry,
   Port,
+  PortProbe,
   Pose,
   Program,
   ProgramRunLog,
@@ -96,6 +97,16 @@ export const useCalibrationCheck = (enabled: boolean) =>
     queryKey: qk.calibrationCheck,
     queryFn: () => api.get<CalibrationCheck>("/calibration/check"),
     enabled,
+    retry: false,
+  });
+
+/** Read-only voltage / model / firmware of the given ports (role hints for leader vs follower). */
+export const usePortProbe = (ports: string[]) =>
+  useQuery({
+    queryKey: [...qk.ports, "probe", ...ports],
+    queryFn: () => api.post<{ ports: PortProbe[] }>("/ports/probe", { ports }),
+    enabled: ports.length > 0,
+    staleTime: 30_000,
     retry: false,
   });
 

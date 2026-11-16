@@ -93,6 +93,21 @@ export function SessionTimer({
 }
 
 const selLoop = (s: StationSnapshot) => s.joints?.loop;
+
+/** Teleop: "latency ~X ms, Y Hz" (leader read -> goal sent, plus half a tick; measured live). */
+export function LatencyReadout() {
+  const { t } = useTranslation("station");
+  const loop = useStation(selLoop);
+  if (loop?.latency_ms_p50 == null) return null;
+  return (
+    <p className="text-sm tabular-nums text-muted-foreground" data-testid="teleop-latency">
+      {t("teleop.latency_readout", {
+        ms: fmt(loop.latency_ms_p50, 0),
+        hz: fmt(loop.fps, 0),
+      })}
+    </p>
+  );
+}
 const selTick = (s: StationSnapshot) => s.joints?.tick;
 
 export function LoopStats({ targetFps, inference = false }: { targetFps: number; inference?: boolean }) {
@@ -104,6 +119,9 @@ export function LoopStats({ targetFps, inference = false }: { targetFps: number;
     [t("stats.fps"), `${fmt(loop?.fps, 1)} / ${targetFps}`],
     [t("stats.tick_p95"), `${fmt(loop?.tick_ms_p95, 1)} ms`],
   ];
+  if (loop?.latency_ms_p50 != null) {
+    items.push([t("stats.latency"), `~${fmt(loop.latency_ms_p50, 0)} ms`]);
+  }
   if (inference) {
     items.push([
       t("stats.inference"),

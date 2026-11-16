@@ -104,6 +104,30 @@ export function stationHandlers(sim: MockStation, base = `${window.location.orig
         return { port: fx.ports[0] };
       }),
     ),
+    http.post(
+      u("/ports/probe"),
+      guard(async ({ request }) => {
+        const b = await json<{ ports?: string[] | null }>(request);
+        const list = b.ports ?? fx.ports.map((p) => p.device);
+        // The demo kit: /dev/ttyACM1 is the 5 V leader, any other port a 12 V follower.
+        const leader = fx.ports[1];
+        return {
+          ports: list.map((device) => {
+            const v = device === leader?.device || device === leader?.stable_path ? 5.0 : 12.1;
+            return {
+              device,
+              voltage_v: v,
+              motors: 6,
+              model_number: 777,
+              firmware: "3.10",
+              role_hint: v < 6 ? "leader" : "follower",
+              error: null,
+              in_use_by: null,
+            };
+          }),
+        };
+      }),
+    ),
     http.get(
       u("/robots"),
       guard(() => ({ robots: sim.profiles, active: sim.activeId })),

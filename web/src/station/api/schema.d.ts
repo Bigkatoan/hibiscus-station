@@ -501,6 +501,27 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/ports/probe": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Probe Ports
+     * @description Read-only voltage / model / firmware of each free port, with the role the voltage
+     *     suggests (a ~5 V arm is usually the leader). Ports a robot holds are not opened.
+     */
+    post: operations["probe_ports_api_v1_ports_probe_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/poses": {
     parameters: {
       query?: never;
@@ -1359,7 +1380,8 @@ export interface components {
         | "camera"
         | "loop"
         | "telemetry_degraded"
-        | "policy_clipping";
+        | "policy_clipping"
+        | "teleop_clipping";
       /**
        * Level
        * @enum {string}
@@ -1404,7 +1426,8 @@ export interface components {
         | "camera"
         | "loop"
         | "telemetry_degraded"
-        | "policy_clipping";
+        | "policy_clipping"
+        | "teleop_clipping";
       /**
        * Level
        * @enum {string}
@@ -2554,6 +2577,11 @@ export interface components {
     /** DetectRequest */
     DetectRequest: {
       /**
+       * Exclude
+       * @description motion: ports already given to the other arm (never offered for this one)
+       */
+      exclude?: string[];
+      /**
        * Method
        * @default unplug
        * @enum {string}
@@ -3644,6 +3672,12 @@ export interface components {
     };
     /** LoopStats */
     LoopStats: {
+      /**
+       * Clip Fraction
+       * @description share of ticks the safety filter changed
+       * @default null
+       */
+      clip_fraction?: number | null;
       /** Fps */
       fps: number;
       /**
@@ -3656,6 +3690,17 @@ export interface components {
        * @default null
        */
       inference_ms_p95?: number | null;
+      /**
+       * Latency Ms P50
+       * @description leader read -> goal sent, plus half a tick (leader-driven sessions)
+       * @default null
+       */
+      latency_ms_p50?: number | null;
+      /**
+       * Latency Ms P95
+       * @default null
+       */
+      latency_ms_p95?: number | null;
       /** Overruns */
       overruns: number;
       /** Telemetry Forced */
@@ -4040,6 +4085,44 @@ export interface components {
       stable_path?: string | null;
       /** Vid Pid */
       vid_pid?: string | null;
+    };
+    /** PortProbe */
+    PortProbe: {
+      /** Device */
+      device: string;
+      /** Error */
+      error: string | null;
+      /** Firmware */
+      firmware: string | null;
+      /** In Use By */
+      in_use_by: string | null;
+      /** Model Number */
+      model_number: number | null;
+      /** Motors */
+      motors: number;
+      /**
+       * Role Hint
+       * @description ~5 V: usually the leader; >= 6.5 V: usually the follower (a hint only)
+       */
+      role_hint: ("follower" | "leader") | null;
+      /**
+       * Voltage V
+       * @description median Present_Voltage of the motors
+       */
+      voltage_v: number | null;
+    };
+    /** PortProbeRequest */
+    PortProbeRequest: {
+      /**
+       * Ports
+       * @description ports to probe (default: every free USB port)
+       */
+      ports?: string[] | null;
+    };
+    /** PortProbes */
+    PortProbes: {
+      /** Ports */
+      ports: components["schemas"]["PortProbe"][];
     };
     /** Ports */
     Ports: {
@@ -5404,6 +5487,12 @@ export interface components {
        * @default 10
        */
       stopping_deadline_s?: number;
+      /**
+       * Teleop Max Relative Target
+       * @description Cap on goal - present (deg) while the leader drives the follower (teleop, record). Larger than max_relative_target: a servo trails a quick human move by v x ~60 ms, and a smaller cap makes the follower chase the leader (lag). It still stops a leader reading that jumps (bad packet, wrong calibration).
+       * @default 30
+       */
+      teleop_max_relative_target?: number;
     };
     /** SafetySettings */
     "SafetySettings-Output": {
@@ -5462,6 +5551,12 @@ export interface components {
        * @default 10
        */
       stopping_deadline_s: number;
+      /**
+       * Teleop Max Relative Target
+       * @description Cap on goal - present (deg) while the leader drives the follower (teleop, record). Larger than max_relative_target: a servo trails a quick human move by v x ~60 ms, and a smaller cap makes the follower chase the leader (lag). It still stops a leader reading that jumps (bad packet, wrong calibration).
+       * @default 30
+       */
+      teleop_max_relative_target: number;
     };
     /** ServerDataset */
     ServerDataset: {
@@ -5678,6 +5773,18 @@ export interface components {
     };
     /** SessionLoop */
     SessionLoop: {
+      /**
+       * Fps
+       * @description mean loop rate over the session
+       */
+      fps?: number | null;
+      /**
+       * Latency Ms P50
+       * @description leader -> follower (leader-driven sessions)
+       */
+      latency_ms_p50?: number | null;
+      /** Latency Ms P95 */
+      latency_ms_p95?: number | null;
       /** Overruns */
       overruns: number;
       /** Telemetry Forced */
@@ -6298,7 +6405,7 @@ export interface components {
     TeleopRequest: {
       /**
        * Fps
-       * @default 30
+       * @default 250
        */
       fps?: number;
     };
@@ -7995,6 +8102,39 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["DetectResponse"];
+        };
+      };
+      /** @description RFC 9457 problem (spec §5.1) */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Problem"];
+        };
+      };
+    };
+  };
+  probe_ports_api_v1_ports_probe_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PortProbeRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PortProbes"];
         };
       };
       /** @description RFC 9457 problem (spec §5.1) */

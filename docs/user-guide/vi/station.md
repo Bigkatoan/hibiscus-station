@@ -30,7 +30,7 @@ Có hai cách, chi tiết trong [hướng dẫn triển khai](../../deploy.md):
 * **Gói Python (wheel)** (Linux, Windows 10/11 hoặc macOS có Python 3.12, qua [uv](https://docs.astral.sh/uv/)):
 
   ```bash
-  uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.5/hibiscus_station-0.2.5-py3-none-any.whl
+  uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.7/hibiscus_station-0.2.7-py3-none-any.whl
   hibiscus-station                  # mở giao diện
   ```
 
@@ -51,8 +51,11 @@ Hãy tắt LeLab và mọi lệnh `lerobot-*` trước: mỗi cổng serial ch�
 
 ## Các bước
 
-1. **Robot.** Tạo hồ sơ robot: loại robot, cổng follower, cổng leader (không bắt buộc). "Tìm bằng
-   cách rút cáp" và "Tìm bằng cách cử động" giúp chọn đúng cổng. Bấm Connect. Lúc này bạn thấy vị
+1. **Robot.** Tạo hồ sơ robot: loại robot, cổng follower, cổng leader (không bắt buộc). Dưới mỗi ô
+   có nút "Tìm tay follower" / "Tìm tay leader" (cử động hoặc rút cáp): chỉ cử động (hoặc rút cáp)
+   đúng tay đó, cổng tìm được vào đúng ô đó. Station đọc điện áp động cơ của mỗi cổng (chỉ đọc) và
+   gợi ý: tay leader thường chạy ~5 V, follower 7,4 V hoặc 12 V. Nếu hai tay có vẻ bị nhầm, bấm
+   "Đổi chỗ follower ⇄ leader" (Station không tự đổi). Bấm Connect. Lúc này bạn thấy vị
    trí các khớp và nhiệt độ động cơ. Khi tay robot đang ở tư thế gập an toàn, bấm "Dùng tư thế hiện
    tại làm tư thế nghỉ": Station sẽ đưa tay về đây trước khi tắt torque.
 2. **Calibrate.** Với mỗi tay: đưa mọi khớp về giữa hành trình, bấm *Set home*, rồi đưa từng khớp đi
@@ -61,7 +64,10 @@ Hãy tắt LeLab và mọi lệnh `lerobot-*` trước: mỗi cổng serial ch�
 3. **Camera.** Thêm các camera tìm thấy. Tên camera (`wrist`, `front`, ...) là tên model sẽ cần
    (`observation.images.<tên>`).
 4. **Teleop.** Cử động tay leader, tay follower làm theo. Nếu leader lệch xa tư thế follower,
-   Station yêu cầu bạn đưa leader lại gần trước.
+   Station yêu cầu bạn đưa leader lại gần trước. Teleop chạy nhanh như LeLab (mặc định 250 Hz, mỗi
+   nhịp chỉ đọc tay leader và gửi lệnh cho follower); màn hình hiện "độ trễ ~X ms, Y Hz" đo trực
+   tiếp. Nếu số Hz thấp, chạy `hibiscus-station doctor`: nó đo tốc độ bus và nhắc chỉnh latency
+   timer của bộ chuyển USB (Windows) về 1 ms.
 5. **Ghi dữ liệu.** Chọn tên dataset, câu mô tả nhiệm vụ, số episode và độ dài. Phím: **→** sang
    episode tiếp (lưu), **←** ghi lại, **Esc** dừng. Episode chạm giới hạn thời gian sẽ được **lưu**
    (khác LeLab, vốn lặng lẽ ghi lại); bạn có thể đổi thành *bỏ*.

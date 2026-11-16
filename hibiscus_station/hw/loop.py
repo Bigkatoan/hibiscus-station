@@ -5,6 +5,11 @@ from __future__ import annotations
 import time
 from collections import deque
 
+#: Teleop runs the lean tick (one leader read + one goal write per tick, like LeLab's free-running
+#: loop at ~250 Hz); on a slower bus the loop runs as fast as the bus allows.
+TELEOP_FPS = 250
+TELEOP_MAX_FPS = 300
+
 
 def percentile(values: list[float], q: float) -> float:
     if not values:
@@ -19,9 +24,14 @@ class LoopStats:
         self.window_s = window_s
         self.ticks: deque[tuple[float, float]] = deque()  # (start, duration)
         self.inference: deque[tuple[float, float]] = deque()
+        self.latency: deque[tuple[float, float]] = deque()  # (start, leader -> goal ms)
+        self.clip_fraction: float | None = None
         self.overruns = 0
         self.total_ticks = 0
         self.all_durations: list[float] = []  # whole session, for tests / session.json
+        self.all_latency: list[float] = []
+        self.first_start: float | None = None
+        self.last_start: float | None = None
         self.slow_inference_since: float | None = None
 
     def _trim(self, now: float) -> None:
@@ -29,8 +39,13 @@ class LoopStats:
             self.ticks.popleft()
         while self.inference and now - self.inference[0][0] > self.window_s:
             self.inference.popleft()
+        while self.latency and now - self.latency[0][0] > self.window_s:
+            self.latency.popleft()
 
     def tick(self, start: float, duration: float, period: float) -> None:
+        if self.first_start is None:
+            self.first_start = start
+        self.last_start = start
         self.ticks.append((start, duration))
         self.total_ticks += 1
         self.all_durations.append(duration)
@@ -49,6 +64,16 @@ class LoopStats:
             self.slow_inference_since = None
         self._trim(start)
 
+    def latency_ms(self, start: float, ms: float) -> None:
+        """Leader -> follower latency of one tick: leader read start to Goal_Position sent, plus half
+        the tick interval (a leader move waits on average that long for the next read)."""
+        if self.ticks:
+            ms += (start - self.ticks[-1][0]) * 500.0
+        self.latency.append((start, ms))
+        self.all_latency.append(ms)
+        if len(self.all_latency) > 100_000:
+            del self.all_latency[:50_000]
+
     def fps(self) -> float:
         if len(self.ticks) < 2:
             return 0.0
@@ -63,6 +88,12 @@ class LoopStats:
             "overruns": self.overruns,
             "telemetry_forced": telemetry_forced,
         }
+        if self.latency:
+            lat = [m for _, m in self.latency]
+            out["latency_ms_p50"] = round(percentile(lat, 50), 1)
+            out["latency_ms_p95"] = round(percentile(lat, 95), 1)
+        if self.clip_fraction is not None:
+            out["clip_fraction"] = round(self.clip_fraction, 3)
         if self.inference:
             inf = [m for _, m in self.inference]
             out["inference_ms_p50"] = round(percentile(inf, 50), 2)
@@ -71,6 +102,17 @@ class LoopStats:
 
     def session_p95_ms(self) -> float:
         return percentile([d * 1000.0 for d in self.all_durations], 95)
+
+    def session_summary(self) -> dict[str, float | None]:
+        """Mean loop rate and leader -> follower latency over the whole session (session.json)."""
+        span = (self.last_start or 0.0) - (self.first_start or 0.0)
+        fps = round((self.total_ticks - 1) / span, 1) if self.total_ticks > 1 and span > 0 else None
+        lat = self.all_latency
+        return {
+            "fps": fps,
+            "latency_ms_p50": round(percentile(lat, 50), 1) if lat else None,
+            "latency_ms_p95": round(percentile(lat, 95), 1) if lat else None,
+        }
 
 
 class Deadline:

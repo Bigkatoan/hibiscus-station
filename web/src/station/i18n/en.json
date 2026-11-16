@@ -155,7 +155,8 @@
       "model_too_slow": "The model is too slow for this fps on this machine. Try a lower fps or a CUDA device."
     },
     "safety": {
-      "clipping": "The policy is fighting the safety limiter."
+      "clipping": "The policy is fighting the safety limiter.",
+      "leader_clipping": "The follower trails the leader by more than the {{max_deg}}° safety cap: it cannot keep up at this speed (check its power supply)."
     },
     "telemetry": {
       "degraded": "Motor telemetry reads are failing."
@@ -241,7 +242,8 @@
     "tick_p95": "Loop p95",
     "inference": "Inference p50/p95",
     "clipped": "Clipped",
-    "overruns": "Overruns"
+    "overruns": "Overruns",
+    "latency": "Latency"
   },
   "controls": {
     "next": "Next",
@@ -323,7 +325,24 @@
     "cal_follower": "Follower calibration",
     "cal_leader": "Leader calibration",
     "cal_new": "New calibration ({{id}})",
-    "cal_existing": "Use existing: {{id}}"
+    "cal_existing": "Use existing: {{id}}",
+    "role_follower": "follower arm",
+    "role_leader": "leader arm",
+    "find_role_motion": "Find the {{role}} (move it)",
+    "find_role_unplug": "Find the {{role}} (unplug it)",
+    "find_motion_desc_role": "Move ONLY the {{role}} for up to 15 s and keep the other arm still. The port whose motor positions change goes into the {{role}} slot.",
+    "find_unplug_desc_role": "Station notes the connected ports, then you unplug the USB cable of the {{role}} only. The port that disappears goes into the {{role}} slot.",
+    "unplug_now_role": "Unplug the {{role}}'s USB cable now…",
+    "move_now_role": "Move the {{role}} now…",
+    "found_role": "Found the {{role}}: {{port}}",
+    "use_port_role": "Use as {{role}}",
+    "probe_looks_leader": "{{v}} V: looks like a leader arm",
+    "probe_looks_follower": "{{v}} V: looks like a follower arm",
+    "probe_unknown": "{{v}} V",
+    "probe_none": "Could not read the motors' voltage on this port.",
+    "role_warning": "The {{slot}} port reads {{v}} V: it looks like the {{looks}}. Swap the ports if the arms are mixed up.",
+    "swap_arms": "Swap follower ⇄ leader",
+    "probe_again": "Re-check voltage"
   },
   "calibrate": {
     "title": "Calibrate",
@@ -432,7 +451,9 @@
     "desc": "Move the leader arm; the follower copies it. Nothing is recorded.",
     "start": "Start teleop",
     "not_idle": "The robot must be connected and idle.",
-    "approach": "Follower moving to the leader pose…"
+    "approach": "Follower moving to the leader pose…",
+    "latency_readout": "latency ~{{ms}} ms, {{hz}} Hz",
+    "fps_max": "{{fps}} (fastest)"
   },
   "replay": {
     "title": "Replay",
