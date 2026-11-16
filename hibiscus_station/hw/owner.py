@@ -70,8 +70,9 @@ CAMERA_SESSIONS = frozenset({"record", "run", "program"})
 BUS_FAIL_LIMIT = 3
 MONITOR_HZ = 10.0
 CALIBRATION_HZ = 50.0
-#: Lean (teleop) tick: follower observation, camera frames and the joints view at this rate; the
-#: leader -> follower path itself runs at the session fps (``TeleopRequest.fps``).
+#: Lean (teleop) tick: follower observation and camera frames at this rate (and at most every other
+#: tick, so telemetry always has ticks of its own); the leader -> follower path itself runs at the
+#: session fps (``TeleopRequest.fps``).
 LEAN_OBS_HZ = 30.0
 #: Leader-driven sessions: warn when the relative-target cap changes this share of the ticks.
 LEADER_CLIP_WARN = 0.2
@@ -169,7 +170,6 @@ class HardwareOwner:
         self._last_monitor_tel = 0.0
         self._last_session_emit = 0.0
         self._last_cal_emit = 0.0
-        self._last_obs_read = 0.0
         self._last_joints_emit = 0.0
         self._camera_alerted: set[str] = set()
         self.ident: int | None = None
@@ -770,8 +770,9 @@ class HardwareOwner:
         """Teleop: e-stop check, leader read, safety filter, send. Nothing else sits between the
         leader read and the goal write. The follower observation (the relative-target reference,
         the joints view) and camera frames are read *after* the send at ``LEAN_OBS_HZ``, and
-        telemetry only on ticks without that read and with slack: at most one extra bus
-        transaction per tick, so the leader -> follower path runs at the session fps."""
+        telemetry on the other ticks (or on observation ticks with half a tick to spare, at low
+        fps): at high fps at most one extra bus transaction per tick, so the leader -> follower
+        path runs at the session fps."""
         period = 1.0 / s.fps
         t_start = time.perf_counter()
         deadline = t_start + period
@@ -809,9 +810,10 @@ class HardwareOwner:
             s.after_send(self, inp, action, safe)
             self._clip_health(s)
         mono = time.monotonic()
-        obs_read = mono - self._last_obs_read >= 1.0 / LEAN_OBS_HZ
+        # At most every other tick: the ticks between carry the telemetry (thermal guard).
+        obs_every = max(2, round(s.fps / LEAN_OBS_HZ))
+        obs_read = self.tick % obs_every == 0
         if obs_read:
-            self._last_obs_read = mono
             if self._read_follower() is None and self.session is None:
                 return
             if self.hub.has_cameras():
@@ -837,8 +839,11 @@ class HardwareOwner:
                 payload["action"] = self.last_action
                 payload["sent"] = self.last_sent
             self.emit("joints", payload)
-        if not obs_read:
-            read = self.telemetry.maybe_read(deadline - time.perf_counter())
+        slack = deadline - time.perf_counter()
+        # Observation ticks carry telemetry only with real slack (low fps), never a forced read.
+        roomy = slack * 1000.0 >= max(self.settings.telemetry.min_slack_ms, period * 500.0)
+        if not obs_read or roomy:
+            read = self.telemetry.maybe_read(slack)
             if read is not None:
                 self._handle_read(read)
                 if self.session is None:
@@ -1454,7 +1459,6 @@ class HardwareOwner:
             self._torque_on()
         self._setup_safety(max_relative_target)
         self.stats = LoopStats()
-        self._last_obs_read = time.monotonic()  # ``obs`` above is fresh
         self._last_joints_emit = 0.0
         self.telemetry.reads = 0
         self.telemetry.forced = 0

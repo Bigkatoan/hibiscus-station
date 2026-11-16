@@ -59,7 +59,7 @@ def test_teleop_defaults_to_the_fast_lean_loop(connected: Station) -> None:
 def test_lean_tick_never_reads_telemetry_and_observation_in_one_tick(connected: Station) -> None:
     st = connected
     fol, lead = get_world("mock://follower"), get_world("mock://leader")
-    st.start_teleop(TeleopRequest(fps=60))
+    st.start_teleop(TeleopRequest(fps=250))
     time.sleep(0.3)
     marks: list[tuple[float, int]] = []
     orig = st.owner.stats.tick
@@ -129,7 +129,7 @@ def test_follower_chasing_the_leader_warns(
 
     st.start_teleop(TeleopRequest(fps=60))
     wait_for(lambda: any(a["active"] for a in alerts()), 4)
-    a = [x for x in alerts() if x["active"]][0]
+    a = next(x for x in alerts() if x["active"])
     assert a["message_key"] == "safety.leader_clipping" and a["params"]["max_deg"] == 30.0
     st.owner.call("control", action="stop")
     wait_for(lambda: alerts()[-1]["active"] is False, 4)

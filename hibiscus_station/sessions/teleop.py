@@ -40,7 +40,8 @@ class TeleopSession(MotionSession):
 
     def __post_init__(self) -> None:
         self.uses_leader = True
-        self.lean = True
+        # Plain teleop only: subclasses (trajectory recording) need frames and observations.
+        self.lean = type(self) is TeleopSession
 
     def begin(self, owner: HardwareOwner, obs: dict[str, Any]) -> None:
         self._start_pose = {k: float(v) for k, v in obs.items() if k.endswith(".pos")}
