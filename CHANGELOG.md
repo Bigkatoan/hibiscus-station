@@ -11,6 +11,13 @@ repository (`station/`); 0.2.0 is the first release of this standalone repositor
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-11-16
+
+### Fixed
+- The Calibrate screen still labelled `wrist_roll` "full turn, nothing to record": the UI had its own
+  hard-coded list. It now follows the server's `full_turn` flag, so `wrist_roll` shows its recorded
+  min | position | max like every other joint (the 0.2.4 server change was already in place).
+
 ## [0.2.4] - 2026-11-16
 
 ### Changed

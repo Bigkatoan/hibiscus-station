@@ -21,13 +21,13 @@ import { useStation, useStatus } from "../ws/StationProvider";
 import type { StationSnapshot } from "../ws/store";
 
 export const MIN_RANGE_STEPS = 100;
-const FULL_TURN = ["wrist_roll"];
 const STEPS = 4096;
 
 function RangeRow({ motor, r: raw }: { motor: string; r: CalibrationMotor }) {
   const { t } = useTranslation("station");
   const r = { min: raw.min ?? 0, pos: raw.pos ?? 0, max: raw.max ?? raw.min ?? 0 };
-  const full = FULL_TURN.includes(motor);
+  // The server decides which motors are full-turn (none since 0.2.4: LeLab-style calibration).
+  const full = raw.full_turn;
   const ok = full || r.max - r.min >= MIN_RANGE_STEPS;
   const left = (r.min / STEPS) * 100;
   const width = (Math.max(0, r.max - r.min) / STEPS) * 100;

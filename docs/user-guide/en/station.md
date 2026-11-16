@@ -31,7 +31,7 @@ Two ways, both described in the [deploy guide](../../deploy.md):
 * **Python wheel** (Linux, Windows 10/11 or macOS with Python 3.12 through [uv](https://docs.astral.sh/uv/)):
 
   ```bash
-  uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.4/hibiscus_station-0.2.4-py3-none-any.whl
+  uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.5/hibiscus_station-0.2.5-py3-none-any.whl
   hibiscus-station
   ```
 

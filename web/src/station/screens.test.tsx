@@ -188,9 +188,10 @@ describe("Calibrate (§6.3)", () => {
     await waitFor(() => {
       expect(screen.getByTestId("range-shoulder_pan")).toHaveAttribute("data-ok", "true");
     });
+    // LeLab-style: wrist_roll is recorded like every joint, never "full turn".
     expect(
-      within(screen.getByTestId("range-wrist_roll")).getByText("full turn, nothing to record"),
-    ).toBeInTheDocument();
+      within(screen.getByTestId("range-wrist_roll")).queryByText("full turn, nothing to record"),
+    ).toBeNull();
     await user.click(screen.getByRole("button", { name: "Finish and save" }));
     expect(await screen.findByTestId("cal-done")).toHaveTextContent("so_follower/desk_follower.json");
     expect(screen.getByRole("link", { name: "Next: Cameras" })).toHaveAttribute("href", "/cameras");
