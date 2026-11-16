@@ -11,7 +11,7 @@ import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/test/server";
 import { stationBase } from "./api/client";
-import { slugify } from "./programs/blockly/serialize";
+import { programId, slugify } from "./programs/blockly/serialize";
 import { advance, renderStation, settle, setupStation, type StationHarness } from "./test/utils";
 import { createRuntime } from "./ws/StationProvider";
 
@@ -341,10 +341,11 @@ describe("Program editor and run panel", () => {
   });
 
   it("a name with no Latin letters still gets a valid id (field report 0.2.6)", async () => {
-    expect(slugify("ロボット")).toMatch(/^program_[a-z0-9]+$/);
-    expect(slugify("ロボット")).toBe(slugify("ロボット"));
-    expect(slugify("ロボット")).not.toBe(slugify("Робот"));
-    expect(slugify("   ")).toBe("");
+    expect(programId("ロボット")).toMatch(/^program_[a-z0-9]+$/);
+    expect(programId("ロボット")).toBe(programId("ロボット"));
+    expect(programId("ロボット")).not.toBe(programId("Робот"));
+    expect(programId("Chào robot")).toBe(slugify("Chào robot"));
+    expect(programId("   ")).toBe("");
     const h = setupStation();
     const user = userEvent.setup();
     await openEditor(h);
@@ -355,7 +356,7 @@ describe("Program editor and run panel", () => {
     );
     await user.click(screen.getByRole("button", { name: "Create" }));
     await waitFor(() => {
-      expect(h.sim.programs.programs.some((p) => p.id === slugify("ロボット"))).toBe(true);
+      expect(h.sim.programs.programs.some((p) => p.id === programId("ロボット"))).toBe(true);
     });
   });
 

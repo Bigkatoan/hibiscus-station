@@ -151,8 +151,14 @@ export function slugify(name: string): string {
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "")
     .slice(0, 64);
-  if (ID_RE.test(s)) return s;
-  // A name with no Latin letter or digit (日本語, Русский, emoji…) still gets a valid, stable id.
+  return ID_RE.test(s) ? s : "";
+}
+
+/** A new program's id: `slugify`, and for a name with no Latin letter or digit (日本語, Русский,
+ * emoji…) a stable `program_<hash>` so that such a name can still be created. */
+export function programId(name: string): string {
+  const s = slugify(name);
+  if (s) return s;
   const trimmed = name.trim();
   return trimmed ? `program_${hash36(trimmed)}` : "";
 }

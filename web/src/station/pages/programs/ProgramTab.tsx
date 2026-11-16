@@ -45,6 +45,7 @@ import {
   blockIds,
   emptyProgram,
   isItemId,
+  programId,
   slugify,
   specIndex,
   stableJson,
@@ -132,7 +133,7 @@ function ButtonsEditor({
 function NewProgramForm({ existing, onCreated }: { existing: string[]; onCreated: (id: string) => void }) {
   const { t } = useTranslation("station");
   const [name, setName] = useState("");
-  const id = slugify(name);
+  const id = programId(name);
   const create = useStationMutation(
     (body: ProgramInput) => api.put<Program>(`/programs/${enc(id)}`, body),
     [qk.programs],
