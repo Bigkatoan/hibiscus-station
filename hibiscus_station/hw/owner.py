@@ -342,10 +342,19 @@ class HardwareOwner:
             rem = deadline - time.perf_counter()
             if rem <= 0:
                 return
-            try:
-                cmd = self._q.get(timeout=rem)
-            except queue.Empty:
-                return
+            if sys.platform == "win32":
+                # Queue / lock timeouts wake on the system tick (up to 15.6 ms late at 30 Hz);
+                # time.sleep uses a high-resolution timer: poll the queue every millisecond.
+                try:
+                    cmd = self._q.get_nowait()
+                except queue.Empty:
+                    time.sleep(min(rem, 0.001))
+                    continue
+            else:
+                try:
+                    cmd = self._q.get(timeout=rem)
+                except queue.Empty:
+                    return
             if cmd is not None:
                 self._exec(cmd)
             if self.estop.is_set and self.state not in ("estopped", "disconnected", "error"):

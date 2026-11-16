@@ -36,8 +36,9 @@ same install smoke test. The Docker deploy stays Linux only.
   when stdout/stderr are pipes or files on Windows, so Vietnamese text does not raise.
 - Atomic writes (`settings.yaml`, profiles, tokens, trajectories) retry `os.replace` briefly on
   Windows sharing violations.
-- The control loop gets a 1 ms system timer on Windows (`timeBeginPeriod`, set when the hardware
-  owner starts); `os.nice` is skipped there.
+- The 30 Hz control loop keeps its rate on Windows, where queue timeouts wake on the 15.6 ms system
+  tick: the hardware owner sets a 1 ms timer (`timeBeginPeriod`) and waits between ticks with
+  high-resolution sleeps while polling its command queue; `os.nice` is skipped there.
 - A request body FastAPI cannot parse (e.g. JSON nested past Python's C recursion limit, 3000 levels
   on Windows) answers `400 validation_failed` instead of `internal_error`.
 - Path checks reject `\` and `:` in session ids and keyframe camera names (Windows separators and

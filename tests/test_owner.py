@@ -81,7 +81,7 @@ def test_teleop_timing_ownership_and_telemetry(connected: Station, events: Event
     ticks = stats.total_ticks
     st.owner.call("control", action="stop")
     assert st.owner.state == "idle"
-    assert ticks >= 80
+    assert ticks >= 80, (ticks, stats.session_p95_ms())
     assert stats.session_p95_ms() <= 36.0, stats.session_p95_ms()
     # 2 arms x (2 hot groups x 2 Hz + 3 cool groups x 1 Hz) = 14 reads/s, never more than one per tick
     assert 30 <= reads <= 14 * 3 + 8, reads

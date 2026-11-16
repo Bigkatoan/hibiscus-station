@@ -234,6 +234,7 @@ def test_ab_program_with_keys_and_trace(tmp_path: Path) -> None:
     wait_for(lambda: len(run.port.submitted) == 2, 3)
     press(run, "1")
     wait_for(lambda: len(run.port.submitted) == 3, 3)
+    wait_for(lambda: len(run.rt.played) == 3, 3)  # recorded just after the submit
     assert run.port.kinds == [A, B, A] and run.rt.played == [A, B, A]
     with pytest.raises(StationError):  # a key the program does not read
         press(run, "9")
