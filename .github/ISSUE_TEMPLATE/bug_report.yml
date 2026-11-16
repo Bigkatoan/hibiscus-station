@@ -56,7 +56,7 @@ body:
     attributes:
       label: Station version and install type
       description: "`hibiscus-station --version`, or `hibiscus-station-ctl status` for Docker."
-      placeholder: "0.2.0, Docker 0.2.0-cpu"
+      placeholder: "0.2.1, Docker 0.2.1-cpu (or Windows wheel)"
     validations:
       required: true
   - type: textarea

@@ -42,8 +42,11 @@ jobs:
         run: uv lock --check && uv sync --locked --python "$PYTHON_VERSION"
       - name: Ruff
         run: uv run ruff check . && uv run ruff format --check .
-      - name: Mypy (strict)
-        run: uv run mypy --strict hibiscus_station
+      - name: Mypy (strict; Linux, plus the Windows and macOS branches)
+        run: |
+          uv run mypy --strict hibiscus_station
+          uv run mypy --strict --platform win32 hibiscus_station
+          uv run mypy --strict --platform darwin hibiscus_station
       - name: Tests (mock hardware, CPU)
         run: uv run pytest -q
       - name: openapi.json up to date
@@ -119,6 +122,79 @@ jobs:
           kill %1
       - uses: actions/upload-artifact@v5
         with: {name: dist, path: dist, retention-days: 7}
+
+  windows:
+    name: windows (pytest, wheel build, uv tool install smoke)
+    runs-on: windows-latest
+    needs: [web]
+    defaults:
+      run: {shell: pwsh}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/download-artifact@v6
+        with: {name: web-dist, path: web/dist}
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          version: "${{ env.UV_VERSION }}"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - name: Sync
+        run: uv sync --locked --python "$env:PYTHON_VERSION"
+      - name: Tests (mock hardware, CPU)
+        run: uv run pytest -q -ra
+      - name: Build the wheel (UI included)
+        run: uv build --out-dir dist
+      - name: uv tool install (CPU torch) and serve the UI in mock mode
+        run: |
+          $wheel = (Get-Item dist\*.whl).FullName
+          uv tool install --python "$env:PYTHON_VERSION" --torch-backend cpu "$wheel"
+          $env:PATH = "$(uv tool dir --bin);$env:PATH"
+          hibiscus-station --version
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          if (-not (hibiscus-station --help | Out-String).Contains("COM3")) { Write-Error "--help: no COM ports"; exit 1 }
+          $home_ = Join-Path $env:RUNNER_TEMP "station"
+          $out = Join-Path $env:RUNNER_TEMP "station-out.log"
+          $err = Join-Path $env:RUNNER_TEMP "station-err.log"
+          $proc = Start-Process -FilePath (Get-Command hibiscus-station).Source -PassThru -NoNewWindow `
+            -ArgumentList "--mock", "--no-browser", "--port", "18210", "--home", $home_ `
+            -RedirectStandardOutput $out -RedirectStandardError $err
+          $ok = $false
+          foreach ($i in 1..90) {
+            hibiscus-station health --home "$home_"
+            if ($LASTEXITCODE -eq 0) { $ok = $true; break }
+            if ($proc.HasExited) { break }
+            Start-Sleep -Seconds 2
+          }
+          if (-not $ok) { Get-Content $out, $err -ErrorAction SilentlyContinue; exit 1 }
+          $index = Invoke-WebRequest -UseBasicParsing http://127.0.0.1:18210/
+          if ($index.Content -notmatch "<title>Hibiscus Station</title>") { Write-Error "no UI index"; exit 1 }
+          $js = [regex]::Match($index.Content, 'src="(/assets/[^"]+\.js)"').Groups[1].Value
+          $asset = Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:18210$js"
+          Write-Output "$js -> $($asset.Headers['Content-Type'])"
+          if ("$($asset.Headers['Content-Type'])" -notmatch "javascript") { Write-Error "bad JS MIME type"; exit 1 }
+          hibiscus-station url --home "$home_" | Select-String "auth\?t="
+          Stop-Process -Id $proc.Id -Force
+          Get-Content $out, $err -ErrorAction SilentlyContinue
+      - uses: actions/upload-artifact@v5
+        with: {name: dist-windows, path: dist, retention-days: 7}
+
+  macos:
+    name: macos (uv tool install smoke)
+    runs-on: macos-latest
+    needs: [wheel]
+    steps:
+      - uses: actions/download-artifact@v6
+        with: {name: dist, path: dist}
+      - uses: astral-sh/setup-uv@v10.3.3
+        with: {version: "${{ env.UV_VERSION }}"}
+      - name: uv tool install (CPU torch) and serve the UI in mock mode
+        run: |
+          uv tool install --python "$PYTHON_VERSION" --torch-backend cpu dist/*.whl
+          hibiscus-station --version
+          hibiscus-station --mock --no-browser --port 18210 --home "$RUNNER_TEMP/station" &
+          for _ in $(seq 90); do hibiscus-station health --home "$RUNNER_TEMP/station" && break; sleep 2; done
+          curl -fsS http://127.0.0.1:18210/ | grep -q "<title>Hibiscus Station</title>"
+          kill %1
 
   deploy-lint:
     name: deploy (shellcheck, hadolint, compose, actionlint)
