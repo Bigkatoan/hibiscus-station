@@ -64,6 +64,8 @@ MOTION_STATES = {
     "traj_record": "recording_traj",
     "traj_play": "playing",
     "program": "programming",
+    # field report 0.2.8: "Return to rest pose" after an interrupted motion (min-jerk, dead-man)
+    "rest": "playing",
 }
 #: Sessions that record or feed camera frames to a model need every configured camera; teleop,
 #: replay and trajectories do not (LeLab teleoperates without cameras too).
@@ -164,6 +166,9 @@ class HardwareOwner:
         self.last_action: dict[str, float] = {}
         self.bus_failures = 0
         self.relaxed_in_estop = False
+        #: An e-stop / safe stop / bus loss ended a motion session: the arm stands wherever it
+        #: froze. The UI offers "Return to rest pose" until a session starts or the rest move ends.
+        self.interrupted = False
         self.last_session_summary: dict[str, Any] | None = None
         self.loaded_model: str | None = None
         self.policy_clipping_alert = False
@@ -329,6 +334,7 @@ class HardwareOwner:
             "last_session": self.last_session_summary,
             "loaded_model": self.loaded_model,
             "lost": self.lost,
+            "interrupted": self.interrupted,
         }
         if self.status_hook is not None:  # the Station adds device, home, server (same on REST and WS)
             self.status_hook(out)
@@ -953,6 +959,13 @@ class HardwareOwner:
         s = self.session
         if s is None:
             return
+        # The goals of this session must never reach the next one: a motion that targets only
+        # some joints holds the others at ``last_sent`` (field report 0.2.8: after an e-stop the
+        # next run drove the arm back to where the interrupted run was going).
+        self.last_sent = {}
+        self.last_action = {}
+        if self.estop.is_set:
+            self.interrupted = True
         self.sub = None
         self.state = "stopping"
         self.emit("state", self.status())
@@ -966,6 +979,8 @@ class HardwareOwner:
             )
         outcome = s.outcome if s.outcome != "running" else reason
         s.outcome = outcome
+        if s.kind == "rest" and outcome == "completed":
+            self.interrupted = False
         try:
             s.end(self, reason)
         except Exception as exc:
@@ -1002,7 +1017,13 @@ class HardwareOwner:
             s.outcome = outcome
         self._teardown_session(reason=outcome)
         p = self.profile
-        if p is not None and p.follower.on_session_end == "relax" and self.follower is not None:
+        cancelled_rest = s.kind == "rest" and s.outcome != "completed"  # stop means stop: no park
+        if (
+            p is not None
+            and p.follower.on_session_end == "relax"
+            and self.follower is not None
+            and not cancelled_rest
+        ):
             if self._park(self.settings.safety.park_s) or not p.follower.rest_pose:
                 self._torque_off()
         if self.state == "stopping":
@@ -1271,6 +1292,7 @@ class HardwareOwner:
         self._close_devices()
         self.estop.clear()
         self.alerts.clear()
+        self.interrupted = False
         self._set_state("disconnected")
         return self.status()
 
@@ -1598,10 +1620,14 @@ class HardwareOwner:
             leader = self._read_leader()
             if leader is None:
                 raise StationError("not_connected", "cannot read the leader")
-            check_leader_close(obs, leader, leader_check_deg)
+            check_leader_close(obs, leader, leader_check_deg, can_align=kind == "teleop")
         session = build(self)
         if not self.follower_torque:
             self._torque_on()
+        self.last_sent = {}
+        self.last_action = {}
+        if kind != "rest":
+            self.interrupted = False  # the operator moved on: the arm leaves its frozen pose
         self._setup_safety(max_relative_target)
         self.stats = LoopStats()
         self._last_joints_emit = 0.0

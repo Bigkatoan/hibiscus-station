@@ -868,6 +868,28 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/robots/rest": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Go Rest
+     * @description idle → playing (session kind ``rest``): move the follower to its rest pose, minimum jerk at
+     *     a capped peak speed, dead-man heartbeat on; ``POST /sessions/current/control {"action": "stop"}``
+     *     cancels it. Offered after an interrupted motion (``Status.interrupted``).
+     */
+    post: operations["go_rest_api_v1_robots_rest_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/robots/rest-pose": {
     parameters: {
       query?: never;
@@ -1913,6 +1935,12 @@ export interface components {
       /** Detail */
       detail: string | null;
       health: components["schemas"]["Health"];
+      /**
+       * Interrupted
+       * @description an e-stop / safe stop ended a motion: the arm stands where it froze (the UI offers POST /robots/rest until a session starts or the rest move completes)
+       * @default false
+       */
+      interrupted?: boolean;
       last_session: components["schemas"]["SessionEnd"] | null;
       /** Loaded Model */
       loaded_model: string | null;
@@ -1951,6 +1979,7 @@ export interface components {
             | "home"
             | "ranges"
             | "approach"
+            | "align"
             | "teleop"
             | "replay"
             | "countdown"
@@ -2801,6 +2830,7 @@ export interface components {
             | "home"
             | "ranges"
             | "approach"
+            | "align"
             | "teleop"
             | "replay"
             | "countdown"
@@ -4970,6 +5000,12 @@ export interface components {
       /** Detail */
       detail: string | null;
       health: components["schemas"]["Health"];
+      /**
+       * Interrupted
+       * @description an e-stop / safe stop ended a motion: the arm stands where it froze (the UI offers POST /robots/rest until a session starts or the rest move completes)
+       * @default false
+       */
+      interrupted?: boolean;
       last_session: components["schemas"]["SessionEnd"] | null;
       /** Loaded Model */
       loaded_model: string | null;
@@ -5022,6 +5058,7 @@ export interface components {
             | "home"
             | "ranges"
             | "approach"
+            | "align"
             | "teleop"
             | "replay"
             | "countdown"
@@ -5680,7 +5717,7 @@ export interface components {
        * Kind
        * @enum {string}
        */
-      kind: "teleop" | "record" | "replay" | "run" | "traj_record" | "traj_play" | "program";
+      kind: "teleop" | "record" | "replay" | "run" | "traj_record" | "traj_play" | "program" | "rest";
       /** Model */
       model: string | null;
       /**
@@ -5727,7 +5764,7 @@ export interface components {
        * Kind
        * @enum {string}
        */
-      kind: "teleop" | "record" | "replay" | "run" | "traj_record" | "traj_play" | "program";
+      kind: "teleop" | "record" | "replay" | "run" | "traj_record" | "traj_play" | "program" | "rest";
       loop: components["schemas"]["SessionLoop"];
       /**
        * Max Temp C
@@ -5818,7 +5855,7 @@ export interface components {
        * Kind
        * @enum {string}
        */
-      kind: "teleop" | "record" | "replay" | "run" | "traj_record" | "traj_play" | "program";
+      kind: "teleop" | "record" | "replay" | "run" | "traj_record" | "traj_play" | "program" | "rest";
       /** @default null */
       loop?: components["schemas"]["SessionLoop"] | null;
       /**
@@ -5891,7 +5928,8 @@ export interface components {
       /** Id */
       id: string;
       /** Kind */
-      kind: ("teleop" | "record" | "replay" | "run" | "traj_record" | "traj_play" | "program") | null;
+      kind:
+        ("teleop" | "record" | "replay" | "run" | "traj_record" | "traj_play" | "program" | "rest") | null;
       /** Max Temp C */
       max_temp_c: number | null;
       /** Model */
@@ -6112,6 +6150,12 @@ export interface components {
       /** Detail */
       detail: string | null;
       health: components["schemas"]["Health"];
+      /**
+       * Interrupted
+       * @description an e-stop / safe stop ended a motion: the arm stands where it froze (the UI offers POST /robots/rest until a session starts or the rest move completes)
+       * @default false
+       */
+      interrupted?: boolean;
       last_session: components["schemas"]["SessionEnd"] | null;
       /** Loaded Model */
       loaded_model: string | null;
@@ -6156,6 +6200,7 @@ export interface components {
             | "home"
             | "ranges"
             | "approach"
+            | "align"
             | "teleop"
             | "replay"
             | "countdown"
@@ -6207,6 +6252,12 @@ export interface components {
       /** Detail */
       detail: string | null;
       health: components["schemas"]["Health"];
+      /**
+       * Interrupted
+       * @description an e-stop / safe stop ended a motion: the arm stands where it froze (the UI offers POST /robots/rest until a session starts or the rest move completes)
+       * @default false
+       */
+      interrupted?: boolean;
       last_session: components["schemas"]["SessionEnd"] | null;
       /** Loaded Model */
       loaded_model: string | null;
@@ -6245,6 +6296,7 @@ export interface components {
             | "home"
             | "ranges"
             | "approach"
+            | "align"
             | "teleop"
             | "replay"
             | "countdown"
@@ -6403,6 +6455,12 @@ export interface components {
     };
     /** TeleopRequest */
     TeleopRequest: {
+      /**
+       * Align
+       * @description leader farther than safety.max_approach_deg: first move the follower to the leader's pose (minimum jerk, peak speed programs.approach_speed_deg_s, dead-man on), then teleop
+       * @default false
+       */
+      align?: boolean;
       /**
        * Fps
        * @default 250
@@ -8801,6 +8859,35 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["ReconnectResult"];
+        };
+      };
+      /** @description RFC 9457 problem (spec §5.1) */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Problem"];
+        };
+      };
+    };
+  };
+  go_rest_api_v1_robots_rest_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Session"];
         };
       };
       /** @description RFC 9457 problem (spec §5.1) */

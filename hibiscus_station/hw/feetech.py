@@ -69,10 +69,32 @@ DEFAULT_MAX_TEMPERATURE_C: Final = 70.0
 #: adapter that answers with zero bytes, a clone without the sensor): treat them as unknown.
 PLAUSIBLE_TEMP_C: Final = (1.0, 150.0)
 PLAUSIBLE_MAX_TEMP_C: Final = (40.0, 150.0)
+#: An STS3215 stalls at about 2.7 A (12 V); a reading above this is not a current (field report
+#: 0.2.8: a leader answered ~1000 = 6.5 A on every motor, torque off). Load is ±100 % at most;
+#: a powered servo reads 4-16 V.
+PLAUSIBLE_CURRENT_A: Final = (0.0, 3.5)
+PLAUSIBLE_LOAD_PCT: Final = 100.0
+PLAUSIBLE_VOLTAGE_V: Final = (3.0, 16.0)
+CURRENT_SIGN_BIT: Final = 15
 
 
 def plausible_temperature(value: float) -> bool:
     return PLAUSIBLE_TEMP_C[0] <= value <= PLAUSIBLE_TEMP_C[1]
+
+
+def plausible(group: str, value: float | list[str]) -> bool:
+    """False for a decoded value no STS3215 can report (the reading is unknown, not a fault)."""
+    if isinstance(value, list):
+        return True
+    if group == "temp_c":
+        return plausible_temperature(value)
+    if group == "current_a":
+        return PLAUSIBLE_CURRENT_A[0] <= value <= PLAUSIBLE_CURRENT_A[1]
+    if group == "load_pct":
+        return abs(value) <= PLAUSIBLE_LOAD_PCT
+    if group == "voltage_v":
+        return PLAUSIBLE_VOLTAGE_V[0] <= value <= PLAUSIBLE_VOLTAGE_V[1]
+    return True
 
 
 def decode_temperature(raw: int) -> float:
@@ -84,7 +106,10 @@ def decode_voltage(raw: int) -> float:
 
 
 def decode_current(raw: int) -> float:
-    return round(raw * CURRENT_UNIT_A, 4)
+    """Magnitude in A. Bit 15 is the direction on Feetech STS (rustypot reads the register unsigned)."""
+    if raw < 0:
+        raw = -raw
+    return round((raw & ((1 << CURRENT_SIGN_BIT) - 1)) * CURRENT_UNIT_A, 4)
 
 
 def decode_load(raw: int) -> float:

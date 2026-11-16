@@ -170,14 +170,19 @@ def test_overheat_status_bit_cuts_torque_at_once(connected: Station) -> None:
     assert st.owner.reason == "thermal"
 
 
-def test_leader_critical_stops_session_keeps_follower_held(connected: Station) -> None:
+def test_leader_heat_never_stops_the_robot(connected: Station) -> None:
+    """Field report 0.2.8: the leader is moved by hand with torque off; its telemetry is shown
+    (up to "hot") but never stops the robot. The follower keeps the thermal safe stop."""
     st = connected
     st.start_teleop(TeleopRequest(fps=30))
     time.sleep(0.3)
     get_world("mock://leader").inject("shoulder_pan", temp_c=67.0)
-    wait_for(lambda: st.owner.state == "estopped", 4)
-    assert st.owner.session is None
-    assert get_world("mock://follower").any_torque()  # the leader has no torque to cut
+    wait_for(lambda: any(a.kind == "temperature" and a.arm == "leader" for a in st.owner.alerts.values()), 4)
+    time.sleep(1.0)
+    assert st.owner.state == "teleop" and st.owner.session is not None
+    lead = [a for a in st.owner.alerts.values() if a.arm == "leader"]
+    assert lead and all(a.level != "critical" for a in lead)
+    st.owner.call("control", action="stop")
 
 
 def test_critical_with_rest_pose_parks_before_torque_off(connected: Station) -> None:

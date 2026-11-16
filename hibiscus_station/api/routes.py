@@ -233,6 +233,13 @@ def build_router() -> APIRouter:
         st.owner.call("torque", arm=body.arm, enabled=body.enabled, confirm=body.confirm)
         return _out(wire.Status, st.status())
 
+    @r.post("/robots/rest", tags=["robots"])
+    def go_rest(request: Request) -> wire.Session:
+        """idle → playing (session kind ``rest``): move the follower to its rest pose, minimum jerk at
+        a capped peak speed, dead-man heartbeat on; ``POST /sessions/current/control {"action": "stop"}``
+        cancels it. Offered after an interrupted motion (``Status.interrupted``)."""
+        return _out(wire.Session, station(request).go_rest())
+
     @r.post("/robots/rest-pose", tags=["robots"])
     def rest_pose(request: Request) -> wire.RestPose:
         return _out(wire.RestPose, station(request).owner.call("set_rest_pose"))
@@ -468,8 +475,13 @@ class MockInject(BaseModel):
     clear_temp: bool = False
     #: "follow": the arm's demo "hand" mirrors ``follow_port`` (e.g. leader holds the follower pose);
     #: "default": back to the normal hand (the sweep on a leader).
-    hand: Literal["follow", "default"] | None = None
+    hand: Literal["follow", "default", "hold"] | None = None
     follow_port: str = "mock://follower"
+    #: hand "hold": every torque-off joint held at 2048 + this many steps (e.g. a folded leader)
+    hold: dict[str, float] = Field(default_factory=dict)
+    #: a raw Present_Current answer on every motor of the arm (field report 0.2.8: ~1000 on a leader)
+    current_raw: int | None = Field(None, ge=0, le=65535)
+    clear_current: bool = False
     #: station-programs.md §4: show a fake coloured cube on a mock camera ("none" removes it).
     camera: str | None = None
     cube: Literal["red", "blue", "green", "yellow", "none"] | None = None
@@ -488,8 +500,17 @@ def build_mock_router() -> APIRouter:
         if not body.port.startswith("mock://"):
             raise StationError("validation_failed", "only mock:// ports")
         world = get_world(body.port)
-        world.inject(body.motor, temp_c=body.temp_c, clear_temp=body.clear_temp)
-        if body.hand == "follow":
+        world.inject(
+            body.motor,
+            temp_c=body.temp_c,
+            clear_temp=body.clear_temp,
+            current_raw=body.current_raw,
+            clear_current=body.clear_current,
+        )
+        if body.hand == "hold":
+            held = dict(body.hold)
+            world.hand = lambda motor, _t: 2048.0 + held.get(motor, 0.0)
+        elif body.hand == "follow":
             if not body.follow_port.startswith("mock://"):
                 raise StationError("validation_failed", "only mock:// ports")
             world.follow(get_world(body.follow_port))

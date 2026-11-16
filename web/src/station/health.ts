@@ -30,10 +30,23 @@ export function worstLevel(levels: Iterable<Level>): Level {
   return w;
 }
 
-/** Effective level: the worse of the server's level and the locally computed one. */
-export function motorLevel(s: MotorSample | undefined, th: Thresholds = DEFAULT_THRESHOLDS): Level {
+/** Effective level: the worse of the server's level and the locally computed one.
+ *
+ * The leader is moved by hand with torque off: its status bits and load are shown but never raise
+ * its level, and its temperature never goes beyond "hot" (field report 0.2.8; the Station does the
+ * same and never stops the robot for the leader). */
+export function motorLevel(
+  s: MotorSample | undefined,
+  th: Thresholds = DEFAULT_THRESHOLDS,
+  arm: "follower" | "leader" = "follower",
+): Level {
   if (!s) return "ok";
-  const local: Level[] = [tempLevel(s.temp_c, th)];
+  const temp = tempLevel(s.temp_c, th);
+  if (arm === "leader") {
+    const w = worstLevel([s.level, temp]);
+    return w === "critical" ? "hot" : w;
+  }
+  const local: Level[] = [temp];
   if (s.status.some((b) => (CRITICAL_STATUS_BITS as readonly string[]).includes(b))) local.push("critical");
   if (s.load_pct !== null && Math.abs(s.load_pct) >= LOAD_WARN_PCT) local.push("warn");
   return worstLevel([s.level, ...local]);

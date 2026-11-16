@@ -6,6 +6,9 @@ import type { Job } from "../api/types";
 import { useRuntime, useStation } from "../ws/StationProvider";
 import type { StationSnapshot } from "../ws/store";
 
+/** Peak joint speed of "Align follower to leader" and "Return to rest pose" (the Station's cap). */
+export const AUTO_MOVE_SPEED_DEG_S = 30;
+
 /** Session control (next / rerecord / stop): WS first (no HTTP round trip), REST fallback. */
 export function useSessionControl(): (action: "next" | "rerecord" | "stop") => void {
   const { control } = useRuntime();

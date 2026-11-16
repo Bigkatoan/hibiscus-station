@@ -36,7 +36,10 @@
     "needs_leader": "Cần có tay leader.",
     "record_first": "Hãy ghi một bộ dữ liệu trước.",
     "pair_first": "Hãy ghép nối với máy chủ Hibiscus trước.",
-    "estopped": "Hãy reset nút dừng khẩn cấp trước."
+    "estopped": "Hãy reset nút dừng khẩn cấp trước.",
+    "title": "Bước này đang bị khoá",
+    "go": "Tới {{step}}",
+    "disabled": "Các nút bên dưới bị tắt cho tới khi đó."
   },
   "state": {
     "disconnected": "Chưa kết nối",
@@ -110,7 +113,14 @@
     "hot": "{{motor}} đang nóng ({{value}} °C). Chưa thể bắt đầu phiên mới cho tới khi nguội.",
     "warm": "{{motor}} đang ấm lên ({{value}} °C).",
     "error": "Robot đã ngắt kết nối: {{reason}}. Kiểm tra cáp USB và nguồn của tay robot rồi kết nối lại.",
-    "estopped": "Robot đã dừng: {{reason}}."
+    "estopped": "Robot đã dừng: {{reason}}.",
+    "interrupted": "Tay robot đã dừng giữa chừng một chuyển động.",
+    "interrupted_hint": "Tay đứng yên tại chỗ dừng. Lần chạy chương trình hoặc quỹ đạo tiếp theo sẽ bắt đầu lại từ đầu.",
+    "rest": "Về tư thế nghỉ",
+    "rest_hint": "Di chuyển chậm (tối đa {{speed}} độ mỗi giây) về tư thế nghỉ của robot. Giữ trang này mở; Space để dừng.",
+    "rest_need_pose": "Hãy lưu tư thế nghỉ ở trang Robot để tay có thể tự về đó.",
+    "resting": "Đang về tư thế nghỉ… Space hoặc Dừng để ngừng.",
+    "rest_stop": "Dừng"
   },
   "alerts": {
     "motor": {
@@ -184,7 +194,7 @@
     "status": "Trạng thái",
     "history": "120 giây qua",
     "status_ok": "ổn",
-    "stale": "cũ",
+    "stale": "không phản hồi",
     "no_data": "Chưa có dữ liệu động cơ. Hãy kết nối robot.",
     "limit_temp": "động cơ tự ngắt ở {{v}} °C",
     "limit_vmin": "tối thiểu {{v}} V",
@@ -194,7 +204,10 @@
     "bit_angle": "cảm biến góc",
     "bit_overheat": "quá nhiệt",
     "bit_overcurrent": "quá dòng",
-    "bit_overload": "quá tải"
+    "bit_overload": "quá tải",
+    "stale_title": "Lần đọc cảm biến gần nhất của tay này không có phản hồi; giá trị đang hiển thị là cũ.",
+    "unknown_title": "Không có giá trị: servo này không báo đại lượng này (số đọc vô lý nên bị bỏ qua).",
+    "leader_note": "Di chuyển bằng tay: chỉ để tham khảo, không bao giờ báo động."
   },
   "camera": {
     "title": "Camera",
@@ -453,7 +466,11 @@
     "not_idle": "Robot phải được kết nối và đang sẵn sàng.",
     "approach": "Tay follower đang di chuyển tới tư thế của leader…",
     "latency_readout": "độ trễ ~{{ms}} ms, {{hz}} Hz",
-    "fps_max": "{{fps}} (nhanh nhất)"
+    "fps_max": "{{fps}} (nhanh nhất)",
+    "align_title": "Hai tay đang lệch nhau xa",
+    "align_hint": "Giữ yên tay leader ở tư thế mong muốn. Tay follower có thể tự di chuyển tới đó thật chậm (tối đa {{speed}} độ mỗi giây); teleop bắt đầu khi tới nơi. Phím Space hoặc nút dừng khẩn cấp sẽ dừng lại.",
+    "align": "Đưa tay follower về tư thế tay leader",
+    "aligning": "Tay follower đang di chuyển chậm tới tư thế tay leader… giữ yên tay leader. Space để dừng."
   },
   "replay": {
     "title": "Phát lại",
@@ -845,7 +862,10 @@
       "ref_missing": "(không còn)",
       "no_profile": "Chưa có hồ sơ robot nào đang dùng, nên chương trình chưa có chỗ để lưu.",
       "no_profile_hint": "Hãy tạo (hoặc kết nối) một hồ sơ robot ở trang Robot trước:",
-      "for_profile": "Lưu cho hồ sơ robot {{name}} (chưa kết nối: hãy kết nối để chạy chương trình)."
+      "for_profile": "Lưu cho hồ sơ robot {{name}} (chưa kết nối: hãy kết nối để chạy chương trình).",
+      "new_cancel": "Huỷ",
+      "list_error": "Không tải được danh sách chương trình.",
+      "retry": "Thử lại"
     },
     "run": {
       "title": "Chạy",
@@ -1114,5 +1134,6 @@
     "banner": "Đang dùng tay giả lập — tay thật ({{ports}}) không chuyển động. Hãy tạo hồ sơ cho tay thật.",
     "create_real": "Tạo hồ sơ cho tay thật",
     "connect_disabled": "Hồ sơ demo: tay giả lập. Chạy Station với --mock để dùng."
-  }
+  },
+  "state_rest": "Đang về tư thế nghỉ"
 }

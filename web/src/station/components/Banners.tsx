@@ -11,6 +11,7 @@ import type { AlertMsg, Status } from "../api/types";
 import { DEFAULT_THRESHOLDS, coolingEtaS, levelCss } from "../health";
 import { useStation } from "../ws/StationProvider";
 import { DeviceLostBanner } from "./DeviceLost";
+import { RestBanner } from "./RestBanner";
 import type { StationSnapshot } from "../ws/store";
 
 const THERMAL_REASONS = ["thermal", "electrical"];
@@ -62,7 +63,8 @@ export function SafetyBanners() {
   const [dismissed, setDismissed] = useState<string[]>([]);
 
   const critical = criticalInfo(status, alerts);
-  const hot = alerts.find((a) => a.level === "hot");
+  // A hot leader (moved by hand, torque off) never blocks a start: no "cannot start" banner for it.
+  const hot = alerts.find((a) => a.level === "hot" && a.arm !== "leader");
   const warns = alerts.filter(
     (a) => a.level === "warn" && a.kind === "temperature" && !dismissed.includes(a.id),
   );
@@ -137,6 +139,7 @@ export function SafetyBanners() {
           </div>
         </div>
       ) : null}
+      {status ? <RestBanner status={status} /> : null}
       {!critical && hot ? (
         <div
           role="alert"

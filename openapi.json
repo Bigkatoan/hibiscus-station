@@ -1332,6 +1332,12 @@
           "health": {
             "$ref": "#/components/schemas/Health"
           },
+          "interrupted": {
+            "default": false,
+            "description": "an e-stop / safe stop ended a motion: the arm stands where it froze (the UI offers POST /robots/rest until a session starts or the rest move completes)",
+            "title": "Interrupted",
+            "type": "boolean"
+          },
           "last_session": {
             "anyOf": [
               {
@@ -1439,6 +1445,7 @@
                   "home",
                   "ranges",
                   "approach",
+                  "align",
                   "teleop",
                   "replay",
                   "countdown",
@@ -3555,6 +3562,7 @@
                   "home",
                   "ranges",
                   "approach",
+                  "align",
                   "teleop",
                   "replay",
                   "countdown",
@@ -9045,6 +9053,12 @@
           "health": {
             "$ref": "#/components/schemas/Health"
           },
+          "interrupted": {
+            "default": false,
+            "description": "an e-stop / safe stop ended a motion: the arm stands where it froze (the UI offers POST /robots/rest until a session starts or the rest move completes)",
+            "title": "Interrupted",
+            "type": "boolean"
+          },
           "last_session": {
             "anyOf": [
               {
@@ -9168,6 +9182,7 @@
                   "home",
                   "ranges",
                   "approach",
+                  "align",
                   "teleop",
                   "replay",
                   "countdown",
@@ -10747,7 +10762,8 @@
               "run",
               "traj_record",
               "traj_play",
-              "program"
+              "program",
+              "rest"
             ],
             "title": "Kind",
             "type": "string"
@@ -10876,7 +10892,8 @@
               "run",
               "traj_record",
               "traj_play",
-              "program"
+              "program",
+              "rest"
             ],
             "title": "Kind",
             "type": "string"
@@ -11103,7 +11120,8 @@
               "run",
               "traj_record",
               "traj_play",
-              "program"
+              "program",
+              "rest"
             ],
             "title": "Kind",
             "type": "string"
@@ -11306,7 +11324,8 @@
                   "run",
                   "traj_record",
                   "traj_play",
-                  "program"
+                  "program",
+                  "rest"
                 ],
                 "type": "string"
               },
@@ -11910,6 +11929,12 @@
           "health": {
             "$ref": "#/components/schemas/Health"
           },
+          "interrupted": {
+            "default": false,
+            "description": "an e-stop / safe stop ended a motion: the arm stands where it froze (the UI offers POST /robots/rest until a session starts or the rest move completes)",
+            "title": "Interrupted",
+            "type": "boolean"
+          },
           "last_session": {
             "anyOf": [
               {
@@ -12019,6 +12044,7 @@
                   "home",
                   "ranges",
                   "approach",
+                  "align",
                   "teleop",
                   "replay",
                   "countdown",
@@ -12138,6 +12164,12 @@
           "health": {
             "$ref": "#/components/schemas/Health"
           },
+          "interrupted": {
+            "default": false,
+            "description": "an e-stop / safe stop ended a motion: the arm stands where it froze (the UI offers POST /robots/rest until a session starts or the rest move completes)",
+            "title": "Interrupted",
+            "type": "boolean"
+          },
           "last_session": {
             "anyOf": [
               {
@@ -12245,6 +12277,7 @@
                   "home",
                   "ranges",
                   "approach",
+                  "align",
                   "teleop",
                   "replay",
                   "countdown",
@@ -12580,6 +12613,12 @@
       },
       "TeleopRequest": {
         "properties": {
+          "align": {
+            "default": false,
+            "description": "leader farther than safety.max_approach_deg: first move the follower to the leader's pose (minimum jerk, peak speed programs.approach_speed_deg_s, dead-man on), then teleop",
+            "title": "Align",
+            "type": "boolean"
+          },
           "fps": {
             "default": 250,
             "maximum": 300.0,
@@ -14149,7 +14188,7 @@
   "info": {
     "description": "Local robot agent API (docs/spec/station.md \u00a75). Bound to 127.0.0.1 unless LAN mode is enabled with a fixed token and allowed host names (\u00a78.1).",
     "title": "Hibiscus Station",
-    "version": "0.2.7"
+    "version": "0.2.8"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -16333,6 +16372,38 @@
           }
         },
         "summary": "Reconnect",
+        "tags": [
+          "robots"
+        ]
+      }
+    },
+    "/api/v1/robots/rest": {
+      "post": {
+        "description": "idle \u2192 playing (session kind ``rest``): move the follower to its rest pose, minimum jerk at\na capped peak speed, dead-man heartbeat on; ``POST /sessions/current/control {\"action\": \"stop\"}``\ncancels it. Offered after an interrupted motion (``Status.interrupted``).",
+        "operationId": "go_rest_api_v1_robots_rest_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem (spec \u00a75.1)"
+          }
+        },
+        "summary": "Go Rest",
         "tags": [
           "robots"
         ]

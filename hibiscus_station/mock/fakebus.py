@@ -53,6 +53,7 @@ class ServoState:
     regs: dict[str, int] = field(default_factory=dict)
     inject_temp_c: float | None = None
     inject_status: int = 0
+    inject_current_raw: int | None = None  # a raw Present_Current answer (field report 0.2.8)
     blocked: bool = False  # mechanically blocked: no motion, load climbs
 
 
@@ -138,6 +139,8 @@ class MockArmWorld:
         disconnect_after_s: float | None = None,
         blocked: bool | None = None,
         fail_registers: set[str] | None = None,
+        current_raw: int | None = None,
+        clear_current: bool = False,
     ) -> None:
         with self.lock:
             targets = [self.servos[self.ids[motor]]] if motor else list(self.servos.values())
@@ -151,6 +154,10 @@ class MockArmWorld:
                     s.inject_status = feetech.encode_status(status_bits)
                 if blocked is not None:
                     s.blocked = blocked
+                if current_raw is not None:
+                    s.inject_current_raw = current_raw
+                if clear_current:
+                    s.inject_current_raw = None
             if timeout_rate is not None:
                 self.faults.timeout_rate = timeout_rate
             if disconnect_after_s is not None:
@@ -263,6 +270,8 @@ class MockArmWorld:
             sag = s.current_a * 0.3
             return round((s.voltage_v - sag) / feetech.VOLTAGE_UNIT_V)
         if name == "present_current":
+            if s.inject_current_raw is not None:
+                return s.inject_current_raw
             return round(s.current_a / feetech.CURRENT_UNIT_A)
         if name == "present_load":
             return feetech.encode_load(s.load_pct)

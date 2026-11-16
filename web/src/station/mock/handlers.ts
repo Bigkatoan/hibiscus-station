@@ -213,6 +213,15 @@ export function stationHandlers(sim: MockStation, base = `${window.location.orig
       }),
     ),
     http.post(
+      u("/robots/rest"),
+      guard(() => {
+        const st = sim.status();
+        const p = sim.profiles.find((r) => r.id === st.robot?.id);
+        if (!p?.follower.rest_pose) throw new MockProblem(422, "validation_failed", { code: "no_rest_pose" });
+        return sim.startSession("rest", {});
+      }),
+    ),
+    http.post(
       u("/sessions/teleop"),
       guard(async ({ request }) => sim.startSession("teleop", await json(request))),
     ),

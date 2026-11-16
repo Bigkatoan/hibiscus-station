@@ -21,6 +21,10 @@ log = logging.getLogger(__name__)
 LEVELS = ("ok", "warn", "hot", "critical")
 LEVEL_RANK = {name: i for i, name in enumerate(LEVELS)}
 DEGRADED_AFTER = 3
+#: Arms moved by hand with torque off: their telemetry is shown, never an alert beyond the
+#: temperature, never a reason to stop or refuse (field report 0.2.8: 6.5 A "gripper draws a high
+#: current" on a leader). The follower keeps every protection.
+INFORMATIONAL_ARMS = frozenset({"leader"})
 
 
 @dataclass
@@ -67,7 +71,8 @@ class ArmTelemetry:
         self.last_attempt: dict[str, float] = dict.fromkeys(self.values, -math.inf)
         self.fails: dict[str, int] = dict.fromkeys(self.values, 0)
         self.limits = ArmLimits()
-        self.implausible_temp = 0
+        #: group -> reads that carried a value no STS3215 can report (logged, never an alert)
+        self.implausible: dict[str, int] = {}
 
     def stale_groups(self) -> list[str]:
         return [g for g, n in self.fails.items() if n > 0]
@@ -80,6 +85,8 @@ class ArmTelemetry:
             "load_pct": self.values["load_pct"].get(motor),
             "status": list(self.values["status"].get(motor, [])),
             "level": level,
+            # True only when a read of this arm failed (no answer): implausible values are unknown
+            # (``None``), not stale.
             "stale": bool(self.stale_groups()),
         }
 
@@ -140,7 +147,11 @@ class TelemetryScheduler:
             log.warning("%s: cannot read voltage limits (%s)", arm, exc)
         try:
             prot = at.bus.sync_read(feetech.REG_PROTECTION_CURRENT, normalize=False, num_retry=2)
-            lim.protection_current_a = {m: feetech.decode_current(v) for m, v in prot.items() if v}
+            lim.protection_current_a = {
+                m: a
+                for m, v in prot.items()
+                if v and feetech.plausible("current_a", a := feetech.decode_current(v))
+            }
         except Exception as exc:
             log.warning("%s: cannot read Protection_Current (%s)", arm, exc)
         at.limits = lim
@@ -169,26 +180,14 @@ class TelemetryScheduler:
                 error=str(exc)[:200],
             )
         decoded = {m: feetech.decode(group, int(v)) for m, v in raw.items()}
-        bad: dict[str, Any] = {}
-        if group == "temp_c":
-            bad = {m: v for m, v in decoded.items() if not feetech.plausible_temperature(float(v))}  # type: ignore[arg-type]
-            if bad:
-                decoded = {m: v for m, v in decoded.items() if m not in bad}
-                at.implausible_temp += 1
-                if at.implausible_temp in (1, DEGRADED_AFTER) or at.implausible_temp % 300 == 0:
-                    log.warning("%s: implausible temperature %s C ignored (no sensor value)", at.arm, bad)
-            if not decoded:
-                at.fails[group] += 1
-                return TelemetryRead(
-                    at.arm,
-                    group,
-                    now,
-                    False,
-                    {},
-                    forced=forced,
-                    degraded=at.fails[group] == DEGRADED_AFTER,
-                    error=f"implausible temperature {bad}"[:200],
-                )
+        bad = {m: v for m, v in decoded.items() if not feetech.plausible(group, v)}
+        if bad:
+            # Not a value this servo can report (no sensor, a clone, a register this firmware does
+            # not fill): unknown, shown as a dash. The bus answered, so this is not a failed read.
+            decoded = {m: v for m, v in decoded.items() if m not in bad}
+            n = at.implausible[group] = at.implausible.get(group, 0) + 1
+            if n in (1, DEGRADED_AFTER) or n % 300 == 0:
+                log.warning("%s: implausible %s %s ignored (no sensor value)", at.arm, group, bad)
         at.values[group] = decoded
         at.last_ok[group] = now
         at.fails[group] = 0
@@ -347,12 +346,17 @@ class ThermalGuard:
         now = read.t if now is None else now
         alerts: list[Alert] = []
         arm = read.arm
+        informational = arm in INFORMATIONAL_ARMS
+        if informational and read.group != "temp_c":
+            return alerts
         for motor, value in read.values.items():
             key = (arm, motor)
             if read.group == "temp_c":
                 temp = float(value)
                 self.temps[key] = temp
                 lvl = self._temp_level(key, temp)
+                if informational and lvl == "critical":
+                    lvl = "hot"  # shown, never a safe stop
                 changed, old = self._edge(self.temp_level, key, lvl)
                 if changed:
                     alerts.append(
@@ -369,7 +373,7 @@ class ThermalGuard:
                             active=lvl != "ok",
                         )
                     )
-                    if lvl == "critical":
+                    if lvl == "critical" and not informational:
                         self._critical.append(
                             CriticalEvent(
                                 arm,
@@ -525,17 +529,19 @@ class ThermalGuard:
         return [
             {"arm": a, "motor": m, "temp_c": self.temps.get((a, m))}
             for (a, m), lvl in self.temp_level.items()
-            if LEVEL_RANK[lvl] >= LEVEL_RANK["hot"]
+            if LEVEL_RANK[lvl] >= LEVEL_RANK["hot"] and a not in INFORMATIONAL_ARMS
         ] + [
             {"arm": a, "motor": m, "status": True}
             for (a, m), lvl in self.status_level.items()
-            if lvl == "critical"
+            if lvl == "critical" and a not in INFORMATIONAL_ARMS
         ]
 
     def any_motor_at_or_above_hot(self) -> bool:
         """For estop reset: every motor must be below ``hot`` (raw value, no hysteresis)."""
-        return any(t >= self.t.temp_hot_c for t in self.temps.values()) or any(
-            lvl == "critical" for lvl in self.status_level.values()
+        return any(
+            t >= self.t.temp_hot_c for (a, _m), t in self.temps.items() if a not in INFORMATIONAL_ARMS
+        ) or any(
+            lvl == "critical" for (a, _m), lvl in self.status_level.items() if a not in INFORMATIONAL_ARMS
         )
 
     def overall(self) -> dict[str, Any]:

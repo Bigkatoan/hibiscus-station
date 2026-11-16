@@ -30,16 +30,26 @@ from hibiscus_station.sessions.base import MotionSession
 from hibiscus_station.sessions.record import RecordSession
 from hibiscus_station.sessions.recorder import DatasetRecorder, check_name
 from hibiscus_station.sessions.replay import ReplaySession, load_episode_actions
+from hibiscus_station.sessions.rest import RestSession
 from hibiscus_station.sessions.run import RunSession
 from hibiscus_station.sessions.teleop import TeleopSession
 from hibiscus_station.settings import Settings, StationPaths, calibration_root
 
 log = logging.getLogger(__name__)
 RECONNECT_TRIES = 3
+#: Field report 0.2.8: automatic moves the operator starts from the UI (return to rest pose,
+#: align follower to leader) never go faster than this peak joint speed.
+ALIGN_MAX_SPEED_DEG_S = 30.0
+REST_FPS = 30
 
 
 class TeleopRequest(BaseModel):
     fps: int = Field(TELEOP_FPS, ge=1, le=TELEOP_MAX_FPS)
+    align: bool = Field(
+        False,
+        description="leader farther than safety.max_approach_deg: first move the follower to the leader's "
+        "pose (minimum jerk, peak speed programs.approach_speed_deg_s, dead-man on), then teleop",
+    )
 
 
 class RecordRequest(BaseModel):
@@ -277,9 +287,16 @@ class Station:
     def start_teleop(self, req: TeleopRequest) -> dict[str, Any]:
         self._profile()
 
+        safety = self.settings.safety
+
         def build(owner: HardwareOwner) -> MotionSession:
             return TeleopSession(
-                kind="teleop", fps=req.fps, approach_s=self.settings.safety.smooth_approach_s
+                kind="teleop",
+                fps=req.fps,
+                approach_s=safety.smooth_approach_s,
+                align=req.align,
+                align_speed_deg_s=min(self.settings.programs.approach_speed_deg_s, ALIGN_MAX_SPEED_DEG_S),
+                align_max_deg=safety.max_approach_deg,
             )
 
         return self.owner.call(  # type: ignore[no-any-return]
@@ -287,9 +304,29 @@ class Station:
             kind="teleop",
             build=build,
             needs_leader=True,
-            leader_check_deg=self.settings.safety.max_approach_deg,
-            max_relative_target=self.settings.safety.teleop_max_relative_target,
+            leader_check_deg=None if req.align else safety.max_approach_deg,
+            max_relative_target=safety.teleop_max_relative_target,
             timeout=10.0,
+        )
+
+    def go_rest(self) -> dict[str, Any]:
+        """idle → playing (kind ``rest``): minimum-jerk move to the profile's rest pose."""
+        profile = self._profile()
+        rest = profile.follower.rest_pose
+        if not rest:
+            raise StationError(
+                "validation_failed",
+                "this robot has no rest pose: set one on the Robot page first",
+                params={"code": "no_rest_pose"},
+            )
+        target = {k: float(v) for k, v in rest.items()}
+        speed = min(self.settings.programs.approach_speed_deg_s, ALIGN_MAX_SPEED_DEG_S)
+
+        def build(owner: HardwareOwner) -> MotionSession:
+            return RestSession(kind="rest", fps=REST_FPS, target=target, speed_deg_s=speed)
+
+        return self.owner.call(  # type: ignore[no-any-return]
+            "start_session", kind="rest", build=build, needs_leader=False, timeout=10.0
         )
 
     def start_record(self, req: RecordRequest) -> dict[str, Any]:

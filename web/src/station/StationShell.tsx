@@ -230,8 +230,8 @@ export function useHottest(): { level: Level; motor: string | null; temp: number
           best = { level: best.level, motor: m, temp: s.temp_c };
       }
     }
-    const levels = Object.values(telemetry).flatMap((motors) =>
-      Object.values(motors).map((s) => motorLevel(s, th)),
+    const levels = Object.entries(telemetry).flatMap(([arm, motors]) =>
+      Object.values(motors).map((s) => motorLevel(s, th, arm === "leader" ? "leader" : "follower")),
     );
     const level = worstLevel([...levels, status?.health.level ?? "ok"]);
     if (best.motor === null && status?.health.hottest)
@@ -320,7 +320,11 @@ function TopBar() {
             <span className="hidden max-w-[8rem] truncate md:inline">
               {status?.robot?.id ?? t("chip.no_robot")}
             </span>
-            <span className="truncate font-extrabold">{t(`state.${status?.state ?? "disconnected"}`)}</span>
+            <span className="truncate font-extrabold">
+              {status?.session?.kind === "rest"
+                ? t("state_rest")
+                : t(`state.${status?.state ?? "disconnected"}`)}
+            </span>
           </Link>
           {status?.robot?.mock || status?.station.mock ? (
             <Link
@@ -369,14 +373,13 @@ function TopBar() {
   );
 }
 
-export function StationShell() {
-  const { t } = useTranslation("station");
-  useStatusQuery();
+/** The wizard steps from the live status and the robots / datasets / models queries. `ready` is
+ * false until the status and the datasets are known (no lock flashes while a page loads). */
+export function useWizardSteps(): { steps: Step[]; ready: boolean } {
   const status = useStation(selStatus);
   const robots = useRobots();
   const datasets = useDatasets();
   const models = useModels();
-  const loc = useLocation();
   const steps = wizardSteps(status, {
     robots: robots.data?.robots.length ?? 0,
     datasets: (datasets.data?.datasets ?? []).map((d) => ({
@@ -385,6 +388,15 @@ export function StationShell() {
     })),
     models: models.data?.models.length ?? 0,
   });
+  return { steps, ready: status !== null && !datasets.isPending };
+}
+
+export function StationShell() {
+  const { t } = useTranslation("station");
+  useStatusQuery();
+  const status = useStation(selStatus);
+  const loc = useLocation();
+  const { steps } = useWizardSteps();
   return (
     <div className="min-h-screen">
       <a

@@ -187,6 +187,8 @@ export class MockStation {
   calibScenario: "ok" | "lelab" | "fresh" = "ok";
   poseOff = false;
   lost: DeviceLost | null = null;
+  /** An e-stop ended a motion: the UI offers "Return to rest pose" (field report 0.2.8). */
+  interrupted = false;
   t = 0;
   tick = 0;
   heatRate: number;
@@ -368,6 +370,7 @@ export class MockStation {
       loaded_model: this.loaded,
       program: this.programs.current(),
       lost: this.lost,
+      interrupted: this.interrupted,
     };
   }
 
@@ -638,7 +641,11 @@ export class MockStation {
     };
     const rt: SessionRt = { s, phaseT: 0, countdown: 3 };
     let state: StationState = "teleop";
-    if (kind === "record") {
+    if (kind === "teleop" && body.align === true) s.episode.phase = "align";
+    if (kind === "rest") {
+      s.episode = { index: 0, of: 1, saved: 0, phase: "approach", elapsed_s: 0, limit_s: 3 };
+      state = "playing";
+    } else if (kind === "record") {
       const rec = body as unknown as RecordRequest;
       rt.rec = rec;
       rt.countdown = rec.countdown_s ?? 3;
@@ -686,6 +693,7 @@ export class MockStation {
     this.session = rt;
     this.torque = true;
     this.lastHeartbeat = this.t;
+    if (kind !== "rest") this.interrupted = false;
     if (kind === "replay") s.episode.phase = "episode";
     this.setState(state, { sub: s.episode.phase });
     if (kind === "teleop") rt.phaseT = 0;
@@ -823,8 +831,10 @@ export class MockStation {
     this.programs.onEstop();
     if (this.state === "disconnected") return this.status();
     this.lastEstopAt = this.t;
-    if (this.session) this.endSession(`estop_${reason}`, "estopped", reason);
-    else this.setState("estopped", { reason });
+    if (this.session) {
+      this.interrupted = true;
+      this.endSession(`estop_${reason}`, "estopped", reason);
+    } else this.setState("estopped", { reason });
     return this.status();
   }
 
@@ -1014,7 +1024,12 @@ export class MockStation {
     rt.phaseT += dt;
     const ep = rt.s.episode;
     if (rt.s.kind === "teleop") {
-      if (this.sub === "approach" && rt.phaseT >= 1.5) {
+      if (this.sub === "align" && rt.phaseT >= 2) {
+        this.sub = "approach";
+        rt.s.episode.phase = "approach";
+        rt.phaseT = 0;
+        this.broadcast({ type: "state", ...this.status() });
+      } else if (this.sub === "approach" && rt.phaseT >= 1.5) {
         this.sub = "teleop";
         rt.s.episode.phase = "teleop";
         this.broadcast({ type: "state", ...this.status() });
@@ -1023,6 +1038,11 @@ export class MockStation {
     }
     ep.elapsed_s = rt.phaseT;
     if (ep.limit_s === null || rt.phaseT < ep.limit_s) return;
+    if (rt.s.kind === "rest") {
+      this.interrupted = false;
+      this.endSession("completed");
+      return;
+    }
     if (ep.phase === "countdown")
       this.phase(rt, "episode", rt.rec?.episode_time_s ?? rt.run?.episode_time_s ?? 30);
     else if (ep.phase === "episode") {

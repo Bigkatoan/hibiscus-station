@@ -36,7 +36,10 @@
     "needs_leader": "Needs a leader arm.",
     "record_first": "Record a dataset first.",
     "pair_first": "Pair with a Hibiscus server first.",
-    "estopped": "Reset the e-stop first."
+    "estopped": "Reset the e-stop first.",
+    "title": "This step is locked",
+    "go": "Go to {{step}}",
+    "disabled": "The controls below are disabled until then."
   },
   "state": {
     "disconnected": "Disconnected",
@@ -110,7 +113,14 @@
     "hot": "{{motor}} is hot ({{value}} °C). New sessions cannot start until it cools down.",
     "warm": "{{motor}} is getting warm ({{value}} °C).",
     "error": "Robot disconnected: {{reason}}. Check the USB cable and the arm's power supply, then connect again.",
-    "estopped": "Robot stopped: {{reason}}."
+    "estopped": "Robot stopped: {{reason}}.",
+    "interrupted": "The arm stopped in the middle of a motion.",
+    "interrupted_hint": "It stays where it stopped. The next program or trajectory run starts from its beginning.",
+    "rest": "Return to rest pose",
+    "rest_hint": "Moves slowly (at most {{speed}} degrees per second) to the robot's rest pose. Keep this page open; Space stops it.",
+    "rest_need_pose": "Set a rest pose on the Robot page to return there automatically.",
+    "resting": "Returning to the rest pose… Space or Stop halts it.",
+    "rest_stop": "Stop"
   },
   "alerts": {
     "motor": {
@@ -184,7 +194,7 @@
     "status": "Status",
     "history": "Last 120 s",
     "status_ok": "ok",
-    "stale": "stale",
+    "stale": "no reply",
     "no_data": "No motor data yet. Connect a robot.",
     "limit_temp": "motor cutoff {{v}} °C",
     "limit_vmin": "min {{v}} V",
@@ -194,7 +204,10 @@
     "bit_angle": "angle sensor",
     "bit_overheat": "overheat",
     "bit_overcurrent": "overcurrent",
-    "bit_overload": "overload"
+    "bit_overload": "overload",
+    "stale_title": "The last read of this arm's sensors got no answer; the values shown are older.",
+    "unknown_title": "No value: this servo does not report it (the reading was impossible and is ignored).",
+    "leader_note": "Moved by hand: shown for information, never an alarm."
   },
   "camera": {
     "title": "Cameras",
@@ -453,7 +466,11 @@
     "not_idle": "The robot must be connected and idle.",
     "approach": "Follower moving to the leader pose…",
     "latency_readout": "latency ~{{ms}} ms, {{hz}} Hz",
-    "fps_max": "{{fps}} (fastest)"
+    "fps_max": "{{fps}} (fastest)",
+    "align_title": "The arms are far apart",
+    "align_hint": "Hold the leader still where you want it. The follower can move there by itself, slowly (at most {{speed}} degrees per second); teleop starts when it arrives. Space or the e-stop stops it.",
+    "align": "Align follower to leader",
+    "aligning": "Follower moving slowly to the leader pose… keep the leader still. Space stops it."
   },
   "replay": {
     "title": "Replay",
@@ -845,7 +862,10 @@
       "ref_missing": "(missing)",
       "no_profile": "No robot profile is active, so a program has nowhere to be saved.",
       "no_profile_hint": "Create a robot profile (or connect one) on the Robot page first:",
-      "for_profile": "Saved for the robot profile {{name}} (not connected: connect it to run the program)."
+      "for_profile": "Saved for the robot profile {{name}} (not connected: connect it to run the program).",
+      "new_cancel": "Cancel",
+      "list_error": "Could not load the programs.",
+      "retry": "Try again"
     },
     "run": {
       "title": "Run",
@@ -1114,5 +1134,6 @@
     "banner": "You are using the SIMULATED demo arm. Your real arm ({{ports}}) does not move. Create a profile for the real arm.",
     "create_real": "Create a profile for the real arm",
     "connect_disabled": "Demo profile: simulated arms. Start Station with --mock to use it."
-  }
+  },
+  "state_rest": "Returning to rest"
 }

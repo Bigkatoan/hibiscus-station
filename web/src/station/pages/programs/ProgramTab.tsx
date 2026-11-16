@@ -4,7 +4,7 @@
  * buttons, save (the Station compiles), check, and run it from the run panel with the running block
  * highlighted live.
  */
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConfirmButton, Spinner } from "@/components/common";
 import { Field } from "@/components/Field";
@@ -130,9 +130,32 @@ function ButtonsEditor({
   );
 }
 
-function NewProgramForm({ existing, onCreated }: { existing: string[]; onCreated: (id: string) => void }) {
+function NewProgramForm({
+  existing,
+  onCreated,
+  onCancel,
+  focusKey,
+}: {
+  existing: string[];
+  onCreated: (id: string) => void;
+  /** Shown when the form can be closed (there are programs to go back to). */
+  onCancel?: (() => void) | undefined;
+  /** Changes on every "New program" click: the name field takes the focus again. */
+  focusKey: number;
+}) {
   const { t } = useTranslation("station");
   const [name, setName] = useState("");
+  const nameRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    const el = nameRef.current;
+    if (!el || focusKey === 0) return;
+    try {
+      el.scrollIntoView({ block: "center" });
+    } catch {
+      // no layout (tests): focusing is enough
+    }
+    el.focus();
+  }, [focusKey]);
   const id = programId(name);
   const create = useStationMutation(
     (body: ProgramInput) => api.put<Program>(`/programs/${enc(id)}`, body),
@@ -161,6 +184,7 @@ function NewProgramForm({ existing, onCreated }: { existing: string[]; onCreated
   return (
     <form
       className="flex flex-wrap items-end gap-2"
+      data-testid="new-program-form"
       onSubmit={(e) => {
         e.preventDefault();
         if (!id || taken) return;
@@ -176,6 +200,7 @@ function NewProgramForm({ existing, onCreated }: { existing: string[]; onCreated
         error={taken ? t("programs.editor.id_taken") : undefined}
       >
         <Input
+          ref={nameRef}
           value={name}
           maxLength={80}
           className="w-56"
@@ -187,6 +212,11 @@ function NewProgramForm({ existing, onCreated }: { existing: string[]; onCreated
       <Button type="submit" disabled={!id || taken || create.isPending}>
         <PxIcon name="plus" /> {t("programs.editor.create")}
       </Button>
+      {onCancel ? (
+        <Button type="button" variant="ghost" onClick={onCancel}>
+          {t("programs.editor.new_cancel")}
+        </Button>
+      ) : null}
       {profile && !status?.robot?.connected ? (
         <p className="w-full text-xs text-muted-foreground" data-testid="program-profile-note">
           {t("programs.editor.for_profile", { name: profile.name || profile.id })}
@@ -475,7 +505,12 @@ export function ProgramTab() {
   const live = useStation((s) => s.program);
   const list = programs.data?.programs ?? [];
   const [selected, setSelected] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
+  // "New program" always opens the form (field report 0.2.8: it toggled, so with no program yet,
+  // the form already open, or the list still loading / failing, a click seemed to do nothing).
+  // Each click bumps the key: the form's name field scrolls into view and takes the focus.
+  const [newKey, setNewKey] = useState(0);
+  const creating = newKey > 0;
+  const showForm = creating || (list.length === 0 && !programs.isPending);
   // A running program is the one to show after a reload.
   const id = selected ?? (live && isLive(live) ? live.program_id : null) ?? list[0]?.id ?? null;
   const program = useProgram(id);
@@ -488,7 +523,7 @@ export function ProgramTab() {
               value={id ?? ""}
               onChange={(e) => {
                 setSelected(e.target.value);
-                setCreating(false);
+                setNewKey(0);
               }}
             >
               {list.map((p) => (
@@ -502,28 +537,53 @@ export function ProgramTab() {
         ) : null}
         <Button
           variant="outline"
-          aria-expanded={creating}
+          data-testid="new-program"
+          aria-expanded={showForm}
           onClick={() => {
-            setCreating((v) => !v);
+            setNewKey((k) => k + 1);
           }}
         >
           <PxIcon name="plus" /> {t("programs.editor.new")}
         </Button>
+        {programs.isPending ? <Spinner /> : null}
       </div>
-      {creating || (list.length === 0 && !programs.isLoading) ? (
+      {programs.isError ? (
+        <div className="flex flex-col gap-2" data-testid="programs-error">
+          <StationError error={programs.error} />
+          <Button
+            variant="outline"
+            size="sm"
+            className="self-start"
+            onClick={() => {
+              void programs.refetch();
+            }}
+          >
+            <PxIcon name="refresh" /> {t("programs.editor.retry")}
+          </Button>
+        </div>
+      ) : null}
+      {showForm ? (
         <Card>
           <CardContent className="pt-3 sm:pt-4">
             <NewProgramForm
               existing={list.map((p) => p.id)}
+              focusKey={newKey}
+              onCancel={
+                list.length > 0
+                  ? () => {
+                      setNewKey(0);
+                    }
+                  : undefined
+              }
               onCreated={(nid) => {
                 setSelected(nid);
-                setCreating(false);
+                setNewKey(0);
               }}
             />
           </CardContent>
         </Card>
       ) : null}
-      <StationError error={programs.error ?? program.error} />
+      <StationError error={program.error} />
       {program.data ? (
         <ProgramWorkspace
           key={program.data.id}

@@ -526,7 +526,7 @@ def test_zero_temperature_readings_never_trip_the_thermal_guard() -> None:
     assert not [a for a in g.update(r, lim) if getattr(a, "level", "") == "critical"]
 
 
-def test_all_zero_temperatures_are_a_failed_read_not_a_critical() -> None:
+def test_all_zero_temperatures_are_unknown_not_a_failed_read_nor_a_critical() -> None:
     from hibiscus_station.settings import TelemetrySettings
 
     class AllZero(_ZeroTempBus):
@@ -536,4 +536,7 @@ def test_all_zero_temperatures_are_a_failed_read_not_a_critical() -> None:
     sched = TelemetryScheduler(TelemetrySettings())
     sched.add_arm("follower", AllZero())
     r = sched._read(sched.arms["follower"], "temp_c", forced=False)
-    assert not r.ok and "implausible" in (r.error or "")
+    # The bus answered: the values are unknown, not a failed read (no "reads are failing" alert).
+    assert r.ok and r.values == {} and not r.degraded
+    assert sched.arms["follower"].stale_groups() == []
+    assert sched.arms["follower"].implausible == {"temp_c": 1}

@@ -11,6 +11,46 @@ repository (`station/`); 0.2.0 is the first release of this standalone repositor
 
 ## [Unreleased]
 
+## [0.2.8] - 2026-11-16
+
+### Fixed
+- **"After an e-stop during *Run on the robot*, the next run finishes the previous turn"** (field
+  report 0.2.7, Windows, real SO-101). The goals of the interrupted session (`last_sent`) outlived
+  it: the next motion that targets only some joints (gripper, a pose with fewer joints, the hold of
+  the joints a primitive does not move) drove the others back to where the e-stopped run was going.
+  The owner now forgets them on every teardown and session start, so the next program or trajectory
+  run always starts fresh (approach to the first sample, then the take from t = 0).
+- **E-stop / reset never touch the calibration.** Checked: no EEPROM write and no file change; the
+  "recalibrate" in the report was the follower frozen far from a folded leader (shoulder_lift
+  141.8 deg, elbow_flex 117.3 deg apart), which teleop refuses on purpose.
+- **Leader telemetry nonsense** ("gripper draws a high current (6.422 A)", "Motor telemetry reads are
+  failing", "ok stale" on every leader motor). Values no STS3215 can report are now *unknown*
+  (shown as a dash), never alerts and never a failed read: current above 3.5 A, load beyond
+  +/-100 %, voltage outside 3-16 V, as temperatures already were; Present_Current's direction bit
+  (bit 15) is masked. The leader (moved by hand, torque off) never raises current, load, status or
+  voltage alerts, its temperature never goes beyond "hot", and nothing from the leader stops the
+  robot or refuses a start; every follower protection is unchanged. "stale" now means a read got no
+  answer ("no reply", with an explanation).
+- **Locked steps were still usable.** A locked wizard step now opens a page that says why (and the
+  Station's exact reason), links to the step to do first, and disables the page's controls; the
+  Train page keeps its pairing form. Same on desktop and phone widths.
+- **"New program" seemed to do nothing** when no program existed yet (the form was already open
+  and the button toggled it), or while the list was loading or failing. The button now always
+  opens the form and focuses its name field; a failing list shows the error with "Try again".
+  `GET /programs` never goes through the hardware owner, so it answers while the owner is busy,
+  e-stopped or in error (tested).
+
+### Added
+- **Return to rest pose** (`POST /robots/rest`, session kind `rest`, state `playing`): after an
+  e-stop ended a motion and the latch is reset (`Status.interrupted`), a banner offers one slow
+  minimum-jerk move to the profile's rest pose (peak speed `programs.approach_speed_deg_s`, at most
+  30 deg/s), dead-man heartbeat on, Space / Stop cancels it.
+- **Align follower to leader** (`POST /sessions/teleop {"align": true}`, phase `align`): when the
+  leader is more than `safety.max_approach_deg` (30 deg) from the follower, teleop still refuses
+  (`leader_far`, now with `params.can_align`), and the UI offers to move the follower slowly
+  (minimum jerk, at most 30 deg/s, dead-man, e-stop) to the leader's pose, then teleop starts.
+- Mock: `POST /api/v1/mock/inject` takes `hand: "hold"` with `hold` offsets and `current_raw`.
+
 ## [0.2.7] - 2026-11-16
 
 ### Fixed

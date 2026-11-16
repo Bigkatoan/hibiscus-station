@@ -51,6 +51,7 @@ Phase = Literal[
     "home",
     "ranges",
     "approach",
+    "align",  # teleop with align=true: the follower moves slowly to the leader's pose first
     "teleop",
     "replay",
     "countdown",
@@ -64,7 +65,7 @@ Phase = Literal[
     "paused",  # programming: paused by the operator
     "done",
 ]
-SessionKind = Literal["teleop", "record", "replay", "run", "traj_record", "traj_play", "program"]
+SessionKind = Literal["teleop", "record", "replay", "run", "traj_record", "traj_play", "program", "rest"]
 JobKind = Literal["upload", "pull", "import", "load"]
 JobStatus = Literal["queued", "running", "succeeded", "failed", "cancelled"]
 ControlAction = Literal["next", "rerecord", "stop", "resume"]
@@ -275,6 +276,11 @@ class Status(Out):
     loaded_model: str | None
     program: ProgramState | None = Field(None, description="the current program run (programming only)")
     lost: DeviceLost | None = Field(None, description="the serial device that was lost (state error)")
+    interrupted: bool = Field(
+        False,
+        description="an e-stop / safe stop ended a motion: the arm stands where it froze (the UI offers "
+        "POST /robots/rest until a session starts or the rest move completes)",
+    )
 
 
 # --------------------------------------------------------------------------- calibration

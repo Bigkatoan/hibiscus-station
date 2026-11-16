@@ -13,6 +13,7 @@ import { RobotPage } from "./pages/RobotPage";
 import { RunModelPage } from "./pages/RunModelPage";
 import { ReplayPage, TeleopPage } from "./pages/TeleopPage";
 import { StationShell } from "./StationShell";
+import { LockGate } from "./components/LockGate";
 import { StationProvider, type StationRuntime } from "./ws/StationProvider";
 
 export const stationRoutes: RouteObject[] = [
@@ -22,16 +23,65 @@ export const stationRoutes: RouteObject[] = [
     children: [
       { index: true, element: <WelcomePage /> },
       { path: "robot", element: <RobotPage /> },
-      { path: "calibrate", element: <CalibratePage /> },
-      { path: "cameras", element: <CamerasPage /> },
-      { path: "teleop", element: <TeleopPage /> },
-      { path: "record", element: <RecordPage /> },
+      {
+        path: "calibrate",
+        element: (
+          <LockGate step="calibrate">
+            <CalibratePage />
+          </LockGate>
+        ),
+      },
+      {
+        path: "cameras",
+        element: (
+          <LockGate step="cameras">
+            <CamerasPage />
+          </LockGate>
+        ),
+      },
+      {
+        path: "teleop",
+        element: (
+          <LockGate step="teleop">
+            <TeleopPage />
+          </LockGate>
+        ),
+      },
+      {
+        path: "record",
+        element: (
+          <LockGate step="record">
+            <RecordPage />
+          </LockGate>
+        ),
+      },
       { path: "replay", element: <ReplayPage /> },
-      { path: "upload", element: <DatasetsPage /> },
+      {
+        path: "upload",
+        element: (
+          <LockGate step="upload">
+            <DatasetsPage />
+          </LockGate>
+        ),
+      },
       { path: "datasets", element: <DatasetsPage /> },
       { path: "datasets/:name", element: <DatasetDetailPage /> },
-      { path: "train", element: <TrainPage /> },
-      { path: "run", element: <RunModelPage /> },
+      {
+        path: "train",
+        element: (
+          <LockGate step="train">
+            <TrainPage />
+          </LockGate>
+        ),
+      },
+      {
+        path: "run",
+        element: (
+          <LockGate step="run">
+            <RunModelPage />
+          </LockGate>
+        ),
+      },
       { path: "programs", element: <ProgramsPage /> },
       { path: "models", element: <ModelsPage /> },
       { path: "sessions", element: <SessionsPage /> },

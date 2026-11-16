@@ -114,7 +114,7 @@ function MotorRow({
   maxTemp: number;
 }) {
   const { t } = useTranslation("station");
-  const level = motorLevel(s, thresholds);
+  const level = motorLevel(s, thresholds, arm);
   return (
     <tr
       data-testid={`motor-${arm}-${motor}`}
@@ -135,8 +135,18 @@ function MotorRow({
           <span className="sr-only">{t(`level.${level}`)}</span>
         </span>
       </td>
-      <td className="py-1 pr-2 tabular-nums">{fmt(s.voltage_v, 1)}</td>
-      <td className="hidden py-1 pr-2 tabular-nums sm:table-cell">{fmt(s.current_a, 2)}</td>
+      <td
+        className="py-1 pr-2 tabular-nums"
+        title={s.voltage_v === null ? t("health.unknown_title") : undefined}
+      >
+        {fmt(s.voltage_v, 1)}
+      </td>
+      <td
+        className="hidden py-1 pr-2 tabular-nums sm:table-cell"
+        title={s.current_a === null ? t("health.unknown_title") : undefined}
+      >
+        {fmt(s.current_a, 2)}
+      </td>
       <td className="py-1 pr-2">
         <LoadBar pct={s.load_pct} />
       </td>
@@ -152,7 +162,15 @@ function MotorRow({
             ))}
           </span>
         )}
-        {s.stale ? <span className="ml-1 text-xs text-muted-foreground">{t("health.stale")}</span> : null}
+        {s.stale ? (
+          <span
+            className="ml-1 text-xs text-muted-foreground"
+            title={t("health.stale_title")}
+            data-testid="stale"
+          >
+            {t("health.stale")}
+          </span>
+        ) : null}
       </td>
       {large ? (
         <td className="py-1 text-foreground">
@@ -203,6 +221,11 @@ export function MotorHealthPanel({
         return (
           <div key={arm} className="min-w-0">
             <h3 className="mb-1 font-extrabold text-base">{t(`arm.${arm}`)}</h3>
+            {arm === "leader" ? (
+              <p className="mb-1 text-xs text-muted-foreground" data-testid="leader-note">
+                {t("health.leader_note")}
+              </p>
+            ) : null}
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
