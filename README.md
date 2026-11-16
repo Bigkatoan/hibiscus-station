@@ -91,7 +91,7 @@ laptop: `ssh -N -L 18210:127.0.0.1:18210 you@robot-pc` and open the same link. S
 Without Docker (Python 3.12 via [uv](https://docs.astral.sh/uv/)):
 
 ```bash
-uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.1/hibiscus_station-0.2.1-py3-none-any.whl
+uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.2/hibiscus_station-0.2.2-py3-none-any.whl
 # no NVIDIA GPU (Pi 5, most mini PCs): add --torch-backend cpu
 hibiscus-station --mock          # demo without hardware (simulated arms, data in ~/.hibiscus/station-demo)
 hibiscus-station                 # with the arms plugged in
@@ -106,7 +106,7 @@ In PowerShell (x64, no admin rights needed):
 
 ```powershell
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"   # uv, once
-uv tool install --python 3.12 https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.1/hibiscus_station-0.2.1-py3-none-any.whl
+uv tool install --python 3.12 https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.2/hibiscus_station-0.2.2-py3-none-any.whl
 # no NVIDIA GPU: add --torch-backend cpu
 hibiscus-station --mock          # demo without hardware (simulated arms, data in ~/.hibiscus/station-demo)
 hibiscus-station                 # with the arms plugged in; the browser opens by itself

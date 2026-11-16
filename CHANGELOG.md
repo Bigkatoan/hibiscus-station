@@ -11,6 +11,69 @@ repository (`station/`); 0.2.0 is the first release of this standalone repositor
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-11-16
+
+First field report on a real SO-101 (Windows): Station listed the arm's port, but calibrate, teleop,
+record and run did nothing to the arm, while LeLab drove it. The `-v` log showed
+`demo_follower MockFollower read state`: the active profile was the demo profile that an earlier
+`hibiscus-station --mock` run had saved in `~/.hibiscus/station`, so every command went to the
+simulated arm.
+
+### Fixed
+- **A real run never drives the demo arm.** `--mock` now keeps its data in `~/.hibiscus/station-demo`
+  (unless `--home` is given). Without `--mock`, a demo profile left in the real data dir is no
+  longer active (it is kept, marked **DEMO**), and connecting it is refused with `409 demo_profile`
+  ("simulated arms: the real arm would not move; create a profile for the real arm").
+- The UI says when the arm is simulated: a **DEMO / TAY GIẢ LẬP** chip in the top bar, a DEMO badge on
+  demo profiles (Connect disabled outside `--mock`), and on the Robot page, when real serial ports
+  are plugged in, a banner with **Create a profile for the real arm** that fills in the detected
+  ports. The profile form lets you pick an existing calibration id (for example LeLab's) for each
+  arm.
+- **One bad packet no longer fails a connect or a calibration.** lerobot sends its configuration and
+  calibration writes (and torque switches) without retries; every bus call Station makes now gets
+  two retries unless it asks otherwise (telemetry does not), through `hw/bus.py`
+  (`StationMotorsBus`). Tested against an STS3215 emulator with 1-2 % lost or corrupted answers.
+- **Every failure says why.** Bus errors in any command are `502 bus_error` with the motor id,
+  register and lerobot's message (they were `500 internal_error: ConnectionError`). Connect reports
+  its step: the port does not open (`port_busy`, with the OS error), the motors fail lerobot's check
+  (missing ids, wrong model, mixed firmware: `bus_error`, step `handshake`) or the settings cannot be
+  written (step `configure`). The UI shows the server's detail under the translated message, a
+  banner with the reason when the robot is in error or e-stopped, and the exact reason under each
+  locked step of the sidebar.
+- Each arm's status carries `calibration_id`, `calibration_file`, `issue` (no file, which other files
+  exist, or which motor field does not keep the written calibration), `bus_errors` and
+  `last_bus_error`.
+- **LeLab calibrations are found and reused.** `GET /calibrations` also lists the legacy folders of
+  lerobot < 0.4 (`so101_follower`, `so100_follower`, `so101_leader`, `so100_leader`) with a `dir`
+  field; `POST /calibration/start` takes `source` (a listed file) to copy it to the arm's
+  calibration id (an existing file is kept as `.bak-<time>`) and write it to the motors. The
+  Calibrate page lists these files with **Use this file**.
+- Teleop no longer needs every configured camera to stream (LeLab teleoperates without cameras);
+  record, run and programs still do.
+- The SO-101 gripper's overload bit is a warning, not a safe stop: lerobot sets the gripper's own
+  overload protection (`Overload_Torque` 25 %) so that squeezing an object trips it. Overload /
+  overcurrent status and low voltage now need two consecutive reads before a safe stop (overheat
+  still stops at once).
+- The status reports the installed lerobot version instead of a fixed `0.7.1`.
+- OpenCV's backend noise while probing cameras on Windows (`VIDEOIO/FFMPEG: Failed list devices
+  for backend dshow`) is no longer printed.
+
+### Added
+- `hibiscus-station doctor [--verbose] [--no-ping] [--no-cameras] [--out DIR]`: versions, USB serial
+  ports (VID:PID, by-id path, which process holds them), cameras, calibration files (all lerobot
+  folders), profiles and the file each expects, the running Station's state, the last 200 log lines,
+  and a **read-only** check of every configured arm whose port is free (ids answering at 1 Mbps,
+  model, firmware, voltage, temperature, status, EEPROM calibration vs. the file, which calibration
+  file the motors carry, sync-read error rate and latency). It starts with **LIKELY PROBLEMS** (e.g.
+  `MOCK PROFILE ACTIVE ... real serial ports present: COM3`) and writes
+  `hibiscus-station-doctor-<time>.zip` without tokens.
+- Startup log line: mode (mock / real hardware), data dir, active profile and its device types.
+- Every failed bus call (operation, register, motor ids, error) goes to `station.log`; `--verbose`
+  also prints them on the console. lerobot's per-tick timing lines stay out of the log.
+- `tests/sts_emulator.py`: a Feetech STS3215 chain on a pseudo-terminal speaking the real protocol,
+  so the real rustypot / lerobot / `so101_*` path is tested without hardware
+  (`tests/test_real_stack.py`, POSIX).
+
 ## [0.2.1] - 2026-11-16
 
 Windows 10/11 (x64, Python 3.12 via uv) is now a supported platform for the wheel install, tested in
@@ -106,7 +169,8 @@ same install smoke test. The Docker deploy stays Linux only.
   per-motor temperature / voltage / current / load telemetry, thermal auto-stop, a dead-man switch
   and a keyboard e-stop. Mock hardware for demos and CI; a hardware acceptance checklist.
 
-[Unreleased]: https://github.com/Bigkatoan/hibiscus-station/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/Bigkatoan/hibiscus-station/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/Bigkatoan/hibiscus-station/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/Bigkatoan/hibiscus-station/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Bigkatoan/hibiscus-station/releases/tag/v0.2.0
 [0.1.1]: https://github.com/Bigkatoan/Hibiscus/releases/tag/v0.1.1
