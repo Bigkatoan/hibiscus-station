@@ -170,7 +170,7 @@ class ProfileStore:
                 self._save()
             return changed
 
-    def set_active(self, robot_id: str) -> None:
+    def set_active(self, robot_id: str | None) -> None:
         with self._lock:
             self._data.active = robot_id
             self._save()

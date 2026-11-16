@@ -56,6 +56,8 @@ export interface Step {
   icon: AnimName;
   done: boolean;
   lock: string | null;
+  /** The exact reason behind the lock, from the Station (missing calibration file, bus error...). */
+  why?: string | null;
 }
 
 export function wizardSteps(
@@ -70,6 +72,14 @@ export function wizardSteps(
   const needConnect = connected ? null : "connect_first";
   const needCal = needConnect ?? (follower?.calibrated ? null : "calibrate_first");
   const needLeader = needCal ?? (leader ? (leader.calibrated ? null : "calibrate_leader") : "needs_leader");
+  const estopped = status?.state === "estopped" ? "estopped" : null;
+  const whyOf = (lock: string | null): string | null => {
+    if (lock === "connect_first") return status?.state === "error" ? (status.detail ?? null) : null;
+    if (lock === "calibrate_first") return follower?.issue ?? null;
+    if (lock === "calibrate_leader") return leader?.issue ?? null;
+    if (lock === "estopped") return status?.detail ?? null;
+    return null;
+  };
   const recorded = info.datasets.some((d) => d.episodes > 0);
   return [
     { to: "/robot", key: "robot", icon: "icon_robot_arm", done: info.robots > 0, lock: null },
@@ -78,7 +88,8 @@ export function wizardSteps(
       key: "calibrate",
       icon: "icon_calibrate",
       done: connected && calibrated,
-      lock: needConnect,
+      lock: needConnect ?? estopped,
+      why: whyOf(needConnect ?? estopped),
     },
     {
       to: "/cameras",
@@ -86,9 +97,24 @@ export function wizardSteps(
       icon: "icon_camera",
       done: (status?.cameras ?? []).some((c) => c.streaming),
       lock: needConnect,
+      why: whyOf(needConnect),
     },
-    { to: "/teleop", key: "teleop", icon: "icon_teleop", done: false, lock: needLeader },
-    { to: "/record", key: "record", icon: "icon_dataset", done: recorded, lock: needLeader },
+    {
+      to: "/teleop",
+      key: "teleop",
+      icon: "icon_teleop",
+      done: false,
+      lock: needLeader ?? estopped,
+      why: whyOf(needLeader ?? estopped),
+    },
+    {
+      to: "/record",
+      key: "record",
+      icon: "icon_dataset",
+      done: recorded,
+      lock: needLeader ?? estopped,
+      why: whyOf(needLeader ?? estopped),
+    },
     {
       to: "/upload",
       key: "upload",
@@ -103,7 +129,14 @@ export function wizardSteps(
       done: false,
       lock: status?.server.paired ? null : "pair_first",
     },
-    { to: "/run", key: "run", icon: "icon_model", done: info.models > 0, lock: needCal },
+    {
+      to: "/run",
+      key: "run",
+      icon: "icon_model",
+      done: info.models > 0,
+      lock: needCal ?? estopped,
+      why: whyOf(needCal ?? estopped),
+    },
   ];
 }
 
@@ -132,7 +165,7 @@ function WizardRail({ steps, onNavigate }: { steps: Step[]; onNavigate?: () => v
                   s.lock && "opacity-70",
                 )
               }
-              title={s.lock ? t(`lock.${s.lock}`) : undefined}
+              title={s.lock ? [t(`lock.${s.lock}`), s.why].filter(Boolean).join(" — ") : undefined}
             >
               <span className="w-4 text-right tabular-nums text-xs text-muted-foreground">{i + 1}</span>
               <PixelAnim name={s.icon} />
@@ -142,6 +175,15 @@ function WizardRail({ steps, onNavigate }: { steps: Step[]; onNavigate?: () => v
             </NavLink>
             {s.lock ? (
               <p className="hidden pl-8 text-xs text-muted-foreground md:block">{t(`lock.${s.lock}`)}</p>
+            ) : null}
+            {s.lock && s.why ? (
+              <p
+                className="hidden max-w-[16rem] break-words pl-8 font-mono text-[11px] leading-tight text-muted-foreground md:line-clamp-4"
+                title={s.why}
+                data-testid={`lock-why-${s.key}`}
+              >
+                {s.why}
+              </p>
             ) : null}
           </li>
         ))}
@@ -280,6 +322,16 @@ function TopBar() {
             </span>
             <span className="truncate font-extrabold">{t(`state.${status?.state ?? "disconnected"}`)}</span>
           </Link>
+          {status?.robot?.mock || status?.station.mock ? (
+            <Link
+              to="/robot"
+              className="flex h-9 shrink-0 items-center border-2 border-[#f08a24] bg-[#ffc531] px-2 text-xs font-extrabold text-[#3b2027]"
+              data-testid="demo-chip"
+              title={t("demo.chip_title")}
+            >
+              {t("demo.chip")}
+            </Link>
+          ) : null}
           <HealthChip />
           <Link
             to="/settings"

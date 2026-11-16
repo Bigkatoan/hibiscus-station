@@ -117,9 +117,14 @@ def test_guard_status_and_voltage_critical() -> None:
 
     g = ThermalGuard(Thresholds())
     lim = ArmLimits(min_voltage_v=4.5, nominal_voltage_v=7.4)
-    g.update(_read("status", {"gripper": ["overload"]}), lim)
+    # overload on a joint: critical once it is seen on two consecutive reads (one byte can be a glitch)
+    g.update(_read("status", {"elbow_flex": ["overload"]}), lim)
+    assert not g.take_critical()
+    assert g.status_level[("follower", "elbow_flex")] == "warn"
+    g.update(_read("status", {"elbow_flex": ["overload"]}), lim)
     ev = g.take_critical()
     assert ev and ev[0].reason == "thermal" and ev[0].kind == "status"
+    # overheat: the servo already cut its torque, no confirmation needed
     g.update(_read("status", {"gripper": ["overheat"]}), lim)
     g.update(_read("status", {"gripper": []}), lim)
     g.update(_read("status", {"gripper": ["overheat"]}), lim)
@@ -127,7 +132,23 @@ def test_guard_status_and_voltage_critical() -> None:
     alerts = g.update(_read("voltage_v", {"gripper": 6.0}), lim)
     assert alerts and alerts[0].level == "warn"  # < 85 % of nominal
     g.update(_read("voltage_v", {"gripper": 4.2}), lim)
+    assert not g.take_critical()  # one low sample: warn only
+    g.update(_read("voltage_v", {"gripper": 4.2}), lim)
     assert g.take_critical()[0].reason == "electrical"
+
+
+def test_gripper_overload_is_a_grasp_not_a_fault() -> None:
+    """lerobot gives the SO-101 gripper Overload_Torque 25 %: squeezing an object sets the overload
+    bit by design. Station must not e-stop a teleop / record session for it."""
+    from hibiscus_station.hw.telemetry import ArmLimits
+
+    g = ThermalGuard(Thresholds())
+    lim = ArmLimits(min_voltage_v=4.0, nominal_voltage_v=5.0)
+    for _ in range(5):
+        g.update(_read("status", {"gripper": ["overload"]}), lim)
+    assert not g.take_critical()
+    assert g.status_level[("follower", "gripper")] == "warn"
+    assert not g.hot_motors()
 
 
 def test_guard_load_stall_and_current() -> None:

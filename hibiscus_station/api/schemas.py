@@ -102,6 +102,11 @@ class StationInfo(Out):
 class ArmStatus(Out):
     port: str
     calibrated: bool
+    calibration_id: str | None = None
+    calibration_file: str | None = Field(None, description="the file lerobot reads for this arm")
+    issue: str | None = Field(None, description="why the arm is not calibrated, in plain words")
+    bus_errors: int = Field(0, description="failed bus calls since connect (retried ones included)")
+    last_bus_error: str | None = None
 
 
 class ArmsStatus(Out):
@@ -112,6 +117,7 @@ class ArmsStatus(Out):
 class RobotStatus(Out):
     id: str
     name: str
+    mock: bool = Field(False, description="the profile drives SIMULATED arms (demo), not real ones")
     connected: bool
     follower_torque: bool
     arms: ArmsStatus
@@ -265,6 +271,9 @@ class CalibrationFile(Out):
     id: str
     path: str
     modified_at: str
+    dir: str = Field(
+        "so_follower", description="lerobot's folder: so_follower, so_leader or a legacy so101_*"
+    )
 
 
 class CalibrationFiles(Out):

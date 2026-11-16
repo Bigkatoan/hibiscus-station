@@ -5,6 +5,7 @@ hibiscus-station --mock --no-browser # demo mode with mock arms and cameras
 hibiscus-station url                 # print a fresh login URL for the running instance
 hibiscus-station health              # exit 0 when the running instance answers (Docker, systemd)
 hibiscus-station openapi PATH        # write the OpenAPI document
+hibiscus-station doctor              # check ports, calibration and motors; write a zip to send
 
 Robot ports are picked in the UI: ``/dev/ttyACM0`` (or ``/dev/serial/by-id/...``) on Linux,
 ``/dev/tty.usbmodem...`` on macOS, ``COM3`` on Windows. Close LeLab / lerobot first: a serial port has
@@ -60,6 +61,10 @@ def _setup_logging(paths: StationPaths, verbose: bool) -> None:
     logging.basicConfig(
         level=logging.DEBUG if verbose else logging.INFO, handlers=[handler, console], force=True
     )
+    # Every failed bus call (motor id, register, error) always reaches the log file; the console
+    # shows them with --verbose. lerobot's per-tick timing lines stay out even with --verbose.
+    logging.getLogger("hibiscus_station.hw.bus").setLevel(logging.DEBUG)
+    logging.getLogger("lerobot").setLevel(logging.INFO)
 
 
 def _fixed_token() -> str | None:
@@ -116,7 +121,9 @@ def serve(
         "$HIBISCUS_STATION_ALLOWED_HOSTS, comma-separated)",
     ),
     no_browser: bool = typer.Option(False, "--no-browser", help="Do not open the browser"),
-    mock: bool = typer.Option(False, "--mock", help="Demo mode: mock arms, mock cameras"),
+    mock: bool = typer.Option(
+        False, "--mock", help="Demo mode: simulated arms and cameras, data in ~/.hibiscus/station-demo"
+    ),
     home: Path | None = typer.Option(None, "--home", help="Data dir (default ~/.hibiscus/station)"),
     verbose: bool = typer.Option(False, "--verbose", "-v"),
     version: bool = typer.Option(False, "--version"),
@@ -144,7 +151,7 @@ def serve(
     from hibiscus_station.hw.locks import DeviceBusyError, InstanceLock
     from hibiscus_station.station import Station
 
-    paths = StationPaths(home or station_home())
+    paths = StationPaths(home or (demo_home() if mock else station_home()))
     paths.ensure()
     lock = InstanceLock(paths.lock, paths.pid)
     try:
@@ -255,6 +262,39 @@ def health(
 
 
 @app.command()
+def doctor(
+    home: Path | None = typer.Option(None, "--home"),
+    out: Path = typer.Option(Path("."), "--out", help="Folder for the zip"),
+    no_ping: bool = typer.Option(False, "--no-ping", help="Do not open the arms' serial ports"),
+    no_cameras: bool = typer.Option(False, "--no-cameras", help="Do not probe cameras"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Print every bus error (motor id, register)"),
+) -> None:
+    """Check ports, calibration, profiles and motors; write hibiscus-station-doctor-<time>.zip to send us.
+
+    Read only: no motor register is written and no torque is switched on. Stop Station first to let
+    the doctor ping the motors (a port has one owner); the zip holds no login token.
+    """
+    from hibiscus_station import doctor as doc
+
+    logging.basicConfig(
+        level=logging.DEBUG if verbose else logging.WARNING,
+        format="%(levelname)s %(name)s: %(message)s",
+        force=True,
+    )
+    if verbose:
+        logging.getLogger("lerobot").setLevel(logging.INFO)
+    text, target = doc.run(
+        home or station_home(),
+        out,
+        ping=not no_ping,
+        probe_cameras=not no_cameras,
+        echo=lambda s: typer.echo(f"... {s}", err=True),
+    )
+    typer.echo(text)
+    typer.echo(f"\nReport saved to {target.resolve()} - send this file with your bug report.")
+
+
+@app.command()
 def openapi(path: Path = typer.Argument(Path("openapi.json"))) -> None:
     """Write the OpenAPI document (committed as station/openapi.json)."""
     from hibiscus_station.openapi import export
@@ -263,8 +303,18 @@ def openapi(path: Path = typer.Argument(Path("openapi.json"))) -> None:
     typer.echo(f"wrote {path}")
 
 
+def demo_home() -> Path:
+    """``--mock`` keeps its demo profile, datasets and sessions apart from the real arm's data."""
+    home = station_home()
+    return home.with_name(f"{home.name}-demo")
+
+
 def main() -> None:
     from hibiscus_station.oscompat import utf8_console
+
+    # OpenCV prints backend noise while cameras are probed (Windows: "VIDEOIO/FFMPEG: Failed list
+    # devices for backend dshow"); real camera errors still reach Station's own log.
+    os.environ.setdefault("OPENCV_LOG_LEVEL", "ERROR")
 
     utf8_console()  # Windows pipes / files default to cp1252
     app(prog_name="hibiscus-station")

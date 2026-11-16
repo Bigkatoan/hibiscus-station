@@ -25,9 +25,10 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from lerobot.motors import Motor, MotorCalibration, SerialMotorsBus
+from lerobot.motors import Motor, MotorCalibration
 
 from hibiscus_station.hw import feetech
+from hibiscus_station.hw.bus import StationMotorsBus
 
 MODEL_NUMBER = 777
 RESOLUTION = 4096
@@ -388,8 +389,8 @@ class FakeServoBus:
                 self.world.write_reg(i, name, int(v))
 
 
-class MockMotorsBus(SerialMotorsBus):  # type: ignore[misc]
-    """lerobot ``SerialMotorsBus`` whose port is a :class:`MockArmWorld`."""
+class MockMotorsBus(StationMotorsBus):
+    """lerobot ``SerialMotorsBus`` (with Station's retries) whose port is a :class:`MockArmWorld`."""
 
     def __init__(
         self,
@@ -397,8 +398,10 @@ class MockMotorsBus(SerialMotorsBus):  # type: ignore[misc]
         motors: dict[str, Motor],
         calibration: dict[str, MotorCalibration] | None = None,
         world: MockArmWorld | None = None,
+        *,
+        arm: str = "",
     ) -> None:
-        super().__init__(port, motors, calibration)
+        super().__init__(port, motors, calibration, arm=arm)
         self.world = world or get_world(port)
 
     def _open_bus(self) -> Any:

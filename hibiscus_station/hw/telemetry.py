@@ -269,6 +269,8 @@ class ThermalGuard:
         self.current_level: dict[tuple[str, str], str] = {}
         self.load_level: dict[tuple[str, str], str] = {}
         self.stall_since: dict[tuple[str, str], float] = {}
+        self.status_streak: dict[tuple[str, str], int] = {}
+        self.voltage_streak: dict[tuple[str, str], int] = {}
         self.temps: dict[tuple[str, str], float] = {}
         self._critical: list[CriticalEvent] = []
 
@@ -351,8 +353,17 @@ class ThermalGuard:
                         )
             elif read.group == "status":
                 bits = list(value) if isinstance(value, list) else []
-                crit = sorted(set(bits) & (feetech.STATUS_CRITICAL | feetech.STATUS_ELECTRICAL))
-                lvl = "critical" if crit else ("warn" if bits else "ok")
+                crit_bits = feetech.STATUS_CRITICAL | feetech.STATUS_ELECTRICAL
+                if motor in feetech.GRASP_MOTORS:
+                    # lerobot sets the gripper's own overload protection (Overload_Torque 25 %):
+                    # squeezing an object trips it by design, it is not a fault.
+                    crit_bits = crit_bits - {"overload"}
+                crit = sorted(set(bits) & crit_bits)
+                # One status byte can be a glitch: a fault must be seen on consecutive reads,
+                # except overheat (the servo has already cut its own torque).
+                n = self.status_streak[key] = self.status_streak.get(key, 0) + 1 if crit else 0
+                confirmed = "overheat" in crit or n >= self.t.critical_consecutive
+                lvl = "critical" if crit and confirmed else ("warn" if bits else "ok")
                 changed, _ = self._edge(self.status_level, key, lvl)
                 if changed:
                     alerts.append(
@@ -384,8 +395,12 @@ class ThermalGuard:
             elif read.group == "voltage_v":
                 v = float(value)
                 lvl = "ok"
-                if limits.min_voltage_v is not None and v < limits.min_voltage_v:
+                low = limits.min_voltage_v is not None and v < limits.min_voltage_v
+                n = self.voltage_streak[key] = self.voltage_streak.get(key, 0) + 1 if low else 0
+                if low and n >= self.t.critical_consecutive:
                     lvl = "critical"
+                elif low:
+                    lvl = "warn"
                 elif (
                     limits.min_voltage_v is not None and v < limits.min_voltage_v + self.t.voltage_margin_v
                 ) or (
@@ -514,6 +529,8 @@ class ThermalGuard:
             self.current_level,
             self.load_level,
             self.stall_since,
+            self.status_streak,
+            self.voltage_streak,
             self.temps,
         ):
             for key in [k for k in store if k[0] == arm]:

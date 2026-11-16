@@ -316,6 +316,7 @@ export class MockStation {
         ? {
             id: p.id,
             name: p.name,
+            mock: p.follower.type === "hibiscus_mock_follower",
             connected,
             follower_torque: this.torque,
             arms: {

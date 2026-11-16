@@ -218,6 +218,27 @@ def test_start_refused_when_busy_or_uncalibrated(station: Station) -> None:
     assert ei.value.code == "busy"
 
 
+def test_teleop_runs_without_cameras_record_needs_them(station: Station) -> None:
+    """A camera that does not open (common on Windows) must not block teleop: LeLab teleoperates
+    without cameras. Recording still needs every configured camera."""
+    from hibiscus_station.profiles import CameraProfile
+    from hibiscus_station.station import RecordRequest
+
+    profile = mock_profile(cameras=0)
+    profile.cameras["front"] = CameraProfile(type="opencv", index_or_path="/dev/hibiscus-no-such-camera")
+    connect_calibrated(station, profile)
+    assert not any(c["streaming"] for c in station.status()["cameras"])
+    get_world("mock://leader").follow(get_world("mock://follower"))
+    time.sleep(0.2)
+    station.start_teleop(TeleopRequest(fps=30))
+    wait_for(lambda: station.owner.state == "teleop", 3)
+    station.owner.call("control", action="stop")
+    wait_for(lambda: station.owner.state == "idle", 5)
+    with pytest.raises(StationError) as ei:
+        station.start_record(RecordRequest(dataset="d1", task="t", num_episodes=1))
+    assert ei.value.code == "camera_unavailable"
+
+
 def test_leader_far_is_refused(connected: Station) -> None:
     get_world("mock://leader").hand = lambda m, t: 2048.0 + 600.0  # ~53 degrees away
     time.sleep(0.2)

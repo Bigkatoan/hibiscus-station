@@ -163,6 +163,17 @@ def _probe_index(target: int | str) -> dict[str, Any] | None:
         cap.release()
 
 
+def quiet_opencv() -> None:
+    """Keep OpenCV's backend probing warnings (Windows dshow / MSMF listing) off the console;
+    Station reports a camera that does not open on its own."""
+    try:
+        import cv2
+
+        cv2.utils.logging.setLogLevel(cv2.utils.logging.LOG_LEVEL_ERROR)
+    except Exception:  # noqa: S110 - an OpenCV build without the logging module: keep its default
+        pass
+
+
 def find_opencv_cameras(
     skip: set[str] | frozenset[str] = frozenset(), *, platform: str = sys.platform
 ) -> list[dict[str, Any]]:
@@ -171,6 +182,7 @@ def find_opencv_cameras(
     until ``MAX_MISSES`` in a row fail."""
     import lerobot.cameras.opencv  # noqa: F401 - sets lerobot's MSMF environment before cv2 opens
 
+    quiet_opencv()
     found: list[dict[str, Any]] = []
     if platform == "linux":
         for dev in sorted(VIDEO_DIR.glob("video*"), key=lambda p: p.name):

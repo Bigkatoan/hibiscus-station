@@ -19,15 +19,34 @@ export function errorText(t: TFunction<"station">, error: unknown): string {
   return t("errors.unknown_error");
 }
 
-/** Localised Station error from its Problem `code` (never the server `detail`). */
+/** The server's own explanation (which motor, which port, which file), when it says more than the code. */
+export function errorDetail(error: unknown): string | null {
+  if (!(error instanceof StationApiError)) return null;
+  const problem = error.problem;
+  const raw: unknown = problem?.detail; // a hand-written Problem may lack it
+  const detail = typeof raw === "string" ? raw.trim() : "";
+  if (!detail || detail === problem?.title || detail === error.code) return null;
+  return detail;
+}
+
+/** Localised Station error from its Problem `code`, with the server `detail` underneath: the exact
+ * reason (motor id, register, port, calibration file) is what lets a user or a bug report act on it. */
 export function StationError({ error, className }: { error: unknown; className?: string }) {
   const { t } = useTranslation("station");
   if (!error) return null;
+  const detail = errorDetail(error);
   return (
     <Alert variant="destructive" className={className}>
       <div className="flex gap-2">
         <PxIcon name="warning" className="mt-0.5 shrink-0" />
-        <AlertTitle>{errorText(t, error)}</AlertTitle>
+        <div className="min-w-0">
+          <AlertTitle>{errorText(t, error)}</AlertTitle>
+          {detail ? (
+            <p className="mt-1 break-words font-mono text-xs" data-testid="error-detail">
+              {detail}
+            </p>
+          ) : null}
+        </div>
       </div>
     </Alert>
   );

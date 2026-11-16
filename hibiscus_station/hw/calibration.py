@@ -131,3 +131,25 @@ def apply_existing(device: Any) -> bool:
     device.bus.disable_torque()
     device.bus.write_calibration(device.calibration)
     return True
+
+
+def mismatch(device: Any) -> str:
+    """Which motors read back other values than the calibration file (for error messages)."""
+    try:
+        actual = device.bus.read_calibration()
+    except Exception as exc:
+        return f"cannot read the motors back: {exc}"
+    out = []
+    for m, want in (device.calibration or {}).items():
+        got = actual.get(m)
+        if got is None:
+            out.append(f"{m}: missing")
+            continue
+        fields = [
+            f"{name} {getattr(got, name)} != {getattr(want, name)}"
+            for name in ("homing_offset", "range_min", "range_max")
+            if getattr(got, name) != getattr(want, name)
+        ]
+        if fields:
+            out.append(f"{m} (id {want.id}): " + ", ".join(fields))
+    return "; ".join(out) or "no difference found"

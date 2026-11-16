@@ -24,7 +24,7 @@ from hibiscus_station.data.sessions import SessionLog
 from hibiscus_station.errors import StationError
 from hibiscus_station.hw import calibration as calib
 from hibiscus_station.hw.cameras import CameraHub, FrameSet
-from hibiscus_station.hw.factory import build_follower, build_leader
+from hibiscus_station.hw.factory import build_follower, build_leader, calibration_files
 from hibiscus_station.hw.locks import DeviceBusyError, DeviceLock
 from hibiscus_station.hw.loop import Deadline, LoopStats
 from hibiscus_station.hw.safety import EStop, SafetyFilter, Watchdog
@@ -42,6 +42,18 @@ from hibiscus_station.settings import Settings, StationPaths, Thresholds, thresh
 
 log = logging.getLogger(__name__)
 
+
+def _lerobot_version() -> str:
+    from importlib.metadata import PackageNotFoundError, version
+
+    try:
+        return version("lerobot")
+    except PackageNotFoundError:  # pragma: no cover
+        return "unknown"
+
+
+LEROBOT_VERSION = _lerobot_version()
+
 MOTION_STATES = {
     "teleop": "teleop",
     "record": "recording",
@@ -52,6 +64,9 @@ MOTION_STATES = {
     "traj_play": "playing",
     "program": "programming",
 }
+#: Sessions that record or feed camera frames to a model need every configured camera; teleop,
+#: replay and trajectories do not (LeLab teleoperates without cameras too).
+CAMERA_SESSIONS = frozenset({"record", "run", "program"})
 BUS_FAIL_LIMIT = 3
 MONITOR_HZ = 10.0
 CALIBRATION_HZ = 50.0
@@ -116,6 +131,7 @@ class HardwareOwner:
         self.leader: Any = None
         self.follower_calibrated = False
         self.leader_calibrated = False
+        self.cal_issue: dict[str, str] = {}  # arm -> why it is not calibrated (shown in the UI)
         self.follower_torque = False
         self.locks: list[DeviceLock] = []
         self.telemetry = TelemetryScheduler(settings.telemetry)
@@ -267,13 +283,14 @@ class HardwareOwner:
         robot = None
         if p is not None:
             arms: dict[str, Any] = {
-                "follower": {"port": p.follower.port, "calibrated": self.follower_calibrated}
+                "follower": self._arm_view("follower", p.follower.port, p.follower.calibration_id)
             }
             if p.leader is not None:
-                arms["leader"] = {"port": p.leader.port, "calibrated": self.leader_calibrated}
+                arms["leader"] = self._arm_view("leader", p.leader.port, p.leader.calibration_id)
             robot = {
                 "id": p.id,
                 "name": p.name,
+                "mock": p.is_mock,
                 "connected": self.follower is not None,
                 "follower_torque": self.follower_torque,
                 "arms": arms,
@@ -284,7 +301,7 @@ class HardwareOwner:
         except RuntimeError:  # pragma: no cover - dict changed during iteration
             cams = []
         out = {
-            "station": {"version": __version__, "lerobot": "0.7.1", "mock": self.mock},
+            "station": {"version": __version__, "lerobot": LEROBOT_VERSION, "mock": self.mock},
             "state": self.state,
             "sub": self.sub if sess is None else sess.episode.phase,
             "reason": self.reason,
@@ -300,6 +317,21 @@ class HardwareOwner:
         if self.status_hook is not None:  # the Station adds device, home, server (same on REST and WS)
             self.status_hook(out)
         return out
+
+    def _arm_view(self, arm: str, port: str, calibration_id: str) -> dict[str, Any]:
+        dev = self.follower if arm == "follower" else self.leader
+        calibrated = self.follower_calibrated if arm == "follower" else self.leader_calibrated
+        bus: Any = getattr(dev, "bus", None)
+        summary = bus.error_summary() if hasattr(bus, "error_summary") else None
+        return {
+            "port": port,
+            "calibrated": calibrated,
+            "calibration_id": calibration_id,
+            "calibration_file": str(dev.calibration_fpath) if dev is not None else None,
+            "issue": None if calibrated or dev is None else self.cal_issue.get(arm),
+            "bus_errors": summary["errors"] if summary else 0,
+            "last_bus_error": summary["last_error"] if summary else None,
+        }
 
     # ================================================================== thread body
     def _run(self) -> None:
@@ -334,7 +366,18 @@ class HardwareOwner:
         handler = getattr(self, f"_cmd_{name}", None)
         if handler is None:
             raise StationError("internal_error", f"unknown command {name}")
-        return handler(**kwargs)
+        try:
+            return handler(**kwargs)
+        except StationError:
+            raise
+        except (ConnectionError, RuntimeError, OSError) as exc:
+            # A motor that did not answer: say which one and what, never a bare "internal error".
+            log.warning("%s failed on the motor bus: %s", name, exc)
+            raise StationError(
+                "bus_error",
+                f"{name.replace('_', ' ')}: {exc}",
+                params={"command": name, "error": str(exc)[:500]},
+            ) from exc
 
     def _wait_until(self, deadline: float) -> None:
         """Sleep until ``deadline`` (perf_counter) while serving commands; wakes early on e-stop."""
@@ -833,6 +876,7 @@ class HardwareOwner:
         self.follower = None
         self.leader = None
         self.follower_calibrated = self.leader_calibrated = False
+        self.cal_issue = {}
         self.follower_torque = False
         for arm in list(self.telemetry.arms):
             self.telemetry.remove_arm(arm)
@@ -865,6 +909,14 @@ class HardwareOwner:
         p = self.profiles.get(robot_id)
         if p is None:
             raise StationError("not_found", f"no robot profile {robot_id!r}")
+        if p.is_mock and not self.mock:
+            raise StationError(
+                "demo_profile",
+                f"{p.name or p.id!r} is a demo profile with SIMULATED arms ({p.follower.port}); the real arm "
+                "would not move. Create a profile for the real arm (Robot > New robot, pick its serial "
+                "port), or start Station with --mock to try the demo",
+                params={"robot": p.id},
+            )
         self.profile = p
         self.estop.clear()
         self._set_state("connecting")
@@ -875,9 +927,14 @@ class HardwareOwner:
             self._set_state("disconnected")
             raise
         except Exception as exc:
+            log.exception("connect failed")
             self._close_devices()
             self._set_state("disconnected")
-            raise StationError("not_connected", f"connect failed: {exc}") from exc
+            raise StationError(
+                "bus_error",
+                f"connect failed: {type(exc).__name__}: {exc}",
+                params={"step": "connect", "error": str(exc)[:500]},
+            ) from exc
         self.profiles.set_active(p.id)
         self._set_state("idle")
         return self.status()
@@ -896,38 +953,80 @@ class HardwareOwner:
             ) from exc
         self.locks.append(lk)
 
-    def _open_device(self, dev: Any, port: str) -> None:
+    def _open_device(self, dev: Any, port: str, arm: str) -> None:
+        """``dev.connect(calibrate=False)`` in three steps, each with its own error (spec §5.1).
+
+        1. open the port (busy / missing / no permission), 2. check the motors answer with the
+        right model and firmware (power, cable, ids), 3. write lerobot's settings (``configure``).
+        """
+        bus = dev.bus
         try:
-            dev.connect(calibrate=False)
+            bus.connect(handshake=False)
         except (ConnectionError, OSError) as exc:
+            cause = str(exc.__cause__ or exc).strip()
             raise StationError(
                 "port_busy",
-                f"cannot open {port}: {exc}. Another program (LeLab? lerobot?) may be using this port",
-                params={"port": port, "holder": None},
+                f"cannot open {port} ({arm}): {cause}. Close LeLab / lerobot or any other program using "
+                "this port, and check the cable",
+                params={"port": port, "holder": None, "arm": arm, "error": cause[:300]},
             ) from exc
+        try:
+            bus._handshake()  # lerobot's own check: every id answers with model 777, one firmware
+        except (ConnectionError, RuntimeError, OSError) as exc:
+            bus.disconnect(disable_torque=False)
+            raise StationError(
+                "bus_error",
+                f"{arm} on {port}: the motors did not pass lerobot's check (is the arm powered? are "
+                f"the motor ids 1-6 set up?): {exc}",
+                params={"arm": arm, "port": port, "step": "handshake", "error": str(exc)[:500]},
+            ) from exc
+        try:
+            dev.configure()
+        except (ConnectionError, RuntimeError, OSError) as exc:
+            bus.disconnect(disable_torque=False)
+            raise StationError(
+                "bus_error",
+                f"{arm} on {port}: writing the motor settings failed: {exc}",
+                params={"arm": arm, "port": port, "step": "configure", "error": str(exc)[:500]},
+            ) from exc
+
+    def _check_calibration(self, arm: str, dev: Any) -> bool:
+        """Is ``dev`` calibrated? Writes the calibration file to the motors when they differ
+        (``keep_existing``); records why not in :attr:`cal_issue`."""
+        path = dev.calibration_fpath
+        self.cal_issue.pop(arm, None)
+        if not dev.calibration:
+            others = sorted(f["id"] for f in calibration_files(self.cal_root) if f["arm"] == arm)
+            hint = f"; calibration files found for this arm: {', '.join(others)}" if others else ""
+            self.cal_issue[arm] = f"no calibration file {path}{hint}"
+            return False
+        if dev.bus.is_calibrated:
+            return True
+        calib.apply_existing(dev)
+        dev.configure()
+        if dev.bus.is_calibrated:
+            return True
+        diff = calib.mismatch(dev)
+        self.cal_issue[arm] = (
+            f"the motors do not keep the calibration of {path} after it was written to them ({diff})"
+        )
+        log.warning("%s: %s", arm, self.cal_issue[arm])
+        return False
 
     def _connect(self, p: RobotProfile) -> None:
         self._lock_port(p.follower.port)
         if p.leader is not None:
             self._lock_port(p.leader.port)
         follower = build_follower(p.follower, self.cal_root)
-        self._open_device(follower, p.follower.port)
+        self._open_device(follower, p.follower.port, "follower")
         self.follower = follower
-        self.follower_calibrated = bool(follower.bus.is_calibrated)
-        if not self.follower_calibrated and follower.calibration:
-            calib.apply_existing(follower)
-            follower.configure()
-            self.follower_calibrated = bool(follower.bus.is_calibrated)
+        self.follower_calibrated = self._check_calibration("follower", follower)
         self.follower_torque = True
         if p.leader is not None:
             leader = build_leader(p.leader, self.cal_root)
-            self._open_device(leader, p.leader.port)
+            self._open_device(leader, p.leader.port, "leader")
             self.leader = leader
-            self.leader_calibrated = bool(leader.bus.is_calibrated)
-            if not self.leader_calibrated and leader.calibration:
-                calib.apply_existing(leader)
-                leader.configure()
-                self.leader_calibrated = bool(leader.bus.is_calibrated)
+            self.leader_calibrated = self._check_calibration("leader", leader)
         self._setup_safety()
         self.telemetry = TelemetryScheduler(self.settings.telemetry)
         self.guard = ThermalGuard(self._effective_thresholds(None))
@@ -1041,21 +1140,46 @@ class HardwareOwner:
             raise StationError("not_connected", f"no {arm} connected", params={"arm": arm})
         return dev
 
-    def _cmd_calibration_start(self, arm: str, keep_existing: bool = False) -> dict[str, Any]:
+    def _cmd_calibration_start(
+        self, arm: str, keep_existing: bool = False, source: str | None = None
+    ) -> dict[str, Any]:
         self._require("idle")
         dev = self._device(arm)
+        if source is not None:
+            self._adopt_calibration(arm, dev, source)
+            keep_existing = True
         if keep_existing:
             if not dev.calibration:
-                raise StationError("not_found", f"no calibration file for {arm}")
+                raise StationError(
+                    "not_found",
+                    f"no calibration file {dev.calibration_fpath} for the {arm}",
+                    params={"arm": arm, "path": str(dev.calibration_fpath)},
+                )
             calib.apply_existing(dev)
             dev.configure()
             self._after_calibration(arm, dev)
+            if self.cal_issue.get(arm):
+                raise StationError(
+                    "not_calibrated", self.cal_issue[arm], params={"arm": arm, "issue": self.cal_issue[arm]}
+                )
             return self.status()
         proc = calib.CalibrationProcess(arm, dev)
         if self.mock and hasattr(dev, "world"):
             dev.world.auto_sweep = True  # the demo "hand" moves the limp arm...
             dev.world.sweep_hold_mid = True  # ...after holding it mid-range for Home
-        proc.start()
+        try:
+            proc.start()
+        except (ConnectionError, RuntimeError, OSError) as exc:
+            # Some motors may already be limp: put the arm back as lerobot leaves it after connect.
+            try:
+                dev.configure()
+            except Exception as again:  # pragma: no cover - the bus is gone; the error says why
+                log.warning("%s: configure after a failed calibration start: %s", arm, again)
+            raise StationError(
+                "bus_error",
+                f"cannot start the {arm} calibration: {exc}",
+                params={"arm": arm, "step": "calibration_start", "error": str(exc)[:500]},
+            ) from exc
         if arm == "follower":
             self.follower_torque = False
             self.follower_calibrated = False
@@ -1066,6 +1190,37 @@ class HardwareOwner:
         self.emit("calibration", proc.view())
         return self.status()
 
+    def _adopt_calibration(self, arm: str, dev: Any, source: str) -> None:
+        """Copy a listed calibration file (LeLab's, another id, a legacy lerobot folder) to this arm's
+        own file; an existing file of that id is kept as ``<id>.json.bak-<time>``."""
+        import shutil
+
+        listed = {f["path"]: f for f in calibration_files(self.cal_root) if f["arm"] == arm}
+        if source not in listed:
+            raise StationError(
+                "not_found",
+                f"{source} is not a {arm} calibration file under {self.cal_root}",
+                params={"arm": arm, "path": source},
+            )
+        target = Path(dev.calibration_fpath)
+        src = Path(source)
+        if src.resolve() != target.resolve():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if target.exists():
+                backup = target.with_name(f"{target.name}.bak-{time.strftime('%Y%m%d-%H%M%S')}")
+                shutil.copy2(target, backup)
+                log.info("%s: kept the previous calibration as %s", arm, backup)
+            shutil.copy2(src, target)
+            log.info("%s: calibration %s copied to %s", arm, src, target)
+        try:
+            dev._load_calibration()
+        except Exception as exc:
+            raise StationError(
+                "validation_failed",
+                f"{source} is not a lerobot calibration file: {exc}",
+                params={"arm": arm, "path": source},
+            ) from exc
+
     def _after_calibration(self, arm: str, dev: Any) -> None:
         if hasattr(dev, "world"):
             dev.world.sweep_hold_mid = False
@@ -1073,7 +1228,7 @@ class HardwareOwner:
                 dev.world.auto_sweep = False
                 if self.mock and dev.world.hand is None:
                     dev.world.place_all(2048.0)  # the demo hand lets go of the follower mid-range
-        ok = bool(dev.bus.is_calibrated)
+        ok = self._check_calibration(arm, dev)
         if arm == "follower":
             self.follower_calibrated = ok
             self.follower_torque = True
@@ -1137,7 +1292,7 @@ class HardwareOwner:
                 )
             if not self.leader_calibrated:
                 raise StationError("not_calibrated", "calibrate the leader first", params={"arm": "leader"})
-        if self.profile is not None:
+        if self.profile is not None and kind in CAMERA_SESSIONS:
             cams = {c["name"]: c for c in self.hub.status()}
             missing = [n for n in self.profile.cameras if n not in cams or not cams[n]["streaming"]]
             if missing:

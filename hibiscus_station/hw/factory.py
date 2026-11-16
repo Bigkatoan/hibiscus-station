@@ -42,7 +42,7 @@ def build_follower(p: FollowerProfile, cal_root: Path) -> Any:
         )
     from lerobot.robots.so_follower import SOFollower, SOFollowerRobotConfig
 
-    return SOFollower(
+    robot = SOFollower(
         SOFollowerRobotConfig(
             port=p.port,
             id=p.calibration_id,
@@ -53,6 +53,16 @@ def build_follower(p: FollowerProfile, cal_root: Path) -> Any:
             use_degrees=True,
         )
     )
+    robot.bus = _station_bus(robot, "follower")
+    return robot
+
+
+def _station_bus(device: Any, arm: str) -> Any:
+    """The device's lerobot bus, rebuilt as a :class:`StationMotorsBus` (same motors and calibration)."""
+    from hibiscus_station.hw.bus import StationMotorsBus
+
+    old = device.bus
+    return StationMotorsBus(old.port, dict(old.motors), device.calibration, arm=arm)
 
 
 def build_leader(p: LeaderProfile, cal_root: Path) -> Any:
@@ -63,9 +73,17 @@ def build_leader(p: LeaderProfile, cal_root: Path) -> Any:
         return MockLeader(MockLeaderConfig(port=p.port, id=p.calibration_id, calibration_dir=cal_dir))
     from lerobot.teleoperators.so_leader import SOLeader, SOLeaderTeleopConfig
 
-    return SOLeader(
+    teleop = SOLeader(
         SOLeaderTeleopConfig(port=p.port, id=p.calibration_id, calibration_dir=cal_dir, use_degrees=True)
     )
+    teleop.bus = _station_bus(teleop, "leader")
+    return teleop
+
+
+#: lerobot folder names: the current ones first, then the per-model folders of lerobot < 0.4
+#: (``so101_follower``...), where an older LeLab or lerobot install left its files.
+FOLLOWER_DIRS = (FOLLOWER_NAME, "so101_follower", "so100_follower")
+LEADER_DIRS = (LEADER_NAME, "so101_leader", "so100_leader")
 
 
 def calibration_files(cal_root: Path) -> list[dict[str, Any]]:
@@ -73,20 +91,23 @@ def calibration_files(cal_root: Path) -> list[dict[str, Any]]:
     import datetime as dt
 
     out: list[dict[str, Any]] = []
-    for arm, d in (
-        ("follower", follower_calibration_dir(cal_root)),
-        ("leader", leader_calibration_dir(cal_root)),
-    ):
-        if not d.is_dir():
-            continue
-        for f in sorted(d.glob("*.json")):
-            st = f.stat()
-            out.append(
-                {
-                    "arm": arm,
-                    "id": f.stem,
-                    "path": str(f),
-                    "modified_at": dt.datetime.fromtimestamp(st.st_mtime, dt.UTC).isoformat(),
-                }
-            )
+    for arm, top, names in (("follower", ROBOTS_DIR, FOLLOWER_DIRS), ("leader", TELEOPS_DIR, LEADER_DIRS)):
+        for name in names:
+            d = cal_root / top / name
+            if not d.is_dir():
+                continue
+            for f in sorted(d.glob("*.json")):
+                try:
+                    st = f.stat()
+                except OSError:  # pragma: no cover
+                    continue
+                out.append(
+                    {
+                        "arm": arm,
+                        "id": f.stem,
+                        "path": str(f),
+                        "modified_at": dt.datetime.fromtimestamp(st.st_mtime, dt.UTC).isoformat(),
+                        "dir": name,
+                    }
+                )
     return out

@@ -93,8 +93,9 @@ Without Docker (Python 3.12 via [uv](https://docs.astral.sh/uv/)):
 ```bash
 uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.1/hibiscus_station-0.2.1-py3-none-any.whl
 # no NVIDIA GPU (Pi 5, most mini PCs): add --torch-backend cpu
-hibiscus-station --mock          # demo without hardware
+hibiscus-station --mock          # demo without hardware (simulated arms, data in ~/.hibiscus/station-demo)
 hibiscus-station                 # with the arms plugged in
+hibiscus-station doctor          # something wrong? writes a report zip to send us
 ```
 
 A systemd user unit for this install is in [deploy/systemd/](deploy/systemd/hibiscus-station.service).
@@ -107,8 +108,9 @@ In PowerShell (x64, no admin rights needed):
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"   # uv, once
 uv tool install --python 3.12 https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.1/hibiscus_station-0.2.1-py3-none-any.whl
 # no NVIDIA GPU: add --torch-backend cpu
-hibiscus-station --mock          # demo without hardware
+hibiscus-station --mock          # demo without hardware (simulated arms, data in ~/.hibiscus/station-demo)
 hibiscus-station                 # with the arms plugged in; the browser opens by itself
+hibiscus-station doctor          # something wrong? writes a report zip to send us
 ```
 
 * **Close LeLab (and any lerobot script) first.** On Windows a COM port and a camera have one owner:

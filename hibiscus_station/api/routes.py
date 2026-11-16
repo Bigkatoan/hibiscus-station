@@ -55,6 +55,11 @@ class CalibrationStart(BaseModel):
     arm: Literal["follower", "leader"]
     id: str | None = None
     keep_existing: bool = False
+    source: str | None = Field(
+        None,
+        description="path of a calibration file listed by GET /calibrations (e.g. one LeLab wrote under "
+        "another id): copied to this arm's calibration id, then written to the motors",
+    )
 
 
 class CalibrationStep(BaseModel):
@@ -198,7 +203,13 @@ def build_router() -> APIRouter:
     @r.post("/calibration/start", tags=["calibration"])
     def calibration_start(request: Request, body: CalibrationStart) -> wire.Status:
         st = station(request)
-        st.owner.call("calibration_start", arm=body.arm, keep_existing=body.keep_existing, timeout=15.0)
+        st.owner.call(
+            "calibration_start",
+            arm=body.arm,
+            keep_existing=body.keep_existing,
+            source=body.source,
+            timeout=15.0,
+        )
         return _out(wire.Status, st.status())
 
     @r.post("/calibration/step", tags=["calibration"])

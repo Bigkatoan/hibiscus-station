@@ -43,7 +43,9 @@ Có hai cách, chi tiết trong [hướng dẫn triển khai](../../deploy.md):
 Station chạy ở `http://127.0.0.1:18210` và tự mở trình duyệt. Nó chỉ nhận kết nối từ chính máy đó.
 Nếu trình duyệt không mở, chạy `hibiscus-station url` (Docker: `hibiscus-station-ctl url`) và mở
 đường link được in ra. Từ máy khác, dùng SSH tunnel (`ssh -L 18210:127.0.0.1:18210 user@may-robot`)
-hoặc bật chế độ LAN như hướng dẫn triển khai. Muốn thử khi chưa có robot: `hibiscus-station --mock`.
+hoặc bật chế độ LAN như hướng dẫn triển khai. Muốn thử khi chưa có robot: `hibiscus-station --mock` (tay giả lập, có nhãn **TAY GIẢ LẬP**; hồ sơ và
+dữ liệu nằm ở `~/.hibiscus/station-demo`). Nếu tay thật không chuyển động, tắt Station rồi chạy
+`hibiscus-station doctor` và gửi file zip nó tạo ra.
 
 Hãy tắt LeLab và mọi lệnh `lerobot-*` trước: mỗi cổng serial chỉ một chương trình dùng được.
 

@@ -195,6 +195,30 @@ describe("Calibrate (§6.3)", () => {
     expect(await screen.findByTestId("cal-done")).toHaveTextContent("so_follower/desk_follower.json");
     expect(screen.getByRole("link", { name: "Next: Cameras" })).toHaveAttribute("href", "/cameras");
   });
+
+  it("offers calibration files written under another name (LeLab) and uses one", async () => {
+    const h = setupStation();
+    h.sim.calibrated.follower = false;
+    let sent: unknown = null;
+    server.use(
+      http.post(`${stationBase()}/calibration/start`, async ({ request }) => {
+        sent = await request.json();
+        h.sim.calibrated.follower = true;
+        return HttpResponse.json(h.sim.status());
+      }),
+    );
+    const user = userEvent.setup();
+    renderStation("/calibrate", h);
+    await settle();
+    const others = await screen.findByTestId("cal-others-follower");
+    expect(others).toHaveTextContent("my_follower");
+    expect(others).toHaveTextContent("so101_follower");
+    await user.click(within(others).getByRole("button", { name: "Use this file" }));
+    await waitFor(() => {
+      expect(sent).toMatchObject({ arm: "follower" });
+      expect((sent as { source?: string } | null)?.source).toContain("so101_follower/my_follower.json");
+    });
+  });
 });
 
 describe("Upload (§6.7)", () => {
@@ -269,6 +293,47 @@ describe("Shell and robot screen", () => {
     expect(
       await screen.findByText("Another program (LeLab? lerobot?) is using /dev/ttyACM0."),
     ).toBeInTheDocument();
+  });
+
+  it("warns loudly when the demo (simulated) arm is in use while a real arm is plugged in", async () => {
+    const h = setupStation();
+    const demo = h.sim.profiles[0]!;
+    demo.follower.type = "hibiscus_mock_follower";
+    demo.follower.port = "mock://follower";
+    const user = userEvent.setup();
+    renderStation("/robot", h);
+    await settle();
+    expect(await screen.findByTestId("demo-chip")).toHaveTextContent("DEMO");
+    const banner = await screen.findByTestId("demo-banner");
+    expect(banner).toHaveTextContent("SIMULATED demo arm");
+    await user.click(within(banner).getByRole("button", { name: "Create a profile for the real arm" }));
+    expect(await screen.findByRole("heading", { name: "New robot" })).toBeInTheDocument();
+    expect(screen.getByTestId("cal-id-follower")).toBeInTheDocument();
+  });
+
+  it("shows the server's exact reason under the friendly message", async () => {
+    const h = setupStation({ connected: false });
+    const detail =
+      "follower on COM3: the motors did not pass lerobot's check: Missing motor IDs: - 4 (expected model: 777)";
+    server.use(
+      http.post(`${stationBase()}/robots/:id/connect`, () =>
+        HttpResponse.json(
+          {
+            title: "A motor did not answer on the serial bus",
+            status: 502,
+            code: "bus_error",
+            detail,
+            params: {},
+          },
+          { status: 502, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+    );
+    renderStation("/robot", h);
+    await settle();
+    await userEvent.click(await screen.findByRole("button", { name: "Connect" }));
+    expect(await screen.findByText(/A motor did not answer\. Check the arm/)).toBeInTheDocument();
+    expect(await screen.findByTestId("error-detail")).toHaveTextContent(detail);
   });
 
   it("switches to Vietnamese", async () => {

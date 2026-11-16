@@ -376,9 +376,61 @@
       "ArmStatus": {
         "additionalProperties": false,
         "properties": {
+          "bus_errors": {
+            "default": 0,
+            "description": "failed bus calls since connect (retried ones included)",
+            "title": "Bus Errors",
+            "type": "integer"
+          },
           "calibrated": {
             "title": "Calibrated",
             "type": "boolean"
+          },
+          "calibration_file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "the file lerobot reads for this arm",
+            "title": "Calibration File"
+          },
+          "calibration_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calibration Id"
+          },
+          "issue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "why the arm is not calibrated, in plain words",
+            "title": "Issue"
+          },
+          "last_bus_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Bus Error"
           },
           "port": {
             "title": "Port",
@@ -815,6 +867,12 @@
             "title": "Arm",
             "type": "string"
           },
+          "dir": {
+            "default": "so_follower",
+            "description": "lerobot's folder: so_follower, so_leader or a legacy so101_*",
+            "title": "Dir",
+            "type": "string"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -992,6 +1050,18 @@
             "default": false,
             "title": "Keep Existing",
             "type": "boolean"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "path of a calibration file listed by GET /calibrations (e.g. one LeLab wrote under another id): copied to this arm's calibration id, then written to the motors",
+            "title": "Source"
           }
         },
         "required": [
@@ -8800,6 +8870,12 @@
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "mock": {
+            "default": false,
+            "description": "the profile drives SIMULATED arms (demo), not real ones",
+            "title": "Mock",
+            "type": "boolean"
           },
           "name": {
             "title": "Name",

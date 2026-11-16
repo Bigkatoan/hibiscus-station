@@ -61,6 +61,8 @@ STATUS_BITS: Final[dict[int, str]] = {
 }
 STATUS_CRITICAL: Final = frozenset({"overheat", "overload"})
 STATUS_ELECTRICAL: Final = frozenset({"overcurrent"})
+#: Motors whose overload bit is part of normal use (grasping), never a safe stop on its own.
+GRASP_MOTORS: Final = frozenset({"gripper"})
 
 DEFAULT_MAX_TEMPERATURE_C: Final = 70.0
 

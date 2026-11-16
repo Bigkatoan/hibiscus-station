@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input, NativeSelect } from "@/components/ui/input";
 import { api } from "../api/client";
-import { qk, usePorts, useRobots, useStationMutation } from "../api/hooks";
+import { qk, useCalibrations, usePorts, useRobots, useStationMutation } from "../api/hooks";
 import type { Port, RobotProfile, Status } from "../api/types";
 import { JointPanel } from "../components/JointPanel";
 import { MotorHealthPanel } from "../components/MotorHealthPanel";
@@ -218,6 +218,59 @@ function PortPicker({
   );
 }
 
+const isMockProfile = (r: RobotProfile): boolean => r.follower.type === "hibiscus_mock_follower";
+
+/** A new SO-101 profile with the detected USB serial ports filled in (follower first, leader second). */
+export function realArmDraft(ports: readonly Port[]): RobotProfile {
+  const usb = ports.filter((p) => p.vid_pid !== null && p.in_use_by === null);
+  const draft = emptyProfile();
+  draft.name = "SO-101";
+  draft.follower.port = usb[0] ? (usb[0].stable_path ?? usb[0].device) : "";
+  if (usb[1])
+    draft.leader = { type: "so101_leader", port: usb[1].stable_path ?? usb[1].device, calibration_id: "" };
+  return draft;
+}
+
+function CalibrationIdField({
+  label,
+  arm,
+  value,
+  fallback,
+  onChange,
+}: {
+  label: string;
+  arm: "follower" | "leader";
+  value: string;
+  fallback: string;
+  onChange: (v: string) => void;
+}) {
+  const { t } = useTranslation("station");
+  const files = useCalibrations();
+  const own = arm === "follower" ? "so_follower" : "so_leader";
+  const ids = (files.data?.files ?? [])
+    .filter((f) => f.arm === arm && (f.dir ?? own) === own)
+    .map((f) => f.id);
+  return (
+    <Field label={label}>
+      <NativeSelect
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+        }}
+        data-testid={`cal-id-${arm}`}
+      >
+        <option value="">{t("robot.cal_new", { id: fallback })}</option>
+        {value && !ids.includes(value) ? <option value={value}>{value}</option> : null}
+        {ids.map((id) => (
+          <option key={id} value={id}>
+            {t("robot.cal_existing", { id })}
+          </option>
+        ))}
+      </NativeSelect>
+    </Field>
+  );
+}
+
 function emptyProfile(): RobotProfile {
   return {
     id: "",
@@ -244,7 +297,8 @@ function ProfileForm({ initial, onDone }: { initial: RobotProfile | null; onDone
   const { t } = useTranslation("station");
   const [p, setP] = useState<RobotProfile>(initial ?? emptyProfile());
   const [leaderPort, setLeaderPort] = useState(initial?.leader?.port ?? "");
-  const isNew = initial === null;
+  const [leaderCal, setLeaderCal] = useState(initial?.leader?.calibration_id ?? "");
+  const isNew = initial === null || initial.id === "";
   const save = useStationMutation(
     (prof: RobotProfile) => api.put<RobotProfile>(`/robots/${encodeURIComponent(prof.id)}`, prof),
     [qk.robots],
@@ -264,7 +318,7 @@ function ProfileForm({ initial, onDone }: { initial: RobotProfile | null; onDone
             ? {
                 type: kind === "so100" ? "so100_leader" : "so101_leader",
                 port: leaderPort,
-                calibration_id: p.leader?.calibration_id ?? `${id}_leader`,
+                calibration_id: leaderCal || `${id}_leader`,
               }
             : null,
         };
@@ -305,6 +359,24 @@ function ProfileForm({ initial, onDone }: { initial: RobotProfile | null; onDone
         }}
       />
       <PortPicker label={t("robot.leader_port")} value={leaderPort} onChange={setLeaderPort} optional />
+      <CalibrationIdField
+        label={t("robot.cal_follower")}
+        arm="follower"
+        value={p.follower.calibration_id}
+        fallback={`${isNew ? slugify(p.name) : p.id}_follower`}
+        onChange={(v) => {
+          setP({ ...p, follower: { ...p.follower, calibration_id: v } });
+        }}
+      />
+      {leaderPort ? (
+        <CalibrationIdField
+          label={t("robot.cal_leader")}
+          arm="leader"
+          value={leaderCal}
+          fallback={`${isNew ? slugify(p.name) : p.id}_leader`}
+          onChange={setLeaderCal}
+        />
+      ) : null}
       <Field label={t("robot.on_end")}>
         <NativeSelect
           value={p.follower.on_session_end}
@@ -413,6 +485,11 @@ export function RobotPage() {
   );
   const disconnect = useStationMutation(() => api.post<Status>("/robots/disconnect", {}));
   const list = robots.data?.robots ?? [];
+  const ports = usePorts();
+  const realPorts = (ports.data?.ports ?? []).filter((p) => p.vid_pid !== null);
+  const demoMode = Boolean(status?.station.mock);
+  const usingDemo =
+    Boolean(status?.robot?.mock) || (!demoMode && list.length > 0 && list.every(isMockProfile));
   const connectedId = status?.robot?.connected ? status.robot.id : null;
   const connected = list.find((r) => r.id === connectedId);
   const busy =
@@ -441,7 +518,9 @@ export function RobotPage() {
         <Card>
           <CardHeader>
             <CardTitle>
-              {editing === "new" ? t("robot.new") : t("robot.edit", { name: editing.name })}
+              {editing === "new" || editing.id === ""
+                ? t("robot.new")
+                : t("robot.edit", { name: editing.name })}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -453,6 +532,25 @@ export function RobotPage() {
             />
           </CardContent>
         </Card>
+      ) : null}
+      {usingDemo && realPorts.length > 0 && editing === null ? (
+        <div
+          role="alert"
+          data-testid="demo-banner"
+          className="flex flex-col gap-2 border-4 border-[#f08a24] bg-[#ffc531] px-3 py-2 text-sm text-[#3b2027] sm:flex-row sm:items-center"
+        >
+          <p className="min-w-0 flex-1 font-bold">
+            {t("demo.banner", { ports: realPorts.map((p) => p.device).join(", ") })}
+          </p>
+          <Button
+            size="sm"
+            onClick={() => {
+              setEditing(realArmDraft(ports.data?.ports ?? []));
+            }}
+          >
+            {t("demo.create_real")}
+          </Button>
+        </div>
       ) : null}
       {status?.state === "connecting" ? (
         <p role="status" className="border-2 border-frame bg-card p-2 text-sm">
@@ -472,6 +570,11 @@ export function RobotPage() {
                     <Badge variant="outline">
                       {r.follower.type.startsWith("so100") ? "SO-100" : "SO-101"}
                     </Badge>
+                    {isMockProfile(r) ? (
+                      <Badge variant="warning" data-testid={`demo-badge-${r.id}`}>
+                        {t("demo.chip")}
+                      </Badge>
+                    ) : null}
                     {isConn ? <Badge variant="success">{t("robot.connected")}</Badge> : null}
                   </div>
                   <p className="break-all text-xs text-muted-foreground">
@@ -494,7 +597,10 @@ export function RobotPage() {
                     ) : (
                       <Button
                         size="sm"
-                        disabled={connectedId !== null || connect.isPending}
+                        disabled={
+                          connectedId !== null || connect.isPending || (isMockProfile(r) && !demoMode)
+                        }
+                        title={isMockProfile(r) && !demoMode ? t("demo.connect_disabled") : undefined}
                         onClick={() => {
                           connect.mutate(r.id);
                         }}

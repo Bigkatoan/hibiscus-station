@@ -112,6 +112,24 @@ export function SafetyBanners() {
           </div>
         </div>
       ) : null}
+      {!critical && status && (status.state === "error" || (status.state === "estopped" && status.detail)) ? (
+        <div
+          role="alert"
+          data-testid="state-banner"
+          className="flex items-start gap-3 border-4 px-3 py-3"
+          style={levelCss(status.state === "error" ? "critical" : "hot")}
+        >
+          <PxIcon name="warning" className="mt-0.5 shrink-0" />
+          <div className="min-w-0">
+            <p className="font-extrabold">
+              {t(status.state === "error" ? "banner.error" : "banner.estopped", {
+                reason: t(`reasons.${status.reason ?? "internal"}`, { defaultValue: status.reason ?? "" }),
+              })}
+            </p>
+            {status.detail ? <p className="mt-1 break-words font-mono text-xs">{status.detail}</p> : null}
+          </div>
+        </div>
+      ) : null}
       {!critical && hot ? (
         <div
           role="alert"

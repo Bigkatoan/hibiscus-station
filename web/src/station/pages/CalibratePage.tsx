@@ -170,12 +170,21 @@ function ArmPanel({ arm, profile }: { arm: Arm; profile: RobotProfile }) {
   const cal = useStation(selCal);
   const files = useCalibrations();
   const calId = arm === "follower" ? profile.follower.calibration_id : (profile.leader?.calibration_id ?? "");
-  const existing = files.data?.files.find((f) => f.arm === arm && f.id === calId);
+  const ownDir = arm === "follower" ? "so_follower" : "so_leader";
+  const existing = files.data?.files.find(
+    (f) => f.arm === arm && f.id === calId && (f.dir ?? ownDir) === ownDir,
+  );
+  const others = (files.data?.files ?? []).filter((f) => f.arm === arm && f.path !== existing?.path);
   const start = useStationMutation(
     (keep: boolean) => api.post<Status>("/calibration/start", { arm, id: calId, keep_existing: keep }),
     [qk.calibrations],
   );
-  const calibrated = Boolean(status?.robot?.arms[arm]?.calibrated);
+  const adopt = useStationMutation(
+    (source: string) => api.post<Status>("/calibration/start", { arm, id: calId, source }),
+    [qk.calibrations],
+  );
+  const armStatus = status?.robot?.arms[arm];
+  const calibrated = Boolean(armStatus?.calibrated);
   const idle = status?.state === "idle";
   return (
     <div className="flex flex-col gap-4">
@@ -197,6 +206,38 @@ function ArmPanel({ arm, profile }: { arm: Arm; profile: RobotProfile }) {
       ) : (
         <p className="text-sm text-muted-foreground">{t("calibrate.no_file")}</p>
       )}
+      {!calibrated && armStatus?.issue ? (
+        <p className="text-sm" data-testid={`cal-issue-${arm}`}>
+          <span className="font-bold">{t("calibrate.issue")}</span>{" "}
+          <span className="break-words font-mono text-xs">{armStatus.issue}</span>
+        </p>
+      ) : null}
+      {status?.state !== "calibrating" && others.length > 0 ? (
+        <div className="flex flex-col gap-2 text-sm" data-testid={`cal-others-${arm}`}>
+          <p>{t("calibrate.other_files")}</p>
+          <ul className="flex flex-col gap-1">
+            {others.map((f) => (
+              <li key={f.path} className="flex flex-wrap items-center gap-2">
+                <span className="font-mono">{f.id}</span>
+                <span className="text-xs text-muted-foreground">
+                  {f.dir} · {formatDateTime(f.modified_at, i18n.language)}
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!idle || adopt.isPending}
+                  onClick={() => {
+                    adopt.mutate(f.path);
+                  }}
+                >
+                  {t("calibrate.use_file")}
+                </Button>
+              </li>
+            ))}
+          </ul>
+          <StationError error={adopt.error} />
+        </div>
+      ) : null}
       {status?.state !== "calibrating" ? (
         <div className="flex flex-wrap gap-2">
           {existing ? (

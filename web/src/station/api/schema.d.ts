@@ -1413,8 +1413,28 @@ export interface components {
     };
     /** ArmStatus */
     ArmStatus: {
+      /**
+       * Bus Errors
+       * @description failed bus calls since connect (retried ones included)
+       * @default 0
+       */
+      bus_errors?: number;
       /** Calibrated */
       calibrated: boolean;
+      /**
+       * Calibration File
+       * @description the file lerobot reads for this arm
+       */
+      calibration_file?: string | null;
+      /** Calibration Id */
+      calibration_id?: string | null;
+      /**
+       * Issue
+       * @description why the arm is not calibrated, in plain words
+       */
+      issue?: string | null;
+      /** Last Bus Error */
+      last_bus_error?: string | null;
       /** Port */
       port: string;
     };
@@ -1614,6 +1634,12 @@ export interface components {
        * @enum {string}
        */
       arm: "follower" | "leader";
+      /**
+       * Dir
+       * @description lerobot's folder: so_follower, so_leader or a legacy so101_*
+       * @default so_follower
+       */
+      dir?: string;
       /** Id */
       id: string;
       /** Modified At */
@@ -1681,6 +1707,11 @@ export interface components {
        * @default false
        */
       keep_existing?: boolean;
+      /**
+       * Source
+       * @description path of a calibration file listed by GET /calibrations (e.g. one LeLab wrote under another id): copied to this arm's calibration id, then written to the motors
+       */
+      source?: string | null;
     };
     /** CalibrationStep */
     CalibrationStep: {
@@ -4790,6 +4821,12 @@ export interface components {
       follower_torque: boolean;
       /** Id */
       id: string;
+      /**
+       * Mock
+       * @description the profile drives SIMULATED arms (demo), not real ones
+       * @default false
+       */
+      mock?: boolean;
       /** Name */
       name: string;
     };

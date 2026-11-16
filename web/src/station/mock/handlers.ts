@@ -147,8 +147,8 @@ export function stationHandlers(sim: MockStation, base = `${window.location.orig
     http.post(
       u("/calibration/start"),
       guard(async ({ request }) => {
-        const b = await json<{ arm: Arm; keep_existing?: boolean }>(request);
-        return sim.calibrationStart(b.arm, Boolean(b.keep_existing));
+        const b = await json<{ arm: Arm; keep_existing?: boolean; source?: string }>(request);
+        return sim.calibrationStart(b.arm, Boolean(b.keep_existing) || Boolean(b.source));
       }),
     ),
     http.post(

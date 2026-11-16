@@ -92,12 +92,21 @@ export const calibrations: CalibrationFile[] = [
     id: "desk_follower",
     path: "~/.cache/huggingface/lerobot/calibration/robots/so_follower/desk_follower.json",
     modified_at: "2026-11-14T09:12:00Z",
+    dir: "so_follower",
   },
   {
     arm: "leader",
     id: "desk_leader",
     path: "~/.cache/huggingface/lerobot/calibration/teleoperators/so_leader/desk_leader.json",
     modified_at: "2026-11-14T09:20:00Z",
+    dir: "so_leader",
+  },
+  {
+    arm: "follower",
+    id: "my_follower",
+    path: "~/.cache/huggingface/lerobot/calibration/robots/so101_follower/my_follower.json",
+    modified_at: "2026-10-02T15:40:00Z",
+    dir: "so101_follower",
   },
 ];
 

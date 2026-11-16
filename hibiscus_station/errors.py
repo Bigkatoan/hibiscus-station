@@ -27,6 +27,8 @@ STATUS = {
     "not_paired": 409,
     "server_error": 502,
     "hardware_timeout": 504,
+    "bus_error": 502,
+    "demo_profile": 409,
     "internal_error": 500,
     # station-programs.md
     "not_implemented": 501,
@@ -57,6 +59,8 @@ TITLES = {
     "not_paired": "Not paired with a Hibiscus server",
     "server_error": "Hibiscus server error",
     "hardware_timeout": "Hardware did not answer in time",
+    "bus_error": "A motor did not answer on the serial bus",
+    "demo_profile": "This profile drives simulated arms",
     "internal_error": "Internal error",
     "not_implemented": "Not implemented yet",
     "program_invalid": "Program has errors",

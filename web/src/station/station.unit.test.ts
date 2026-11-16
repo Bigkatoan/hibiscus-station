@@ -17,6 +17,7 @@ import en from "./i18n/en.json";
 import vi_ from "./i18n/vi.json";
 import { MockStation } from "./mock/sim";
 import { wizardSteps } from "./StationShell";
+import { realArmDraft } from "./pages/RobotPage";
 import { ControlSocket, HEARTBEAT_MS, backoffMs } from "./ws/control";
 import { JOINT_WINDOW_S, StationStore, appendJoints } from "./ws/store";
 import { encodeFrame, parseFrame } from "./ws/video";
@@ -245,6 +246,24 @@ describe("mock station ThermalGuard", () => {
   });
 });
 
+describe("real arm draft (field report 0.2.1: demo profile left active)", () => {
+  it("fills the detected USB ports, follower first, skipping ports in use", () => {
+    const port = (device: string, inUse: string | null = null) => ({
+      device,
+      stable_path: null,
+      vid_pid: "1a86:55d3",
+      serial_number: null,
+      description: "USB Single Serial",
+      in_use_by: inUse,
+    });
+    const d = realArmDraft([port("COM3"), port("COM4"), port("COM5", "pid 7")]);
+    expect(d.follower.type).toBe("so101_follower");
+    expect(d.follower.port).toBe("COM3");
+    expect(d.leader?.port).toBe("COM4");
+    expect(realArmDraft([{ ...port("/dev/ttyS0"), vid_pid: null }]).follower.port).toBe("");
+  });
+});
+
 describe("wizard rail", () => {
   it("locks steps until their prerequisite is met", () => {
     const sim = new MockStation({ connected: false });
@@ -259,6 +278,44 @@ describe("wizard rail", () => {
     expect(steps.find((s) => s.key === "run")?.lock).toBeNull();
     expect(steps.find((s) => s.key === "upload")?.lock).toBeNull();
     expect(steps.find((s) => s.key === "train")?.lock).toBe("pair_first");
+  });
+
+  it("says why a step is locked: the Station's own reason (field report 0.2.1)", () => {
+    const sim = new MockStation({ connected: false });
+    sim.doConnect("desk_so101");
+    const st = sim.status();
+    const robot = st.robot!;
+    const issue =
+      "no calibration file /c/robots/so_follower/desk_follower.json; calibration files found: my_follower";
+    const status = {
+      ...st,
+      robot: {
+        ...robot,
+        arms: { ...robot.arms, follower: { ...robot.arms.follower, calibrated: false, issue } },
+      },
+    };
+    let steps = wizardSteps(status, { robots: 1, datasets: [], models: 1 });
+    expect(steps.find((s) => s.key === "teleop")?.lock).toBe("calibrate_first");
+    expect(steps.find((s) => s.key === "teleop")?.why).toBe(issue);
+    expect(steps.find((s) => s.key === "run")?.why).toBe(issue);
+    const err = {
+      ...st,
+      state: "error" as const,
+      robot: null,
+      reason: "bus_lost",
+      detail: "follower: motor ID 3 timed out",
+    };
+    steps = wizardSteps(err, { robots: 1, datasets: [], models: 0 });
+    expect(steps.find((s) => s.key === "calibrate")?.why).toBe("follower: motor ID 3 timed out");
+    const stopped = {
+      ...st,
+      state: "estopped" as const,
+      reason: "electrical",
+      detail: "follower elbow_flex 4.1 V",
+    };
+    steps = wizardSteps(stopped, { robots: 1, datasets: [], models: 1 });
+    expect(steps.find((s) => s.key === "teleop")?.lock).toBe("estopped");
+    expect(steps.find((s) => s.key === "teleop")?.why).toBe("follower elbow_flex 4.1 V");
   });
 });
 

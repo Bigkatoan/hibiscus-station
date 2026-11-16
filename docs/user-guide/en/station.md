@@ -45,7 +45,9 @@ Station starts on `http://127.0.0.1:18210` and opens your browser. It only accep
 the same computer. If the browser does not open, run `hibiscus-station url` (Docker:
 `hibiscus-station-ctl url`) and open the link it prints. From another computer use an SSH tunnel
 (`ssh -L 18210:127.0.0.1:18210 user@robot-pc`), or turn on LAN mode as the deploy guide explains.
-To try it without a robot: `hibiscus-station --mock`.
+To try it without a robot: `hibiscus-station --mock` (simulated arms, marked **DEMO**; its profiles and
+data stay in `~/.hibiscus/station-demo`). If the real arm does not move, run `hibiscus-station doctor`
+(with Station stopped) and send the zip it writes.
 
 Close LeLab and any `lerobot-*` command first: only one program can use a serial port.
 

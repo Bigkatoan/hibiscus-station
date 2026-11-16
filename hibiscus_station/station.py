@@ -10,6 +10,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from hibiscus_station import __version__
 from hibiscus_station.data import datasets as ds_catalog
 from hibiscus_station.data.sessions import prune
 from hibiscus_station.errors import StationError
@@ -112,8 +113,41 @@ class Station:
         )
         if mock and not self.profiles.list():
             self.profiles.put(demo_profile())
+        if not mock:
+            self._retire_demo_active()
+
+    def _retire_demo_active(self) -> None:
+        """A real run never picks a demo profile (field report 0.2.1: a profile left by an earlier
+        ``--mock`` run stayed active, and every command drove the simulated arm, not the real one).
+        The demo profile is kept (user data), only no longer the active one."""
+        active = self.profiles.get(self.profiles.active) if self.profiles.active else None
+        if active is not None and active.is_mock:
+            real = [p for p in self.profiles.list() if not p.is_mock]
+            self.profiles.set_active(real[0].id if real else None)
+            log.warning(
+                "profile %r is a demo profile (simulated arms): not active without --mock; active now: %s",
+                active.id,
+                real[0].id if real else "none (create a profile for the real arm on the Robot page)",
+            )
+
+    def describe(self) -> str:
+        """One line for the log and the doctor: mode, active profile, device types."""
+        active = self.profiles.get(self.profiles.active) if self.profiles.active else None
+        if active is None:
+            prof = "none"
+        else:
+            leader = active.leader.type if active.leader else "no leader"
+            kind = "SIMULATED arms" if active.is_mock else "real arms"
+            prof = f"{active.id} ({active.follower.type} on {active.follower.port}, {leader}; {kind})"
+        demo = [p.id for p in self.profiles.list() if p.is_mock]
+        return (
+            f"Hibiscus Station {__version__}: {'MOCK (demo)' if self.mock else 'real hardware'} mode, "
+            f"home {self.paths.home}, active profile {prof}"
+            + (f", demo profiles: {', '.join(demo)}" if demo and not self.mock else "")
+        )
 
     def start(self) -> None:
+        log.info("%s", self.describe())
         if not self.started:
             self.owner.start()
             self.encoder.start()

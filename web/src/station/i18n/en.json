@@ -35,7 +35,8 @@
     "calibrate_leader": "Calibrate the leader first.",
     "needs_leader": "Needs a leader arm.",
     "record_first": "Record a dataset first.",
-    "pair_first": "Pair with a Hibiscus server first."
+    "pair_first": "Pair with a Hibiscus server first.",
+    "estopped": "Reset the e-stop first."
   },
   "state": {
     "disconnected": "Disconnected",
@@ -63,7 +64,8 @@
     "completed": "completed",
     "estop_user": "e-stop",
     "estop_ui_lost": "e-stop (UI lost)",
-    "estop_thermal": "thermal stop"
+    "estop_thermal": "thermal stop",
+    "internal": "internal error"
   },
   "arm": {
     "follower": "Follower",
@@ -105,7 +107,9 @@
     "stopped_hold": "The arm is held in place.",
     "cooling_eta": "Cool enough to reset in about {{s}} s.",
     "hot": "{{motor}} is hot ({{value}} °C). New sessions cannot start until it cools down.",
-    "warm": "{{motor}} is getting warm ({{value}} °C)."
+    "warm": "{{motor}} is getting warm ({{value}} °C).",
+    "error": "Robot disconnected: {{reason}}. Check the USB cable and the arm's power supply, then connect again.",
+    "estopped": "Robot stopped: {{reason}}."
   },
   "alerts": {
     "motor": {
@@ -314,7 +318,11 @@
     "torque_on": "Torque on",
     "torque_off": "Relax (torque off)",
     "relax_confirm": "No rest pose saved: the arm will go limp where it is. Support it first. Continue?",
-    "health_desc": "Live temperatures and voltages of every motor."
+    "health_desc": "Live temperatures and voltages of every motor.",
+    "cal_follower": "Follower calibration",
+    "cal_leader": "Leader calibration",
+    "cal_new": "New calibration ({{id}})",
+    "cal_existing": "Use existing: {{id}}"
   },
   "calibrate": {
     "title": "Calibrate",
@@ -337,7 +345,10 @@
     "too_small": "range too small",
     "finish": "Finish and save",
     "done": "{{arm}} calibrated.",
-    "next": "Next: Cameras"
+    "next": "Next: Cameras",
+    "other_files": "Other calibration files for this arm (LeLab or lerobot wrote them under another name):",
+    "use_file": "Use this file",
+    "issue": "Why not calibrated:"
   },
   "cameras": {
     "title": "Cameras",
@@ -590,7 +601,9 @@
     "needs_check": "The calibration changed: replay this trajectory at low speed and confirm it first.",
     "dry_run_required": "Do a dry run of this version first.",
     "fast_replay_not_allowed": "Speeds above 100 % are not enabled for this robot.",
-    "detector_invalid": "This detector cannot be used (check its model and labels)."
+    "detector_invalid": "This detector cannot be used (check its model and labels).",
+    "bus_error": "A motor did not answer. Check the arm's power supply and cables, then try again.",
+    "demo_profile": "This profile drives SIMULATED arms: the real arm would not move. Create a profile for the real arm."
   },
   "programs": {
     "title": "Programs",
@@ -1014,5 +1027,12 @@
     "pause": "Pause preview",
     "scrub": "Preview position",
     "time": "{{t}} / {{total}} s"
+  },
+  "demo": {
+    "chip": "DEMO",
+    "chip_title": "Simulated arms: the real arm does not move",
+    "banner": "You are using the SIMULATED demo arm. Your real arm ({{ports}}) does not move. Create a profile for the real arm.",
+    "create_real": "Create a profile for the real arm",
+    "connect_disabled": "Demo profile: simulated arms. Start Station with --mock to use it."
   }
 }

@@ -39,7 +39,7 @@ class MockFollower(SOFollower):  # type: ignore[misc]
         world = get_world(config.port, read_latency_s=config.read_latency_s)
         self.world = world
         motors = dict(self.bus.motors)  # type: ignore[has-type]
-        self.bus = MockMotorsBus(config.port, motors, self.calibration, world=world)
+        self.bus = MockMotorsBus(config.port, motors, self.calibration, world=world, arm="follower")
 
 
 class MockLeader(SOLeader):  # type: ignore[misc]
@@ -51,7 +51,7 @@ class MockLeader(SOLeader):  # type: ignore[misc]
         world = get_world(config.port, read_latency_s=config.read_latency_s)
         self.world = world
         motors = dict(self.bus.motors)  # type: ignore[has-type]
-        self.bus = MockMotorsBus(config.port, motors, self.calibration, world=world)
+        self.bus = MockMotorsBus(config.port, motors, self.calibration, world=world, arm="leader")
 
 
 def make_mock_follower(port: str, robot_id: str, calibration_dir: Any, **kw: Any) -> MockFollower:

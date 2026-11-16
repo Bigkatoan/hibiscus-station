@@ -35,7 +35,8 @@
     "calibrate_leader": "Hãy hiệu chỉnh tay leader trước.",
     "needs_leader": "Cần có tay leader.",
     "record_first": "Hãy ghi một bộ dữ liệu trước.",
-    "pair_first": "Hãy ghép nối với máy chủ Hibiscus trước."
+    "pair_first": "Hãy ghép nối với máy chủ Hibiscus trước.",
+    "estopped": "Hãy reset nút dừng khẩn cấp trước."
   },
   "state": {
     "disconnected": "Chưa kết nối",
@@ -63,7 +64,8 @@
     "completed": "hoàn tất",
     "estop_user": "dừng khẩn",
     "estop_ui_lost": "dừng khẩn (mất giao diện)",
-    "estop_thermal": "dừng vì nhiệt"
+    "estop_thermal": "dừng vì nhiệt",
+    "internal": "lỗi nội bộ"
   },
   "arm": {
     "follower": "Tay follower",
@@ -105,7 +107,9 @@
     "stopped_hold": "Tay robot đang được giữ nguyên vị trí.",
     "cooling_eta": "Khoảng {{s}} giây nữa đủ nguội để đặt lại.",
     "hot": "{{motor}} đang nóng ({{value}} °C). Chưa thể bắt đầu phiên mới cho tới khi nguội.",
-    "warm": "{{motor}} đang ấm lên ({{value}} °C)."
+    "warm": "{{motor}} đang ấm lên ({{value}} °C).",
+    "error": "Robot đã ngắt kết nối: {{reason}}. Kiểm tra cáp USB và nguồn của tay robot rồi kết nối lại.",
+    "estopped": "Robot đã dừng: {{reason}}."
   },
   "alerts": {
     "motor": {
@@ -314,7 +318,11 @@
     "torque_on": "Bật mô-men",
     "torque_off": "Thả lỏng (tắt mô-men)",
     "relax_confirm": "Chưa có tư thế nghỉ: tay robot sẽ rũ xuống tại chỗ. Hãy đỡ tay trước. Tiếp tục?",
-    "health_desc": "Nhiệt độ và điện áp trực tiếp của từng động cơ."
+    "health_desc": "Nhiệt độ và điện áp trực tiếp của từng động cơ.",
+    "cal_follower": "Hiệu chuẩn tay follower",
+    "cal_leader": "Hiệu chuẩn tay leader",
+    "cal_new": "Hiệu chuẩn mới ({{id}})",
+    "cal_existing": "Dùng file có sẵn: {{id}}"
   },
   "calibrate": {
     "title": "Hiệu chỉnh",
@@ -337,7 +345,10 @@
     "too_small": "biên độ quá nhỏ",
     "finish": "Hoàn tất và lưu",
     "done": "{{arm}} đã được hiệu chỉnh.",
-    "next": "Tiếp: Camera"
+    "next": "Tiếp: Camera",
+    "other_files": "Các file hiệu chuẩn khác của tay này (LeLab hoặc lerobot đã lưu dưới tên khác):",
+    "use_file": "Dùng file này",
+    "issue": "Lý do chưa hiệu chuẩn:"
   },
   "cameras": {
     "title": "Camera",
@@ -590,7 +601,9 @@
     "needs_check": "Hiệu chỉnh đã thay đổi: hãy phát lại quỹ đạo này ở tốc độ chậm và xác nhận trước.",
     "dry_run_required": "Hãy chạy thử phiên bản này trước.",
     "fast_replay_not_allowed": "Robot này chưa bật tốc độ trên 100 %.",
-    "detector_invalid": "Không dùng được bộ nhận diện này (kiểm tra model và nhãn)."
+    "detector_invalid": "Không dùng được bộ nhận diện này (kiểm tra model và nhãn).",
+    "bus_error": "Một động cơ không trả lời. Kiểm tra nguồn và cáp của tay robot rồi thử lại.",
+    "demo_profile": "Hồ sơ này điều khiển tay GIẢ LẬP: tay thật sẽ không chuyển động. Hãy tạo hồ sơ cho tay thật."
   },
   "programs": {
     "title": "Chương trình",
@@ -1014,5 +1027,12 @@
     "pause": "Tạm dừng xem trước",
     "scrub": "Vị trí xem trước",
     "time": "{{t}} / {{total}} giây"
+  },
+  "demo": {
+    "chip": "TAY GIẢ LẬP",
+    "chip_title": "Tay giả lập: tay robot thật không chuyển động",
+    "banner": "Đang dùng tay giả lập — tay thật ({{ports}}) không chuyển động. Hãy tạo hồ sơ cho tay thật.",
+    "create_real": "Tạo hồ sơ cho tay thật",
+    "connect_disabled": "Hồ sơ demo: tay giả lập. Chạy Station với --mock để dùng."
   }
 }
