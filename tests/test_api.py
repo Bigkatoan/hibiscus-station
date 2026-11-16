@@ -224,7 +224,7 @@ def test_models_import_compat_load_over_rest(client: TestClient, station: Statio
 def test_openapi_json_is_up_to_date() -> None:
     from hibiscus_station.openapi import export
 
-    committed = (STATION_DIR / "openapi.json").read_text()
+    committed = (STATION_DIR / "openapi.json").read_text(encoding="utf-8")
     assert json.loads(committed) == json.loads(export()), "run: hibiscus-station openapi openapi.json"
 
 
@@ -252,7 +252,7 @@ def test_every_error_code_has_ui_text() -> None:
     if not i18n.is_dir():
         pytest.skip("web sources not available")
     for lang in ("en", "vi"):
-        errors = json.loads((i18n / f"{lang}.json").read_text())["errors"]
+        errors = json.loads((i18n / f"{lang}.json").read_text(encoding="utf-8"))["errors"]
         missing = sorted(set(STATUS) - set(errors))
         assert not missing, f"{lang}.json errors.* missing {missing}"
 
@@ -264,7 +264,7 @@ def test_every_alert_message_key_has_ui_text() -> None:
     i18n = STATION_DIR / "web" / "src" / "station" / "i18n"
     if not i18n.is_dir():
         pytest.skip("web sources not available")
-    src = "\n".join(p.read_text() for p in (STATION_DIR / "hibiscus_station").rglob("*.py"))
+    src = "\n".join(p.read_text(encoding="utf-8") for p in (STATION_DIR / "hibiscus_station").rglob("*.py"))
     keys = set(re.findall(r'"((?:motor|camera|record|run|safety|telemetry)\.[a-z_]+(?:\.[a-z_]+)?)"', src))
     for group in re.findall(r'f"motor\.([a-z]+)\.\{lvl\}"', src):
         keys |= {f"motor.{group}.ok", f"motor.{group}.warn"}
@@ -272,7 +272,7 @@ def test_every_alert_message_key_has_ui_text() -> None:
     keys = {k for k in keys if not k.startswith("telemetry.jsonl")}  # a file name, not a key
     assert len(keys) > 10, keys
     for lang in ("en", "vi"):
-        alerts = json.loads((i18n / f"{lang}.json").read_text())["alerts"]
+        alerts = json.loads((i18n / f"{lang}.json").read_text(encoding="utf-8"))["alerts"]
         for key in keys:
             node: Any = alerts
             for part in key.split("."):

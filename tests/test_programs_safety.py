@@ -11,6 +11,7 @@ camera that does not exist.
 
 from __future__ import annotations
 
+import sys
 import threading
 import time
 from pathlib import Path
@@ -31,7 +32,7 @@ from blocks_dsl import (
     wait,
     wait_until,
 )
-from conftest import Heartbeat, connect_calibrated, mock_profile, wait_for
+from conftest import Heartbeat, connect_calibrated, deep_json, mock_profile, wait_for
 
 from hibiscus_station.mock import get_world
 from hibiscus_station.mock.policy import make_dummy_act
@@ -73,6 +74,19 @@ def _put(client: Any, doc: dict[str, Any], pid: str = "p", **kw: Any) -> ps.Prog
     r = client.put(f"{API}/programs/{pid}", json={"name": "P", "editor": doc, **kw})
     assert r.status_code == 200, r.text
     return ps.Program.model_validate(r.json())
+
+
+def _put_deep(client: Any, pid: str, body: dict[str, Any]) -> Any:
+    """PUT a body too deep for the C ``json`` encoder on Windows (its recursion limit is 3000)."""
+    return client.put(
+        f"{API}/programs/{pid}", content=deep_json(body), headers={"content-type": "application/json"}
+    )
+
+
+def _refused_as_too_deep(r: Any) -> bool:
+    """Windows: Python cannot even parse JSON nested past 3000 levels; Station must answer a clean
+    400 ``validation_failed`` (never a 500 or a crash). Elsewhere the limit is 10000."""
+    return sys.platform == "win32" and r.status_code == 400 and r.json()["code"] == "validation_failed"
 
 
 def _run(client: Any, pid: str = "p", **body: Any) -> Any:
@@ -230,7 +244,7 @@ def test_trajectory_from_another_calibration_is_refused(real: Station, client: A
     from hibiscus_station.programs.calibration_ref import calibration_file
 
     f = calibration_file(st.cal_root, st.owner.profile)  # type: ignore[arg-type]
-    f.write_text(f.read_text() + " ")
+    f.write_text(f.read_text(encoding="utf-8") + " ")
     r = _run(client)
     assert r.status_code == 422 and "trajectory_needs_check" in {e["code"] for e in r.json()["errors"]}, (
         r.text
@@ -317,7 +331,9 @@ def test_deeply_nested_programs_never_crash(station: Station, client: Any, depth
     from hibiscus_station.programs.compiler import MAX_NESTING
 
     connect_calibrated(station)
-    r = client.put(f"{API}/programs/deep", json={"name": "deep", "editor": _nested_ifs(depth)})
+    r = _put_deep(client, "deep", {"name": "deep", "editor": _nested_ifs(depth)})
+    if _refused_as_too_deep(r):
+        return
     assert r.status_code == 200, r.text[:300]
     p = ps.Program.model_validate(r.json())
     if depth * 2 <= MAX_NESTING:
@@ -469,7 +485,11 @@ def test_malformed_editor_json_is_saved_with_issues(station: Station, client: An
 
 def test_too_many_blocks(station: Station, client: Any) -> None:
     connect_calibrated(station)
-    p = _put(client, program(*[wait(0.1) for _ in range(2100)]))
+    r = _put_deep(client, "p", {"name": "P", "editor": program(*[wait(0.1) for _ in range(2100)])})
+    if _refused_as_too_deep(r):
+        return
+    assert r.status_code == 200, r.text[:300]
+    p = ps.Program.model_validate(r.json())
     assert p.ast is None and [i.code for i in p.issues] == ["too_many_blocks"]
 
 
@@ -533,7 +553,8 @@ def test_signal_spam_is_bounded(station: Station, client: Any) -> None:
 def test_mqtt_is_off_by_default(station: Station) -> None:
     assert station.settings.programs.mqtt_url is None
     assert station.programs.mqtt is None
-    assert not [t for t in threading.enumerate() if "paho" in t.name.lower() or "mqtt" in t.name.lower()]
+    names = [t.name.lower() for t in threading.enumerate() if not t.name.startswith("pytest_timeout")]
+    assert not [n for n in names if "paho" in n or "mqtt" in n]
 
 
 def test_signals_need_the_token(station: Station, client: Any) -> None:

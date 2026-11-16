@@ -46,14 +46,14 @@ def test_serve_mock_single_instance_and_url(tmp_path: Path) -> None:
                 try:
                     r = httpx.get(
                         f"{base}/api/v1/status",
-                        headers={"Authorization": f"Bearer {token_file.read_text().strip()}"},
+                        headers={"Authorization": f"Bearer {token_file.read_text(encoding='utf-8').strip()}"},
                     )
                     if r.status_code == 200:
                         break
                 except httpx.HTTPError:
                     pass
             time.sleep(0.3)
-        token = token_file.read_text().strip()
+        token = token_file.read_text(encoding="utf-8").strip()
         assert is_private(token_file)
         r = httpx.get(f"{base}/api/v1/status", headers={"Authorization": f"Bearer {token}"})
         assert r.status_code == 200 and r.json()["station"]["mock"] is True
@@ -77,7 +77,7 @@ def test_serve_mock_single_instance_and_url(tmp_path: Path) -> None:
             timeout=60,
         )
         assert f"127.0.0.1:{port}/auth?t={token}" in url.stdout
-        assert json.loads((home / "station.pid").read_text())["port"] == port
+        assert json.loads((home / "station.pid").read_text(encoding="utf-8"))["port"] == port
     finally:
         proc.terminate()
         try:
@@ -149,7 +149,7 @@ def test_lan_mode_fixed_token_allowed_hosts_and_health(tmp_path: Path) -> None:
             except httpx.HTTPError:
                 pass
             time.sleep(0.3)
-        assert (home / "token").read_text().strip() == token
+        assert (home / "token").read_text(encoding="utf-8").strip() == token
         for host in (
             f"robot.example:{port}",
             f"10.0.0.7:{port}",

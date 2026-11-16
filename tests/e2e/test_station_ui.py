@@ -61,7 +61,7 @@ def _wait(pred: Callable[[], Any], timeout: float = 30.0, what: str = "condition
 
 
 def _image_features(pdir: Path) -> dict[str, tuple[int, int]]:
-    cfg = json.loads((pdir / "config.json").read_text())
+    cfg = json.loads((pdir / "config.json").read_text(encoding="utf-8"))
     out = {}
     for key, ft in cfg["input_features"].items():
         if ft["type"] == "VISUAL":

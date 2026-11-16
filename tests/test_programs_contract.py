@@ -268,7 +268,7 @@ def test_stub_routes_validate_bodies_first(client: Any) -> None:
 
 
 def test_every_stub_is_in_openapi() -> None:
-    doc = json.loads((STATION_DIR / "openapi.json").read_text())
+    doc = json.loads((STATION_DIR / "openapi.json").read_text(encoding="utf-8"))
     paths = {p.removeprefix("/api/v1") for p in doc["paths"]}
     for _, path, _ in IMPLEMENTED + PROGRAMS + LANDED:
         templ = (
@@ -302,7 +302,7 @@ def test_new_states_have_ui_text() -> None:
     if not i18n.is_dir():
         pytest.skip("web sources not available")
     for lang in ("en", "vi"):
-        strings = json.loads((i18n / f"{lang}.json").read_text())["state"]
+        strings = json.loads((i18n / f"{lang}.json").read_text(encoding="utf-8"))["state"]
         missing = sorted(set(get_args(wire.StationState)) - set(strings))
         assert not missing, f"{lang}.json state.* missing {missing}"
 

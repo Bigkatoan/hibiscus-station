@@ -6,6 +6,7 @@ which checks every request against the server contract snapshot in ``tests/contr
 
 from __future__ import annotations
 
+import json
 import math
 import stat
 import sys
@@ -16,12 +17,39 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from keyring.backend import KeyringBackend as _KeyringBackend
 
 from hibiscus_station.mock import get_world, reset_worlds
 from hibiscus_station.profiles import CameraProfile, FollowerProfile, LeaderProfile, RobotProfile
 from hibiscus_station.station import Station
 
 PORT = 18210
+
+
+def deep_json(obj: Any) -> str:
+    """``json.dumps`` without recursion, for documents nested deeper than the C encoder allows."""
+    out: list[str] = []
+    stack: list[Any] = [obj]
+    raw = object()
+    while stack:
+        item = stack.pop()
+        if isinstance(item, tuple) and item and item[0] is raw:
+            out.append(item[1])
+        elif isinstance(item, dict):
+            parts: list[Any] = [(raw, "{")]
+            for i, (k, v) in enumerate(item.items()):
+                parts += [(raw, ("," if i else "") + json.dumps(k) + ":"), v]
+            parts.append((raw, "}"))
+            stack.extend(reversed(parts))
+        elif isinstance(item, list):
+            parts = [(raw, "[")]
+            for i, v in enumerate(item):
+                parts += ([(raw, ",")] if i else []) + [v]
+            parts.append((raw, "]"))
+            stack.extend(reversed(parts))
+        else:
+            out.append(json.dumps(item))
+    return "".join(out)
 
 
 def is_private(path: Path, mode: int = 0o600) -> bool:
@@ -42,9 +70,39 @@ def isolated(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
     monkeypatch.setenv("HIBISCUS_STATION_HOME", str(tmp_path / "station-home"))
     for var in ("HIBISCUS_TOKEN", "HIBISCUS_SERVER", "HIBISCUS_WORKSPACE_ID"):
         monkeypatch.delenv(var, raising=False)
+    if sys.platform == "win32":
+        # Windows stores the PAT in the Credential Manager (keyring). The CLI's file fallback checks
+        # POSIX modes and refuses any file on Windows, so the tests use an in-memory keyring.
+        import keyring
+
+        monkeypatch.setenv("HIBISCUS_KEYRING", "1")
+        previous = keyring.get_keyring()
+        keyring.set_keyring(_MemoryKeyring())
     reset_worlds()
     yield tmp_path
     reset_worlds()
+    if sys.platform == "win32":
+        keyring.set_keyring(previous)
+
+
+class _MemoryKeyring(_KeyringBackend):  # type: ignore[misc,valid-type]
+    priority = 1  # type: ignore[assignment]
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.store: dict[tuple[str, str], str] = {}
+
+    def get_password(self, service: str, username: str) -> str | None:
+        return self.store.get((service, username))
+
+    def set_password(self, service: str, username: str, password: str) -> None:
+        self.store[(service, username)] = password
+
+    def delete_password(self, service: str, username: str) -> None:
+        from keyring.errors import PasswordDeleteError
+
+        if self.store.pop((service, username), None) is None:
+            raise PasswordDeleteError(username)
 
 
 def mock_profile(
@@ -103,7 +161,7 @@ def _ws_validator() -> Any:
 
     import jsonschema
 
-    doc = json.loads((STATION_DIR / "openapi.json").read_text())
+    doc = json.loads((STATION_DIR / "openapi.json").read_text(encoding="utf-8"))
     schema = {"$ref": "#/components/schemas/ServerMessage", "components": doc["components"]}
     return jsonschema.Draft202012Validator(schema)
 

@@ -346,7 +346,7 @@ def test_needs_check_trajectory_is_refused_in_a_program(ready: Station) -> None:
     from hibiscus_station.programs.calibration_ref import calibration_file
 
     f = calibration_file(st.cal_root, st.owner.profile)  # type: ignore[arg-type]
-    f.write_text(f.read_text() + " ")
+    f.write_text(f.read_text(encoding="utf-8") + " ")
 
     def script(rt: FakeRuntime, port: MotionPort) -> str:
         rt.run(port, PlayTrajectoryStmt(id="p", kind="play_trajectory", trajectory=a))

@@ -274,7 +274,7 @@ def test_calibration_change_needs_a_check_replay(connected: Station, client: Any
     a = _save(client, _record(client, st, name="A", seconds=0.8).id)
     assert a.status == "ready"
     f = calibration_file(st.cal_root, st.owner.profile)  # type: ignore[arg-type]
-    f.write_text(f.read_text() + "\n")  # what a recalibration does: a new file
+    f.write_text(f.read_text(encoding="utf-8") + "\n")  # what a recalibration does: a new file
     got = TrajectoryDetail.model_validate(client.get(f"{API}/trajectories/{a.id}").json())
     assert got.status == "needs_check"
     r = _play(client, a.id, speed_pct=100)

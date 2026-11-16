@@ -142,7 +142,6 @@ def serve(
     from hibiscus_station.api.security import LocalAuth
     from hibiscus_station.app import create_app
     from hibiscus_station.hw.locks import DeviceBusyError, InstanceLock
-    from hibiscus_station.oscompat import high_resolution_timer
     from hibiscus_station.station import Station
 
     paths = StationPaths(home or station_home())
@@ -161,7 +160,6 @@ def serve(
     _setup_logging(paths, verbose)
     auth = LocalAuth(token=token, port=port, extra_hosts=extra_hosts)
     auth.write_token(paths.token)
-    high_resolution_timer()  # Windows: 1 ms timer for the control loop's waits
     station = Station(paths.home, mock=mock, port=port)
     application = create_app(station, auth)
     url = f"http://{login}/auth?t={auth.token}"

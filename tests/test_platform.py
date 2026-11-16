@@ -77,12 +77,12 @@ def test_reacquire_after_release_rewrites_holder(tmp_path: Path) -> None:
 
 _HOLDER = textwrap.dedent(
     """
-    import sys, time
+    import os, sys
     from pathlib import Path
     from hibiscus_station.hw.locks import DeviceLock
     lk = DeviceLock(Path(sys.argv[1]), sys.argv[2])
     lk.acquire()
-    print("locked", flush=True)
+    print("locked", os.getpid(), flush=True)
     sys.stdin.readline()
     if sys.argv[3] == "release":
         lk.release()
@@ -92,7 +92,9 @@ _HOLDER = textwrap.dedent(
 )
 
 
-def _holder(tmp_path: Path, device: str, mode: str) -> subprocess.Popen[str]:
+def _holder(tmp_path: Path, device: str, mode: str) -> tuple[subprocess.Popen[str], int]:
+    """A second process holding ``device``, and its pid (a venv ``python.exe`` on Windows is a
+    launcher: the interpreter is its child, with another pid)."""
     proc = subprocess.Popen(  # noqa: S603 - our own interpreter
         [sys.executable, "-c", _HOLDER, str(tmp_path), device, mode],
         stdin=subprocess.PIPE,
@@ -101,8 +103,9 @@ def _holder(tmp_path: Path, device: str, mode: str) -> subprocess.Popen[str]:
         cwd=Path(__file__).resolve().parents[1],
     )
     assert proc.stdout is not None
-    assert proc.stdout.readline().strip() == "locked"
-    return proc
+    word, pid = proc.stdout.readline().split()
+    assert word == "locked"
+    return proc, int(pid)
 
 
 def _acquire_eventually(lock: DeviceLock, timeout: float = 10.0) -> None:
@@ -118,11 +121,11 @@ def _acquire_eventually(lock: DeviceLock, timeout: float = 10.0) -> None:
 
 
 def test_lock_across_processes_reports_the_other_pid(tmp_path: Path) -> None:
-    proc = _holder(tmp_path, "COM5", "release")
+    proc, pid = _holder(tmp_path, "COM5", "release")
     try:
         with pytest.raises(DeviceBusyError) as ei:
             DeviceLock(tmp_path, "\\\\.\\com5").acquire()
-        assert ei.value.holder == proc.pid
+        assert ei.value.holder == pid != os.getpid()
         assert proc.stdin is not None and proc.stdout is not None
         proc.stdin.write("\n")
         proc.stdin.flush()
@@ -136,7 +139,7 @@ def test_lock_across_processes_reports_the_other_pid(tmp_path: Path) -> None:
 
 
 def test_lock_is_freed_when_the_holder_dies(tmp_path: Path) -> None:
-    proc = _holder(tmp_path, "COM6", "hold")
+    proc, _pid = _holder(tmp_path, "COM6", "hold")
     with pytest.raises(DeviceBusyError):
         DeviceLock(tmp_path, "COM6").acquire()
     proc.kill()  # TerminateProcess on Windows: no cleanup code runs

@@ -209,7 +209,10 @@ class Run:
 
     def lines(self) -> list[dict[str, Any]]:
         return [
-            json.loads(x) for x in (self.home / "runs" / "programs" / f"{RUN}.jsonl").read_text().splitlines()
+            json.loads(x)
+            for x in (self.home / "runs" / "programs" / f"{RUN}.jsonl")
+            .read_text(encoding="utf-8")
+            .splitlines()
         ]
 
     def status(self) -> str:

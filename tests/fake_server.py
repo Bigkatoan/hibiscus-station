@@ -236,8 +236,8 @@ class FakeHibiscus:
 
     def _load_policies(self) -> dict[str, dict[str, Any]]:
         root = Path(__file__).resolve().parent / "contract" / "hibiscus-v0.1.1" / "policy-schemas"
-        train = json.loads((root / "train.json").read_text())
-        presets = json.loads((root / "presets.json").read_text())["presets"]
+        train = json.loads((root / "train.json").read_text(encoding="utf-8"))
+        presets = json.loads((root / "presets.json").read_text(encoding="utf-8"))["presets"]
         out: dict[str, dict[str, Any]] = {}
         for p in ("act", "diffusion"):
             out[p] = {
@@ -252,7 +252,7 @@ class FakeHibiscus:
                 "gpu_support": {"cuda0": "supported", "cuda1": "supported"},
                 "schema_etag": "etag-" + p,
                 "experimental": False,
-                "policy_schema": json.loads((root / f"{p}.json").read_text()),
+                "policy_schema": json.loads((root / f"{p}.json").read_text(encoding="utf-8")),
                 "train_schema": train,
                 "presets": [
                     {

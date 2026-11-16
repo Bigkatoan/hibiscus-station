@@ -35,6 +35,7 @@ from hibiscus_station.hw.telemetry import (
     TelemetryScheduler,
     ThermalGuard,
 )
+from hibiscus_station.oscompat import high_resolution_timer
 from hibiscus_station.profiles import ProfileStore, RobotProfile
 from hibiscus_station.sessions.base import MotionSession, TickInput
 from hibiscus_station.settings import Settings, StationPaths, Thresholds, threshold_problems
@@ -152,6 +153,7 @@ class HardwareOwner:
     # ================================================================== lifecycle (any thread)
     def start(self) -> None:
         if self._thread is None:
+            high_resolution_timer()  # Windows: 1 ms waits for the control loop (no-op elsewhere)
             self._thread = threading.Thread(target=self._run, name="hardware-owner", daemon=True)
             self._thread.start()
 
@@ -302,7 +304,7 @@ class HardwareOwner:
     # ================================================================== thread body
     def _run(self) -> None:
         self.ident = threading.get_ident()
-        if sys.platform != "win32":  # Windows has no nice(); the 1 ms timer is set by the CLI
+        if sys.platform != "win32":  # Windows has no nice(); the 1 ms timer is set in start()
             try:
                 os.nice(-5)
             except OSError:

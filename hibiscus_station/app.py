@@ -127,7 +127,11 @@ def create_app(
 
     @app.exception_handler(StarletteHTTPException)
     async def http_error(request: Request, exc: StarletteHTTPException) -> JSONResponse:
-        code = {404: "not_found", 405: "validation_failed"}.get(exc.status_code, "internal_error")
+        # 400: FastAPI could not parse the body (e.g. JSON nested past the C recursion limit,
+        # 3000 levels on Windows, 10000 elsewhere)
+        code = {400: "validation_failed", 404: "not_found", 405: "validation_failed"}.get(
+            exc.status_code, "internal_error"
+        )
         return problem_response(StationError(code, str(exc.detail), status=exc.status_code), "")
 
     @app.exception_handler(Exception)
