@@ -1,4 +1,9 @@
-"""Serial port listing and detection (spec §2 L3/L4, §5.2 ``/ports``)."""
+"""Serial port listing and detection (spec §2 L3/L4, §5.2 ``/ports``).
+
+Linux names ports ``/dev/ttyACM0`` with a stable ``/dev/serial/by-id/...`` link; macOS
+``/dev/tty.usbmodem...``; Windows ``COM3`` (no stable path: the number sticks to the USB adapter's
+serial number, or to the USB socket for adapters without one).
+"""
 
 from __future__ import annotations
 
@@ -7,6 +12,8 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+
+from hibiscus_station.hw.locks import normalize_device
 
 BY_ID = Path("/dev/serial/by-id")
 
@@ -23,21 +30,20 @@ def _stable_paths() -> dict[str, str]:
 
 
 def list_ports(in_use: dict[str, str] | None = None, *, usb_only: bool = True) -> list[dict[str, Any]]:
-    """USB serial ports with VID:PID, serial number and the stable ``/dev/serial/by-id`` path."""
+    """USB serial ports with VID:PID, serial number and the stable ``/dev/serial/by-id`` path
+    (Linux only; ``None`` elsewhere)."""
     from serial.tools import list_ports as lp
 
     stable = _stable_paths()
-    in_use = in_use or {}
+    held = {normalize_device(k): v for k, v in (in_use or {}).items()}
     rows: list[dict[str, Any]] = []
     for p in lp.comports():
         vid, pid = getattr(p, "vid", None), getattr(p, "pid", None)
         if usb_only and vid is None:
             continue
-        real = os.path.realpath(p.device)
+        real = normalize_device(p.device)  # /dev symlinks resolved, COM names upper-cased
         stable_path = stable.get(real)
-        holder = (
-            in_use.get(p.device) or in_use.get(real) or (in_use.get(stable_path) if stable_path else None)
-        )
+        holder = held.get(real)
         rows.append(
             {
                 "device": p.device,

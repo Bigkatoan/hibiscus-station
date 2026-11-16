@@ -69,7 +69,7 @@ class RunLog:
         d = program_runs_dir(home)
         d.mkdir(parents=True, exist_ok=True)
         os.chmod(d, 0o700)
-        fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+        fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_APPEND | getattr(os, "O_BINARY", 0), 0o600)
         self._fh = os.fdopen(fd, "a", encoding="utf-8")
         self._emit = emit
         self._clock = clock

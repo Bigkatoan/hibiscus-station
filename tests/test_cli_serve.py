@@ -12,6 +12,7 @@ from pathlib import Path
 
 import httpx
 import pytest
+from conftest import is_private
 
 
 def _free_port() -> int:
@@ -53,7 +54,7 @@ def test_serve_mock_single_instance_and_url(tmp_path: Path) -> None:
                     pass
             time.sleep(0.3)
         token = token_file.read_text().strip()
-        assert oct(token_file.stat().st_mode & 0o777) == "0o600"
+        assert is_private(token_file)
         r = httpx.get(f"{base}/api/v1/status", headers={"Authorization": f"Bearer {token}"})
         assert r.status_code == 200 and r.json()["station"]["mock"] is True
         assert httpx.get(f"{base}/api/v1/status").status_code == 401

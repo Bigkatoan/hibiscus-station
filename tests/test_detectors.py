@@ -4,7 +4,6 @@ the REST surface, against the mock camera's fake red / blue cube."""
 from __future__ import annotations
 
 import base64
-import os
 import statistics
 import time
 from pathlib import Path
@@ -12,7 +11,7 @@ from typing import Any
 
 import numpy as np
 import pytest
-from conftest import mock_profile, wait_for
+from conftest import is_private, mock_profile, wait_for
 
 from hibiscus_station.errors import StationError
 from hibiscus_station.mock.camera import MockCamera, MockCameraConfig
@@ -257,7 +256,7 @@ def test_store_crud_and_private_files(store: DetectorStore) -> None:
     det = store.put("cubes", ps.DetectorInput(name="Cubes", spec=color_spec()))
     assert det.robot == "desk" and det.labels == ["red", "blue"] and det.model_file is None
     path = store.paths.detector_json("cubes")
-    assert oct(os.stat(path).st_mode & 0o777) == "0o600"
+    assert is_private(path)
     assert store.get("cubes") == det and [d.id for d in store.all()] == ["cubes"]
     again = store.put("cubes", ps.DetectorInput(name="Cubes 2", spec=color_spec()))
     assert again.created_at == det.created_at and again.name == "Cubes 2"
@@ -296,7 +295,7 @@ def test_store_classifier_model_lifecycle(store: DetectorStore) -> None:
     assert not store.paths.detector_model("clf").exists()
     det = store.set_model("clf", channel_model())
     assert det.model_file == "clf.onnx" and det.model_sha256 and len(det.model_sha256) == 64
-    assert oct(os.stat(store.paths.detector_model("clf")).st_mode & 0o777) == "0o600"
+    assert is_private(store.paths.detector_model("clf"))
     assert store.runtime("clf").evaluate(cube_frame("red")).label == "r"
     # compatible edit (same label count and input size) keeps the model
     kept = store.put("clf", ps.DetectorInput(name="Clf", spec=clf_spec(labels=["x", "y", "z"])))

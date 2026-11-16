@@ -12,6 +12,7 @@ import asyncio
 import json
 import logging
 import struct
+import sys
 import threading
 import time
 from collections.abc import Callable
@@ -92,6 +93,16 @@ def device_key(p: CameraProfile) -> str:
     return str(p.index_or_path)
 
 
+def camera_target(index_or_path: int | str | None) -> int | Path:
+    """OpenCV target of a profile: an index (``0``, or ``"0"`` as the UI sends it; the only kind on
+    Windows and macOS) or a device path (``/dev/v4l/by-id/...``). A digit string opened as a path
+    would be read as a file name and fail."""
+    if isinstance(index_or_path, int):
+        return index_or_path
+    text = str(index_or_path).strip()
+    return int(text) if text.isdigit() else Path(text)
+
+
 def build_camera(name: str, p: CameraProfile) -> Any:
     if p.type == "mock":
         from hibiscus_station.mock.camera import MockCamera, MockCameraConfig
@@ -108,10 +119,9 @@ def build_camera(name: str, p: CameraProfile) -> Any:
     from lerobot.cameras import Cv2Rotation
     from lerobot.cameras.opencv import OpenCVCamera, OpenCVCameraConfig
 
-    iop: int | Path = p.index_or_path if isinstance(p.index_or_path, int) else Path(str(p.index_or_path))
     return OpenCVCamera(
         OpenCVCameraConfig(
-            index_or_path=iop,
+            index_or_path=camera_target(p.index_or_path),
             fps=p.fps,
             width=p.width,
             height=p.height,
@@ -119,6 +129,68 @@ def build_camera(name: str, p: CameraProfile) -> Any:
             fourcc=p.fourcc,
         )
     )
+
+
+#: Windows / macOS cameras are OpenCV indices (no ``/dev/video*``). They are numbered without gaps,
+#: so the scan stops after a few missing ones instead of trying lerobot's 60 (slow on MSMF).
+MAX_CAMERA_INDEX = 16
+MAX_MISSES = 3
+VIDEO_DIR = Path("/dev")
+
+
+def _probe_index(target: int | str) -> dict[str, Any] | None:
+    import cv2
+
+    cap = cv2.VideoCapture(target)  # CAP_ANY: MSMF then DSHOW on Windows, like lerobot's cameras
+    try:
+        if not cap.isOpened():
+            return None
+        code = int(cap.get(cv2.CAP_PROP_FOURCC))
+        return {
+            "name": f"OpenCV Camera @ {target}",
+            "type": "OpenCV",
+            "id": target,
+            "backend_api": cap.getBackendName(),
+            "default_stream_profile": {
+                "format": cap.get(cv2.CAP_PROP_FORMAT),
+                "fourcc": "".join(chr((code >> 8 * i) & 0xFF) for i in range(4)),
+                "width": int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
+                "height": int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
+                "fps": cap.get(cv2.CAP_PROP_FPS),
+            },
+        }
+    finally:
+        cap.release()
+
+
+def find_opencv_cameras(
+    skip: set[str] | frozenset[str] = frozenset(), *, platform: str = sys.platform
+) -> list[dict[str, Any]]:
+    """OpenCV cameras in lerobot's ``find_cameras`` format, never opening an id in ``skip`` (the
+    ones Station streams). Linux probes ``/dev/video*``; other systems probe indices 0, 1, 2...
+    until ``MAX_MISSES`` in a row fail."""
+    import lerobot.cameras.opencv  # noqa: F401 - sets lerobot's MSMF environment before cv2 opens
+
+    found: list[dict[str, Any]] = []
+    if platform == "linux":
+        for dev in sorted(VIDEO_DIR.glob("video*"), key=lambda p: p.name):
+            if str(dev) not in skip and (info := _probe_index(str(dev))) is not None:
+                found.append(info)
+        return found
+    misses = 0
+    for index in range(MAX_CAMERA_INDEX):
+        if str(index) in skip:
+            misses = 0
+            continue
+        info = _probe_index(index)
+        if info is None:
+            misses += 1
+            if misses >= MAX_MISSES:
+                break
+            continue
+        misses = 0
+        found.append(info)
+    return found
 
 
 class CameraHub:

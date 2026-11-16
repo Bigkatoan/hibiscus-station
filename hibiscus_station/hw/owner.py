@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import os
 import queue
+import sys
 import threading
 import time
 from collections.abc import Callable
@@ -301,10 +302,11 @@ class HardwareOwner:
     # ================================================================== thread body
     def _run(self) -> None:
         self.ident = threading.get_ident()
-        try:
-            os.nice(-5)
-        except (OSError, AttributeError):
-            pass
+        if sys.platform != "win32":  # Windows has no nice(); the 1 ms timer is set by the CLI
+            try:
+                os.nice(-5)
+            except OSError:
+                pass
         while not self._stop.is_set():
             try:
                 if self.session is not None and self.state in MOTION_STATES.values():

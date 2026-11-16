@@ -10,6 +10,7 @@ from typing import Any
 
 import numpy as np
 import pytest
+from conftest import is_private
 
 from hibiscus_station.errors import StationError
 from hibiscus_station.hw import feetech
@@ -268,7 +269,7 @@ def test_robots_yaml_round_trip(tmp_path: Path) -> None:
     store.put(p)
     again = ProfileStore(tmp_path / "robots.yaml")
     assert again.get("desk") == p and again.active == "desk"
-    assert (tmp_path / "robots.yaml").stat().st_mode & 0o777 == 0o600
+    assert is_private(tmp_path / "robots.yaml")
     with pytest.raises(ValueError):
         type(p).model_validate({**p.model_dump(), "id": "Bad Id"})
     assert again.delete("desk") and again.active is None

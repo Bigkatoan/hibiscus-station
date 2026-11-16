@@ -80,7 +80,8 @@ def make_dummy_act(
                 "task": task,
             },
             indent=2,
-        )
+        ),
+        encoding="utf-8",
     )
     if weights_format == "bin":  # pickle checkpoint (refused by Station)
         (out_dir / "model.safetensors").rename(out_dir / "pytorch_model.bin")
@@ -91,7 +92,7 @@ def make_bundle(out_root: Path, bundle_name: str, cameras: dict[str, tuple[int, 
     """A Hibiscus bundle directory (docs/spec/bundle.md §2) around a dummy ACT checkpoint."""
     root = out_root / bundle_name
     make_dummy_act(root / "pretrained_model", cameras)
-    (root / "MODEL_CARD.md").write_text(f"# {bundle_name}\n\nDummy ACT for tests.\n")
+    (root / "MODEL_CARD.md").write_text(f"# {bundle_name}\n\nDummy ACT for tests.\n", encoding="utf-8")
     files = []
     for p in sorted(root.rglob("*")):
         if p.is_file():
@@ -99,7 +100,8 @@ def make_bundle(out_root: Path, bundle_name: str, cameras: dict[str, tuple[int, 
             data = p.read_bytes()
             files.append({"path": rel, "size": len(data), "sha256": hashlib.sha256(data).hexdigest()})
     (root / "MANIFEST.json").write_text(
-        json.dumps({"schema_version": "1", "bundle_name": bundle_name, "files": files}, indent=2)
+        json.dumps({"schema_version": "1", "bundle_name": bundle_name, "files": files}, indent=2),
+        encoding="utf-8",
     )
     return root
 

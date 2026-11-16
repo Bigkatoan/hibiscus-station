@@ -5,14 +5,13 @@ from __future__ import annotations
 import itertools
 import json
 import math
-import stat
 import threading
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pytest
-from conftest import wait_for
+from conftest import is_private, wait_for
 
 from hibiscus_station.errors import StationError
 from hibiscus_station.profiles import FollowerProfile, RobotProfile
@@ -188,9 +187,9 @@ def test_create_draft_writes_the_layout(trajs: TrajectoryStore, paths: RobotData
     )
     d = paths.trajectory_dir(tr.id)
     assert {p.name for p in d.iterdir()} == {"trajectory.json", "samples.parquet", "keyframes"}
-    assert stat.S_IMODE(d.stat().st_mode) == 0o700
-    assert stat.S_IMODE((d / "trajectory.json").stat().st_mode) == 0o600
-    assert stat.S_IMODE((d / "samples.parquet").stat().st_mode) == 0o600
+    assert is_private(d, 0o700)
+    assert is_private(d / "trajectory.json")
+    assert is_private(d / "samples.parquet")
     assert tr.status == "draft" and tr.trim == tr.suggested_trim and tr.trim.start_s > 0.9
     assert tr.samples == len(take().t) and tr.raw_duration_s == pytest.approx(3.0)
     assert tr.duration_s == pytest.approx(3.0 - tr.trim.start_s - tr.trim.end_s, abs=1e-6)
@@ -299,7 +298,7 @@ def test_poses_replace_capture_and_needs_check(paths: RobotDataPaths, cal: Cal) 
     out = poses.replace([PoseInput(name="home", positions={"shoulder_pan.pos": 0.0})])
     created = out[0].created_at
     assert out[0].calibration_hash == "aaaa" and not out[0].needs_check
-    assert stat.S_IMODE(paths.poses.stat().st_mode) == 0o600
+    assert is_private(paths.poses)
     cal.value = "bbbb"
     assert poses.get("home").needs_check
     out = poses.replace(

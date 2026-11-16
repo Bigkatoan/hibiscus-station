@@ -92,7 +92,7 @@ class DatasetRecorder:
                 raise StationError(
                     "not_found", f"dataset {self.name} does not exist", params={"dataset": self.name}
                 )
-            info = json.loads(info_path.read_text())
+            info = json.loads(info_path.read_text(encoding="utf-8"))
             mismatch = []
             if int(info.get("fps", 0)) != self.fps:
                 mismatch.append(f"fps {info.get('fps')} != {self.fps}")
@@ -123,7 +123,7 @@ class DatasetRecorder:
         meta: dict[str, Any] = {}
         if meta_path.is_file():
             try:
-                meta = json.loads(meta_path.read_text())
+                meta = json.loads(meta_path.read_text(encoding="utf-8"))
             except ValueError:
                 meta = {}
         meta.setdefault("created_at", dt.datetime.now(dt.UTC).isoformat())

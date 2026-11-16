@@ -14,6 +14,8 @@ from typing import Any, Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from hibiscus_station.oscompat import replace_file
+
 DEFAULT_PORT = 18210
 
 
@@ -29,7 +31,8 @@ def calibration_root() -> Path:
     if home := os.environ.get("HF_LEROBOT_HOME"):
         return Path(home).expanduser() / "calibration"
     hf_home = os.environ.get("HF_HOME")
-    base = Path(hf_home).expanduser() if hf_home else Path.home() / ".cache" / "huggingface"
+    cache = os.environ.get("XDG_CACHE_HOME")  # huggingface_hub honours it on every OS
+    base = Path(hf_home).expanduser() if hf_home else Path(cache or Path.home() / ".cache") / "huggingface"
     return base / "lerobot" / "calibration"
 
 
@@ -41,7 +44,7 @@ def write_private(path: Path, data: str | bytes) -> None:
         with os.fdopen(fd, "wb") as fh:
             fh.write(data.encode("utf-8") if isinstance(data, str) else data)
         os.chmod(tmp, 0o600)
-        os.replace(tmp, path)
+        replace_file(tmp, path)
     except BaseException:
         Path(tmp).unlink(missing_ok=True)
         raise

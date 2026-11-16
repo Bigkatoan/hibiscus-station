@@ -27,6 +27,7 @@ import numpy as np
 import numpy.typing as npt
 
 from hibiscus_station.errors import StationError
+from hibiscus_station.oscompat import replace_file
 from hibiscus_station.programs.interfaces import TrajectorySamples
 from hibiscus_station.programs.paths import RobotDataPaths
 from hibiscus_station.programs.schemas import (
@@ -181,7 +182,7 @@ def write_parquet(path: Path, samples: TrajectorySamples) -> None:
     try:
         pq.write_table(table, tmp)
         tmp.chmod(0o600)
-        tmp.replace(path)
+        replace_file(tmp, path)
     except BaseException:
         tmp.unlink(missing_ok=True)
         raise

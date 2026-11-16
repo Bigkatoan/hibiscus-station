@@ -21,6 +21,7 @@ from hibiscus_station.api.routes import build_mock_router, build_router
 from hibiscus_station.api.security import COOKIE, LocalAuth
 from hibiscus_station.api.ws import EventHub, build_ws_router
 from hibiscus_station.errors import StationError
+from hibiscus_station.oscompat import register_web_mimetypes
 from hibiscus_station.programs.api_detectors import build_detectors_router
 from hibiscus_station.programs.api_programs import build_programs_router
 from hibiscus_station.programs.api_trajectories import build_trajectories_router
@@ -171,6 +172,7 @@ def create_app(
 
     app.openapi = openapi  # type: ignore[method-assign]
 
+    register_web_mimetypes()  # Windows: .js is often text/plain in the registry
     sdir = static_dir or default_static_dir()
     index = sdir / "index.html"
     if index.is_file():

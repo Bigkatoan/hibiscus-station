@@ -39,7 +39,7 @@ from blocks_dsl import (
     wait_until,
     while_,
 )
-from conftest import wait_for
+from conftest import is_private, wait_for
 
 from hibiscus_station.errors import StationError
 from hibiscus_station.profiles import GripHold
@@ -539,4 +539,4 @@ def test_run_files_are_private(tmp_path: Path) -> None:
     run = Run(tmp_path, program(log(text("x")))).start()
     run.done()
     path = tmp_path / "runs" / "programs" / f"{RUN}.jsonl"
-    assert path.stat().st_mode & 0o777 == 0o600 and path.parent.stat().st_mode & 0o777 == 0o700
+    assert is_private(path) and is_private(path.parent, 0o700)

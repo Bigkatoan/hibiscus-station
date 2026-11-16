@@ -44,7 +44,7 @@ class ServerLink:
         self.data: dict[str, Any] = {}
         if path.is_file():
             try:
-                self.data = json.loads(path.read_text())
+                self.data = json.loads(path.read_text(encoding="utf-8"))
             except ValueError:
                 self.data = {}
 

@@ -6,6 +6,10 @@ hibiscus-station url                 # print a fresh login URL for the running i
 hibiscus-station health              # exit 0 when the running instance answers (Docker, systemd)
 hibiscus-station openapi PATH        # write the OpenAPI document
 
+Robot ports are picked in the UI: ``/dev/ttyACM0`` (or ``/dev/serial/by-id/...``) on Linux,
+``/dev/tty.usbmodem...`` on macOS, ``COM3`` on Windows. Close LeLab / lerobot first: a serial port has
+one owner.
+
 LAN mode (spec §8.1, opt-in): ``--host 0.0.0.0`` (or a LAN address) is accepted only with a fixed
 token in ``$HIBISCUS_STATION_TOKEN`` and at least one ``--allow-host`` name the browser will use.
 """
@@ -26,7 +30,13 @@ from hibiscus_station import __version__
 from hibiscus_station.settings import DEFAULT_PORT, StationPaths, station_home
 
 app = typer.Typer(
-    add_completion=False, help="Hibiscus Station: the local robot agent.", no_args_is_help=False
+    add_completion=False,
+    help=(
+        "Hibiscus Station: the local robot agent. Opens the UI in the browser; pick the arm's serial "
+        "port there (Linux /dev/ttyACM0, macOS /dev/tty.usbmodem..., Windows COM3). Close LeLab or "
+        "any lerobot script first: a serial port or camera has one owner."
+    ),
+    no_args_is_help=False,
 )
 LOOPBACK_HOSTS = ("127.0.0.1", "::1")
 TOKEN_ENV = "HIBISCUS_STATION_TOKEN"  # noqa: S105 - the name of the variable
@@ -40,7 +50,7 @@ def _setup_logging(paths: StationPaths, verbose: bool) -> None:
 
     paths.logs.mkdir(parents=True, exist_ok=True)
     handler = logging.handlers.RotatingFileHandler(
-        paths.logs / "station.log", maxBytes=10 * 1024**2, backupCount=5
+        paths.logs / "station.log", maxBytes=10 * 1024**2, backupCount=5, encoding="utf-8"
     )
     handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(threadName)s %(name)s: %(message)s"))
     handler.addFilter(RedactingFilter())
@@ -132,6 +142,7 @@ def serve(
     from hibiscus_station.api.security import LocalAuth
     from hibiscus_station.app import create_app
     from hibiscus_station.hw.locks import DeviceBusyError, InstanceLock
+    from hibiscus_station.oscompat import high_resolution_timer
     from hibiscus_station.station import Station
 
     paths = StationPaths(home or station_home())
@@ -140,16 +151,17 @@ def serve(
     try:
         lock.acquire()
     except DeviceBusyError:
-        token = paths.token.read_text().strip() if paths.token.is_file() else ""
+        token = paths.token.read_text(encoding="utf-8").strip() if paths.token.is_file() else ""
         running = _running_login(paths, _running_port(paths) or port)
         typer.echo(f"Hibiscus Station is already running: http://{running}/auth?t={token}")
         raise typer.Exit(0) from None
     login = lan_login if lan and lan_login else _host_port(host, port)
     pid_info = {"pid": os.getpid(), "port": port, "host": host, "login": login}
-    paths.pid.write_text(json.dumps(pid_info))
+    paths.pid.write_text(json.dumps(pid_info), encoding="utf-8")
     _setup_logging(paths, verbose)
     auth = LocalAuth(token=token, port=port, extra_hosts=extra_hosts)
     auth.write_token(paths.token)
+    high_resolution_timer()  # Windows: 1 ms timer for the control loop's waits
     station = Station(paths.home, mock=mock, port=port)
     application = create_app(station, auth)
     url = f"http://{login}/auth?t={auth.token}"
@@ -184,7 +196,7 @@ def _running_login(paths: StationPaths, port: int) -> str:
 
 def _pid_info(paths: StationPaths) -> dict[str, object]:
     try:
-        data = json.loads(paths.pid.read_text())
+        data = json.loads(paths.pid.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
     return data if isinstance(data, dict) else {}
@@ -205,7 +217,7 @@ def url(home: Path | None = typer.Option(None, "--home")) -> None:
         typer.echo("Hibiscus Station is not running.", err=True)
         raise typer.Exit(1)
     login = _running_login(paths, _running_port(paths) or DEFAULT_PORT)
-    typer.echo(f"http://{login}/auth?t={paths.token.read_text().strip()}")
+    typer.echo(f"http://{login}/auth?t={paths.token.read_text(encoding='utf-8').strip()}")
 
 
 @app.command()
@@ -229,7 +241,7 @@ def health(
         r = httpx.get(
             f"http://{target}:{port}/api/v1/status",
             headers={
-                "Authorization": f"Bearer {paths.token.read_text().strip()}",
+                "Authorization": f"Bearer {paths.token.read_text(encoding='utf-8').strip()}",
                 "Host": f"127.0.0.1:{port}",
             },
             timeout=timeout,
@@ -249,11 +261,14 @@ def openapi(path: Path = typer.Argument(Path("openapi.json"))) -> None:
     """Write the OpenAPI document (committed as station/openapi.json)."""
     from hibiscus_station.openapi import export
 
-    path.write_text(export())
+    path.write_text(export(), encoding="utf-8")
     typer.echo(f"wrote {path}")
 
 
 def main() -> None:
+    from hibiscus_station.oscompat import utf8_console
+
+    utf8_console()  # Windows pipes / files default to cp1252
     app(prog_name="hibiscus-station")
 
 

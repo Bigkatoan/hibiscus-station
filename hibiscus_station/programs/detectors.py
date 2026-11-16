@@ -327,7 +327,7 @@ class DetectorStore:
 
     def _read(self, path: Path) -> Detector:
         try:
-            return Detector.model_validate_json(path.read_text())
+            return Detector.model_validate_json(path.read_text(encoding="utf-8"))
         except (OSError, ValidationError, ValueError) as exc:
             raise StationError(
                 "detector_invalid", f"unreadable detector file {path.name}", params={"file": path.name}

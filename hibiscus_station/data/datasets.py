@@ -21,7 +21,7 @@ def _meta(datasets_root: Path, name: str) -> dict[str, Any]:
     path = sidecar_dir(datasets_root, name) / "dataset.json"
     if path.is_file():
         try:
-            data: dict[str, Any] = json.loads(path.read_text())
+            data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
             return data
         except ValueError:
             return {}
@@ -35,7 +35,7 @@ def summary(datasets_root: Path, name: str) -> dict[str, Any] | None:
     info_path = root / "meta" / "info.json"
     if not info_path.is_file():
         return None
-    info = json.loads(info_path.read_text())
+    info = json.loads(info_path.read_text(encoding="utf-8"))
     features = info.get("features", {})
     cams = [k.removeprefix("observation.images.") for k in features if k.startswith("observation.images.")]
     meta = _meta(datasets_root, name)

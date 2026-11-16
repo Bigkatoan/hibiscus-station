@@ -7,6 +7,8 @@ which checks every request against the server contract snapshot in ``tests/contr
 from __future__ import annotations
 
 import math
+import stat
+import sys
 import threading
 import time
 from collections.abc import Callable, Iterator
@@ -20,6 +22,14 @@ from hibiscus_station.profiles import CameraProfile, FollowerProfile, LeaderProf
 from hibiscus_station.station import Station
 
 PORT = 18210
+
+
+def is_private(path: Path, mode: int = 0o600) -> bool:
+    """POSIX: ``path`` has exactly ``mode``. Windows has no POSIX modes (NTFS ACLs: the user's
+    profile directory is private already), so it is always True there."""
+    return sys.platform == "win32" or stat.S_IMODE(path.stat().st_mode) == mode
+
+
 BASE = f"http://127.0.0.1:{PORT}"
 
 

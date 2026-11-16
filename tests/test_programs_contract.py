@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, get_args
 
 import pytest
-from conftest import STATION_DIR, contract_errors
+from conftest import STATION_DIR, contract_errors, is_private
 from pydantic import TypeAdapter, ValidationError
 
 from hibiscus_station.api import schemas as wire
@@ -422,7 +422,7 @@ def test_robot_data_paths_layout(tmp_path: Path) -> None:
     assert p.program_json("ab") == tmp_path / "robots/desk/programs/ab/program.json"
     assert program_run_log(tmp_path, RUN) == tmp_path / "runs/programs" / f"{RUN}.jsonl"
     p.ensure()
-    assert (p.root.stat().st_mode & 0o777) == 0o700
+    assert is_private(p.root, 0o700)
 
 
 @pytest.mark.parametrize(

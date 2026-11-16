@@ -19,6 +19,7 @@ from hibiscus_station.jobs import Job, JobManager
 from hibiscus_station.models import compat, importer
 from hibiscus_station.models.loader import LoadedPolicy, load_policy
 from hibiscus_station.models.registry import ModelEntry, ModelRegistry
+from hibiscus_station.oscompat import import_roots
 from hibiscus_station.profiles import ProfileStore, RobotProfile
 from hibiscus_station.programs.hub import ProgramsHub
 from hibiscus_station.remote import ServerLink, pull_model, upload_dataset
@@ -102,7 +103,7 @@ class Station:
         self.jobs = JobManager(self.owner.emit)
         self.loaded: LoadedPolicy | None = None
         self._load_lock = threading.Lock()
-        self.import_roots = [Path.home(), Path("/media"), Path("/mnt")]
+        self.import_roots = import_roots()
         self.started = False
         self.owner.status_hook = self._decorate_status
         self.programs = ProgramsHub(self)  # trajectories, poses, detectors, signals, programs

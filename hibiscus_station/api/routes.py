@@ -20,6 +20,7 @@ from hibiscus_station.data.sessions import list_sessions, session_series
 from hibiscus_station.errors import StationError
 from hibiscus_station.hw import ports as hwports
 from hibiscus_station.hw.factory import calibration_files
+from hibiscus_station.hw.locks import normalize_device
 from hibiscus_station.profiles import CameraProfile, RobotProfile
 from hibiscus_station.settings import Settings
 from hibiscus_station.station import (
@@ -135,7 +136,8 @@ def build_router() -> APIRouter:
                 return wire.DetectResponse(ports_before=lister())
             port = hwports.detect_unplug(body.ports_before, lister, timeout_s=body.timeout_s)
         else:
-            candidates = [p for p in lister() if p not in in_use]
+            held = {normalize_device(d) for d in in_use}
+            candidates = [p for p in lister() if normalize_device(p) not in held]
             port = hwports.detect_motion(candidates, hwports.read_raw_positions, timeout_s=body.timeout_s)
         if port is None:
             raise StationError("not_found", "no port detected; try again", params={"method": body.method})
@@ -258,7 +260,7 @@ def build_router() -> APIRouter:
 
     @r.get("/sessions/{session_id}/telemetry", tags=["sessions"])
     def session_telemetry(request: Request, session_id: str) -> wire.TelemetrySeries:
-        if "/" in session_id or ".." in session_id:
+        if any(c in session_id for c in "/\\:") or ".." in session_id:
             raise StationError("validation_failed", "bad session id")
         series = session_series(station(request).paths.sessions, session_id)
         if series is None:
@@ -459,12 +461,10 @@ def _discover(st: Station) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     found: list[dict[str, Any]] = []
     try:
-        from lerobot.cameras.opencv import OpenCVCamera
+        from hibiscus_station.hw.cameras import find_opencv_cameras
 
-        for c in OpenCVCamera.find_cameras():
-            if str(c.get("id")) in holders:
-                continue  # never probe a camera Station holds; listed below as in use
-            found.append({**c, "type": "opencv"})
+        # never probe a camera Station holds (Windows refuses a second open); listed below as in use
+        found += [{**c, "type": "opencv"} for c in find_opencv_cameras(set(holders))]
     except Exception:  # noqa: S110 - no video stack: nothing to list
         pass
     try:

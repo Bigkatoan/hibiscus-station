@@ -45,7 +45,7 @@ def list_sessions(root: Path) -> list[dict[str, Any]]:
         if not meta_path.is_file():
             continue
         try:
-            meta = json.loads(meta_path.read_text())
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
         except ValueError:
             continue
         row = {

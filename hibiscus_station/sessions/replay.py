@@ -26,7 +26,7 @@ def load_episode_actions(root: Path, episode: int) -> tuple[int, list[dict[str, 
     info_path = root / "meta" / "info.json"
     if not info_path.is_file():
         raise StationError("not_found", f"no dataset at {root}")
-    info = json.loads(info_path.read_text())
+    info = json.loads(info_path.read_text(encoding="utf-8"))
     names = list(info["features"]["action"]["names"])
     rows: list[tuple[int, list[float]]] = []
     for f in sorted((root / "data").rglob("*.parquet")):

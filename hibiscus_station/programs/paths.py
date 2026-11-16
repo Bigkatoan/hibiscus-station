@@ -59,7 +59,7 @@ class RobotDataPaths:
         return self.trajectory_dir(trajectory_id) / "samples.parquet"
 
     def keyframe(self, trajectory_id: str, camera: str, index: int) -> Path:
-        if "/" in camera or camera.startswith(".") or index < 0:
+        if any(c in camera for c in "/\\:") or camera.startswith(".") or index < 0:
             raise StationError("validation_failed", "bad keyframe", params={"camera": camera, "index": index})
         return self.trajectory_dir(trajectory_id) / "keyframes" / camera / f"{index:04d}.jpg"
 
