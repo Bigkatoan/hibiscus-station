@@ -485,7 +485,10 @@ function ProgramWorkspace({ program, onDeleted }: { program: Program; onDeleted:
               <PxIcon name="check" /> {t("programs.editor.no_issues")}
             </p>
           ) : (
-            <p className="flex items-center gap-2 text-sm text-muted-foreground" data-testid="program-unchecked">
+            <p
+              className="flex items-center gap-2 text-sm text-muted-foreground"
+              data-testid="program-unchecked"
+            >
               <PxIcon name="search" /> {t("programs.editor.not_checked")}
             </p>
           )}

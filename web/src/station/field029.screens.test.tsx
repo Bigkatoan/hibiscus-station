@@ -100,7 +100,13 @@ function homeProgram(h: ReturnType<typeof setupStation>) {
       blocks: {
         languageVersion: 0,
         blocks: [
-          { type: "hb_start", id: "start", x: 40, y: 40, inputs: { DO: { block: { type: "hb_go_home", id: "gh" } } } },
+          {
+            type: "hb_start",
+            id: "start",
+            x: 40,
+            y: 40,
+            inputs: { DO: { block: { type: "hb_go_home", id: "gh" } } },
+          },
         ],
       },
     },

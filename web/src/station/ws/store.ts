@@ -293,9 +293,7 @@ export class StationStore {
         const st = this.snap.status;
         this.set({
           lastSession: session,
-          ...(st && !ended
-            ? { status: { ...st, session, sub: session.episode?.phase ?? st.sub } }
-            : {}),
+          ...(st && !ended ? { status: { ...st, session, sub: session.episode.phase ?? st.sub } } : {}),
         });
         return;
       }
