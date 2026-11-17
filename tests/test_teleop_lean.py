@@ -15,7 +15,7 @@ from conftest import Events, wait_for
 
 from hibiscus_station.hw.loop import TELEOP_FPS, LoopStats
 from hibiscus_station.hw.owner import LEAN_OBS_HZ
-from hibiscus_station.mock import get_world
+from hibiscus_station.mock import fakebus, get_world
 from hibiscus_station.station import Station, TeleopRequest
 
 
@@ -56,8 +56,24 @@ def test_teleop_defaults_to_the_fast_lean_loop(connected: Station) -> None:
     assert summary["loop"]["fps"] > 90
 
 
-def test_lean_tick_never_reads_telemetry_and_observation_in_one_tick(connected: Station) -> None:
+class _FineClock:
+    """``time`` for the fake bus with ``monotonic`` read from ``perf_counter``: the tick starts this
+    test buckets by are perf_counter stamps, and on Windows ``monotonic`` ticks in ~15.6 ms steps
+    (four 250 Hz ticks), which put four or five reads in one bucket (CI windows, 0.2.9)."""
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(time, name)
+
+    @staticmethod
+    def monotonic() -> float:
+        return time.perf_counter()
+
+
+def test_lean_tick_never_reads_telemetry_and_observation_in_one_tick(
+    connected: Station, monkeypatch: pytest.MonkeyPatch
+) -> None:
     st = connected
+    monkeypatch.setattr(fakebus, "time", _FineClock())
     fol, lead = get_world("mock://follower"), get_world("mock://leader")
     st.start_teleop(TeleopRequest(fps=250))
     time.sleep(0.3)
