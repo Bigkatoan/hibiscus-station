@@ -73,3 +73,34 @@ def test_an_unlisted_skip_fails(tmp_path: Path, cls: str, name: str) -> None:
 
 def test_an_empty_report_fails(tmp_path: Path) -> None:
     assert check_skips.check("linux", [_junit(tmp_path, [])], check_skips.load_allowed())
+
+
+def test_the_emulated_e2e_flow_may_skip_on_windows_only(tmp_path: Path) -> None:
+    junit = _junit(
+        tmp_path,
+        [
+            ("tests.e2e.test_station_ui", "test_station_ui_end_to_end[mock-vi]", None),
+            (
+                "tests.e2e.test_station_ui",
+                "test_station_ui_end_to_end[sts-vi]",
+                "the STS emulator needs pseudo-terminals",
+            ),
+        ],
+    )
+    assert check_skips.check("windows", [junit], check_skips.load_allowed()) == []
+    assert len(check_skips.check("linux", [junit], check_skips.load_allowed())) == 1
+
+
+def test_ci_runs_the_e2e_suite_on_linux_and_windows_and_fails_on_a_missing_browser() -> None:
+    import yaml
+
+    ci = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
+    job = ci["jobs"]["e2e"]
+    assert job["env"]["HIBISCUS_E2E_REQUIRED"] == "1"
+    rows = {r["platform"]: r for r in job["strategy"]["matrix"]["include"]}
+    assert rows["windows"]["os"] == "windows-latest" and rows["linux"]["os"].startswith("ubuntu")
+    assert rows["linux"]["tests"] == "tests/e2e"  # the whole suite, screen matrix included
+    assert rows["windows"]["tests"].startswith("tests/e2e")
+    steps = " ".join(str(s.get("run", "")) for s in job["steps"])
+    assert "-m e2e" in steps and 'check_skips.py --platform "${{ matrix.platform }}"' in steps
+    assert "pnpm install --frozen-lockfile" in steps  # axe-core for the screen matrix

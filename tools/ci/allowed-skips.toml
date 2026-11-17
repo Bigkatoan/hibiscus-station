@@ -40,6 +40,12 @@ platforms = ["windows"]
 reason = "pseudo-terminals are POSIX only (STS3215 emulator)"
 covered_by = "Linux and macOS CI; UAT-1 step 10 (AT-18); SP-2"
 
+[[skip]]
+test = "tests/e2e/test_station_ui.py::test_station_ui_end_to_end[sts-vi]"
+platforms = ["windows"]
+reason = "pseudo-terminals are POSIX only (STS3215 emulator)"
+covered_by = "e2e (linux) job; e2e (windows) mock-vi and mock-en; UAT-1 steps 3 - 5; SP-2"
+
 # -- platform-specific device locks (hibiscus_station/platform.py)
 [[skip]]
 test = "tests/test_platform.py::test_dev_symlinks_resolve_to_one_lock"

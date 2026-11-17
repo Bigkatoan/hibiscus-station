@@ -105,30 +105,56 @@ jobs:
         with: {name: web-dist, path: web/dist, retention-days: 7}
 
   e2e:
-    name: e2e (Playwright, hibiscus-station --mock)
-    runs-on: ubuntu-24.04
+    # D-1 / FL-7 / BR-1: the built UI against a real `hibiscus-station --mock` in Chromium. Linux runs
+    # the whole suite (novice flows in vi and en, the STS3215-emulator flow, the screen matrix with
+    # scroll + axe checks); windows-latest runs the novice flows (the emulator needs pseudo-terminals,
+    # listed in tools/ci/allowed-skips.toml; the matrix baseline is Linux fonts). A missing browser,
+    # UI build or axe-core fails the job instead of skipping (HIBISCUS_E2E_REQUIRED=1).
+    name: e2e (${{ matrix.platform }}, Playwright, hibiscus-station --mock)
+    runs-on: ${{ matrix.os }}
     needs: [web]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-24.04, platform: linux, tests: tests/e2e, browser: "--with-deps chromium"}
+          - {os: windows-latest, platform: windows, tests: tests/e2e/test_station_ui.py, browser: chromium}
+    defaults:
+      run: {shell: bash}
+    env:
+      HIBISCUS_E2E_REQUIRED: "1"
     steps:
       - uses: actions/checkout@v7.0.1
       - name: Free disk space (torch / LeRobot wheels)
+        if: runner.os == 'Linux'
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
           df -h /
       - uses: actions/download-artifact@v6
         with: {name: web-dist, path: web/dist}
+      - uses: pnpm/action-setup@v6.1.1
+        with: {version: "${{ env.PNPM_VERSION }}"}
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: "${{ env.NODE_VERSION }}"
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - name: axe-core for the screen matrix (web/node_modules)
+        working-directory: web
+        run: pnpm install --frozen-lockfile
       - uses: astral-sh/setup-uv@v10.3.3
         with:
           version: "${{ env.UV_VERSION }}"
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-      - run: uv sync --locked --python "$PYTHON_VERSION" && uv run playwright install --with-deps chromium
-      - run: uv run pytest -q -ra tests/e2e -m e2e --junitxml=e2e-junit.xml
-      - name: No skipped e2e test (D-1)
+      - run: uv sync --locked --python "$PYTHON_VERSION" && uv run playwright install ${{ matrix.browser }}
+      - run: uv run pytest -q -ra "${{ matrix.tests }}" -m e2e --junitxml=e2e-junit.xml
+      - name: Skipped e2e tests are in the published list (D-1, NFR-18)
         if: ${{ !cancelled() && hashFiles('e2e-junit.xml') != '' }}
-        run: uv run python tools/ci/check_skips.py --platform linux e2e-junit.xml
+        run: uv run python tools/ci/check_skips.py --platform "${{ matrix.platform }}" e2e-junit.xml
       - uses: actions/upload-artifact@v5
         if: always()
-        with: {name: e2e-screenshots, path: screenshots/e2e, retention-days: 7, if-no-files-found: ignore}
+        with: {name: "e2e-screenshots-${{ matrix.platform }}", path: screenshots/e2e, retention-days: 7, if-no-files-found: ignore}
 
   release-assets:
     # ADR-13 / FL-12 / SP-3 on Linux: build the release assets (wheel, constraints.txt, overrides.txt,
