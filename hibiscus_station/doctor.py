@@ -988,13 +988,28 @@ def zip_target(out_dir: Path) -> Path:
     return out_dir / f"hibiscus-station-doctor-{time.strftime('%Y%m%d-%H%M%S')}.zip"
 
 
+def _secrets(paths: StationPaths) -> list[str]:
+    """The local login token as stored on disk: removed literally from every file in the zip, on top
+    of :func:`redact` (which only finds it after ``t=`` / ``Bearer``)."""
+    try:
+        token = paths.token.read_text(encoding="utf-8").strip()
+    except OSError:
+        return []
+    return [token] if len(token) >= 8 else []
+
+
 def write_zip(report: dict[str, Any], paths: StationPaths, out_dir: Path, target: Path | None = None) -> Path:
-    """The zip to send. The token file and ``server.json`` are never added."""
+    """The zip to send. The token file and ``server.json`` are never added; every text goes
+    through :func:`redact` and loses the literal local token."""
     out_dir.mkdir(parents=True, exist_ok=True)
     target = target or zip_target(out_dir)
+    secrets = _secrets(paths)
 
     def clean(text: str) -> str:
-        return redact(text)
+        text = redact(text)
+        for secret in secrets:
+            text = text.replace(secret, "[local token removed]")
+        return text
 
     def read(f: Path) -> str:
         return clean(f.read_text(encoding="utf-8", errors="replace"))
@@ -1010,10 +1025,7 @@ def write_zip(report: dict[str, Any], paths: StationPaths, out_dir: Path, target
         for c in report["calibrations"]:
             p = Path(c["path"])
             if p.is_file() and p.stat().st_size < 64 * 1024:
-                z.writestr(
-                    f"calibration/{c['arm']}/{c['dir']}/{p.name}",
-                    p.read_text(encoding="utf-8", errors="replace"),
-                )
+                z.writestr(f"calibration/{c['arm']}/{c['dir']}/{p.name}", read(p))
         metas = sorted(paths.sessions.glob("*/session.json"), key=lambda f: f.stat().st_mtime)
         for f in metas[-5:] if paths.sessions.is_dir() else []:
             z.writestr(f"sessions/{f.parent.name}.json", read(f))
@@ -1031,4 +1043,7 @@ def run(
     paths = StationPaths(home)
     report = collect(paths, calibration_root(), ping=ping, probe_cameras=probe_cameras, echo=echo)
     target = write_zip(report, paths, out_dir, zip_target(out_dir))
-    return summary(report, target), target
+    text = summary(report, target)
+    for secret in _secrets(paths):
+        text = text.replace(secret, "[local token removed]")
+    return text, target

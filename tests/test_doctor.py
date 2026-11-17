@@ -320,3 +320,41 @@ def test_doctor_ends_with_what_to_send_in_english_and_vietnamese(
     tail = text.split("WHAT TO SEND / CẦN GỬI GÌ\n")[1]
     assert "The motor check is incomplete" in tail and "run `hibiscus-station doctor --verbose` again" in tail
     assert "Phần kiểm tra động cơ chưa đủ" in tail and "tắt Station và LeLab" in tail
+
+
+def test_doctor_zip_has_no_token_or_pat(
+    tmp_path: Path, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    f, ld = emus
+    home = _calibrated_home(tmp_path, f, ld, monkeypatch)
+    token = "Zk3v9QmT2xLp8RwYc4NbJ7HdFs6GaE1u0Io5KqWzXyV"  # 43 chars, as Station makes them
+    pat = "hbp_AbCd1234_" + "x7Yq2Lm9Pz4Rt6Wv8Ks1Hn3Bf5Dj0Gc2Qe4Ua6Io8Ty"
+    pat_secret = pat[len("hbp_AbCd") :]
+    (home / "token").write_text(token, encoding="utf-8")
+    (home / "server.json").write_text(json.dumps({"url": "https://hibiscus.example", "token": pat}))
+    (home / "logs").mkdir()
+    (home / "logs" / "station.log").write_text(
+        f"GET /auth?t={token}\nAuthorization: Bearer {token}\nupload with {pat}\nraw {token}\n",
+        encoding="utf-8",
+    )
+    with (home / "robots.yaml").open("a", encoding="utf-8") as fh:
+        fh.write(f"# token {token}\n# pat {pat}\n")
+    (home / "settings.yaml").write_text(f"# {pat}\n", encoding="utf-8")
+    (home / "sessions" / "s1").mkdir(parents=True)
+    (home / "sessions" / "s1" / "session.json").write_text(json.dumps({"note": f"{token} {pat}"}))
+    cal = tmp_path / "calibration" / "robots" / "so_follower" / "arm_follower.json"
+    data = json.loads(cal.read_text(encoding="utf-8"))
+    data["shoulder_pan"]["note"] = token
+    cal.write_text(json.dumps(data), encoding="utf-8")
+
+    text, target = _run(home, tmp_path / "out")
+    with zipfile.ZipFile(target) as z:
+        names = z.namelist()
+        blobs = {n: z.read(n) for n in names}
+    assert "token" not in names and "server.json" not in names
+    assert {"report.txt", "report.json", "station.log.tail", "robots.yaml", "settings.yaml"} <= set(names)
+    assert "sessions/s1.json" in names and "calibration/follower/so_follower/arm_follower.json" in names
+    for name, blob in blobs.items():
+        assert token.encode() not in blob, name
+        assert pat_secret.encode() not in blob, name
+    assert token not in text and pat_secret not in text
