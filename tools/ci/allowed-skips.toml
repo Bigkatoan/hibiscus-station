@@ -1,0 +1,54 @@
+# NFR-18 / AT-2: the published list of tests that may be SKIPPED, per platform. CI fails on any
+# other skip (tools/ci/check_skips.py reads the pytest JUnit XML of each job).
+#
+#   test       pytest node id or prefix: a module (tests/x.py) or one test (tests/x.py::test_y)
+#   platforms  linux | windows | macos  (the CI job's platform)
+#   reason     why it cannot run there
+#   covered_by the acceptance test / UAT step / other CI job that covers it instead
+#
+# Change this list only with the Tech Lead and QC: a new entry is a coverage gap on that platform.
+
+# -- pseudo-terminal STS3215 emulator (tests/sts_emulator.py): POSIX pty, no Windows equivalent until
+#    SP-2 (virtual COM port pair on windows-latest) lands.
+[[skip]]
+test = "tests/test_calib_simple.py"
+platforms = ["windows"]
+reason = "pseudo-terminals are POSIX only (STS3215 emulator)"
+covered_by = "Linux and macOS CI; UAT-1 step 5 (AT-22, AT-23, AT-26); SP-2"
+
+[[skip]]
+test = "tests/test_real_stack.py"
+platforms = ["windows"]
+reason = "pseudo-terminals are POSIX only (STS3215 emulator)"
+covered_by = "Linux and macOS CI; UAT-1 steps 3 - 5 and 8 (AT-11 - AT-26, AT-31); SP-2"
+
+[[skip]]
+test = "tests/test_teleop_latency.py"
+platforms = ["windows"]
+reason = "pseudo-terminals are POSIX only (STS3215 emulator)"
+covered_by = "Linux and macOS CI; UAT-1 step 8 (AT-31, NFR-1); SP-2"
+
+[[skip]]
+test = "tests/test_device_lost.py::test_bus_stops_retrying_a_lost_device"
+platforms = ["windows"]
+reason = "pseudo-terminals are POSIX only (STS3215 emulator)"
+covered_by = "Linux and macOS CI; UAT-1 step 10 (AT-18); SP-2"
+
+[[skip]]
+test = "tests/test_device_lost.py::test_pty_closed_mid_teleop_then_back_under_a_new_name"
+platforms = ["windows"]
+reason = "pseudo-terminals are POSIX only (STS3215 emulator)"
+covered_by = "Linux and macOS CI; UAT-1 step 10 (AT-18); SP-2"
+
+# -- platform-specific device locks (hibiscus_station/platform.py)
+[[skip]]
+test = "tests/test_platform.py::test_dev_symlinks_resolve_to_one_lock"
+platforms = ["windows"]
+reason = "/dev paths and symlinks do not exist on Windows"
+covered_by = "Linux and macOS CI"
+
+[[skip]]
+test = "tests/test_platform.py::test_windows_lock_is_a_byte_past_the_header"
+platforms = ["linux", "macos"]
+reason = "Windows byte-range lock semantics"
+covered_by = "Windows CI (python, windows-latest)"
