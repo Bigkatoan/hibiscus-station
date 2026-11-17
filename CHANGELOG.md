@@ -51,6 +51,14 @@ with its own line (see the README); GitHub never offers a pre-release as its "la
 - **The doctor report always starts with LIKELY PROBLEMS**, or "No likely problems found".
 
 ### Fixed
+- **On a flaky bus the doctor said a motor "does not answer (power? cable?)" although it did**:
+  the same report showed it in the scan and in sync reads that worked. Whether a motor answers now
+  comes from everything it sent during the check (scan, pings, sync reads, register reads, late
+  answers): a motor that answered anything "answers only now and then", one that sent only damaged
+  packets "answers only with corrupted packets"; "do not answer (power? cable?)" is kept for a
+  motor that sent nothing at all. The bus fault is named under "unreliable bus" (lost, corrupted or
+  late answers, motors answering now and then), also next to a silent motor when the other motors
+  show it.
 - **One late answer on the bus made the doctor show wrong values** (`80 C`, `341.3 V`, "overheat,
   overload", wrong position limits) and tell you to calibrate the arm again: an answer that came
   later than the bus timeout was taken as the answer to the next read, and every later register

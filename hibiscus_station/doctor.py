@@ -439,8 +439,9 @@ def _check_motors(probe: Any, out: dict[str, Any]) -> None:
     out["sync_read_present_position"] = time_sync_reads(probe, ids, pos_addr, pos_size)
     for mid in ids:
         row = out["motors"][str(mid)]
-        if not row["ping_ok"]:
-            continue  # no ping answered: its registers are not asked
+        ev = probe.evidence.get(mid)
+        if not row["ping_ok"] and not (ev and ev.heard):
+            continue  # nothing at all from this id: its registers are not asked
         regs: dict[int, int] = {}
         failed: dict[str, str] = {}
         for addr, length in REGISTER_BLOCKS:
@@ -481,7 +482,14 @@ def _conclude(out: dict[str, Any], evidence: dict[int, Any]) -> None:
             "corrupt": ev.corrupt if ev else 0,
             "garbled": ev.garbled if ev else 0,
         }
-        state = "answers" if row.get("ping_ok") else "silent"
+        if row.get("ping_ok"):
+            state = "answers"
+        elif ev is not None and ev.answered:
+            state = "flaky"
+        elif ev is not None and ev.heard:
+            state = "corrupt"
+        else:
+            state = "silent"
         row["state"] = state
         if state == "silent":
             row["error"] = "no answer"
@@ -641,7 +649,18 @@ def bus_verdict(a: dict[str, Any]) -> dict[str, Any] | None:
     ms = sr.get("ms_per_read")
     faults: list[str] = []
     if silent:
-        pass  # every sync read asks the silent motors too and fails (QD-21)
+        # every sync read asks the silent motors too and fails: count only what failed for the others
+        others = [{k: v for k, v in r.items() if k not in silent} for r in sr.get("failures_by_read") or []]
+        others = [r for r in others if r]
+        if others:
+            counts = dict.fromkeys(READ_FAILURES, 0)
+            for r in others:
+                kind = r[min(r, key=int)]
+                counts[kind if kind in counts else "other"] += 1
+            faults.append(
+                f"{len(others)} of {reads} reads also failed for the motors that answer "
+                f"({failures_text(counts)})"
+            )
     elif failed:
         every = not flaky and not corrupt
         faults.append(
