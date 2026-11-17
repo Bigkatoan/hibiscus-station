@@ -67,10 +67,12 @@ export function useRecordKeys(enabled: boolean, onKey: (a: "next" | "rerecord" |
 
 function EpisodeStrip({ dataset, saved }: { dataset: string; saved: number }) {
   const { t } = useTranslation("station");
-  const detail = useDataset(dataset);
+  // Nothing to show before the first saved episode, and a new dataset that keeps none is removed
+  // when the session ends: never ask for it then (QC 0.2.9 QD-18, a console 404).
+  const detail = useDataset(dataset, saved > 0);
   const { refetch } = detail;
   useEffect(() => {
-    void refetch();
+    if (saved > 0) void refetch();
   }, [saved, refetch]);
   const eps = detail.data?.episode_list ?? [];
   if (eps.length === 0) return null;

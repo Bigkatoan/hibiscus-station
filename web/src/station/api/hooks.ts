@@ -126,10 +126,11 @@ export const useDiscoverCameras = (enabled = true) =>
 export const useDatasets = () =>
   useQuery({ queryKey: qk.datasets, queryFn: () => api.get<{ datasets: LocalDataset[] }>("/datasets") });
 
-export const useDataset = (name: string) =>
+export const useDataset = (name: string, enabled = true) =>
   useQuery({
     queryKey: qk.dataset(name),
     queryFn: () => api.get<LocalDatasetDetail>(`/datasets/${encodeURIComponent(name)}`),
+    enabled,
   });
 
 export const useEpisodeTelemetry = (name: string, index: number | null) =>
