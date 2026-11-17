@@ -15,17 +15,9 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from e2e_support import SPA
+from e2e_support import SPA, unavailable
 
 CHECKPOINT = Path(os.environ.get("HIBISCUS_E2E_CHECKPOINT", "/nonexistent"))
-REQUIRED = os.environ.get("HIBISCUS_E2E_REQUIRED") == "1"
-
-
-def unavailable(reason: str) -> None:
-    """Skip a test whose tooling is missing, or fail it where the tooling must exist (CI)."""
-    if REQUIRED:
-        pytest.fail(f"{reason} (HIBISCUS_E2E_REQUIRED=1)")
-    pytest.skip(reason)
 
 
 @pytest.fixture(scope="session")

@@ -35,6 +35,17 @@ WEB = REPO / "web"
 SPA = Path(os.environ.get("HIBISCUS_STATION_STATIC", WEB / "dist"))
 SHOTS = Path(os.environ.get("HIBISCUS_E2E_SHOTS", REPO / "screenshots" / "e2e"))
 ARMS = ("follower", "leader")
+#: CI: a missing UI build, Chromium or axe-core fails the tests instead of skipping them
+REQUIRED = os.environ.get("HIBISCUS_E2E_REQUIRED") == "1"
+
+
+def unavailable(reason: str) -> None:
+    """Skip a test whose tooling is missing, or fail it where the tooling must exist (CI)."""
+    import pytest
+
+    if REQUIRED:
+        pytest.fail(f"{reason} (HIBISCUS_E2E_REQUIRED=1)")
+    pytest.skip(reason)
 
 
 # ---------------------------------------------------------------------------------------- strings
