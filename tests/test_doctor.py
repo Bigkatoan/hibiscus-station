@@ -693,3 +693,34 @@ def test_doctor_with_no_ping_says_to_run_again_without_it(tmp_path: Path) -> Non
     assert "The motors were not checked (--no-ping)" in tail and "without --no-ping" in tail
     assert "Động cơ chưa được kiểm tra (--no-ping)" in tail and "không có --no-ping" in tail
     assert "close Station and LeLab" not in tail
+
+
+def _motor_check(text: str) -> list[str]:
+    return text.split("Motor check (read only):\n")[1].split("\n\n")[0].splitlines()
+
+
+def test_no_ping_says_the_motor_check_was_skipped_not_that_there_is_no_arm(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """QD-13: a profile with two real arms and --no-ping."""
+    monkeypatch.setenv("HF_LEROBOT_CALIBRATION", str(tmp_path / "calibration"))
+    home = tmp_path / "home"
+    home.mkdir()
+    ProfileStore(StationPaths(home).robots).put(
+        RobotProfile(
+            id="desk",
+            follower=FollowerProfile(port="COM3", calibration_id="desk_follower"),
+            leader=LeaderProfile(port="COM4", calibration_id="desk_leader"),
+        )
+    )
+    text, _t = doctor.run(home, tmp_path / "out", ping=False, probe_cameras=False, echo=lambda _s: None)
+    lines = _motor_check(text)
+    assert lines == ["  skipped (--no-ping): the serial ports were not opened"], lines
+    assert "no real arm" not in text
+
+
+def test_motor_check_without_any_arm_says_so(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HF_LEROBOT_CALIBRATION", str(tmp_path / "calibration"))
+    monkeypatch.setattr(doctor, "ports", lambda _p: [])
+    text, _t = _run(tmp_path / "home", tmp_path / "out")
+    assert _motor_check(text) == ["  nothing to check: no real arm in the profiles and no USB serial port"]

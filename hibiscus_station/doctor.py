@@ -904,8 +904,10 @@ def summary(report: dict[str, Any], target: Path | None = None) -> str:
                 f"  {c.get('id')}  {c.get('backend_api')}  {c.get('default_stream_profile')}" for c in cams
             ] or ["  (none)"]
     lines += ["", "Motor check (read only):"]
-    if not report["arms"]:
-        lines.append("  no real arm in the profiles (or --no-ping)")
+    if not report.get("ping", True):
+        lines.append("  skipped (--no-ping): the serial ports were not opened")
+    elif not report["arms"]:
+        lines.append("  nothing to check: no real arm in the profiles and no USB serial port")
     for a in report["arms"]:
         head = f"  {a['robot']} {a['arm']} on {a['port']}"
         if a.get("skipped"):
