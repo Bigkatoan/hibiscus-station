@@ -59,17 +59,22 @@ jobs:
       - name: Verify them (checksums; resolved set == uv.lock on Windows x64, Linux x86_64, macOS arm64)
         run: uv run --no-project --python "$PYTHON_VERSION" --with packaging python tools/release/verify_assets.py dist/release
       - name: Release notes from CHANGELOG.md
+        # A pre-release (1.0.0a1) is listed under [Unreleased] (tools/release/check_versions.py), so
+        # its compare links resolve before its tag exists; a release has its own section.
         env:
           VERSION: ${{ steps.version.outputs.version }}
+          PRERELEASE: ${{ steps.version.outputs.prerelease }}
         run: |
-          awk -v v="$VERSION" '
+          section="$VERSION"
+          if [ "$PRERELEASE" = true ]; then section=Unreleased; fi
+          awk -v v="$section" '
             $0 ~ "^## \\[" v "\\]" {found=1; next}
             found && /^## \[/ {exit}
             found && /^\[[^]]+\]: / {exit}
             found {print}
           ' CHANGELOG.md > RELEASE_NOTES.md
           if ! grep -q '[^[:space:]]' RELEASE_NOTES.md; then
-            echo "::error file=CHANGELOG.md::no '## [$VERSION]' section in CHANGELOG.md"
+            echo "::error file=CHANGELOG.md::no '## [$section]' section in CHANGELOG.md"
             exit 1
           fi
           base="https://github.com/Bigkatoan/hibiscus-station/releases/download/v$VERSION"
@@ -83,7 +88,11 @@ jobs:
             echo "irm $base/install.ps1 | iex"
             echo '```'
             echo
-            echo "The same command updates; the link of an older version goes back to it. Cùng lệnh để cập nhật; liên kết của bản cũ để quay lại bản đó."
+            echo "This line always installs exactly $VERSION: use it to come back to this version later. To update, paste the line of a newer release. Dòng này luôn cài đúng bản $VERSION: dùng nó để quay lại bản này sau này. Để cập nhật, dán dòng cài của bản mới hơn."
+            if [ "$PRERELEASE" = true ]; then
+              echo
+              echo "This is a test build (pre-release): GitHub's \"latest\" link never points at it. Đây là bản thử nghiệm (pre-release): liên kết \"latest\" của GitHub không trỏ tới bản này."
+            fi
             echo "It installs exactly the libraries tested for this release (\`constraints.txt\`, \`overrides.txt\`, checked against \`SHA256SUMS\`)."
             echo
             echo "- Docker (Linux): \`bash install.sh --version $VERSION\` ([deploy guide](https://github.com/Bigkatoan/hibiscus-station/blob/v$VERSION/docs/deploy.md))"

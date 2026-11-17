@@ -388,3 +388,36 @@ def test_changelog_lists_the_m0_changes_for_users(change: str) -> None:
     """QD-15: [Unreleased] was empty; it lists what the 1.0.0a1 build changes for its users."""
     notes = check_versions.unreleased_notes((ROOT / "CHANGELOG.md").read_text(encoding="utf-8"))
     assert change in " ".join(notes.split())
+
+
+def _release_notes(tmp_path: Path, version: str, pre: bool) -> str:
+    """Run release.yml's "Release notes" step on this repository's CHANGELOG.md."""
+    import subprocess
+
+    import yaml
+
+    wf = yaml.safe_load((ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8"))
+    step = next(
+        s
+        for j in wf["jobs"].values()
+        for s in j["steps"]
+        if s.get("name") == "Release notes from CHANGELOG.md"
+    )
+    shutil.copy2(ROOT / "CHANGELOG.md", tmp_path / "CHANGELOG.md")
+    env = {**os.environ, "VERSION": version, "PRERELEASE": "true" if pre else "false"}
+    bash = shutil.which("bash")
+    assert bash, "bash runs the workflow step (Git Bash on Windows)"
+    cmd = [bash, "-euo", "pipefail", "-c", step["run"]]
+    subprocess.run(cmd, env=env, cwd=tmp_path, check=True, capture_output=True)  # noqa: S603 - the repo's own workflow
+    return (tmp_path / "RELEASE_NOTES.md").read_text(encoding="utf-8")
+
+
+def test_release_notes_of_the_pre_release_and_their_install_lines(tmp_path: Path) -> None:
+    """QD-1 / QD-15: the draft of 1.0.0a1 takes its notes from [Unreleased] (it has no section of its
+    own), and its install text never says the same line updates (a versioned line reinstalls it)."""
+    notes = _release_notes(tmp_path, "1.0.0a1", pre=True)
+    assert "Version 1.0.0a1" in notes and "## [0.2.8]" not in notes
+    assert "releases/download/v1.0.0a1/install.ps1 | iex" in notes
+    assert "The same command updates" not in notes and "test build (pre-release)" in notes
+    stable = _release_notes(tmp_path, "0.2.8", pre=False)
+    assert "Return to rest pose" in stable and "test build" not in stable
