@@ -103,7 +103,11 @@ describe("Run model (R2)", () => {
     // Cameras stay on screen after the stop.
     expect(screen.getByTestId("camera-wrist")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "I'm clear, reset" }));
-    expect(await screen.findByText(/Motors too hot: elbow_flex/)).toBeInTheDocument();
+    // QC 0.2.9 QD-3: the motor and its temperature, never "[object Object]" or the raw detail
+    const refused = await screen.findByText(/Motors too hot:/);
+    expect(refused).toHaveTextContent("Motors too hot: follower elbow_flex 66 °C. Let them cool down first.");
+    expect(document.body).not.toHaveTextContent("[object Object]");
+    expect(document.body).not.toHaveTextContent("let it cool down");
     expect(h.sim.state).toBe("estopped");
   });
 });

@@ -427,9 +427,14 @@ export class MockStation {
   }
 
   requireCool(): void {
+    // the Station's shape: {arm, motor, temp_c} per motor at or above "hot"
     const hot = Object.entries(this.levels)
       .filter(([, l]) => l === "hot" || l === "critical")
-      .map(([k]) => k.split(".")[1]);
+      .map(([k]) => {
+        const [arm = "follower", motor = ""] = k.split(".");
+        const temp = this.temps[arm as Arm][motor];
+        return { arm, motor, temp_c: temp === undefined ? null : Math.round(temp) };
+      });
     if (hot.length) throw new MockProblem(409, "motor_hot", { motors: hot });
   }
 

@@ -17,6 +17,8 @@ import en from "./i18n/en.json";
 import vi_ from "./i18n/vi.json";
 import { i18n } from "@/lib/i18n";
 import { registerStationI18n } from "./i18n";
+import { StationApiError } from "./api/client";
+import { errorDetail, errorText } from "./components/StationError";
 import { MockStation } from "./mock/sim";
 import { wizardSteps } from "./StationShell";
 import { realArmDraft, roleWarnings } from "./pages/RobotPage";
@@ -389,6 +391,26 @@ describe("station i18n", () => {
     expect(t("datasets.summary", { count: 3, ...summary })).toMatch(/^3 episodes · /);
     const tv = i18n.getFixedT("vi", "station");
     expect(tv("record.done", { count: 1, path: "d" })).toBe("Đã lưu 1 tập trong d");
+  });
+
+  it("a motor_hot refusal names the motor and its temperature, in vi too (QC 0.2.9 QD-3)", () => {
+    registerStationI18n();
+    const err = new StationApiError(409, {
+      type: "about:blank",
+      title: "A motor is too hot",
+      status: 409,
+      code: "motor_hot",
+      detail: "a motor is still hot; let it cool down",
+      params: { motors: [{ arm: "follower", motor: "elbow_flex", temp_c: 66.4 }] },
+      request_id: "r1",
+    });
+    expect(errorText(i18n.getFixedT("en", "station"), err)).toBe(
+      "Motors too hot: follower elbow_flex 66 °C. Let them cool down first.",
+    );
+    expect(errorText(i18n.getFixedT("vi", "station"), err)).toBe(
+      "Động cơ quá nóng: follower elbow_flex 66 °C. Hãy để nguội trước.",
+    );
+    expect(errorDetail(err)).toBeNull(); // the English server detail adds nothing
   });
 
   it("every literal key used in the station UI exists", () => {
