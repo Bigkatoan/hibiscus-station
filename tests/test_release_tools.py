@@ -369,3 +369,22 @@ def test_docker_image_tags_follow_the_pep440_version(tmp_path: Path) -> None:
     text = (ROOT / ".github" / "workflows" / "docker.yml").read_text(encoding="utf-8")
     assert "type=semver" not in text  # semver would tag 1.0.0-a1
     assert "value=${{ matrix.variant }},enable=${{ steps.version.outputs.stable }}" in text
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        "one line in PowerShell",  # P-1
+        "current (A) and load (%)",  # K-11 / SP-1
+        "raw register",  # K-11
+        "WHAT TO SEND / CẦN GỬI",  # F-63
+        "Station is not running",  # D-15
+        "port held by another program",  # D-15
+        "CH340 / CH343",  # D-21
+        "Version 1.0.0a1",  # QD-1
+    ],
+)
+def test_changelog_lists_the_m0_changes_for_users(change: str) -> None:
+    """QD-15: [Unreleased] was empty; it lists what the 1.0.0a1 build changes for its users."""
+    notes = check_versions.unreleased_notes((ROOT / "CHANGELOG.md").read_text(encoding="utf-8"))
+    assert change in " ".join(notes.split())
