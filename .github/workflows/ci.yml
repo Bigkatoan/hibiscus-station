@@ -157,6 +157,7 @@ jobs:
           uv sync --locked --python "$PYTHON_VERSION"
           if [ -n "${{ matrix.install }}" ]; then uv run playwright install ${{ matrix.install }}; fi
       - name: The e2e fixtures launch the browser this job names (AT-2)
+        if: matrix.browser != 'chromium'
         run: |
           grep -q HIBISCUS_E2E_BROWSER tests/e2e/conftest.py || {
             echo "::error::tests/e2e/conftest.py ignores HIBISCUS_E2E_BROWSER: this job would test Chromium, not $HIBISCUS_E2E_BROWSER"
