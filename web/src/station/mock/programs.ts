@@ -933,7 +933,7 @@ export class MockPrograms {
       if (b.type === "hb_button_pressed" && !buttons.some((x) => x.name === f.BUTTON))
         add("unknown_button", "error", b.id, { button: f.BUTTON });
       if (b.type === "hb_relax_arm" && loopDepth.get(b.id)) add("relax_in_loop", "confirm", b.id);
-      if (b.type === "hb_go_home" && !this.sim.profile?.follower.rest_pose)
+      if ((b.type === "hb_go_home" || b.type === "hb_relax_arm") && !this.sim.profile?.follower.rest_pose)
         add("no_rest_pose", "error", b.id);
       if (b.type === "hb_repeat_forever") {
         const inner = [...walkBlocks({ blocks: { blocks: b.inputs?.DO?.block ? [b.inputs.DO.block] : [] } })];

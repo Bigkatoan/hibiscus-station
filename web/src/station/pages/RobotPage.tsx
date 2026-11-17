@@ -22,12 +22,12 @@ import { Input, NativeSelect } from "@/components/ui/input";
 import { api } from "../api/client";
 import { qk, useCalibrations, usePortProbe, usePorts, useRobots, useStationMutation } from "../api/hooks";
 import type { Port, PortProbe, RobotProfile, Status } from "../api/types";
+import { GoHomeButton, RelaxButton, SetHomeButton } from "../components/HomeControls";
 import { JointPanel } from "../components/JointPanel";
 import { MotorHealthPanel } from "../components/MotorHealthPanel";
 import { StationError } from "../components/StationError";
 import { Sprite } from "@/hibiscus/PixelAnim";
-import { useStation, useStatus } from "../ws/StationProvider";
-import type { StationSnapshot } from "../ws/store";
+import { useStatus } from "../ws/StationProvider";
 
 export function slugify(name: string): string {
   return (
@@ -521,26 +521,11 @@ function ProfileForm({ initial, onDone }: { initial: RobotProfile | null; onDone
   );
 }
 
-const selFollowerJoints = (s: StationSnapshot) => s.joints?.arms.follower;
-
 function ConnectedPanel({ profile }: { profile: RobotProfile }) {
   const { t } = useTranslation("station");
   const status = useStatus();
-  const joints = useStation(selFollowerJoints);
-  const restPose = useStationMutation(
-    (pose: Record<string, number>) =>
-      api.put<RobotProfile>(`/robots/${encodeURIComponent(profile.id)}`, {
-        ...profile,
-        follower: { ...profile.follower, rest_pose: pose },
-      }),
-    [qk.robots],
-  );
   const torque = useStationMutation((enabled: boolean) =>
-    api.post<Status>("/robots/torque", {
-      arm: "follower",
-      enabled,
-      confirm: !profile.follower.rest_pose ? true : undefined,
-    }),
+    api.post<Status>("/robots/torque", { arm: "follower", enabled }),
   );
   const torqueOn = status?.robot?.follower_torque ?? false;
   const canTorque = status?.state === "idle" || status?.state === "estopped";
@@ -552,34 +537,27 @@ function ConnectedPanel({ profile }: { profile: RobotProfile }) {
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <JointPanel />
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!joints || restPose.isPending}
-              onClick={() => {
-                if (joints) restPose.mutate({ ...joints });
-              }}
-            >
-              {t("robot.set_rest")}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!canTorque || torque.isPending}
-              onClick={() => {
-                if (torqueOn && !profile.follower.rest_pose && !window.confirm(t("robot.relax_confirm")))
-                  return;
-                torque.mutate(!torqueOn);
-              }}
-            >
-              {torqueOn ? t("robot.torque_off") : t("robot.torque_on")}
-            </Button>
+          <div className="flex flex-wrap items-start gap-2">
+            <SetHomeButton />
+            <GoHomeButton />
+            {torqueOn ? (
+              <RelaxButton />
+            ) : (
+              <Button
+                variant="outline"
+                disabled={!canTorque || torque.isPending}
+                onClick={() => {
+                  torque.mutate(true);
+                }}
+              >
+                {t("robot.torque_on")}
+              </Button>
+            )}
           </div>
           {profile.follower.rest_pose ? (
             <p className="text-xs text-muted-foreground">{t("robot.rest_saved")}</p>
           ) : null}
-          <StationError error={restPose.error ?? torque.error} />
+          <StationError error={torque.error} />
         </CardContent>
       </Card>
       <Card>

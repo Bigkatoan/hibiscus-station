@@ -38,6 +38,7 @@ import type {
   Program,
   ProgramInput,
 } from "../../api/types";
+import { SetHomeButton } from "../../components/HomeControls";
 import { StationError } from "../../components/StationError";
 import { emptyRefs, SO101_JOINTS, type EditorRefs } from "../../programs/blockly/refs";
 import {
@@ -446,6 +447,20 @@ function ProgramWorkspace({ program, onDeleted }: { program: Program; onDeleted:
                       <span className="text-xs text-muted-foreground"> · {blockLabel(i.block_id)}</span>
                     ) : null}
                   </span>
+                  {i.code === "no_rest_pose" ? (
+                    // CR-2: fix it in place (relax arm / go Home need this robot's Home)
+                    <SetHomeButton
+                      label={t("home.set_now")}
+                      className="h-7 px-2 text-xs"
+                      onDone={() => {
+                        check.mutate(undefined, {
+                          onSuccess: (r) => {
+                            setIssues(r.issues);
+                          },
+                        });
+                      }}
+                    />
+                  ) : null}
                 </li>
               ))}
             </ul>

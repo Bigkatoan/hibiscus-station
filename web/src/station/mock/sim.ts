@@ -561,6 +561,19 @@ export class MockStation {
     return this.status();
   }
 
+  /** POST /robots/rest-pose: the follower's present pose becomes the robot's Home (CR-2). */
+  setRestPose(): { rest_pose: Record<string, number> } {
+    if (this.state !== "idle") throw new MockProblem(409, "busy", { state: this.state });
+    const p = this.profile;
+    if (!p) throw new MockProblem(409, "not_connected", { state: this.state });
+    if (!this.calibrated.follower) throw new MockProblem(409, "not_calibrated", { arm: "follower" });
+    const pose = Object.fromEntries(
+      fx.MOTORS.map((m, i) => [`${m}.pos`, Math.round(this.pos(i) * 100) / 100]),
+    );
+    p.follower.rest_pose = pose;
+    return { rest_pose: pose };
+  }
+
   setTorque(enabled: boolean): Status {
     if (this.state !== "idle" && this.state !== "estopped")
       throw new MockProblem(409, "busy", { state: this.state });
@@ -801,6 +814,8 @@ export class MockStation {
   endSession(outcome: string, to: StationState = "idle", reason: string | null = null): void {
     const rt = this.session;
     if (!rt) return;
+    // CR-1: a user Stop holds the arm where it is; the UI offers Return Home / Relax.
+    if (outcome === "stopped") this.interrupted = true;
     // Like the backend teardown (§5.3): state "stopping", then the final `session` message
     // (`ended: true`, phase "done" with the saved count), then the new state.
     rt.s.episode = { ...rt.s.episode, phase: "done" };

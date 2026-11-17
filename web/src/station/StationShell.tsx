@@ -16,6 +16,7 @@ import { useDatasets, useModels, useRobots, useStatusQuery } from "./api/hooks";
 import type { Level, Status } from "./api/types";
 import { SafetyBanners } from "./components/Banners";
 import { EStopButton } from "./components/EStopButton";
+import { HomeControls } from "./components/HomeControls";
 import { MotorHealthPanel, useThresholds } from "./components/MotorHealthPanel";
 import { levelCss, motorLevel, worstLevel } from "./health";
 import { TwinDock, TwinSection } from "./twin/TwinDock";
@@ -305,6 +306,7 @@ function TopBar() {
           <span className="hidden text-base font-extrabold text-[#9bd35a] md:inline">{t("app.station")}</span>
         </Link>
         <div className="ml-auto flex min-w-0 items-center gap-1 sm:gap-2">
+          <HomeControls compact className="hidden flex-nowrap sm:flex" />
           <Link
             to="/robot"
             className="flex h-9 min-w-0 items-center gap-1 border-2 border-[#c99a62] dark:border-[#4f5a80] px-1 text-sm"

@@ -4,6 +4,7 @@
  * once, CR-1 (Stop holds, then "Return Home" / "Relax") and CR-2 ("Home").
  */
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MotorHealthPanel } from "./components/MotorHealthPanel";
 import { MAX_EXTRAPOLATE_S, extrapolate } from "./components/SessionWidgets";
@@ -85,5 +86,128 @@ describe("Episode timer", () => {
     expect(extrapolate(5, 0, 25_000, true, 30)).toBeCloseTo(5 + MAX_EXTRAPOLATE_S);
     expect(extrapolate(29.5, 0, 5000, true, 30)).toBe(30);
     expect(extrapolate(5, 0, 5000, false, 30)).toBe(5);
+  });
+});
+
+const HOME = { "shoulder_pan.pos": 0, "shoulder_lift.pos": -90, "elbow_flex.pos": 90 };
+
+describe("CR-1: Stop holds, then Return Home / Relax", () => {
+  it("after a Stop the banner says the arm holds and Relax asks to support the arm first", async () => {
+    const h = setupStation();
+    const p = h.sim.profiles[0];
+    if (p) p.follower.rest_pose = { ...HOME };
+    const user = userEvent.setup();
+    renderStation("/teleop", h);
+    await settle();
+    h.sim.startSession("teleop", {});
+    h.sim.controlAction("stop");
+    const banner = await screen.findByTestId("rest-banner");
+    expect(banner).toHaveTextContent("Stopped. The arm holds its position.");
+    expect(within(banner).getByRole("button", { name: /Return Home/ })).toBeEnabled();
+    await user.click(within(banner).getByRole("button", { name: "Relax" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveTextContent("Support the arm");
+    expect(h.sim.torque).toBe(true); // nothing happens before the confirmation
+    await user.click(within(dialog).getByRole("button", { name: "I am holding it, relax" }));
+    await waitFor(() => {
+      expect(h.sim.torque).toBe(false);
+    });
+    expect(await screen.findByTestId("support-arm")).toHaveTextContent("Support the arm");
+  });
+
+  it("after a user e-stop the dock offers Return Home, which resets the latch and moves Home", async () => {
+    const h = setupStation();
+    const p = h.sim.profiles[0];
+    if (p) p.follower.rest_pose = { ...HOME };
+    const user = userEvent.setup();
+    renderStation("/teleop", h);
+    await settle();
+    h.sim.startSession("teleop", {});
+    h.sim.estop("user");
+    const dock = await screen.findByTestId("estop-dock");
+    await user.click(within(dock).getByRole("button", { name: /Return Home/ }));
+    await waitFor(() => {
+      expect(h.sim.state).toBe("playing");
+    });
+    await advance(h.sim, 3.2);
+    await waitFor(() => {
+      expect(h.sim.state).toBe("idle");
+    });
+  });
+
+  it("never offers Return Home after a thermal stop, and a second press says to support the arm", async () => {
+    const h = setupStation();
+    const p = h.sim.profiles[0];
+    if (p) p.follower.rest_pose = { ...HOME };
+    renderStation("/teleop", h);
+    await settle();
+    h.sim.startSession("teleop", {});
+    h.sim.estop("thermal");
+    const dock = await screen.findByTestId("estop-dock");
+    expect(within(dock).queryByRole("button", { name: /Return Home/ })).toBeNull();
+    h.sim.estop("user"); // second press within 2 s: torque off (D-6)
+    expect(await screen.findByTestId("estop-support-arm")).toHaveTextContent("Support the arm");
+  });
+});
+
+describe("CR-2: Home", () => {
+  it("is set from the top bar and the Robot 3D panel and used by Return Home", async () => {
+    const h = setupStation();
+    const user = userEvent.setup();
+    renderStation("/teleop", h);
+    await settle();
+    const bar = await screen.findByTestId("home-bar");
+    expect(within(bar).getByRole("button", { name: "Return Home" })).toBeDisabled();
+    await user.click(within(bar).getByRole("button", { name: "Set Home at current position" }));
+    await waitFor(() => {
+      expect(h.sim.profiles[0]?.follower.rest_pose).toBeTruthy();
+    });
+    await waitFor(() => {
+      expect(within(bar).getByRole("button", { name: "Return Home" })).toBeEnabled();
+    });
+    // Robot 3D carries the same pair; replacing Home asks first
+    const panel = screen.getAllByTestId("home-panel")[0];
+    if (!panel) throw new Error("no Robot 3D Home controls");
+    await user.click(within(panel).getByRole("button", { name: /Set Home at current position/ }));
+    expect(await screen.findByRole("dialog")).toHaveTextContent("Replace Home?");
+  });
+
+  it("is asked for right after calibration when the robot has none", async () => {
+    const h = setupStation();
+    const user = userEvent.setup();
+    renderStation("/calibrate", h);
+    await settle();
+    const prompt = await screen.findByTestId("home-prompt");
+    expect(prompt).toHaveTextContent("Set this robot's Home");
+    await user.click(within(prompt).getByRole("button", { name: /Set Home at current position/ }));
+    await waitFor(() => {
+      expect(screen.queryByTestId("home-prompt")).toBeNull();
+    });
+  });
+
+  it("a program block blocked by a missing Home offers Set Home now in place, then re-checks", async () => {
+    const h = setupStation();
+    const prog = h.sim.programs.programs[0];
+    if (!prog) throw new Error("no sample program");
+    prog.issues = [
+      {
+        id: "no_rest_pose:x",
+        code: "no_rest_pose",
+        message_key: "programs.issues.no_rest_pose",
+        severity: "error",
+        block_id: null,
+        params: {},
+      },
+    ];
+    const user = userEvent.setup();
+    renderStation("/programs?tab=programs", h);
+    await settle();
+    const list = await screen.findByTestId("program-issues");
+    expect(list).toHaveTextContent("Set Home for this robot first.");
+    await user.click(within(list).getByRole("button", { name: "Set Home now" }));
+    await waitFor(() => {
+      expect(h.sim.profiles[0]?.follower.rest_pose).toBeTruthy();
+    });
+    expect(await screen.findByTestId("program-ok")).toBeInTheDocument();
   });
 });

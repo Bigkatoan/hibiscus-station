@@ -199,7 +199,7 @@ describe("Calibrate (§6.3, LeLab-simple)", () => {
     expect(screen.getByTestId("cal-now-leader")).toHaveTextContent("Done! Now the Leader arm.");
   });
 
-  it("guides Home → Ranges with a tick per joint; Save only when every joint moved", async () => {
+  it("guides Middle → Ranges with a tick per joint; Save only when every joint moved", async () => {
     const h = setupStation({ calib: "fresh" });
     const user = userEvent.setup();
     renderStation("/calibrate", h);
@@ -211,7 +211,7 @@ describe("Calibrate (§6.3, LeLab-simple)", () => {
       screen.getByRole("img", { name: "SO-101 arm with every joint in the middle of its range" }),
     ).toBeInTheDocument();
     expect(screen.getByText("The follower is limp: hold it.")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Set home" }));
+    await user.click(screen.getByRole("button", { name: "Set middle" }));
     await screen.findByTestId("cal-ranges");
     await advance(h.sim, 1.2);
     await waitFor(() => {

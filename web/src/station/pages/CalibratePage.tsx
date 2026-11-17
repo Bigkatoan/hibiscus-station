@@ -18,7 +18,7 @@ import { PageHeader } from "@/components/common";
 import { Mascot } from "@/components/Mascot";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PxIcon, Sprite } from "@/hibiscus/PixelAnim";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -34,6 +34,7 @@ import type {
   RobotProfile,
   Status,
 } from "../api/types";
+import { SetHomeButton, useHomeState } from "../components/HomeControls";
 import { StationError } from "../components/StationError";
 import { useStation, useStatus } from "../ws/StationProvider";
 import type { StationSnapshot } from "../ws/store";
@@ -703,6 +704,7 @@ export function CalibratePage() {
   const check = useCalibrationCheck(canCheck);
   const fCal = Boolean(status?.robot?.arms.follower.calibrated);
   const lCal = Boolean(status?.robot?.arms.leader?.calibrated);
+  const home = useHomeState();
   const refetch = check.refetch;
   useEffect(() => {
     if (canCheck) void refetch();
@@ -792,6 +794,17 @@ export function CalibratePage() {
           </CardContent>
         </Card>
       )}
+      {connected && fCal && !home.hasHome && !calibrating ? (
+        <Card data-testid="home-prompt">
+          <CardHeader>
+            <CardTitle>{t("home.prompt_title")}</CardTitle>
+            <CardDescription>{t("home.prompt_text")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SetHomeButton />
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }

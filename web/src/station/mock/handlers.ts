@@ -213,6 +213,10 @@ export function stationHandlers(sim: MockStation, base = `${window.location.orig
       }),
     ),
     http.post(
+      u("/robots/rest-pose"),
+      guard(() => sim.setRestPose()),
+    ),
+    http.post(
       u("/robots/rest"),
       guard(() => {
         const st = sim.status();

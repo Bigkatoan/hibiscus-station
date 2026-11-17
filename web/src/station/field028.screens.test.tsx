@@ -50,8 +50,8 @@ describe("Return to rest pose", () => {
     h.sim.estopReset();
     const banner = await screen.findByTestId("rest-banner");
     expect(banner).toHaveAttribute("data-phase", "offer");
-    expect(banner).toHaveTextContent("The arm stopped in the middle of a motion.");
-    await user.click(within(banner).getByRole("button", { name: "Return to rest pose" }));
+    expect(banner).toHaveTextContent("Stopped. The arm holds its position.");
+    await user.click(within(banner).getByRole("button", { name: "Return Home" }));
     await waitFor(() => {
       expect(screen.getByTestId("rest-banner")).toHaveAttribute("data-phase", "moving");
     });
@@ -63,7 +63,7 @@ describe("Return to rest pose", () => {
     expect(h.sim.state).toBe("idle");
   });
 
-  it("asks for a rest pose when the robot has none", async () => {
+  it("asks for a Home when the robot has none", async () => {
     const h = setupStation();
     renderStation("/teleop", h);
     await settle();
@@ -71,8 +71,8 @@ describe("Return to rest pose", () => {
     h.sim.estop("user");
     h.sim.estopReset();
     const banner = await screen.findByTestId("rest-banner");
-    expect(banner).toHaveTextContent("Set a rest pose on the Robot page");
-    expect(within(banner).queryByRole("button", { name: "Return to rest pose" })).toBeNull();
+    expect(banner).toHaveTextContent("No Home yet. Set Home at the current position");
+    expect(within(banner).queryByRole("button", { name: "Return Home" })).toBeNull();
   });
 });
 
