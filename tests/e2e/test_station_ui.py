@@ -1,8 +1,12 @@
 """End-to-end: the built Station UI against a real ``hibiscus-station --mock`` process (spec §6, §9).
 
 Drives Chromium (Playwright) through connect → calibrate → cameras → teleop → over-temperature
-safe stop → record 2 episodes with the keyboard → LeRobotDataset loads → import the real ACT
-checkpoint → run it with every camera, joints, temperatures and the Space e-stop. Screenshots go
+safe stop → record 2 episodes with the keyboard → LeRobotDataset loads → an e-stop in episode 1 of a
+new recording (nothing kept) → the dead-man stop during a replay (page closed, then read in
+Vietnamese) → import the real ACT checkpoint → run it with every camera, joints, temperatures and
+the Space e-stop. A guard fails the test on any console error, uncaught page error or HTTP error
+response the page did not expect (QC 0.2.9 QD-18: a 404 after a session that kept no episode).
+Screenshots go
 to ``screenshots/e2e/`` (git-ignored; ``HIBISCUS_E2E_SHOTS`` overrides). The Station listens on a
 free port, or on ``HIBISCUS_E2E_PORT``.
 
@@ -168,9 +172,37 @@ def test_station_ui_end_to_end(browser: Any, station_proc: tuple[str, str, Path]
     base, login, home = station_proc
     SHOTS.mkdir(parents=True, exist_ok=True)
     ctx = browser.new_context(locale="en-US", viewport={"width": 1440, "height": 1000})
-    page = ctx.new_page()
     errors: list[str] = []
-    page.on("pageerror", lambda e: errors.append(str(e)))
+    #: HTTP refusals the test provokes on purpose (url suffix, status); each one may be seen once,
+    #: as the response and as Chromium's "Failed to load resource" console line.
+    expected: list[tuple[str, int]] = []
+
+    def is_expected(url: str, status: int | None) -> bool:
+        return any(url.endswith(u) and (status is None or status == st) for u, st in expected)
+
+    def on_console(msg: Any) -> None:
+        if msg.type != "error":
+            return
+        url = str((msg.location or {}).get("url") or "")
+        if msg.text.startswith("Failed to load resource") and is_expected(url, None):
+            return
+        errors.append(f"console error: {msg.text} ({url})")
+
+    def on_response(r: Any) -> None:
+        if r.status >= 400 and not is_expected(r.url, r.status):
+            errors.append(f"HTTP {r.status} {r.request.method} {r.url}")
+
+    def watch(p: Any) -> Any:
+        """The console-error guard: every page of the run reports into ``errors``."""
+        p.on("pageerror", lambda e: errors.append(f"page error: {e}"))
+        p.on("console", on_console)
+        p.on("response", on_response)
+        return p
+
+    def no_errors(where: str) -> None:
+        assert not errors, f"{where}: " + "; ".join(errors)
+
+    page = watch(ctx.new_page())
 
     def api(method: str, path: str, data: Any = None) -> Any:
         r = ctx.request.fetch(
@@ -204,6 +236,7 @@ def test_station_ui_end_to_end(browser: Any, station_proc: tuple[str, str, Path]
         """
         leader = {"port": "mock://leader"}
         api("POST", "/mock/inject", {**leader, "hand": "follow", "follow_port": "mock://follower"})
+        expected.append((f"/api/v1{endpoint}", 409))  # leader_far: the guard allows this refusal
         try:
             for _ in range(20):
                 with page.expect_response(lambda r: r.url.endswith(endpoint)) as resp:
@@ -214,6 +247,7 @@ def test_station_ui_end_to_end(browser: Any, station_proc: tuple[str, str, Path]
                 time.sleep(0.5)
             raise AssertionError(f"{button}: the leader never came close to the follower")
         finally:
+            expected.remove((f"/api/v1{endpoint}", 409))
             api("POST", "/mock/inject", {**leader, "hand": "default"})
 
     def shot(name: str, *, dark: bool = False) -> None:
@@ -391,6 +425,54 @@ def test_station_ui_end_to_end(browser: Any, station_proc: tuple[str, str, Path]
     go(f"/datasets/{DATASET}")
     expect(page.get_by_text("#2").first).to_be_visible()
     shot("09-dataset")
+    no_errors("golden path up to the dataset")
+
+    # ---------------------------------------------------------------- 7b. e-stop in episode 1: nothing kept
+    go("/record")
+    page.get_by_label(re.compile("^Dataset name")).fill("e2e_estop_ep1")
+    page.get_by_label(re.compile("^Task")).fill("Pick the red cube")
+    start_with_leader("Start recording", "/sessions/record")
+    wait_state("recording")
+    page.locator("body").click(position={"x": 5, "y": 5})
+    _wait(lambda: phase() == "episode", 20, "episode 1 of the e-stop run")
+    time.sleep(1.0)
+    page.keyboard.press("Space")
+    st = wait_state("estopped", timeout=10)
+    assert st["reason"] == "user"
+    none = page.get_by_test_id("record-none")
+    expect(none).to_be_visible(timeout=20000)
+    expect(none).to_contain_text("No episode was saved.")
+    expect(none.get_by_role("link", name="Upload")).to_have_count(0)
+    page.wait_for_timeout(1500)  # a late refetch of the removed dataset would show up here
+    shot("09b-record-estop-episode-1")
+    no_errors("e-stop in episode 1")
+    page.get_by_role("button", name="I'm clear, reset").click()
+    wait_state("idle")
+
+    # ---------------------------------------------------------------- 7c. dead-man stop: the page goes away mid-replay
+    api("POST", "/sessions/replay", {"dataset": DATASET, "episode": 0})
+    wait_state("replaying", timeout=20)
+    page.close()  # no heartbeat from the UI: the Station stops the robot by itself
+    st = wait_state("estopped", timeout=15)
+    assert st["reason"] == "ui_lost", st
+    no_errors("dead-man stop")
+    page = watch(ctx.new_page())
+    page.add_init_script("window.localStorage.setItem('hibiscus.lang', 'vi')")
+    page.goto(f"{base}/teleop")
+    banner = page.get_by_test_id("state-banner")
+    expect(banner).to_contain_text("Robot đã dừng: mất kết nối giao diện.", timeout=15000)
+    expect(banner).to_contain_text("Trang không gửi tín hiệu nào trong 1 giây")
+    expect(page.get_by_test_id("lock-gate")).to_contain_text("Trang không gửi tín hiệu nào")
+    assert "heartbeat" not in page.locator("body").inner_text().lower()
+    shot("09c-deadman-vi")
+    page.close()
+    page = watch(ctx.new_page())
+    page.add_init_script("window.localStorage.setItem('hibiscus.lang', 'en')")
+    go("/teleop")
+    expect(page.get_by_test_id("state-banner")).to_contain_text("This page sent no sign of life for 1 s")
+    page.get_by_role("button", name="I'm clear, reset").click()
+    wait_state("idle")
+    no_errors("after the dead-man stop")
 
     # ---------------------------------------------------------------- 8. import the ACT checkpoint
     go("/run")
@@ -432,5 +514,5 @@ def test_station_ui_end_to_end(browser: Any, station_proc: tuple[str, str, Path]
     page.get_by_role("button", name="I'm clear, reset").click()
     wait_state("idle")
 
-    assert not errors, errors
+    no_errors("end of the run")
     ctx.close()
