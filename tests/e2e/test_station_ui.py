@@ -238,6 +238,18 @@ def test_station_ui_end_to_end(browser: Any, station_proc: tuple[str, str, Path]
     wait_state("idle")
     expect(page.get_by_text("connected", exact=True).first).to_be_visible()
     shot("01-robot-connected", dark=True)
+    # QC 0.2.9 QD-6: with Robot 3D shown (the default) the motor health tables fit at 1280 / 1440
+    expect(page.get_by_test_id("motor-leader-gripper")).to_be_visible(timeout=15000)
+    for width in (1280, 1440):
+        page.set_viewport_size({"width": width, "height": 1000})
+        page.wait_for_timeout(300)
+        overflow = page.evaluate(
+            """() => [...document.querySelectorAll('[data-testid="motor-health"] table')]
+                .map((t) => [t.parentElement.scrollWidth, t.parentElement.clientWidth])
+                .filter(([s, c]) => s > c + 1)"""
+        )
+        assert overflow == [], f"motor health scrolls sideways at {width} px: {overflow}"
+    page.set_viewport_size({"width": 1440, "height": 1000})
 
     # ---------------------------------------------------------------- 2. calibrate both arms
     go("/calibrate")

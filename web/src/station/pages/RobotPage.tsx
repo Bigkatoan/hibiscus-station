@@ -529,8 +529,10 @@ function ConnectedPanel({ profile }: { profile: RobotProfile }) {
   );
   const torqueOn = status?.robot?.follower_torque ?? false;
   const canTorque = status?.state === "idle" || status?.state === "estopped";
+  // QC 0.2.9 QD-6: next to Robot 3D, half the page was too narrow for the motor health tables
+  // (they scrolled sideways, "Load" and "Status" hidden): the cards stack, each full width.
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid gap-4" data-testid="robot-connected">
       <Card>
         <CardHeader>
           <CardTitle>{t("joints.title")}</CardTitle>
