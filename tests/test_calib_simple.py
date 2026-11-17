@@ -9,17 +9,17 @@ wrong file before teleop.
 from __future__ import annotations
 
 import json
-import sys
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
 import pytest
+from sts_emulator import pty_unavailable
 
 from hibiscus_station.hw import calibration as calib
 
-if sys.platform == "win32":  # pragma: no cover
-    pytest.skip("pseudo-terminals are POSIX only", allow_module_level=True)
+if reason := pty_unavailable():  # pragma: no cover
+    pytest.skip(reason, allow_module_level=True)
 
 from sts_emulator import STSEmulator, lelab_calibration
 

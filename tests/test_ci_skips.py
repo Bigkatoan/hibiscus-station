@@ -166,3 +166,23 @@ def test_the_e2e_fixture_launches_the_browser_the_job_names() -> None:
         support.browser_engine("webkit")  # not an AT-2 browser: never a silent Chromium run
     conftest = (ROOT / "tests" / "e2e" / "conftest.py").read_text(encoding="utf-8")
     assert "browser_engine(BROWSER)" in conftest and "pw.chromium.launch()" not in conftest
+
+
+PTY_MODULES = ["test_calib_simple.py", "test_real_stack.py", "test_teleop_latency.py", "test_device_lost.py"]
+
+
+def test_the_pty_emulator_tests_skip_on_macos_instead_of_failing() -> None:
+    """QD-7: pyserial sets 1 Mbps on macOS with the IOSSIOSPEED ioctl, which a pty refuses (ENOTTY);
+    the emulator tests skip there with that reason (listed for macos in allowed-skips.toml)."""
+    sys.path.insert(0, str(ROOT / "tests"))
+    try:
+        from sts_emulator import pty_unavailable
+    finally:
+        sys.path.remove(str(ROOT / "tests"))
+    assert pty_unavailable("linux") is None
+    assert "POSIX only" in str(pty_unavailable("win32"))
+    assert "ENOTTY" in str(pty_unavailable("darwin")) and "1 Mbps" in str(pty_unavailable("darwin"))
+    for name in PTY_MODULES:
+        src = (ROOT / "tests" / name).read_text(encoding="utf-8")
+        assert "pty_unavailable()" in src, name
+        assert 'sys.platform == "win32"' not in src, name  # one rule for every platform

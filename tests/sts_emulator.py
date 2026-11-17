@@ -25,11 +25,26 @@ import math
 import os
 import random
 import select
+import sys
 import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
+
+
+def pty_unavailable(platform: str = sys.platform) -> str | None:
+    """Why the emulator's pseudo-terminal cannot carry the real serial stack on ``platform``, or None.
+
+    macOS: pyserial sets a non-standard speed (1 Mbps) with the IOKit ioctl IOSSIOSPEED, which a pty
+    refuses with ENOTTY ("Not a typewriter"); a real USB serial adapter accepts it.
+    """
+    if platform == "win32":
+        return "pseudo-terminals are POSIX only"
+    if platform == "darwin":
+        return "a macOS pty refuses pyserial's 1 Mbps ioctl (IOSSIOSPEED: ENOTTY)"
+    return None
+
 
 MODEL_STS3215 = 777
 RES = 4096

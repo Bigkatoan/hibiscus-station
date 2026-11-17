@@ -7,7 +7,6 @@ from __future__ import annotations
 import errno
 import json
 import logging
-import sys
 import time
 from collections.abc import Iterator
 from pathlib import Path
@@ -15,6 +14,7 @@ from typing import Any
 
 import pytest
 from conftest import wait_for
+from sts_emulator import pty_unavailable
 
 from hibiscus_station.hw.portloss import (
     DeviceLostError,
@@ -176,13 +176,13 @@ def test_mock_unplug_during_teleop_is_device_lost(connected: Any) -> None:
 
 
 # ------------------------------------------------------------------------------ real stack (pty)
-posix = pytest.mark.skipif(sys.platform == "win32", reason="pseudo-terminals are POSIX only")
+posix = pytest.mark.skipif(pty_unavailable() is not None, reason=str(pty_unavailable()))
 
 
 @pytest.fixture
 def emus() -> Iterator[tuple[Any, Any]]:
-    if sys.platform == "win32":  # pragma: no cover
-        pytest.skip("pseudo-terminals are POSIX only")
+    if reason := pty_unavailable():  # pragma: no cover
+        pytest.skip(reason)
     from sts_emulator import STSEmulator
 
     f, ld = STSEmulator(seed=1), STSEmulator(seed=2)
