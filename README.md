@@ -102,12 +102,19 @@ A systemd user unit for this install is in [deploy/systemd/](deploy/systemd/hibi
 
 ### Windows 10/11
 
-In PowerShell (x64, no admin rights needed):
+Open PowerShell (x64, no admin rights, no git or Python needed) and paste **one** line:
 
 ```powershell
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"   # uv, once
-uv tool install --python 3.12 https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.8/hibiscus_station-0.2.8-py3-none-any.whl
-# no NVIDIA GPU: add --torch-backend cpu
+irm https://github.com/Bigkatoan/hibiscus-station/releases/latest/download/install.ps1 | iex
+```
+
+It installs uv (checked by SHA-256), Python 3.12 and Station with exactly the libraries tested for
+that release (CPU PyTorch). **Update**: run the same line again. **Go back** to a version: the same
+line with that release's link, e.g.
+`irm https://github.com/Bigkatoan/hibiscus-station/releases/download/vX.Y.Z/install.ps1 | iex`.
+Profiles, calibration, datasets and models are kept. Then, in a new PowerShell window:
+
+```powershell
 hibiscus-station --mock          # demo without hardware (simulated arms, data in ~/.hibiscus/station-demo)
 hibiscus-station                 # with the arms plugged in; the browser opens by itself
 hibiscus-station doctor          # something wrong? writes a report zip to send us

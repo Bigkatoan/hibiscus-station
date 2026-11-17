@@ -182,19 +182,34 @@ JetPack 6 outside NVIDIA's containers): use the Docker image for the GPU.
 
 ## Windows 10/11 and macOS (wheel)
 
-The same wheel, installed with uv (x64 Windows 10/11, Apple silicon or Intel macOS):
+**Windows 10/11 x64**: one line in PowerShell, no admin rights, no git, no Python (ADR-13):
 
 ```powershell
-# Windows, PowerShell; macOS: curl -LsSf https://astral.sh/uv/install.sh | sh
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-uv tool install --python 3.12 --torch-backend cpu https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.8/hibiscus_station-0.2.8-py3-none-any.whl
+irm https://github.com/Bigkatoan/hibiscus-station/releases/latest/download/install.ps1 | iex
+```
+
+The release's `install.ps1` downloads uv (pinned, checked by SHA-256) into
+`%LOCALAPPDATA%\HibiscusStation`, then runs `uv tool install --force` of that release's wheel with
+its `constraints.txt` (every library of `uv.lock`, exact versions) and `overrides.txt` (lerobot and
+the Hibiscus CLI as prebuilt wheels of the release, so no git), all checked against `SHA256SUMS`.
+Every install of a release gets the same libraries QC tested (CPU PyTorch). Run the same line again
+to update; `irm https://github.com/Bigkatoan/hibiscus-station/releases/download/vX.Y.Z/install.ps1 | iex`
+installs exactly version X.Y.Z (roll back). A pre-release is only reachable by its versioned link.
+QC / offline: `$env:HIBISCUS_STATION_BASE_URL = "C:\path\to\downloaded\assets"` before the line
+installs from a folder (e.g. `gh release download` of a draft).
+
+**macOS** (preview, Apple silicon): the same release assets with uv:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+base=https://github.com/Bigkatoan/hibiscus-station/releases/download/vX.Y.Z
+uv tool install --python 3.12 -c $base/constraints.txt --overrides $base/overrides.txt $base/hibiscus_station-X.Y.Z-py3-none-any.whl
 hibiscus-station --mock          # try it; Ctrl+C to stop
 ```
 
-Drop `--torch-backend cpu` on a Windows PC with an NVIDIA GPU to get CUDA PyTorch. Windows notes
-(driver for the CH340/CH343 USB-serial chip of the servo board, `COM3`-style port names, camera
-numbers, closing LeLab first) are in the [README](../README.md#windows-1011). There is no udev rule
-or systemd unit on these systems: start `hibiscus-station` yourself (or from Task Scheduler / a
+Windows notes (driver for the CH340/CH343 USB-serial chip of the servo board, `COM3`-style port
+names, camera numbers, closing LeLab first) are in the [README](../README.md#windows-1011). There is
+no udev rule or systemd unit on these systems: start `hibiscus-station` yourself (or from Task Scheduler / a
 launchd agent). Data lives in `~/.hibiscus/station` (`%USERPROFILE%\.hibiscus\station`).
 
 Run it as a user service that starts at boot:

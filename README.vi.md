@@ -102,14 +102,22 @@ File dịch vụ systemd cho cách cài này nằm ở [deploy/systemd/](deploy/
 
 ### Windows 10/11
 
-Trong PowerShell (x64, không cần quyền admin):
+Mở PowerShell (x64, không cần quyền admin, không cần cài git hay Python) và dán **một** dòng:
 
 ```powershell
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"   # cài uv, một lần
-uv tool install --python 3.12 https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.8/hibiscus_station-0.2.8-py3-none-any.whl
-# không có GPU NVIDIA: thêm --torch-backend cpu
+irm https://github.com/Bigkatoan/hibiscus-station/releases/latest/download/install.ps1 | iex
+```
+
+Lệnh này cài uv (kiểm tra SHA-256), Python 3.12 và Station với đúng bộ thư viện đã kiểm thử cho bản
+phát hành đó (PyTorch CPU). **Cập nhật**: chạy lại đúng dòng đó. **Quay lại** một phiên bản: cùng dòng
+với liên kết của bản đó, ví dụ
+`irm https://github.com/Bigkatoan/hibiscus-station/releases/download/vX.Y.Z/install.ps1 | iex`.
+Hồ sơ, hiệu chỉnh, dữ liệu và model được giữ nguyên. Sau đó, trong một cửa sổ PowerShell mới:
+
+```powershell
 hibiscus-station --mock          # thử khi chưa có robot
 hibiscus-station                 # khi đã cắm tay robot; trình duyệt tự mở
+hibiscus-station doctor          # gặp lỗi? tạo tệp zip báo cáo để gửi cho chúng tôi
 ```
 
 * **Tắt LeLab (và mọi script lerobot) trước.** Trên Windows mỗi cổng COM và mỗi camera chỉ có một
