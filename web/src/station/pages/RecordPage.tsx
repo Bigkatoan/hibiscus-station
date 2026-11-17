@@ -14,7 +14,6 @@ import { Mascot } from "@/components/Mascot";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox, Input, NativeSelect } from "@/components/ui/input";
-import { formatSize } from "@/lib/format";
 import { api } from "../api/client";
 import { qk, useDataset, useDatasets, useStationMutation } from "../api/hooks";
 import type { CameraStatus, RecordRequest, Session } from "../api/types";
@@ -29,6 +28,7 @@ import { useCritical, useSessionControl } from "../components/controls";
 import { DEFAULT_THRESHOLDS, levelCss, peakTemp, tempLevel } from "../health";
 import { useRuntime, useStatus } from "../ws/StationProvider";
 import type { SessionEndInfo } from "../ws/store";
+import { fmtFixed, fmtSize } from "../units";
 
 /** MB per episode: about 2 Mbit/s of encoded video per 640×480@30 camera (scaled by pixels × fps). */
 export function estimateEpisodeMb(
@@ -90,7 +90,7 @@ function EpisodeStrip({ dataset, saved }: { dataset: string; saved: number }) {
               className="flex shrink-0 flex-col items-center border-2 border-frame bg-card px-2 py-1 text-xs"
             >
               <span className="font-extrabold text-base">#{e.index + 1}</span>
-              <span className="tabular-nums">{e.length_s !== null ? e.length_s.toFixed(1) : "–"} s</span>
+              <span className="tabular-nums">{e.length_s !== null ? fmtFixed(e.length_s) : "–"} s</span>
               {max !== null ? (
                 <span
                   className="mt-0.5 inline-flex items-center gap-0.5 border px-0.5 tabular-nums"
@@ -197,7 +197,7 @@ function RecordLive({ session }: { session: Session }) {
 }
 
 function RecordSetup() {
-  const { t, i18n } = useTranslation("station");
+  const { t } = useTranslation("station");
   const status = useStatus();
   const datasets = useDatasets();
   const [form, setForm] = useState<RecordForm>({
@@ -372,8 +372,8 @@ function RecordSetup() {
           </label>
           <p className="text-sm text-muted-foreground sm:col-span-2" data-testid="disk-estimate">
             {t("record.estimate", {
-              size: formatSize(mb * 1e6, i18n.language),
-              total: formatSize(mb * 1e6 * form.num_episodes, i18n.language),
+              size: fmtSize(mb * 1e6),
+              total: fmtSize(mb * 1e6 * form.num_episodes),
               count: cams.length,
             })}
           </p>

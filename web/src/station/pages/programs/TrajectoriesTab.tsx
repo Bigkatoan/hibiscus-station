@@ -41,6 +41,7 @@ import { useSessionControl } from "../../components/controls";
 import { useStation, useStatus } from "../../ws/StationProvider";
 import { formatSeconds, JointLegend, JointPlot } from "./shared";
 import { GhostPreview } from "../../twin/GhostPreview";
+import { fmtFixed } from "../../units";
 
 const enc = encodeURIComponent;
 export const SPEEDS = [10, 25, 50, 75, 100, 125, 150];
@@ -167,7 +168,7 @@ function RecordCard({ onDraft }: { onDraft: (id: string) => void }) {
               <>
                 <p className="font-extrabold text-xl tabular-nums">
                   {t("programs.traj.capturing", {
-                    s: (rec?.elapsed_s ?? 0).toFixed(1),
+                    s: fmtFixed(rec?.elapsed_s ?? 0),
                     limit: rec?.limit_s ?? limit,
                     samples: t("programs.traj.samples", { count: rec?.samples ?? 0 }),
                   })}
@@ -300,7 +301,7 @@ function TrajectoryEditor({ id, onClose }: { id: string; onClose: () => void }) 
           width={600}
           height={160}
           className="h-40 w-full border-2 border-frame bg-card"
-          label={t("programs.traj.plot_label", { name: tr.name, s: raw.toFixed(1) })}
+          label={t("programs.traj.plot_label", { name: tr.name, s: fmtFixed(raw) })}
         />
         <JointLegend names={tr.joints} />
         <div className="flex flex-wrap items-end gap-3">
@@ -346,13 +347,13 @@ function TrajectoryEditor({ id, onClose }: { id: string; onClose: () => void }) 
             }}
           >
             {t("programs.traj.use_suggested", {
-              a: tr.suggested_trim.start_s.toFixed(1),
-              b: tr.suggested_trim.end_s.toFixed(1),
+              a: fmtFixed(tr.suggested_trim.start_s),
+              b: fmtFixed(tr.suggested_trim.end_s),
             })}
           </Button>
         </div>
         <p className="text-sm tabular-nums text-muted-foreground">
-          {t("programs.traj.kept", { kept: kept.toFixed(1), raw: raw.toFixed(1) })}
+          {t("programs.traj.kept", { kept: fmtFixed(kept), raw: fmtFixed(raw) })}
         </p>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -491,7 +492,7 @@ function TrajectoryCard({
         {t("programs.traj.meta", {
           s: formatSeconds(tr.duration_s),
           fps: tr.fps,
-          speed: tr.max_speed_deg_s.toFixed(0),
+          speed: fmtFixed(tr.max_speed_deg_s, 0),
         })}
       </p>
       {needsCheck ? (
@@ -609,7 +610,7 @@ function PreviewCard({ id }: { id: string | null }) {
                 width={600}
                 height={160}
                 className="h-40 w-full border-2 border-frame bg-card"
-                label={t("programs.traj.plot_label", { name: tr.name, s: tr.raw_duration_s.toFixed(1) })}
+                label={t("programs.traj.plot_label", { name: tr.name, s: fmtFixed(tr.raw_duration_s) })}
               />
               <JointLegend names={tr.joints} />
             </div>

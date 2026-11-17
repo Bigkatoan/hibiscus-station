@@ -39,6 +39,7 @@ import { ServerDetail } from "../components/ServerText";
 import { StationError } from "../components/StationError";
 import { useStation, useStatus } from "../ws/StationProvider";
 import type { StationSnapshot } from "../ws/store";
+import { fmtFixed } from "../units";
 
 export const MIN_RANGE_STEPS = 100;
 const STEPS = 4096;
@@ -581,10 +582,10 @@ function PoseCheck({ onRecalibrate }: { onRecalibrate: (arm: Arm) => void }) {
                         {j.ok ? <PxIcon name="check" /> : <PxIcon name="warning" />} {j.joint}
                       </span>
                     </td>
-                    <td className="py-1 pr-2 text-right tabular-nums">{j.follower.toFixed(1)}</td>
-                    <td className="py-1 pr-2 text-right tabular-nums">{j.leader.toFixed(1)}</td>
+                    <td className="py-1 pr-2 text-right tabular-nums">{fmtFixed(j.follower)}</td>
+                    <td className="py-1 pr-2 text-right tabular-nums">{fmtFixed(j.leader)}</td>
                     <td className="py-1 text-right tabular-nums">
-                      {j.diff.toFixed(1)}
+                      {fmtFixed(j.diff)}
                       {unit(j.unit)}
                     </td>
                   </tr>
@@ -596,7 +597,7 @@ function PoseCheck({ onRecalibrate }: { onRecalibrate: (arm: Arm) => void }) {
             <Box
               tone="success"
               mood="happy"
-              title={t("calibrate.check_ok", { max: r.max_diff.toFixed(1) })}
+              title={t("calibrate.check_ok", { max: fmtFixed(r.max_diff) })}
               testid="pose-ok"
             >
               <Button asChild size="lg" className="self-start">

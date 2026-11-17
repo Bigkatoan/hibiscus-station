@@ -19,6 +19,7 @@ import { CameraTile } from "../components/CameraGrid";
 import { StationError } from "../components/StationError";
 import { PxIcon } from "@/hibiscus/PixelAnim";
 import { useStatus } from "../ws/StationProvider";
+import { fmtFixed } from "../units";
 
 export const FPS_WARN_RATIO = 0.9;
 
@@ -177,7 +178,7 @@ function AddCamera({
           <p className="text-sm">
             {probe.data.ok
               ? t("cameras.measured", {
-                  fps: probe.data.measured_fps.toFixed(1),
+                  fps: fmtFixed(probe.data.measured_fps),
                   w: probe.data.width,
                   h: probe.data.height,
                 })

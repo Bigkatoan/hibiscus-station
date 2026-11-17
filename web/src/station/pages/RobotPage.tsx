@@ -28,6 +28,7 @@ import { MotorHealthPanel } from "../components/MotorHealthPanel";
 import { StationError } from "../components/StationError";
 import { Sprite } from "@/hibiscus/PixelAnim";
 import { useStatus } from "../ws/StationProvider";
+import { fmtFixed } from "../units";
 
 export function slugify(name: string): string {
   return (
@@ -274,7 +275,7 @@ function ProbeHint({ probe }: { probe: PortProbe }) {
   const key = probe.role_hint ? `robot.probe_looks_${probe.role_hint}` : "robot.probe_unknown";
   return (
     <p className="text-xs text-muted-foreground" data-testid="probe-hint">
-      {t(key, { v: probe.voltage_v.toFixed(1) })}
+      {t(key, { v: fmtFixed(probe.voltage_v) })}
       {fw}
     </p>
   );
@@ -452,7 +453,7 @@ function ProfileForm({ initial, onDone }: { initial: RobotProfile | null; onDone
           >
             {t("robot.role_warning", {
               slot: t(`robot.role_${w.slot}`),
-              v: w.voltage_v.toFixed(1),
+              v: fmtFixed(w.voltage_v),
               looks: t(`robot.role_${w.looks_like}`),
             })}
           </p>

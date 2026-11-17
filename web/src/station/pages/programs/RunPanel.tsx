@@ -39,6 +39,7 @@ import { TechDetails } from "../../components/ServerText";
 import { StationError } from "../../components/StationError";
 import { useRuntime, useStation, useStatus } from "../../ws/StationProvider";
 import { isLive, logLineText, programMood, useProgramInput } from "./shared";
+import { fmtFixed } from "../../units";
 
 const enc = encodeURIComponent;
 
@@ -466,7 +467,7 @@ export function RunPanel({
           >
             <p className="tabular-nums">
               {t("programs.run.now", {
-                t: mine.t.toFixed(1),
+                t: fmtFixed(mine.t),
                 steps: t("programs.run.steps", { count: mine.steps }),
                 block: mine.block_id ? blockLabel(mine.block_id) : "–",
               })}
@@ -475,7 +476,7 @@ export function RunPanel({
               <p className="text-muted-foreground">
                 {t(`programs.run.waiting_${mine.waiting.kind}`)}
                 {mine.waiting.timeout_s !== null
-                  ? ` · ${t("programs.run.timeout_in", { s: Math.max(0, mine.waiting.since_s + mine.waiting.timeout_s - mine.t).toFixed(0) })}`
+                  ? ` · ${t("programs.run.timeout_in", { s: fmtFixed(Math.max(0, mine.waiting.since_s + mine.waiting.timeout_s - mine.t), 0) })}`
                   : ""}
               </p>
             ) : null}
@@ -564,9 +565,7 @@ export function RunPanel({
                         : ""
                   }
                 >
-                  <span className="tabular-nums text-muted-foreground">
-                    {l.t.toFixed(1).padStart(6, " ")}
-                  </span>{" "}
+                  <span className="tabular-nums text-muted-foreground">{fmtFixed(l.t).padStart(6, " ")}</span>{" "}
                   {logLineText(l, t, blockLabel)}
                 </li>
               ))}

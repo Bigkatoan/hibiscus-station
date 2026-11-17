@@ -12,6 +12,7 @@ import { DEFAULT_THRESHOLDS, fmt, levelCss, motorLevel, type Thresholds } from "
 import { useStation } from "../ws/StationProvider";
 import type { Series, StationSnapshot } from "../ws/store";
 import { PxIcon } from "@/hibiscus/PixelAnim";
+import { svgNum } from "../units";
 
 export function useThresholds(): Thresholds {
   const settings = useSettings();
@@ -45,7 +46,7 @@ export function Sparkline({
   const pts = ts
     .map((t, i) => {
       const v = series?.v[i];
-      return v === null || v === undefined ? null : `${x(t).toFixed(1)},${y(v).toFixed(1)}`;
+      return v === null || v === undefined ? null : `${svgNum(x(t))},${svgNum(y(v))}`;
     })
     .filter((p): p is string => p !== null)
     .join(" ");

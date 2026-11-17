@@ -25,11 +25,12 @@ import {
   useStationMutation,
 } from "../api/hooks";
 import type { Job, LocalDatasetDetail, Session } from "../api/types";
-import { JobProgress, formatBytes, scalar, useLatestJob } from "../components/controls";
+import { JobProgress, scalar, useLatestJob } from "../components/controls";
 import { PairForm } from "../components/PairForm";
 import { StationError } from "../components/StationError";
 import { DEFAULT_THRESHOLDS, levelCss, peakTemp, tempLevel } from "../health";
 import { useStatus } from "../ws/StationProvider";
+import { fmtFixed, fmtSize } from "../units";
 
 export function DatasetsPage() {
   const { t } = useTranslation("station");
@@ -66,7 +67,7 @@ export function DatasetsPage() {
                     count: d.episodes,
                     frames: t("datasets.frames", { count: d.frames }),
                     fps: d.fps,
-                    size: formatBytes(d.size_bytes),
+                    size: fmtSize(d.size_bytes),
                   })}
                 </p>
                 <p className="text-xs text-muted-foreground">{d.cameras.join(", ")}</p>
@@ -122,7 +123,7 @@ function TelemetryChart({ name, index }: { name: string; index: number }) {
               >
                 {t(`level.${a.level === "info" ? "ok" : a.level}`)}
               </span>
-              {a.t.toFixed(1)} s · {a.motor ?? a.kind} {a.value !== null ? `· ${a.value}` : ""}
+              {fmtFixed(a.t)} s · {a.motor ?? a.kind} {a.value !== null ? `· ${a.value}` : ""}
             </li>
           ))}
         </ul>
@@ -298,7 +299,7 @@ export function DatasetDetailPage() {
                 count: d.episodes,
                 frames: t("datasets.frames", { count: d.frames }),
                 fps: d.fps,
-                size: formatBytes(d.size_bytes),
+                size: fmtSize(d.size_bytes),
               })
             : undefined
         }
@@ -380,7 +381,7 @@ export function DatasetDetailPage() {
                           #{e.index + 1}
                         </button>
                         <span className="tabular-nums">
-                          {e.length_s !== null ? e.length_s.toFixed(1) : "–"} s
+                          {e.length_s !== null ? fmtFixed(e.length_s) : "–"} s
                         </span>
                         {max !== null ? (
                           <span

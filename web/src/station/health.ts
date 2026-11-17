@@ -5,6 +5,7 @@
  */
 import { PALETTE, type SpriteName } from "@/hibiscus/sprites.gen";
 import type { Level, MotorLimits, MotorSample, Thresholds as SettingsThresholds } from "./api/types";
+import { fmtFixed } from "./units";
 
 /** The temperature part of the Station thresholds (Settings.thresholds / RobotProfile.thresholds). */
 export type Thresholds = Pick<SettingsThresholds, "temp_warn_c" | "temp_hot_c" | "temp_critical_c">;
@@ -86,7 +87,7 @@ export function validateThresholds(th: Thresholds, maxTempC: number = FACTORY_MA
 }
 
 export function fmt(v: number | null | undefined, digits = 1): string {
-  return v === null || v === undefined || !Number.isFinite(v) ? "–" : v.toFixed(digits);
+  return v === null || v === undefined || !Number.isFinite(v) ? "–" : fmtFixed(v, digits);
 }
 
 /** Lowest motor temperature limit reported by the motors (or the factory value). */
