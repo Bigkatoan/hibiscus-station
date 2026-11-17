@@ -295,7 +295,8 @@ export function useProgramStateQuery(id: string | null) {
   const { store } = useRuntime();
   const q = useQuery({
     queryKey: qk.programState(id ?? ""),
-    queryFn: () => api.get<ProgramState>(`/programs/${enc(id ?? "")}/state`),
+    // `null`: the program has not run since the Station started (QC 0.2.9 QD-10: was a 404)
+    queryFn: () => api.get<ProgramState | null>(`/programs/${enc(id ?? "")}/state`),
     enabled: id !== null,
     retry: false,
   });

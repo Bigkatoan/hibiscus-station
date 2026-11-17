@@ -178,6 +178,24 @@ describe("Program editor and run panel", () => {
     expect(await axeViolations()).toEqual([]);
   });
 
+  it("opening a program that never ran asks for its state without an error answer (QC 0.2.9 QD-10)", async () => {
+    const h = setupStation();
+    const states: number[] = [];
+    const onResponse = ({ request, response }: { request: Request; response: Response }) => {
+      if (/\/programs\/[^/]+\/state$/.test(new URL(request.url).pathname)) states.push(response.status);
+    };
+    server.events.on("response:mocked", onResponse);
+    try {
+      await openEditor(h);
+      await waitFor(() => {
+        expect(states.length).toBeGreaterThan(0);
+      });
+      expect(states.every((s) => s === 200)).toBe(true);
+    } finally {
+      server.events.removeListener("response:mocked", onResponse);
+    }
+  });
+
   it("refuses a hardware run before a dry run of this version", async () => {
     const h = setupStation();
     const user = userEvent.setup();

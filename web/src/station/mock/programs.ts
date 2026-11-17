@@ -1042,10 +1042,14 @@ export class MockPrograms {
     return this.run ? structuredClone(this.run.state) : null;
   }
 
-  stateOf(id: string): ProgramState {
+  /** `null` when the program has not run since the Station started; 404 for no such program. */
+  stateOf(id: string): ProgramState | null {
     if (this.run?.state.program_id === id) return structuredClone(this.run.state);
     const last = this.lastState.get(id);
-    if (!last) throw new MockProblem(404, "not_found");
+    if (!last) {
+      this.program(id);
+      return null;
+    }
     return structuredClone(last);
   }
 

@@ -781,7 +781,8 @@ export interface paths {
     };
     /**
      * Program State
-     * @description The running (or last ended) run of this program; 404 when it never ran this launch.
+     * @description The running (or last ended) run of this program; ``null`` when it has not run since
+     *     the Station started; 404 when there is no such program.
      */
     get: operations["program_state_api_v1_programs__program_id__state_get"];
     put?: never;
@@ -8737,7 +8738,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["ProgramState"];
+          "application/json": components["schemas"]["ProgramState"] | null;
         };
       };
       /** @description RFC 9457 problem (spec §5.1) */

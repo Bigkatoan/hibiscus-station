@@ -73,8 +73,9 @@ def build_programs_router() -> APIRouter:
         return wire.Session.model_validate(svc.run(_st(request), program_id, body))
 
     @r.get("/programs/{program_id}/state")
-    def program_state(request: Request, program_id: str = item_id()) -> ps.ProgramState:
-        """The running (or last ended) run of this program; 404 when it never ran this launch."""
+    def program_state(request: Request, program_id: str = item_id()) -> ps.ProgramState | None:
+        """The running (or last ended) run of this program; ``null`` when it has not run since
+        the Station started; 404 when there is no such program."""
         return svc.state(_st(request), program_id)
 
     @r.post("/programs/{program_id}/pause")

@@ -16163,7 +16163,7 @@
     },
     "/api/v1/programs/{program_id}/state": {
       "get": {
-        "description": "The running (or last ended) run of this program; 404 when it never ran this launch.",
+        "description": "The running (or last ended) run of this program; ``null`` when it has not run since\nthe Station started; 404 when there is no such program.",
         "operationId": "program_state_api_v1_programs__program_id__state_get",
         "parameters": [
           {
@@ -16182,7 +16182,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProgramState"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ProgramState"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Program State Api V1 Programs  Program Id  State Get"
                 }
               }
             },

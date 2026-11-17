@@ -116,8 +116,11 @@ def test_program_crud_check_and_refusals(station: Station, client: Any) -> None:
     listed = {p["id"]: p for p in client.get(f"{API}/programs").json()["programs"]}
     assert listed["ab"]["ok"] and not listed["empty"]["ok"] and listed["ab"]["last_run"] is None
     assert client.get(f"{API}/programs/empty").json()["version"] == 1
-    # never ran: state 404, controls 409
-    assert client.get(f"{API}/programs/ab/state").status_code == 404
+    # never ran: state null (QC 0.2.9 QD-10: a 404 here was a console error on every Programs tab
+    # load), an unknown program 404; controls 409
+    never = client.get(f"{API}/programs/ab/state")
+    assert never.status_code == 200 and never.json() is None
+    assert client.get(f"{API}/programs/nope/state").status_code == 404
     assert client.post(f"{API}/programs/ab/pause").status_code == 409
     assert client.post(f"{API}/programs/ab/fake", json={"gripper_holding": True}).status_code == 409
     assert client.get(f"{API}/programs/ab/runs").json() == {"runs": []}
