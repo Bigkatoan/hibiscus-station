@@ -724,3 +724,65 @@ def test_motor_check_without_any_arm_says_so(tmp_path: Path, monkeypatch: pytest
     monkeypatch.setattr(doctor, "ports", lambda _p: [])
     text, _t = _run(tmp_path / "home", tmp_path / "out")
     assert _motor_check(text) == ["  nothing to check: no real arm in the profiles and no USB serial port"]
+
+
+def test_a_lelab_file_with_the_profiles_id_is_named_once_and_consistently(
+    tmp_path: Path, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """QD-10: LeLab's ``so101_follower/arm_follower.json``, the profile expects ``arm_follower``,
+    the motors carry it. One true sentence, no "no calibration" / "MISSING" next to it."""
+    f, ld = emus
+    home = _calibrated_home(tmp_path, f, ld, monkeypatch)
+    cal_root = tmp_path / "calibration"
+    station_file = cal_root / "robots" / "so_follower" / "arm_follower.json"
+    (cal_root / "robots" / "so101_follower").mkdir(parents=True)
+    station_file.rename(cal_root / "robots" / "so101_follower" / "arm_follower.json")
+    text, _t = _run(home, tmp_path / "out")
+    problems = text.split("\n\n")[0].splitlines()[1:]
+    assert problems == [
+        "  ! arm follower: calibration 'arm_follower' is in LeLab's folder (so101_follower), "
+        "Station does not use it yet: Calibrate > Use this file"
+    ], problems
+    assert "no calibration 'arm_follower'" not in text
+    profile = next(x for x in text.splitlines() if x.startswith("    follower: "))
+    assert profile.endswith(
+        "calibration 'arm_follower' in LeLab's folder (so101_follower), not used by Station yet"
+    ), profile
+    assert "MISSING" not in text
+    assert "motors carry the calibration of: ['" in text and "so101_follower" in text
+
+
+def test_a_missing_calibration_lists_the_other_files_of_that_arm(tmp_path: Path) -> None:
+    report: dict[str, Any] = {
+        "profiles": {
+            "active": "arm",
+            "robots": [
+                {
+                    "id": "arm",
+                    "mock": False,
+                    "arms": {
+                        "follower": {
+                            "calibration_id": "arm_follower",
+                            "file_exists": False,
+                            "expects": "/c/robots/so_follower/arm_follower.json",
+                        }
+                    },
+                }
+            ],
+        },
+        "ports": [],
+        "calibrations": [
+            {
+                "arm": "follower",
+                "id": "my_follower",
+                "dir": "so101_follower",
+                "path": "/c/x/my_follower.json",
+            },
+            {"arm": "leader", "id": "arm_follower", "dir": "so101_leader", "path": "/c/y/arm_follower.json"},
+        ],
+        "running": None,
+        "arms": [],
+    }
+    assert doctor.warnings(report) == [
+        "arm follower: no calibration 'arm_follower' (files found: my_follower - Calibrate > Use this file)"
+    ]

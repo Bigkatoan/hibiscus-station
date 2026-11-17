@@ -670,6 +670,17 @@ def _looks_busy(error: str) -> bool:
     return any(m in e for m in BUSY_MARKERS)
 
 
+def lelab_copies(report: dict[str, Any], arm: str, a: dict[str, Any]) -> list[str]:
+    """The folders (``so101_follower``...) of LeLab / older lerobot files that carry the
+    calibration id a profile arm expects, outside the folder Station reads."""
+    cal_id, expects = a.get("calibration_id"), a.get("expects")
+    return [
+        str(c.get("dir"))
+        for c in report.get("calibrations", [])
+        if c.get("arm") == arm and c.get("id") == cal_id and c.get("path") != expects
+    ]
+
+
 def warnings(report: dict[str, Any]) -> list[str]:
     """The likely causes the report shows, in plain words (first lines of the summary)."""
     out: list[str] = []
@@ -690,6 +701,13 @@ def warnings(report: dict[str, Any]) -> list[str]:
     for r in robots.values():
         for arm, a in r["arms"].items():
             if not r["mock"] and not a["file_exists"]:
+                lelab = lelab_copies(report, arm, a)
+                if lelab:
+                    out.append(
+                        f"{r['id']} {arm}: calibration '{a['calibration_id']}' is in LeLab's folder "
+                        f"({', '.join(lelab)}), Station does not use it yet: Calibrate > Use this file"
+                    )
+                    continue
                 found = [c["id"] for c in report["calibrations"] if c["arm"] == arm]
                 out.append(
                     f"{r['id']} {arm}: no calibration '{a['calibration_id']}'"
@@ -851,7 +869,13 @@ def summary(report: dict[str, Any], target: Path | None = None) -> str:
             f"  {r['id']}{' (active)' if r['id'] == prof.get('active') else ''}: cameras {r['cameras']}"
         )
         for arm, a in r["arms"].items():
-            ok = "found" if a["file_exists"] else "MISSING"
+            lelab = [] if a["file_exists"] else lelab_copies(report, arm, a)
+            if a["file_exists"]:
+                ok = "found"
+            elif lelab:
+                ok = f"in LeLab's folder ({', '.join(lelab)}), not used by Station yet"
+            else:
+                ok = "MISSING"
             lines.append(f"    {arm}: {a['type']} on {a['port']}, calibration '{a['calibration_id']}' {ok}")
     run = report.get("running")
     lines += ["", "Running Station:"]
