@@ -21,7 +21,7 @@
 #   --dry-run                   print what would be done, change nothing
 set -euo pipefail
 
-VERSION="0.2.8"
+VERSION="1.0.0a1"
 REPO_RAW="https://raw.githubusercontent.com/Bigkatoan/hibiscus-station/v${VERSION}"
 IMAGE="ghcr.io/bigkatoan/hibiscus-station"
 VARIANT=""

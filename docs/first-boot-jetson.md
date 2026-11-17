@@ -64,4 +64,4 @@ Tick each line and keep the filled-in copy. Afterwards run the hardware checklis
   Check `COMPOSE_FILE` in `.env` and `docker info | grep -i runtime`, then `hibiscus-station-ctl up`.
 * `CUDA driver version is insufficient`: JetPack is older than the CUDA in the image. Update
   JetPack 6 to the latest 6.x release.
-* As a fallback the `cpu` image runs on the Jetson's CPU (`hibiscus-station-ctl update 0.2.8-cpu`).
+* As a fallback the `cpu` image runs on the Jetson's CPU (`hibiscus-station-ctl update 1.0.0a1-cpu`).

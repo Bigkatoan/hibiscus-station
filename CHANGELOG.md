@@ -11,6 +11,15 @@ repository (`station/`); 0.2.0 is the first release of this standalone repositor
 
 ## [Unreleased]
 
+These changes are in the test build **1.0.0a1** (a pre-release, the M0 milestone of 1.0). Install it
+with its own line (see the README); GitHub never offers a pre-release as its "latest" release.
+
+### Changed
+- **Version 1.0.0a1.** The test build has its own version number everywhere (`hibiscus-station
+  --version`, the web page, the doctor report, the Docker image tags `1.0.0a1-cpu` / `-cuda` /
+  `-jetson`), so it can never be mistaken for 0.2.8. The Windows install line and the installer's
+  "go back to this version" line point at this build's own release.
+
 ## [0.2.8] - 2026-11-16
 
 ### Fixed

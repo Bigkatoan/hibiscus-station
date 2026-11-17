@@ -70,7 +70,7 @@ def _tree(tmp_path: Path) -> Path:
         ("deploy/.env.example", "STATION_TAG={v}-cpu", "STATION_TAG=0.2.1-cpu", ".env.example"),
         ("web/package.json", '"version": "{v}"', '"version": "0.2.1"', "web/package.json"),
         ("CITATION.cff", 'version: "{v}"', 'version: "0.2.1"', "CITATION.cff"),
-        ("CHANGELOG.md", "compare/v{v}...HEAD", "compare/v0.2.2...HEAD", "[Unreleased]"),
+        ("CHANGELOG.md", "...HEAD\n", "...main\n", "[Unreleased]"),
     ],
 )
 def test_a_stale_version_anywhere_fails(tmp_path: Path, rel: str, old: str, new: str, needle: str) -> None:
@@ -205,14 +205,15 @@ def test_wheel_platform_markers() -> None:
 
 
 def test_pre_release_versions_are_matched_whole(tmp_path: Path) -> None:
-    """A pre-release (1.0.0a1, the M0 build) must not pass as its release number (1.0.0)."""
+    """A pre-release (1.0.0a1, the M0 build) and its release number (1.0.0) are different versions."""
     root = _tree(tmp_path)
     v = check_versions.station_version(root)
+    other = v.split("a")[0] if check_versions.is_pre_release(v) else f"{v}a1"
     readme = root / "README.md"
     readme.write_text(
-        readme.read_text(encoding="utf-8").replace(f":{v}-cpu", f":{v}a1-cpu", 1), encoding="utf-8"
+        readme.read_text(encoding="utf-8").replace(f":{v}-cpu", f":{other}-cpu", 1), encoding="utf-8"
     )
-    assert any("README.md" in e and f"{v}a1" in e for e in check_versions.check(root))
+    assert any("README.md" in e and f"{other} != {v}" in e for e in check_versions.check(root))
 
 
 def test_compare_envs_requires_the_exact_tested_set() -> None:
@@ -268,14 +269,65 @@ def test_installer_reads_uv_output_without_colour() -> None:
 @pytest.mark.parametrize(
     ("doc", "needle"),
     [
-        ("README.md", "A test build (pre-release, e.g. 1.0.0a1) is only reachable by its versioned link"),
-        (
-            "README.vi.md",
-            "Bản thử nghiệm (pre-release, ví dụ 1.0.0a1) chỉ cài được bằng liên kết có số phiên bản",
-        ),
-        ("docs/deploy.md", "A pre-release is only reachable by its versioned link"),
+        ("README.md", "it is only reachable by its versioned link, the line above"),
+        ("README.vi.md", "nên chỉ cài được bằng liên kết có số phiên bản, tức là dòng ở trên"),
+        ("docs/deploy.md", "so it is only reachable by its versioned link"),
     ],
 )
 def test_install_docs_say_a_pre_release_needs_its_versioned_link(doc: str, needle: str) -> None:
     """GitHub's releases/latest skips pre-releases: the M0 test build is installed by its own link."""
     assert needle in " ".join((ROOT / doc).read_text(encoding="utf-8").split())
+
+
+# =========================================================================== QD-1
+def test_the_m0_build_is_the_pre_release_1_0_0a1() -> None:
+    """QD-1: the M0 candidate must not carry 0.2.8, which is already released (and has no installer)."""
+    assert check_versions.station_version() == "1.0.0a1"
+    assert check_versions.is_pre_release("1.0.0a1") and not check_versions.is_pre_release("1.0.0")
+
+
+@pytest.mark.parametrize("doc", ["README.md", "README.vi.md", "docs/deploy.md"])
+def test_a_pre_release_doc_never_points_at_releases_latest(tmp_path: Path, doc: str) -> None:
+    """QD-1: releases/latest/download/install.ps1 was a 404 (latest = 0.2.8, which has no installer)
+    and can never serve a pre-release."""
+    root = _tree(tmp_path)
+    v = check_versions.station_version(root)
+    path = root / doc
+    text = path.read_text(encoding="utf-8")
+    line = f"releases/download/v{v}/install.ps1"
+    assert line in text, doc
+    path.write_text(text.replace(line, "releases/latest/download/install.ps1", 1), encoding="utf-8")
+    assert any(doc in e and "releases/latest" in e for e in check_versions.check(root))
+
+
+def test_a_pre_release_is_listed_under_unreleased() -> None:
+    """QD-15 / QD-1: the pre-release's changes are in [Unreleased] (its compare link resolves before
+    the tag exists) and name the version; an empty [Unreleased] fails."""
+    repo = check_versions.REPO
+    links = f"[Unreleased]: {repo}/compare/v0.2.8...HEAD\n[0.2.8]: {repo}/releases/tag/v0.2.8\n"
+    good = (
+        "## [Unreleased]\n\nIn the test build 1.0.0a1.\n\n### Added\n- a thing\n\n## [0.2.8] - x\n\n" + links
+    )
+    assert check_versions.check_changelog(good, "1.0.0a1") == []
+    empty = "## [Unreleased]\n\n## [0.2.8] - x\n\n" + links
+    assert any("lists no change" in e for e in check_versions.check_changelog(empty, "1.0.0a1"))
+    unnamed = good.replace("In the test build 1.0.0a1.\n\n", "")
+    assert any("does not name" in e for e in check_versions.check_changelog(unnamed, "1.0.0a1"))
+    own = good.replace("## [0.2.8] - x", "## [1.0.0a1] - x\n\n## [0.2.8] - x")
+    assert any("own section" in e for e in check_versions.check_changelog(own, "1.0.0a1"))
+
+
+@pytest.mark.parametrize("version", ["1.0.0a1", "1.0.0"])
+def test_installer_links_resolve_for_its_kind_of_release(version: str) -> None:
+    """QD-1: the installer's update / roll-back lines: a pre-release never names releases/latest;
+    roll back is always this version's own installer."""
+    text = build_release.render_installer(
+        version=version, base_url="https://example.invalid/r", uv_sha256="e" * 64
+    )
+    assert "releases/download/v$Version/install.ps1" in text
+    assert f"releases/download/v{version}/install.ps1" in text  # the header names the versioned line
+    pre = version != "1.0.0"
+    assert f"$PreRelease = ${str(pre).lower()}" in text
+    header = text.split("& {", 1)[0]
+    assert ("releases/latest" in header) is (not pre)
+    assert "run the same install command again" not in text  # a versioned line reinstalls the same build

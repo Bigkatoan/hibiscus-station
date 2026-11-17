@@ -276,6 +276,7 @@ def ps_ascii(text: str) -> str:
 
 def render_installer(*, version: str, base_url: str, uv_sha256: str) -> str:
     text = TEMPLATE.read_text(encoding="utf-8")
+    pre = re.fullmatch(r"\d+\.\d+\.\d+", version) is None
     values = {
         "@VERSION@": version,
         "@BASE_URL@": base_url,
@@ -284,6 +285,13 @@ def render_installer(*, version: str, base_url: str, uv_sha256: str) -> str:
         "@UV_SHA256@": uv_sha256,
         "@PYTHON_VERSION@": PYTHON_VERSION,
         "@REPO_URL@": REPO_URL,
+        "@PRE_RELEASE@": "true" if pre else "false",
+        # GitHub's releases/latest never serves a pre-release (QD-1)
+        "@LATEST_LINE@": (
+            '#   (a pre-release: GitHub\'s "latest" link never serves it: use the line above)'
+            if pre
+            else f"#   irm {REPO_URL}/releases/latest/download/install.ps1 | iex       # the latest release"
+        ),
     }
     for k, v in values.items():
         text = text.replace(k, v)

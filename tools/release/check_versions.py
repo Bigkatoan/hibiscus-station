@@ -6,6 +6,11 @@ package metadata (pyproject.toml, uv.lock, web/package.json, CITATION.cff), the 
 (deploy/install.sh, deploy/.env.example), every image tag / wheel URL / ``update`` example in the
 README files and the user documentation, or the CHANGELOG (latest section and its compare links).
 
+A pre-release (``1.0.0a1``, the M0 test build) is never GitHub's "latest" release: its documents
+must not send Windows users to ``releases/latest/download/install.ps1`` (QD-1: that link 404s while
+no stable release carries an ``install.ps1``), and its changes stay under ``[Unreleased]`` in the
+CHANGELOG, which must name the version, so every compare link resolves before the tag exists.
+
 Usage: ``python3 tools/release/check_versions.py`` (Python 3.11+, standard library only). Exit 1
 with one line per mismatch. Runs in CI (ci.yml) and in tests/test_release_tools.py.
 """
@@ -45,6 +50,14 @@ DOC_PATTERNS = [
 ]
 
 
+#: a Windows install line that follows GitHub's "latest" release (pre-releases are never "latest")
+LATEST_INSTALLER = "releases/latest/download/install.ps1"
+
+
+def is_pre_release(version: str) -> bool:
+    return re.fullmatch(r"\d+\.\d+\.\d+", version) is None
+
+
 def station_version(root: Path = ROOT) -> str:
     text = (root / "hibiscus_station" / "__init__.py").read_text(encoding="utf-8")
     m = re.search(r'^__version__ = "([^"]+)"$', text, re.M)
@@ -61,8 +74,15 @@ def _one(errors: list[str], where: str, pattern: str, text: str, want: str) -> N
         errors.append(f"{where}: {m.group(1)} != {want}")
 
 
+def unreleased_notes(text: str) -> str:
+    """The body of the ``## [Unreleased]`` section (empty when there is none)."""
+    m = re.search(r"^## \[Unreleased\][^\n]*\n(.*?)(?=^## \[|^\[[^\]]+\]: |\Z)", text, re.M | re.S)
+    return m.group(1).strip() if m else ""
+
+
 def check_changelog(text: str, want: str) -> list[str]:
-    """Latest released section == ``want``; compare links form an unbroken chain to HEAD."""
+    """Latest released section == ``want`` (a pre-release: ``[Unreleased]`` lists its changes and
+    names it); compare links form an unbroken chain to HEAD."""
     errors: list[str] = []
     sections = [
         m.group(1)
@@ -70,7 +90,15 @@ def check_changelog(text: str, want: str) -> list[str]:
         if "(in the Hibiscus repository)" not in m.group(0)
     ]
     released = [s for s in sections if s != "Unreleased"]
-    if not released or released[0] != want:
+    if is_pre_release(want):
+        if want in released:
+            errors.append(f"CHANGELOG.md: pre-release {want} has its own section; list it under [Unreleased]")
+        notes = unreleased_notes(text)
+        if not re.search(r"^[-*] ", notes, re.M):
+            errors.append(f"CHANGELOG.md: [Unreleased] lists no change of the pre-release {want}")
+        elif want not in notes:
+            errors.append(f"CHANGELOG.md: [Unreleased] does not name the pre-release {want}")
+    elif not released or released[0] != want:
         errors.append(f"CHANGELOG.md: latest section is {released[:1]}, not [{want}]")
     links = dict(re.findall(r"^\[([^\]]+)\]: (\S+)$", text, re.M))
     if released:
@@ -109,6 +137,11 @@ def check(root: Path = ROOT) -> list[str]:
                 for m in pat.finditer(line):
                     if m.group(1) != want:
                         errors.append(f"{rel}:{lineno}: {m.group(0)} ({m.group(1)} != {want})")
+            if is_pre_release(want) and LATEST_INSTALLER in line:
+                errors.append(
+                    f"{rel}:{lineno}: {LATEST_INSTALLER} never reaches the pre-release {want}: "
+                    f"use releases/download/v{want}/install.ps1"
+                )
 
     errors += check_changelog(read("CHANGELOG.md"), want)
     return errors
