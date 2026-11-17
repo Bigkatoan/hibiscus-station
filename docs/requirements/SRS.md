@@ -210,7 +210,7 @@ Teleop không cần camera nào đang phát; ghi, chạy model, chương trình 
 **FR-24 (F-24) Teleop.** Bắt đầu cần: kết nối, Sẵn sàng, hai tay đã hiệu chỉnh, không động cơ follower
 nóng, leader trong 30° (RULE-12). Vòng nhanh: mỗi nhịp kiểm e-stop → đọc leader → lọc an toàn → ghi
 lệnh follower; quan sát follower và camera ở ≤ 30 Hz, telemetry ở các nhịp khác. fps mặc định 250 (≤
-300; chọn được ở Nâng cao); bus chậm thì chạy chậm hơn, không lỗi. Giới hạn bước teleop
+300; ô chọn fps hiện ngay trên trang, mặc định "250 (nhanh nhất)"); bus chậm thì chạy chậm hơn, không lỗi. Giới hạn bước teleop
 `safety.teleop_max_relative_target` 30°; kẹp dải hiệu chỉnh. Màn hình: camera (nếu có), bảng khớp
 (leader, follower, bị cắt), sức khoẻ động cơ hai tay, Robot 3D, đồng hồ, "độ trễ ~X ms, Y Hz" đo trực
 tiếp (p50), Dừng. Tóm tắt phiên lưu `loop.fps`, `latency_ms_p50/p95`. Traces BR-4, NFR-1, NFR-2.

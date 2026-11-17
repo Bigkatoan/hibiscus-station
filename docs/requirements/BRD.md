@@ -223,8 +223,10 @@ Theo dõi tay robot và gửi báo cáo chẩn đoán." Đồng thời khách h�
 kèm nút phụ "Vẫn thử teleop" (teleop vẫn từ chối nếu hai tay lệch quá 30°).
 
 **Q-7. Tuỳ chọn nâng cao cho kỹ sư nên ẩn hay hiện mặc định?**
-*Đề xuất:* ẩn sau mục "Nâng cao" (đóng mặc định) ở các màn hình Hiệu chỉnh, Teleop (fps), Chạy model
-(giới hạn bước), Cài đặt; người mới không cần mở.
+Hiện nay: Hiệu chỉnh và Chạy model đã có mục "Nâng cao" đóng sẵn; ô chọn fps của Teleop và trang
+Cài đặt hiện thẳng.
+*Đề xuất:* giữ như hiện nay cho v1.0 (fps Teleop mặc định "nhanh nhất" nên người mới không cần đổi;
+Cài đặt là trang riêng của kỹ sư); không thêm màn hình "chế độ người mới / kỹ sư".
 
 **Q-8. Thuật ngữ tiếng Việt cho "calibrate".** Giao diện đang dùng lẫn "Hiệu chỉnh" và "Hiệu chuẩn".
 *Đề xuất:* dùng **"Hiệu chỉnh"** ở mọi nơi (đã dùng trong thanh bước và hướng dẫn). Tương tự giữ các
