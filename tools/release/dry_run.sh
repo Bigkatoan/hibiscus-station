@@ -2,10 +2,13 @@
 # Release dry run (FL-12, SP-3 on Linux): build the release assets, install them the way a user does
 # into a fresh, empty home with no git on PATH, and check the result.
 #
-#   tools/release/dry_run.sh [--keep] [--no-docker] [--port 18352]
+#   tools/release/dry_run.sh [--keep] [--no-docker] [--port 18352] [--out DIR | --assets DIR]
 #
-# 1. web/dist (built with web/scripts/node.sh when missing), then tools/release/build_release.py and
-#    tools/release/verify_assets.py.
+# 0. The tested set: `uv sync --locked --no-dev --no-install-project` into a fresh venv (its Python
+#    also runs the release tools).
+# 1. web/dist (built with web/scripts/node.sh when missing), then tools/release/build_release.py
+#    (--out DIR: keep the assets there) and tools/release/verify_assets.py. --assets DIR: skip the
+#    build and install the assets in DIR (e.g. the CI artifact of another job).
 # 2. Install with the real install.ps1 in a PowerShell 7 container (mcr.microsoft.com/powershell, no
 #    git in the image; uv and the assets mounted), or with --no-docker the same `uv tool install`
 #    command in bash with git hidden from PATH.
@@ -22,13 +25,17 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 KEEP=0
 DOCKER=1
 PORT=18352
+OUT=""
+ASSETS=""
 PWSH_IMAGE="mcr.microsoft.com/powershell:7.4-ubuntu-22.04"
 while [ $# -gt 0 ]; do
   case "$1" in
     --keep) KEEP=1 ;;
     --no-docker) DOCKER=0 ;;
     --port) PORT="$2"; shift ;;
-    -h|--help) sed -n '2,19p' "$0"; exit 0 ;;
+    --out) OUT="$2"; shift ;;
+    --assets) ASSETS="$2"; shift ;;
+    -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
     *) echo "unknown option $1" >&2; exit 2 ;;
   esac
   shift
@@ -47,18 +54,30 @@ step() { printf '\n== %s\n' "$*"; }
 VERSION="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' "$ROOT/hibiscus_station/__init__.py")"
 step "Hibiscus Station $VERSION release dry run in $WORK"
 
-step "1. build the UI and the release assets"
-if [ ! -f "$ROOT/web/dist/index.html" ]; then
-  "$ROOT/web/scripts/node.sh" pnpm install --frozen-lockfile
-  "$ROOT/web/scripts/node.sh" pnpm build
-fi
-REL="$WORK/release"
-if ! (cd "$ROOT" && $UV run --frozen python tools/release/build_release.py --out "$REL") > "$WORK/build.log" 2>&1; then
-  tail -40 "$WORK/build.log"; echo "FAIL: build_release.py" >&2; exit 1
+step "0. the tested set (uv sync --locked --no-dev)"
+REF="$WORK/ref-venv"
+(cd "$ROOT" && UV_PROJECT_ENVIRONMENT="$REF" $UV sync --locked --no-dev --no-install-project --python 3.12 -q)
+PY="$REF/bin/python"
+
+if [ -n "$ASSETS" ]; then
+  REL="$(cd "$ASSETS" && pwd)"
+  step "1. release assets from $REL"
+else
+  step "1. build the UI and the release assets"
+  if [ ! -f "$ROOT/web/dist/index.html" ]; then
+    "$ROOT/web/scripts/node.sh" pnpm install --frozen-lockfile
+    "$ROOT/web/scripts/node.sh" pnpm build
+  fi
+  REL="${OUT:-$WORK/release}"
+  mkdir -p "$REL"
+  REL="$(cd "$REL" && pwd)"
+  if ! (cd "$ROOT" && env -u PYTHONPATH "$PY" tools/release/build_release.py --out "$REL") > "$WORK/build.log" 2>&1; then
+    tail -40 "$WORK/build.log"; echo "FAIL: build_release.py" >&2; exit 1
+  fi
 fi
 ls -l "$REL"
 step "1b. verify the assets (checksums; resolved set == uv.lock on Windows x64, Linux x86_64, macOS arm64)"
-(cd "$ROOT" && $UV run --frozen python tools/release/verify_assets.py "$REL")
+(cd "$ROOT" && env -u PYTHONPATH "$PY" tools/release/verify_assets.py "$REL")
 
 HOME_T="$WORK/home"
 mkdir -p "$HOME_T"
@@ -72,7 +91,7 @@ if [ "$DOCKER" = 1 ] && command -v docker >/dev/null && { docker image inspect "
   cp "$(command -v uv)" "$WORK/uvbin/uv"
   # Same absolute paths inside and outside, so the tool environment also runs on the host.
   docker run --rm --network host -u "$(id -u):$(id -g)" \
-    -v "$WORK:$WORK" -v "$CACHE:$CACHE" \
+    -v "$WORK:$WORK" -v "$REL:$REL:ro" -v "$CACHE:$CACHE" \
     -e HOME="$HOME_T" -e UV_CACHE_DIR="$CACHE" \
     -e HIBISCUS_STATION_BASE_URL="$REL" -e HIBISCUS_STATION_UV="$WORK/uvbin/uv" \
     -e PATH=/opt/microsoft/powershell/7 \
@@ -96,27 +115,8 @@ GOT="$("$BIN/hibiscus-station" --version)"
 echo "$GOT"
 [ "$GOT" = "hibiscus-station $VERSION" ] || { echo "FAIL: expected hibiscus-station $VERSION" >&2; exit 1; }
 
-step "4. installed libraries == uv.lock (uv sync --locked --no-dev)"
-REF="$WORK/ref-venv"
-(cd "$ROOT" && UV_PROJECT_ENVIRONMENT="$REF" $UV sync --locked --no-dev --no-install-project --python 3.12 -q)
-list() { $UV pip list --python "$1" --format json; }
-list "$TOOLS/hibiscus-station/bin/python" > "$WORK/installed.json"
-list "$REF/bin/python" > "$WORK/reference.json"
-$UV run --project "$ROOT" --frozen python - "$WORK/installed.json" "$WORK/reference.json" "$VERSION" <<'PY'
-import json, re, sys
-norm = lambda n: re.sub(r"[-_.]+", "-", n).lower()
-inst = {norm(p["name"]): p["version"] for p in json.load(open(sys.argv[1]))}
-ref = {norm(p["name"]): p["version"] for p in json.load(open(sys.argv[2]))}
-station = inst.pop("hibiscus-station", None)
-diff = sorted(set(inst.items()) ^ set(ref.items()))
-print(f"installed {len(inst)} packages + hibiscus-station {station}; reference {len(ref)}")
-for name, ver in diff:
-    side = "installed only" if inst.get(name) == ver else "lock only"
-    print(f"  {side}: {name}=={ver}")
-if diff or station != sys.argv[3]:
-    sys.exit("FAIL: the installed set differs from uv.lock")
-print("OK: 100 % identical")
-PY
+step "4. installed libraries == the tested set (uv.lock), 100 %"
+env -u PYTHONPATH "$PY" "$ROOT/tools/release/compare_envs.py" "$TOOLS/hibiscus-station/bin/python" "$PY" "$VERSION"
 
 step "5. smoke launch on 127.0.0.1:$PORT"
 "$BIN/hibiscus-station" --mock --no-browser --port "$PORT" --home "$WORK/station" > "$WORK/station.log" 2>&1 &
