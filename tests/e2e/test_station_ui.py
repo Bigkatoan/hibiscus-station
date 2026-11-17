@@ -22,7 +22,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from e2e_support import ARMS, Driver, launch_station, wait_for
+
+from .e2e_support import ARMS, Driver, launch_station, wait_for
 
 pytestmark = [pytest.mark.e2e, pytest.mark.timeout(900)]
 

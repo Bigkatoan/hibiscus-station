@@ -15,7 +15,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from e2e_support import SPA, unavailable
+
+from .e2e_support import SPA, unavailable
 
 CHECKPOINT = Path(os.environ.get("HIBISCUS_E2E_CHECKPOINT", "/nonexistent"))
 

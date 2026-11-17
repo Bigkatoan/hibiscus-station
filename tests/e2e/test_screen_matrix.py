@@ -34,7 +34,8 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
-from e2e_support import (
+
+from .e2e_support import (
     REQUIRED,
     SHOTS,
     UI,
