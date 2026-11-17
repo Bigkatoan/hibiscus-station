@@ -242,9 +242,8 @@ def test_station_ui_end_to_end(browser: Any, station_proc: tuple[str, str, Path]
     # ---------------------------------------------------------------- 2. calibrate both arms
     go("/calibrate")
     for arm in ("follower", "leader"):
-        page.get_by_role("tab", name=arm.capitalize()).click()
-        panel = page.get_by_role("tabpanel")
-        panel.get_by_role("button", name=re.compile("^(Start calibration|Recalibrate)$")).click()
+        page.get_by_test_id(f"cal-step-{arm}").click()  # the wizard stepper (0.2.7 calibration)
+        page.get_by_role("button", name=re.compile("Start calibration|Recalibrate")).first.click()
         expect(page.get_by_test_id("cal-home")).to_be_visible()
         page.get_by_role("button", name="Set middle").click()
         expect(page.get_by_test_id("cal-ranges")).to_be_visible()
@@ -253,8 +252,8 @@ def test_station_ui_end_to_end(browser: Any, station_proc: tuple[str, str, Path]
         expect(page.get_by_test_id("range-gripper")).to_have_attribute("data-ok", "true", timeout=20000)
         if arm == "follower":
             shot("02-calibrate-ranges")
-        page.get_by_role("button", name="Finish and save").click()
-        expect(page.get_by_test_id("cal-done")).to_be_visible()
+        page.get_by_role("button", name=re.compile("^Save")).click()
+        _wait(lambda a=arm: status()["robot"]["arms"][a]["calibrated"], 20, f"{arm} calibrated")
     st = wait_state("idle")
     assert st["robot"]["arms"]["follower"]["calibrated"] and st["robot"]["arms"]["leader"]["calibrated"]
     shot("03-calibrate-done")
