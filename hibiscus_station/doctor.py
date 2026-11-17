@@ -360,6 +360,7 @@ def ping_arm(
     *,
     raw: bool = True,
     vid_pid: str | None = None,
+    calibration_file: str | None = None,
 ) -> dict[str, Any]:
     """Read-only check of an SO-101 arm on ``port``: which ids answer, their registers, and
     (``raw``) a raw dump of every id once the lerobot bus is closed again."""
@@ -420,6 +421,7 @@ def ping_arm(
         )
         if calibration:
             out["calibration_vs_eeprom"] = _compare(calibration, out["motors"])
+            out["calibration_file"] = calibration_file
         # Which calibration file (any id, e.g. LeLab's) the motors' EEPROM carries now.
         out["eeprom_matches"] = [
             path
@@ -494,10 +496,16 @@ def teleop_estimate(ms_per_read: float | None, chip: str | None = None) -> dict[
     return out
 
 
+NO_ANSWER = "motor did not answer"
+
+
 def _compare(cal: dict[str, Any], motors: dict[str, Any]) -> dict[str, Any]:
     out: dict[str, Any] = {}
     for name, v in cal.items():
         row = motors.get(str(v.get("id")), {})
+        if not row or row.get("error"):
+            out[name] = NO_ANSWER  # listed as "do not answer", never as a calibration mismatch
+            continue
         diffs = []
         for key, reg in (
             ("homing_offset", "Homing_Offset"),
@@ -655,6 +663,7 @@ def check_arms(
                     cal_by_path.get(expects) if expects else None,
                     same_arm,
                     vid_pid=_vid_pid(report, port),
+                    calibration_file=expects,
                 )
             )
         arms.append(row)
@@ -668,6 +677,17 @@ BUSY_MARKERS = ("access is denied", "permission denied", "resource busy", "busy"
 def _looks_busy(error: str) -> bool:
     e = error.lower()
     return any(m in e for m in BUSY_MARKERS)
+
+
+def lelab_copies(report: dict[str, Any], arm: str, a: dict[str, Any]) -> list[str]:
+    """The folders (``so101_follower``...) of LeLab / older lerobot files that carry the
+    calibration id a profile arm expects, outside the folder Station reads."""
+    cal_id, expects = a.get("calibration_id"), a.get("expects")
+    return [
+        str(c.get("dir"))
+        for c in report.get("calibrations", [])
+        if c.get("arm") == arm and c.get("id") == cal_id and c.get("path") != expects
+    ]
 
 
 def warnings(report: dict[str, Any]) -> list[str]:
@@ -690,6 +710,13 @@ def warnings(report: dict[str, Any]) -> list[str]:
     for r in robots.values():
         for arm, a in r["arms"].items():
             if not r["mock"] and not a["file_exists"]:
+                lelab = lelab_copies(report, arm, a)
+                if lelab:
+                    out.append(
+                        f"{r['id']} {arm}: calibration '{a['calibration_id']}' is in LeLab's folder "
+                        f"({', '.join(lelab)}), Station does not use it yet: Calibrate > Use this file"
+                    )
+                    continue
                 found = [c["id"] for c in report["calibrations"] if c["arm"] == arm]
                 out.append(
                     f"{r['id']} {arm}: no calibration '{a['calibration_id']}'"
@@ -697,7 +724,7 @@ def warnings(report: dict[str, Any]) -> list[str]:
                 )
     run = report.get("running") or {}
     if run.get("error"):
-        out.append(f"Station (pid {run.get('pid')}) does not answer: {run['error']}")
+        out.append(f"Station (pid {run.get('pid') or '?'}) does not answer: {run['error']}")
     checked: set[str] = set()
     for a in report.get("arms", []):
         checked.add(str(a["port"]))
@@ -725,6 +752,18 @@ def warnings(report: dict[str, Any]) -> list[str]:
         if missing:
             out.append(
                 f"{a['robot']} {a['arm']}: motor id(s) {', '.join(missing)} do not answer (power? cable?)"
+            )
+        cmp = a.get("calibration_vs_eeprom") or {}
+        diffs = {m: d for m, d in cmp.items() if d not in ("match", NO_ANSWER)}
+        if diffs:
+            names = list(diffs)
+            first = f"{names[0]} {diffs[names[0]].split('; ')[0]}"
+            detail = first if len(names) == 1 else f"{', '.join(names)}; first: {first}"
+            name = Path(str(a.get("calibration_file") or "")).stem or "?"
+            out.append(
+                f"{a['robot']} {a['arm']}: calibration file '{name}' does not match the motors "
+                f"({len(names)} of {len(cmp)} motors: {detail}); Connect writes the file to the "
+                "motors: if it is not this arm's file, calibrate the arm again"
             )
         est = a.get("teleop_estimate") or {}
         if est.get("warning"):
@@ -815,8 +854,8 @@ def summary(report: dict[str, Any], target: Path | None = None) -> str:
         "LIKELY PROBLEMS:",
         *([f"  ! {w}" for w in problems] or ["  No likely problems found"]),
         "",
-        f"Hibiscus Station {v['hibiscus_station']} · Python {v['python']} · lerobot {v['lerobot']} · "
-        f"rustypot {v['rustypot']}",
+        f"Hibiscus Station {v['hibiscus_station']} · Python {v['python']} · "
+        f"lerobot {v['lerobot'] or 'not installed'} · rustypot {v['rustypot'] or 'not installed'}",
         f"OS: {v['os']} ({v['machine']})",
         f"Data: {report['home']}",
         f"Calibration folder: {report['calibration_root']}",
@@ -851,7 +890,13 @@ def summary(report: dict[str, Any], target: Path | None = None) -> str:
             f"  {r['id']}{' (active)' if r['id'] == prof.get('active') else ''}: cameras {r['cameras']}"
         )
         for arm, a in r["arms"].items():
-            ok = "found" if a["file_exists"] else "MISSING"
+            lelab = [] if a["file_exists"] else lelab_copies(report, arm, a)
+            if a["file_exists"]:
+                ok = "found"
+            elif lelab:
+                ok = f"in LeLab's folder ({', '.join(lelab)}), not used by Station yet"
+            else:
+                ok = "MISSING"
             lines.append(f"    {arm}: {a['type']} on {a['port']}, calibration '{a['calibration_id']}' {ok}")
     run = report.get("running")
     lines += ["", "Running Station:"]
@@ -865,13 +910,15 @@ def summary(report: dict[str, Any], target: Path | None = None) -> str:
             )
         )
     elif run.get("error"):
-        lines.append(f"  pid {run.get('pid')} does not answer: {run['error']}")
+        lines.append(f"  pid {run.get('pid') or '?'} does not answer: {run['error']}")
     else:
         st = run["status"]
         robot = st.get("robot") or {}
+        mode = "MOCK" if (st.get("station") or {}).get("mock") else "real"
         lines.append(
-            f"  pid {run.get('pid')}: mode {'MOCK' if (st.get('station') or {}).get('mock') else 'real'}, "
-            f"state {st.get('state')} reason {st.get('reason')} detail {st.get('detail')}"
+            f"  pid {run.get('pid') or '?'}: mode {mode}, state {st.get('state') or '?'}"
+            + (f", reason {st['reason']}" if st.get("reason") else "")
+            + (f", detail {st['detail']}" if st.get("detail") else "")
         )
         if robot:
             lines.append(
@@ -881,8 +928,10 @@ def summary(report: dict[str, Any], target: Path | None = None) -> str:
         for arm, a in (robot.get("arms") or {}).items():
             if a:
                 lines.append(
-                    f"    {arm}: calibrated {a.get('calibrated')} issue {a.get('issue')} "
-                    f"bus errors {a.get('bus_errors')} last {a.get('last_bus_error')}"
+                    f"    {arm}: {'calibrated' if a.get('calibrated') else 'not calibrated'}"
+                    + (f" ({a['issue']})" if a.get("issue") else "")
+                    + f", bus errors {a.get('bus_errors') or 0}"
+                    + (f", last: {a['last_bus_error']}" if a.get("last_bus_error") else "")
                 )
         last = st.get("last_session") or {}
         lp = last.get("loop") or {}
@@ -904,8 +953,10 @@ def summary(report: dict[str, Any], target: Path | None = None) -> str:
                 f"  {c.get('id')}  {c.get('backend_api')}  {c.get('default_stream_profile')}" for c in cams
             ] or ["  (none)"]
     lines += ["", "Motor check (read only):"]
-    if not report["arms"]:
-        lines.append("  no real arm in the profiles (or --no-ping)")
+    if not report.get("ping", True):
+        lines.append("  skipped (--no-ping): the serial ports were not opened")
+    elif not report["arms"]:
+        lines.append("  nothing to check: no real arm in the profiles and no USB serial port")
     for a in report["arms"]:
         head = f"  {a['robot']} {a['arm']} on {a['port']}"
         if a.get("skipped"):
@@ -954,9 +1005,17 @@ def summary(report: dict[str, Any], target: Path | None = None) -> str:
         be = a.get("bus_errors") or {}
         if be.get("errors"):
             lines.append(f"    bus errors: {be}")
-    lines += ["", f"Last {len(report['log_tail'])} log lines are in the zip.", ""]
+    lines += ["", _log_line(len(report["log_tail"])), ""]
     lines += send_instructions(report, target)
     return redact("\n".join(lines))
+
+
+def _log_line(n: int) -> str:
+    if n == 0:
+        return "No Station log found (logs/station.log)."
+    if n == 1:
+        return "The last log line is in the zip."
+    return f"The last {n} log lines are in the zip."
 
 
 def _fmt(d: dict[str, Any], key: str, unit: str) -> str:
@@ -983,14 +1042,15 @@ def _raw_lines(dump: dict[str, Any] | None) -> list[str]:
         out.append(f"      id {mid}: {blocks}")
         d = row.get("decoded")
         if d:
+            g = {k: "-" if v is None else v for k, v in d.items()}  # a block that did not answer
             out.append(
-                f"        -> fw {d.get('firmware')} model {d.get('model_number')} "
-                f"temperature raw {d.get('temperature_raw')} = {_fmt(d, 'temp_c', 'C')} "
-                f"(max limit {d.get('max_temperature_limit_c')} C) "
-                f"voltage raw {d.get('voltage_raw')} = {_fmt(d, 'voltage_v', 'V')} "
-                f"current raw {d.get('current_raw')} = {_fmt(d, 'current_a', 'A')} "
-                f"load raw {d.get('load_raw')} = {_fmt(d, 'load_pct', '%')} "
-                f"status raw {d.get('status_raw')} {d.get('status')}"
+                f"        -> fw {g.get('firmware')} model {g.get('model_number')} "
+                f"temperature raw {g.get('temperature_raw')} = {_fmt(d, 'temp_c', 'C')} "
+                f"(max limit {g.get('max_temperature_limit_c')} C) "
+                f"voltage raw {g.get('voltage_raw')} = {_fmt(d, 'voltage_v', 'V')} "
+                f"current raw {g.get('current_raw')} = {_fmt(d, 'current_a', 'A')} "
+                f"load raw {g.get('load_raw')} = {_fmt(d, 'load_pct', '%')} "
+                f"status raw {g.get('status_raw')} {g.get('status')}"
             )
     return out
 

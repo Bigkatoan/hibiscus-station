@@ -113,8 +113,10 @@ When the arm does not work as it should, one report lets us find the cause on th
 
 The report is in English (for engineers), apart from its last section. It starts with **LIKELY
 PROBLEMS** (or "No likely problems found"): for example a demo profile is active, a calibration file
-is missing, another program holds a port (named), Station was killed and left `station.pid` behind,
-the bus is slow, or motors report impossible readings (0 °C, 6.5 A).
+is missing, LeLab's calibration file is there but Station does not use it yet (Calibrate > Use this
+file), the calibration file does not match what the motors carry, another program holds a port
+(named), Station was killed and left `station.pid` behind, the bus is slow, or motors report
+impossible readings (0 °C, 6.5 A).
 
 `doctor` is **read only**: it writes nothing to a motor and switches no torque on. On every USB serial
 port (also ports no robot profile names) it reads each motor: model, firmware, position, voltage,
@@ -125,8 +127,10 @@ same units and with the same "unknown" rules as the motor health screen. The zip
 the last 200 log lines, the robot profiles, the settings, the calibration files and the last 5
 sessions; never the login token or a Hibiscus access token.
 
-Options: `--no-ping` does not open the serial ports, `--no-cameras` does not probe cameras, `--out
-<folder>` is where the zip goes (default: the current folder).
+Options: `--verbose` also prints every bus error (motor id, register) while the motors are read,
+`--no-ping` does not open the serial ports (the report then says the motor check was skipped),
+`--no-cameras` does not probe cameras, `--out <folder>` is where the zip goes (default: the current
+folder).
 
 ## Safety
 
