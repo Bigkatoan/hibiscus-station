@@ -104,3 +104,12 @@ def test_ci_runs_the_e2e_suite_on_linux_and_windows_and_fails_on_a_missing_brows
     steps = " ".join(str(s.get("run", "")) for s in job["steps"])
     assert "-m e2e" in steps and 'check_skips.py --platform "${{ matrix.platform }}"' in steps
     assert "pnpm install --frozen-lockfile" in steps  # axe-core for the screen matrix
+
+
+def test_ci_runs_on_a_push_to_a_release_branch() -> None:
+    """AT-2 is checked on the exact commit of the milestone build, which lives on release/* before main."""
+    import yaml
+
+    ci = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
+    on = ci.get("on", ci.get(True))  # PyYAML reads the bare key `on` as True
+    assert "release/**" in on["push"]["branches"] and "main" in on["push"]["branches"]
