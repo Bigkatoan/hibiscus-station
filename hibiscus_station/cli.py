@@ -291,7 +291,8 @@ def doctor(
         echo=lambda s: typer.echo(f"... {s}", err=True),
     )
     typer.echo(text)
-    typer.echo(f"\nReport saved to {target.resolve()} - send this file with your bug report.")
+    if str(target.resolve()) not in text:  # the report's bilingual "what to send" names it already
+        typer.echo(f"\nReport saved to {target.resolve()} - send this file with your bug report.")
 
 
 @app.command()
