@@ -205,3 +205,18 @@ def test_macos_ci_turns_off_the_runner_vms_timer_coalescing_before_the_tests() -
         and s.get("if") == "runner.os == 'macOS'"
     ]
     assert len(honest) == 1, "the macOS job must turn timer coalescing off before the tests"
+
+
+def test_macos_ci_gives_the_loopback_a_second_address_for_the_lan_mode_test() -> None:
+    """QD-7: test_lan_mode_fixed_token_allowed_hosts_and_health binds 127.0.0.2 (a LAN-mode name on
+    lo); macOS answers only 127.0.0.1 on lo0 until it is aliased (ConnectTimeout, CI run 44048775720)."""
+    import yaml
+
+    ci = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
+    steps = ci["jobs"]["python"]["steps"]
+    tests = next(i for i, s in enumerate(steps) if s.get("name", "").startswith("Tests"))
+    assert any(
+        "ifconfig lo0 alias 127.0.0.2" in str(s.get("run", "")) and s.get("if") == "runner.os == 'macOS'"
+        for s in steps[:tests]
+    )
+    assert "127.0.0.2" in (ROOT / "tests" / "test_cli_serve.py").read_text(encoding="utf-8")

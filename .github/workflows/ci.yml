@@ -72,6 +72,9 @@ jobs:
         # tests keep the Linux thresholds; the runner's timers are made honest instead.
         if: runner.os == 'macOS'
         run: sudo sysctl -w kern.timer.coalescing_enabled=0
+      - name: A second loopback address on macOS, as Linux and Windows have (LAN-mode test)
+        if: runner.os == 'macOS'
+        run: sudo ifconfig lo0 alias 127.0.0.2 up
       - name: Tests (mock hardware, CPU)
         run: uv run pytest -q -ra --junitxml=pytest-junit.xml
       - name: Skipped tests are in the published list (NFR-18)
