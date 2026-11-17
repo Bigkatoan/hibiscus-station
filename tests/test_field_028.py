@@ -20,7 +20,7 @@ from conftest import Events, Heartbeat, connect_calibrated, fast_hand, gentle_ha
 from test_programs_safety import _phase, _put, _rt, _run, _traj
 
 from hibiscus_station.errors import StationError
-from hibiscus_station.hw import feetech
+from hibiscus_station.hw import calibration, feetech
 from hibiscus_station.hw.telemetry import TelemetryRead, TelemetryScheduler, ThermalGuard
 from hibiscus_station.mock import get_world
 from hibiscus_station.settings import TelemetrySettings, Thresholds
@@ -38,13 +38,31 @@ def real(connected: Station) -> Station:
 
 def _calibrate_wide(st: Station, arm: str) -> None:
     """Calibrate through ±1400 steps (±123°), like a real arm, so far poses stay in range (the mock
-    servo clamps goals to the calibrated position limits, as a real one does)."""
+    servo clamps goals to the calibrated position limits, as a real one does).
+
+    Deterministic on any machine speed (QD-6): the home is set with every joint held at the
+    centre, and the sweep runs until the recorded ranges cover the whole ±1400 steps. With the
+    home taken at a random point of the sweep, the rest pose of a later test could sit at the
+    edge of the range, where "60° away" was clamped to 5°."""
     world = get_world(f"mock://{arm}")
-    world.hand = fast_hand(amplitude=1400.0)
+    world.hand = lambda _m, _t: 2048.0
     st.owner.call("calibration_start", arm=arm)
     time.sleep(0.1)
     st.owner.call("calibration_step", action="set_home")
-    time.sleep(0.8)
+    world.hand = fast_hand(amplitude=1400.0)
+
+    def covered() -> bool:
+        proc = st.owner.calibration
+        if proc is None:
+            return False
+        lo, hi = dict(proc.mins), dict(proc.maxes)
+        return all(
+            m in calibration.FULL_TURN_MOTORS
+            or (lo.get(m, 2048) <= 2048 - 1380 and hi.get(m, 0) >= 2048 + 1380)
+            for m in MOTORS
+        )
+
+    wait_for(covered, 30)
     st.owner.call("calibration_step", action="finish_ranges")
     world.hand = None if arm == "follower" else gentle_hand
     world.place_all(2048.0)
@@ -269,6 +287,7 @@ def test_rest_move_is_slow_cancellable_and_needs_the_heartbeat(wide: Station, cl
     world.set_hand("shoulder_pan", world.present_raw("shoulder_pan") + 683)
     time.sleep(0.3)
     world.hand = None
+    wait_for(lambda: abs(st.owner.last_obs["shoulder_pan.pos"] - rest["shoulder_pan.pos"]) > 55.0, 3)
     with Heartbeat(st):
         r = client.post(f"{API}/robots/rest")
         assert r.status_code == 200, r.text

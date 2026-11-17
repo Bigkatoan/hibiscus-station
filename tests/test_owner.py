@@ -268,3 +268,32 @@ def test_deadman_without_heartbeat_estops_run(connected: Station, tmp_path) -> N
         time.sleep(0.5)
     wait_for(lambda: st.owner.state == "estopped", 3)
     assert st.owner.reason == "ui_lost"
+
+
+def test_a_stale_flag_left_by_the_last_session_tick_does_not_block_the_next_start(station: Station) -> None:
+    """QD-3: on Windows the last tick of a recording read a camera frame older than the tick's
+    strict limit (2 frame periods) while the episode was being encoded, so the hub kept the camera
+    flagged stale. Nothing reads the cameras while idle on the Run page, so "Run" was refused with
+    ``camera_unavailable`` although the camera streamed fine. The start check must judge the camera
+    by a fresh read, and still refuse a camera that really stopped."""
+    from hibiscus_station.station import RecordRequest
+
+    connect_calibrated(station)
+    get_world("mock://leader").follow(get_world("mock://follower"))
+    hub = station.hub
+    time.sleep(0.2)
+    hub.read_latest_all(max_age_ms=0.001)  # what a slow last session tick leaves behind
+    assert hub.status()[0]["stale"]
+    station.start_record(RecordRequest(dataset="qd3", task="t", num_episodes=1, episode_time_s=5))
+    assert station.owner.state == "recording"
+    station.owner.call("control", action="stop")
+    wait_for(lambda: station.owner.state == "idle", 10)
+
+    hub.camera("wrist").stall(True)
+    time.sleep(1.3)  # older than the idle limit (1 s): really not streaming
+    try:
+        with pytest.raises(StationError) as ei:
+            station.start_record(RecordRequest(dataset="qd3b", task="t", num_episodes=1))
+        assert ei.value.code == "camera_unavailable"
+    finally:
+        hub.camera("wrist").stall(False)

@@ -1595,6 +1595,11 @@ class HardwareOwner:
             if not self.leader_calibrated:
                 raise StationError("not_calibrated", "calibrate the leader first", params={"arm": "leader"})
         if self.profile is not None and kind in CAMERA_SESSIONS:
+            if not self.hub.loop_active:
+                # Judge the cameras by a fresh read (the idle preview limit), not by the stale flag
+                # the last session tick may have left: that tick allows only two frame periods, and
+                # nothing reads the cameras while idle on the Run page (QD-3).
+                self.hub.read_latest_all(max_age_ms=1000.0)
             cams = {c["name"]: c for c in self.hub.status()}
             missing = [n for n in self.profile.cameras if n not in cams or not cams[n]["streaming"]]
             if missing:
