@@ -1097,6 +1097,31 @@ def test_a_corrupted_id_byte_never_makes_a_silent_motor_answer(
     assert m6["state"] == "silent" and m6["evidence"]["corrupt"] == 0, m6
 
 
+def test_a_motor_whose_every_answer_is_cut_short_is_not_silent(
+    tmp_path: Path, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """QD-29: every answer lost its last 2 bytes (a half-duplex adapter turning round too early).
+    Servos 2, 4, 6 were "do not answer (power? cable?)" next to a raw dump of the same report saying
+    they sent "malformed answer". Every servo sent bytes: each one answers only with malformed
+    packets, and the report names the bus."""
+    f, ld = emus
+    home = _calibrated_home(tmp_path, f, ld, monkeypatch)
+    _mangle(f, lambda _i, _r, _p, p: p[:-2])
+    text, target = _run(home, tmp_path / "out")
+    problems, fol = text.split("\n\n")[0], _section(text, "follower")
+    assert "do not answer" not in text and "power? cable?" not in text, problems
+    assert "  ! arm follower: unreliable bus: " in problems, problems
+    assert "motor id(s) 1, 2, 3, 4, 5, 6 answer only with malformed packets" in problems, problems
+    for mid in range(1, 7):
+        assert f"    id {mid}: answers only with malformed packets (cut short or the wrong length)" in fol, (
+            fol
+        )
+    motors = _arm(_report(target), "follower")["motors"]
+    assert {m["state"] for m in motors.values()} == {"corrupt"}, motors
+    assert all(m["evidence"]["garbled"] > 0 for m in motors.values()), motors
+    assert "got corrupted answers (checksum)" not in fol, fol
+
+
 # ------------------------------------------------------------------ invariants over a fault grid
 GRID_DROP = (0.0, 0.01, 0.05, 0.2, 0.35, 0.4, 1.0)
 GRID_CORRUPT = (0.0, 0.05, 0.4)
@@ -1324,7 +1349,10 @@ def test_the_report_never_contradicts_itself(
     # QD-27: one state per motor; "do not answer" only for a servo that sent nothing at all
     no_answer = {int(m.group(1)) for m in re.finditer(r"^    id (\d+): no answer$", fol, re.M)}
     full = {int(m.group(1)) for m in re.finditer(r"^    id (\d+): model ", fol, re.M)}
-    garbage = {int(m.group(1)) for m in re.finditer(r"^    id (\d+): answers only with corrupted", fol, re.M)}
+    garbage = {
+        int(m.group(1))
+        for m in re.finditer(r"^    id (\d+): answers only with (?:corrupted|malformed)", fol, re.M)
+    }
     assert no_answer | full | garbage == set(range(1, 7)), ctx
     assert not (no_answer & full or no_answer & garbage or full & garbage), ctx
     assert set(dead) <= no_answer, ctx

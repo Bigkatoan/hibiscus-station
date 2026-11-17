@@ -583,7 +583,8 @@ def bus_verdict(a: dict[str, Any]) -> dict[str, Any] | None:
     a ping answered (1 + 2 retries)          answers     its registers (``?`` for an unreadable one)
     no ping answered, another valid answer   flaky       "answers only now and then" + its registers
     (scan, sync read, register, late)
-    only corrupted / cut-short packets       corrupt     "answers only with corrupted packets"
+    only corrupted / cut-short packets       corrupt     "answers only with corrupted / malformed
+    (whatever their id byte: QD-28)                      packets"
     no packet at all                         silent      "no answer"
     =======================================  ==========  =============================================
 
@@ -672,8 +673,8 @@ def bus_verdict(a: dict[str, Any]) -> dict[str, Any] | None:
             f"motor id(s) {', '.join(flaky)} answer only now and then (no valid answer to "
             f"{PING_RETRIES + 1} pings)"
         )
-    if corrupt:
-        faults.append(f"motor id(s) {', '.join(corrupt)} answer only with corrupted packets (checksum)")
+    for words, group in _damaged_groups(motors, corrupt).items():
+        faults.append(f"motor id(s) {', '.join(group)} answer only with {words}")
     late = int((a.get("bus_errors") or {}).get("late_discarded") or 0)
     slow_and_steady = not silent and not failed and ms is not None and ms > SLOW_READ_MS
     if late and not slow_and_steady:
@@ -709,6 +710,25 @@ def bus_verdict(a: dict[str, Any]) -> dict[str, Any] | None:
     return out
 
 
+def damage_words(m: dict[str, Any]) -> str:
+    """What the packets of a motor that sent only damaged ones were (state ``corrupt``)."""
+    ev = m.get("evidence") or {}
+    corrupt, garbled = ev.get("corrupt"), ev.get("garbled")
+    if garbled and not corrupt:
+        return "malformed packets (cut short or the wrong length)"
+    if garbled and corrupt:
+        return "corrupted or malformed packets (checksum, cut short)"
+    return "corrupted packets (checksum)"
+
+
+def _damaged_groups(motors: dict[str, Any], ids: list[str]) -> dict[str, list[str]]:
+    """The motors of ``ids`` by :func:`damage_words`."""
+    out: dict[str, list[str]] = {}
+    for k in ids:
+        out.setdefault(damage_words(motors[k]), []).append(k)
+    return out
+
+
 def answering_text(a: dict[str, Any]) -> str:
     """The ids that answer (every motor that is not silent: :func:`bus_verdict`'s states), never
     contradicting the per-motor lines; notes: ids that answered a ping only on a retry or that the
@@ -735,9 +755,9 @@ def answering_text(a: dict[str, Any]) -> str:
     flaky = [int(k) for k, s in states.items() if s == "flaky"]
     if flaky:
         notes.append(f"{_ranges(flaky)} answer only now and then (no ping answered)")
-    corrupt = [int(k) for k, s in states.items() if s == "corrupt"]
-    if corrupt:
-        notes.append(f"{_ranges(corrupt)} answer only with corrupted packets")
+    corrupt = [k for k, s in states.items() if s == "corrupt"]
+    for words, ids in _damaged_groups(motors, corrupt).items():
+        notes.append(f"{_ranges([int(k) for k in ids])} answer only with {words.split(' (')[0]}")
     other = {k: (v if v is not None else "?") for k, v in seen.items() if k not in motors}
     if other:
         notes.append(f"other ids on the bus: {_scan_text(other)}")
@@ -1373,7 +1393,7 @@ def _motor_lines(mid: str, m: dict[str, Any]) -> list[str]:
     if state == "silent":
         return [f"    id {mid}: {m.get('error') or 'no answer'}"]
     if state == "corrupt":
-        return [f"    id {mid}: answers only with corrupted packets (checksum), no register could be read"]
+        return [f"    id {mid}: answers only with {damage_words(m)}, no register could be read"]
     unread = set(m.get("unreadable") or [])
     g = {
         k: "?" if k in unread or m.get(k) is None else _text(m.get(k))

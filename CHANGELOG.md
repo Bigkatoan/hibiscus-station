@@ -65,6 +65,12 @@ with its own line (see the README); GitHub never offers a pre-release as its "la
   cable?)". A packet with a wrong checksum cannot tell which servo sent it: it now counts only for
   the servo the request went to (a ping or a read of one servo), or for the bus when several servos
   were asked, never for the id it carries.
+- **A motor whose every answer was cut short was called "does not answer (power? cable?)"**, next to
+  a raw dump in the same report saying it sent "malformed answer" (an adapter that turns the line
+  round too early cuts the last bytes of every answer). A packet still incomplete when the doctor
+  stops waiting now counts as a malformed answer of the servo that was asked, and a packet cut short
+  by the next one is recognised as such: these motors "answer only with malformed packets (cut
+  short or the wrong length)" and the bus is named.
 - **One late answer on the bus made the doctor show wrong values** (`80 C`, `341.3 V`, "overheat,
   overload", wrong position limits) and tell you to calibrate the arm again: an answer that came
   later than the bus timeout was taken as the answer to the next read, and every later register

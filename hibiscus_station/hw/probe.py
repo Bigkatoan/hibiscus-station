@@ -109,6 +109,15 @@ def _next_packet(buf: bytearray, end: int) -> int:
     return -1
 
 
+def _header_inside(buf: bytearray, end: int) -> int:
+    """Where a packet header (``FF FF`` and an id) starts inside the damaged packet ``buf[:end]``
+    (-1: none): the packet was cut short and the next one began."""
+    j = buf.find(b"\xff\xff", 4, end)
+    while j > 0 and len(buf) > j + 2 and buf[j + 2] == 0xFF:
+        j = buf.find(b"\xff\xff", j + 1, end)
+    return j
+
+
 def parse(buf: bytearray) -> list[Frame]:
     """The complete packets at the start of ``buf`` (consumed); bytes before a header are skipped
     and an incomplete packet at the end stays in ``buf`` for the next read. A packet that a valid
@@ -139,6 +148,11 @@ def parse(buf: bytearray) -> list[Frame]:
             return out
         raw = bytes(buf[:total])
         ok = checksum(raw[2:-1]) == raw[-1]
+        cut = -1 if ok else _header_inside(buf, total)
+        if cut > 0:  # cut short, the next packet's header came before its end (QD-29)
+            out.append(Frame(raw[2], raw[4] if cut > 4 else 0, b"", raw[:cut], ok=False, cut=True))
+            del buf[:cut]
+            continue
         out.append(Frame(raw[2], raw[4], raw[5:-1], raw, ok=ok))
         del buf[:total]
 
@@ -268,10 +282,18 @@ class Probe:
             for f in parse(buf):
                 if self._take(f, request, expect, out):
                     last = time.perf_counter()
+        if len(buf) > 1 and expect is not None:
+            # still incomplete: a packet cut short. The servo asked sent it; on a request to several
+            # servos nobody can be named (QD-29: never dropped as if nothing had come)
+            asked = next(iter(expect)) if len(expect) == 1 else None
+            if asked is None or asked not in out.frames:
+                self._note(
+                    Frame(buf[2] if len(buf) > 2 else -1, 0, b"", bytes(buf), ok=False, cut=True), asked
+                )
         if expect is not None:
             for mid in expect:
                 if mid not in out.frames and mid not in out.failed:
-                    out.failed[mid] = GARBLED if buf else (out.damage or NO_ANSWER)
+                    out.failed[mid] = GARBLED if len(buf) > 1 else (out.damage or NO_ANSWER)
             if not out.failed:
                 out.ms = (last - t0) * 1000
         return out
