@@ -39,6 +39,22 @@ ARMS = ("follower", "leader")
 REQUIRED = os.environ.get("HIBISCUS_E2E_REQUIRED") == "1"
 
 
+#: AT-2 browsers -> (Playwright engine, launch options); msedge is the Edge installed on the machine
+BROWSERS: dict[str, tuple[str, dict[str, str]]] = {
+    "chromium": ("chromium", {}),
+    "firefox": ("firefox", {}),
+    "msedge": ("chromium", {"channel": "msedge"}),
+}
+
+
+def browser_engine(name: str) -> tuple[str, dict[str, str]]:
+    """The Playwright engine and launch options for ``HIBISCUS_E2E_BROWSER`` (QD-9)."""
+    if name not in BROWSERS:
+        raise ValueError(f"HIBISCUS_E2E_BROWSER={name!r}: use one of {', '.join(BROWSERS)}")
+    engine, options = BROWSERS[name]
+    return engine, dict(options)
+
+
 def unavailable(reason: str) -> None:
     """Skip a test whose tooling is missing, or fail it where the tooling must exist (CI)."""
     import pytest

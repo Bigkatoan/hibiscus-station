@@ -1,9 +1,10 @@
-"""Fixtures of the browser tests: Chromium, the ACT checkpoint, the Station launcher.
+"""Fixtures of the browser tests: the browser, the ACT checkpoint, the Station launcher.
 
 Every test module here is marked ``e2e`` (deselected by default; ``pytest -m e2e tests/e2e`` or ``make e2e``).
 They need ``web/dist`` (``pnpm build`` in ``web/``) and a Chromium for the pinned Playwright
 (``uv run playwright install chromium``); without them they skip, unless ``HIBISCUS_E2E_REQUIRED=1``
-(CI) turns the skip into a failure.
+(CI) turns the skip into a failure. ``HIBISCUS_E2E_BROWSER`` picks the browser (AT-2): ``chromium``
+(default), ``firefox`` or ``msedge`` (the installed Microsoft Edge).
 """
 
 from __future__ import annotations
@@ -16,9 +17,10 @@ from typing import Any
 
 import pytest
 
-from .e2e_support import SPA, unavailable
+from .e2e_support import SPA, browser_engine, unavailable
 
 CHECKPOINT = Path(os.environ.get("HIBISCUS_E2E_CHECKPOINT", "/nonexistent"))
+BROWSER = os.environ.get("HIBISCUS_E2E_BROWSER", "chromium")
 
 
 @pytest.fixture(scope="session")
@@ -29,13 +31,13 @@ def browser() -> Iterator[Any]:
         from playwright.sync_api import sync_playwright
     except ImportError:
         unavailable("playwright is not installed")
+    engine, options = browser_engine(BROWSER)
     with sync_playwright() as pw:
         try:
-            b = pw.chromium.launch()
+            b = getattr(pw, engine).launch(**options)
         except Exception as exc:
-            unavailable(
-                f"no Chromium for Playwright ({str(exc).splitlines()[0]}): playwright install chromium"
-            )
+            hint = "install Microsoft Edge" if "channel" in options else f"playwright install {engine}"
+            unavailable(f"no {BROWSER} for Playwright ({str(exc).splitlines()[0]}): {hint}")
         yield b
         b.close()
 

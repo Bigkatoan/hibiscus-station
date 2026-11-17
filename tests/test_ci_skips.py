@@ -147,3 +147,22 @@ def test_ci_runs_on_a_push_to_a_release_branch() -> None:
     ci = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
     on = ci.get("on", ci.get(True))  # PyYAML reads the bare key `on` as True
     assert "release/**" in on["push"]["branches"] and "main" in on["push"]["branches"]
+
+
+def test_the_e2e_fixture_launches_the_browser_the_job_names() -> None:
+    """QD-9: HIBISCUS_E2E_BROWSER picks the Playwright engine; Edge is Chromium on the msedge channel."""
+    spec = importlib.util.spec_from_file_location("e2e_support", ROOT / "tests" / "e2e" / "e2e_support.py")
+    assert spec and spec.loader
+    support = importlib.util.module_from_spec(spec)
+    sys.modules["e2e_support"] = support  # its dataclasses look their module up
+    try:
+        spec.loader.exec_module(support)
+    finally:
+        del sys.modules["e2e_support"]
+    assert support.browser_engine("chromium") == ("chromium", {})
+    assert support.browser_engine("firefox") == ("firefox", {})
+    assert support.browser_engine("msedge") == ("chromium", {"channel": "msedge"})
+    with pytest.raises(ValueError, match="webkit"):
+        support.browser_engine("webkit")  # not an AT-2 browser: never a silent Chromium run
+    conftest = (ROOT / "tests" / "e2e" / "conftest.py").read_text(encoding="utf-8")
+    assert "browser_engine(BROWSER)" in conftest and "pw.chromium.launch()" not in conftest
