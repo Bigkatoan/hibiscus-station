@@ -15,7 +15,8 @@ import threading
 import time
 from typing import Any
 
-from conftest import wait_for
+import pytest
+from conftest import connect_calibrated, mock_profile, wait_for
 
 from hibiscus_station.station import RecordRequest, Station
 
@@ -158,3 +159,46 @@ def test_a_new_record_on_the_same_dataset_waits_for_the_background_finalize(conn
     from hibiscus_station.data import datasets as catalog
 
     assert catalog.summary(st.paths.datasets, "again")["episodes"] == 2  # type: ignore[index]
+
+
+@pytest.fixture
+def two_cams(station: Station) -> Station:
+    connect_calibrated(station, mock_profile(cameras=2, size=(320, 240)))
+    return station
+
+
+def test_a_camera_slower_than_configured_never_reads_as_stale(two_cams: Station) -> None:
+    """Defect 1b: a webcam configured at 30 fps that delivers 12 fps (Windows MSMF in low light)
+    is not "No fresh frames": every tick of the episode gets the latest frame, the clock runs."""
+    st = two_cams
+    st.hub.camera("wrist").fps = 12  # the device delivers fewer frames than the profile asks
+    time.sleep(0.3)
+    st.start_record(
+        RecordRequest(
+            dataset="slowcam", task="t", fps=30, countdown_s=0.2, episode_time_s=1.5, num_episodes=1
+        )
+    )
+    wait_for(lambda: st.owner.session is None, 20)
+    summary = st.owner.last_session_summary
+    assert summary is not None and summary["outcome"] == "completed", summary
+    cams = summary["summary"]["cameras"]["wrist"]
+    assert cams["stale_ticks"] == 0, cams
+    assert 8 <= cams["fps_measured"] <= 16, cams
+    assert cams["fps_configured"] == 30
+
+
+def test_record_summary_carries_camera_evidence(connected: Station) -> None:
+    st = connected
+    st.start_record(
+        RecordRequest(dataset="ev", task="t", fps=30, countdown_s=0.2, episode_time_s=0.8, num_episodes=1)
+    )
+    wait_for(lambda: st.owner.session is None, 20)
+    summary = st.owner.last_session_summary
+    assert summary is not None
+    cam = summary["summary"]["cameras"]["wrist"]
+    assert {"backend", "fps_configured", "fps_measured", "age_ms_p95", "stale_ticks", "last_error"} <= set(
+        cam
+    )
+    assert summary["summary"]["save_s"] and all(s >= 0 for s in summary["summary"]["save_s"])
+    meta = (st.paths.sessions / summary["id"] / "session.json").read_text(encoding="utf-8")
+    assert '"fps_measured"' in meta

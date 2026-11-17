@@ -105,6 +105,11 @@ class MockCamera(Camera):  # type: ignore[misc]
     def is_connected(self) -> bool:
         return self._connected
 
+    @property
+    def latest_timestamp(self) -> float | None:
+        """``perf_counter`` of the latest frame, as lerobot's OpenCVCamera keeps it."""
+        return self._frame_t if self._frame is not None else None
+
     @staticmethod
     def find_cameras() -> list[dict[str, Any]]:
         return [
@@ -134,9 +139,9 @@ class MockCamera(Camera):  # type: ignore[misc]
         return f
 
     def _run(self) -> None:
-        period = 1.0 / float(self.fps)
         nxt = time.perf_counter()
         while not self._stop.is_set():
+            period = 1.0 / float(self.fps)  # re-read: a test can slow a running camera down
             if not self.stalled:
                 frame = self._render(self.counter)
                 with self._lock:

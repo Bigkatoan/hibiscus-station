@@ -23,7 +23,7 @@ from hibiscus_station import __version__
 from hibiscus_station.data.sessions import SessionLog
 from hibiscus_station.errors import StationError
 from hibiscus_station.hw import calibration as calib
-from hibiscus_station.hw.cameras import CameraHub, FrameSet
+from hibiscus_station.hw.cameras import CameraHub, FrameSet, fresh_age_ms
 from hibiscus_station.hw.factory import build_follower, build_leader, calibration_files
 from hibiscus_station.hw.locks import DeviceBusyError, DeviceLock
 from hibiscus_station.hw.loop import Deadline, LoopStats
@@ -717,7 +717,7 @@ class HardwareOwner:
             self._wait_until(deadline)
             return
         cam_fps = min((c.fps for c in (self.profile.cameras.values() if self.profile else [])), default=30)
-        frames, stale = self.hub.read_latest_all(max_age_ms=2000.0 / max(1, cam_fps))
+        frames, stale = self.hub.read_latest_all(max_age_ms=fresh_age_ms(cam_fps))
         obs_full = {**obs, **frames}
         self.hub.publish(
             FrameSet(self.tick, time.monotonic(), frames, policy_input=s.policy_input, stale=stale)
@@ -986,6 +986,26 @@ class HardwareOwner:
         except Exception as exc:
             log.exception("session teardown failed")
             s.summary["teardown_error"] = str(exc)[:300]
+        if self.hub.has_cameras():
+            cams = self.hub.stats()
+            s.summary["cameras"] = cams
+            for name, c in cams.items():
+                slow = c["fps_measured"] is not None and c["fps_measured"] < 0.8 * c["fps_configured"]
+                if c["stale_ticks"] or slow:  # the evidence a doctor zip carries (station.log)
+                    log.warning(
+                        "camera %s during %s: %s fps of %s configured (%s, %sx%s), %d/%d stale ticks, "
+                        "frame age p95 %s ms, last error: %s",
+                        name,
+                        s.kind,
+                        c["fps_measured"],
+                        c["fps_configured"],
+                        c["backend"],
+                        *c["size"],
+                        c["stale_ticks"],
+                        c["ticks"],
+                        c["age_ms_p95"],
+                        c["last_error"],
+                    )
         summary = {
             **s.view(),
             "outcome": outcome,
@@ -1650,6 +1670,7 @@ class HardwareOwner:
             },
         )
         self.hub.loop_active = True
+        self.hub.reset_stats()
         self.watchdog.arm()
         session.t0 = time.monotonic()
         session.begin(self, obs)
