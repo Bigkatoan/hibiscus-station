@@ -654,7 +654,7 @@ export function RobotPage() {
       ) : null}
       {status?.state === "connecting" ? (
         <p role="status" className="border-2 border-frame bg-card p-2 text-sm">
-          {t("robot.connecting")} {status.detail ?? ""}
+          {t("robot.connecting")}
         </p>
       ) : null}
       <StationError error={connect.error ?? disconnect.error} />

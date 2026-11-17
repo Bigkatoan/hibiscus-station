@@ -76,10 +76,7 @@ const RULES: [RegExp, Rule][] = [
     // hw/owner.py: an arm without its calibration file
     /^no calibration file (\S+?)(?:; calibration files found(?: for this arm)?: (.+))?$/,
     (m, t) => ({
-      text: [
-        t("server_text.no_cal_file"),
-        m[2] ? t("server_text.cal_files_found", { files: m[2] }) : null,
-      ]
+      text: [t("server_text.no_cal_file"), m[2] ? t("server_text.cal_files_found", { files: m[2] }) : null]
         .filter(Boolean)
         .join(" "),
       raw: m[1] ?? null,
@@ -104,13 +101,24 @@ export function serverText(t: TFunction<"station">, line: string | null | undefi
 }
 
 /** A closed "Technical details" holding the Station's own line, for a bug report. */
-export function TechDetails({ raw, className }: { raw: string | null | undefined; className?: string }) {
+export function TechDetails({
+  raw,
+  className,
+  testid,
+}: {
+  raw: string | null | undefined;
+  className?: string;
+  /** test id of the line itself */
+  testid?: string;
+}) {
   const { t } = useTranslation("station");
   if (!raw) return null;
   return (
     <details className={cn("text-xs", className)} data-testid="tech-details">
       <summary className="cursor-pointer select-none opacity-80">{t("server_text.technical")}</summary>
-      <p className="mt-1 break-words font-mono">{raw}</p>
+      <p className="mt-1 break-words font-mono" data-testid={testid}>
+        {raw}
+      </p>
     </details>
   );
 }

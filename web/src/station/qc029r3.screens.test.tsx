@@ -154,7 +154,9 @@ describe("Record form: the size estimate a user believes (QD-21)", () => {
     renderStation("/record", h);
     await settle();
     const line = await estimate("1", "5");
-    expect(line).toHaveTextContent(/^About \d+(\.\d)? MB per episode with 2 cameras, about \d+(\.\d)? MB in total\.$/);
+    expect(line).toHaveTextContent(
+      /^About \d+(\.\d)? MB per episode with 2 cameras, about \d+(\.\d)? MB in total\.$/,
+    );
     expect(line).not.toHaveTextContent(/0\.00|GiB/);
   });
 

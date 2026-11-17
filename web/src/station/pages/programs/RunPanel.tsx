@@ -35,6 +35,7 @@ import type {
 import { CameraGrid } from "../../components/CameraGrid";
 import { RobotTwin } from "../../twin/RobotTwin";
 import { isTextInput } from "../../components/EStopButton";
+import { TechDetails } from "../../components/ServerText";
 import { StationError } from "../../components/StationError";
 import { useRuntime, useStation, useStatus } from "../../ws/StationProvider";
 import { isLive, logLineText, programMood, useProgramInput } from "./shared";
@@ -479,8 +480,8 @@ export function RunPanel({
               </p>
             ) : null}
             {/* Stopped and e-stopped are said by the badge; a fault or a timeout says what happened. */}
-            {mine.message && (mine.status === "failed" || mine.status === "timeout") ? (
-              <p className="font-bold">{mine.message}</p>
+            {mine.status === "failed" || mine.status === "timeout" ? (
+              <TechDetails raw={mine.message} />
             ) : null}
           </div>
         ) : null}
@@ -518,15 +519,17 @@ export function RunPanel({
             ) : (
               <ul className="flex flex-col text-sm tabular-nums">
                 {conds.map((c) => (
-                  <li key={c.block_id} className="flex justify-between gap-2">
+                  <li key={c.block_id} className="flex flex-wrap justify-between gap-x-2">
                     <span className="truncate">{blockLabel(c.block_id)}</span>
                     <span className={c.value === true ? "font-bold text-success" : ""}>
                       {c.value === null
-                        ? (c.message ?? "?")
+                        ? "?"
                         : typeof c.value === "boolean"
                           ? t(c.value ? "programs.run.value_true" : "programs.run.value_false")
                           : String(c.value)}
                     </span>
+                    {/* why it cannot be evaluated now: the Station's own line */}
+                    {c.value === null ? <TechDetails raw={c.message} className="basis-full" /> : null}
                   </li>
                 ))}
               </ul>

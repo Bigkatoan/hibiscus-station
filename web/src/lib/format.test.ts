@@ -27,7 +27,8 @@ describe("formatSize: human sizes, never 0.00 (QC 0.2.9 QD-21)", () => {
     expect(formatSize(Number.NaN)).toBe("—");
   });
   it("never prints a zero for a size that is not zero", () => {
-    for (const b of [1, 999, 1001, 4.9e6, 9.99e6, 1e12, 7e15]) expect(formatSize(b)).not.toMatch(/^0[.,]?0*\s/);
+    for (const b of [1, 999, 1001, 4.9e6, 9.99e6, 1e12, 7e15])
+      expect(formatSize(b)).not.toMatch(/^0[.,]?0*\s/);
   });
 });
 

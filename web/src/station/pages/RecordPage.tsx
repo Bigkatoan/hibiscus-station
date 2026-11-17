@@ -462,11 +462,11 @@ function NothingSaved({
   const { t } = useTranslation("station");
   const end = info ?? { dropped: false, kept: false, reason: ended.outcome };
   const name = ended.dataset ?? "";
-  let why: string;
-  if (end.dropped) why = droppedText(t, ended, end);
-  else if (end.reason === "stopped" || end.reason === "completed") why = t("record.none_stopped");
+  let said: string;
+  if (end.dropped) said = droppedText(t, ended, end);
+  else if (end.reason === "stopped" || end.reason === "completed") said = t("record.none_stopped");
   else
-    why = t("record.none_ended", {
+    said = t("record.none_ended", {
       reason: t(`reasons.${end.reason}`, { defaultValue: t("reasons.internal") }),
     });
   return (
@@ -475,7 +475,7 @@ function NothingSaved({
         <Mascot mood="idle" />
         <div className="min-w-[min(14rem,100%)] flex-1" role="status">
           <p className="break-words font-extrabold text-base">{t("record.none_title")}</p>
-          <p className="text-sm">{why}</p>
+          <p className="text-sm">{said}</p>
           <p className="text-sm text-muted-foreground">
             {end.kept ? t("record.none_kept", { name }) : t("record.none_removed", { name })}
           </p>

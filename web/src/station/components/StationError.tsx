@@ -3,6 +3,7 @@ import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Alert, AlertTitle } from "@/components/ui/misc";
 import { StationApiError } from "../api/client";
+import { TechDetails } from "./ServerText";
 
 /** One Problem param as words. A motor ({arm, motor, temp_c}, as in `motor_hot`) reads
  * "follower elbow_flex 66 °C" (QC 0.2.9 QD-3: a list of them showed "[object Object]"). */
@@ -46,8 +47,9 @@ export function errorDetail(error: unknown): string | null {
   return detail;
 }
 
-/** Localised Station error from its Problem `code`, with the server `detail` underneath: the exact
- * reason (motor id, register, port, calibration file) is what lets a user or a bug report act on it. */
+/** Localised Station error from its Problem `code`. The server `detail` (English: the exact motor
+ * id, register, port or calibration file, for a bug report) sits behind a closed "Technical
+ * details" (QC 0.2.9 QD-19: never English under a translated title). */
 export function StationError({ error, className }: { error: unknown; className?: string }) {
   const { t } = useTranslation("station");
   if (!error) return null;
@@ -58,11 +60,7 @@ export function StationError({ error, className }: { error: unknown; className?:
         <PxIcon name="warning" className="mt-0.5 shrink-0" />
         <div className="min-w-0">
           <AlertTitle>{errorText(t, error)}</AlertTitle>
-          {detail ? (
-            <p className="mt-1 break-words font-mono text-xs" data-testid="error-detail">
-              {detail}
-            </p>
-          ) : null}
+          <TechDetails raw={detail} className="mt-1" testid="error-detail" />
         </div>
       </div>
     </Alert>

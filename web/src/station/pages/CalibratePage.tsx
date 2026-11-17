@@ -35,6 +35,7 @@ import type {
   Status,
 } from "../api/types";
 import { SetHomeButton, useHomeState } from "../components/HomeControls";
+import { ServerDetail } from "../components/ServerText";
 import { StationError } from "../components/StationError";
 import { useStation, useStatus } from "../ws/StationProvider";
 import type { StationSnapshot } from "../ws/store";
@@ -471,10 +472,10 @@ function ArmStep({
             </span>
           </p>
           {issue ? (
-            <p className="text-xs" data-testid={`cal-issue-${arm}`}>
-              <span className="font-bold">{t("calibrate.issue")}</span>{" "}
-              <span className="break-words font-mono">{issue}</span>
-            </p>
+            <div className="text-xs" data-testid={`cal-issue-${arm}`}>
+              <span className="font-bold">{t("calibrate.issue")}</span>
+              <ServerDetail line={issue} textClassName="text-xs" />
+            </div>
           ) : null}
           {files.length > 0 ? (
             <>

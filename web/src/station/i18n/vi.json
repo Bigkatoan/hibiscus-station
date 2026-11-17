@@ -456,8 +456,7 @@
     "check_replug": "Rút cáp USB ra rồi cắm lại, sau đó bấm Kết nối lại.",
     "reconnect": "Kết nối lại",
     "waiting": "Đang chờ cổng xuất hiện lại… hãy cắm lại cáp USB.",
-    "new_port": "{{arm}} giờ ở cổng {{port}}.",
-    "os_said": "Hệ thống báo:"
+    "new_port": "{{arm}} giờ ở cổng {{port}}."
   },
   "cameras": {
     "title": "Camera",

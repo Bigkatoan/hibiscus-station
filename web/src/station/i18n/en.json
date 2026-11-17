@@ -456,8 +456,7 @@
     "check_replug": "Unplug and plug the USB cable back in, then press Reconnect.",
     "reconnect": "Reconnect",
     "waiting": "Waiting for the port to come back… plug the cable back in.",
-    "new_port": "The {{arm}} arm is now on {{port}}.",
-    "os_said": "The system said:"
+    "new_port": "The {{arm}} arm is now on {{port}}."
   },
   "cameras": {
     "title": "Cameras",

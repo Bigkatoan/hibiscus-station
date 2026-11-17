@@ -419,18 +419,22 @@ describe("station i18n", () => {
     expect(t("programs.run.steps", { count: 1 })).toBe("1 step");
     const tv = i18n.getFixedT("vi", "station");
     expect(tv("programs.run.steps", { count: 1 })).toBe("1 bước");
-    expect(tv("programs.run.now", { t: "1,5", steps: tv("programs.run.steps", { count: 3 }), block: "x" })).toBe(
-      "1,5 s · 3 bước · x",
-    );
+    expect(
+      tv("programs.run.now", { t: "1,5", steps: tv("programs.run.steps", { count: 3 }), block: "x" }),
+    ).toBe("1,5 s · 3 bước · x");
   });
 
   it("every English count has _one and _other forms (plural class sweep, QC 0.2.9 QD-20)", () => {
     expect(countsWithoutPlural(flatEntries(en))).toEqual([]);
     registerStationI18n();
     const t = i18n.getFixedT("en", "station");
-    expect(t("programs.traj.capturing", { s: "0.1", limit: 60, samples: t("programs.traj.samples", { count: 1 }) })).toBe(
-      "Recording · 0.1 / 60 s · 1 sample",
-    );
+    expect(
+      t("programs.traj.capturing", {
+        s: "0.1",
+        limit: 60,
+        samples: t("programs.traj.samples", { count: 1 }),
+      }),
+    ).toBe("Recording · 0.1 / 60 s · 1 sample");
     expect(t("datasets.frames", { count: 1 })).toBe("1 frame");
   });
 
