@@ -421,11 +421,13 @@ def ping_arm(
             "ms_per_read": round(sum(ok_ms) / len(ok_ms), 2) if ok_ms else None,
         }
         # Bus speed (and the slow-bus advice) only means something when every motor answers;
-        # a silent motor is reported as such, not as a slow USB adapter.
+        # a silent motor is reported as such, not as a slow USB adapter (QD-21). When every motor
+        # answers but some reads are lost, the speed of the reads that worked still holds (QD-22).
+        silent = any(m.get("error") for m in out["motors"].values())
         out["teleop_estimate"] = (
-            teleop_estimate(out["sync_read_present_position"]["ms_per_read"], usb_chip(vid_pid))
-            if fails == 0
-            else None
+            None
+            if silent or not ok_ms
+            else teleop_estimate(out["sync_read_present_position"]["ms_per_read"], usb_chip(vid_pid))
         )
         if calibration:
             out["calibration_vs_eeprom"] = _compare(calibration, out["motors"])
@@ -775,6 +777,13 @@ def warnings(report: dict[str, Any]) -> list[str]:
             out.append(
                 f"{a['robot']} {a['arm']}: motor id(s) {', '.join(missing)} do not answer (power? cable?)"
             )
+        sr = a.get("sync_read_present_position") or {}
+        if sr.get("failed") and not missing and a.get("motors"):
+            out.append(
+                f"{a['robot']} {a['arm']}: unreliable bus: {sr['failed']} of {sr['reads']} reads got no "
+                "answer although every motor answers; check the 3-pin cables between the servos, the "
+                "power supply (it may drop under load) and plug the USB adapter straight into the PC"
+            )
         cmp = a.get("calibration_vs_eeprom") or {}
         diffs = {m: d for m, d in cmp.items() if d not in ("match", NO_ANSWER)}
         if diffs:
@@ -1023,8 +1032,10 @@ def summary(report: dict[str, Any], target: Path | None = None) -> str:
             s = a["sync_read_present_position"]
             speed = f"{s['ms_per_read']} ms each" if s.get("ms_per_read") is not None else "no read succeeded"
             lines.append(f"    sync read: {s['failed']}/{s['reads']} failed, {speed}")
-            if s["failed"]:
+            if s["failed"] and not a.get("teleop_estimate"):
                 lines.append("    teleop estimate: not measured (some motors did not answer)")
+            elif s["failed"]:
+                lines.append(f"    ! {s['failed']} of {s['reads']} reads lost although every motor answers")
             est = a.get("teleop_estimate")
             if est:
                 lines.append(

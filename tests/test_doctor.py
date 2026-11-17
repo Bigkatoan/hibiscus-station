@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 import time
 import types
@@ -833,6 +834,28 @@ def test_a_silent_motor_is_not_reported_as_a_slow_bus(
     fol = fol[: fol.index("\n  arm leader on ")] if "\n  arm leader on " in fol else fol
     assert "teleop estimate: not measured (some motors did not answer)" in fol, fol
     assert "Hz, leader -> follower latency" not in fol, fol
+
+
+def test_a_bus_that_loses_answers_is_a_likely_problem(
+    tmp_path: Path, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """QD-22: every motor answers but some reads are lost (a loose servo cable, a dipping supply).
+    The report must say so in LIKELY PROBLEMS and keep the speed of the reads that worked."""
+    f, ld = emus
+    home = _calibrated_home(tmp_path, f, ld, monkeypatch)
+    f.rng.seed(7)
+    f.drop_rate = 0.05
+    text, _t = _run(home, tmp_path / "out")
+    fol = text[text.index("  arm follower on ") :]
+    fol = fol[: fol.index("\n  arm leader on ")] if "\n  arm leader on " in fol else fol
+    lost = re.search(r"sync read: (\d+)/20 failed", fol)
+    assert lost, fol
+    assert int(lost.group(1)) > 0, fol  # 5 % drops over 20 reads of 6 motors: lost reads are certain
+    problems = text.split("\n\n")[0]
+    assert "arm follower: unreliable bus: " in problems, problems
+    assert "do not answer" not in problems, problems
+    assert "not measured (some motors did not answer)" not in fol, fol
+    assert "reads lost although every motor answers" in fol, fol
 
 
 def test_a_calibration_file_of_another_arm_names_every_motor_that_differs() -> None:

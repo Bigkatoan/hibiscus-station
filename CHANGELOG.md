@@ -29,6 +29,8 @@ with its own line (see the README); GitHub never offers a pre-release as its "la
   `2026-11-17 17:35:15 UTC+07:00`), like the rest of the report.
 - **A motor that does not answer is no longer reported as a slow USB adapter**: the doctor times only
   the reads that succeed, so a loose servo cable shows as "motor does not answer", not "slow bus".
+- **The doctor flags an unreliable bus**: when every motor answers but some reads get no answer, it
+  names it in LIKELY PROBLEMS (servo cables, power supply, USB hub) and still shows the bus speed.
 - **The doctor report ends with what to send**, in English and Vietnamese (*WHAT TO SEND / CẦN GỬI
   GÌ*): the one zip file to send, what it holds, and, when the motor check could not finish, what
   to close and how to run the doctor again.
