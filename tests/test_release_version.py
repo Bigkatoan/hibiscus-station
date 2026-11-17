@@ -58,3 +58,55 @@ def test_the_changelog_dates_this_version() -> None:
     assert first, "no release section in CHANGELOG.md"
     assert first.group(1) == _version()
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", first.group(2)), first.group(0)
+
+
+# QC 0.2.9 QD-13: the Docker route (install.sh, image tags, .env.example) and the systemd / wheel
+# docs were left at 0.2.1 because the hygiene check only looked at the wheel URLs. Every install
+# route must name the release being shipped.
+DEPLOY_DOCS = (
+    "README.md",
+    "README.vi.md",
+    "deploy/install.sh",
+    "deploy/.env.example",
+    "deploy/compose.yml",
+    "deploy/hibiscus-station-ctl",
+    "deploy/systemd/hibiscus-station.service",
+    "docs/deploy.md",
+    "docs/first-boot-jetson.md",
+    "docs/first-boot-pi5.md",
+)
+# Files that must carry at least one versioned reference (so a rewrite cannot silently drop it).
+MUST_NAME_VERSION = (
+    "README.md",
+    "README.vi.md",
+    "deploy/install.sh",
+    "deploy/.env.example",
+    "deploy/systemd/hibiscus-station.service",
+    "docs/deploy.md",
+)
+_IMAGE_TAG = re.compile(r"(?<![\w.])v?(\d+\.\d+\.\d+)-(?:cpu|cuda|jetson)\b")
+_WHEEL_URL = re.compile(r"releases/download/v([^/\s]+)/hibiscus_station-([^-\s]+)-py3")
+_SCRIPT_VERSION = re.compile(r'^VERSION="([^"]+)"$', re.M)
+
+
+def _versions_named(text: str) -> list[str]:
+    found = [m.group(1) for m in _IMAGE_TAG.finditer(text)]
+    for a, b in _WHEEL_URL.findall(text):
+        found += [a, b]
+    found += _SCRIPT_VERSION.findall(text)
+    return found
+
+
+def test_every_install_route_names_this_release() -> None:
+    v = _version()
+    for doc in DEPLOY_DOCS:
+        named = _versions_named(_text(doc))
+        if doc in MUST_NAME_VERSION:
+            assert named, f"{doc}: names no release version"
+        stale = sorted({x for x in named if x != v})
+        assert not stale, f"{doc}: names {stale}, not {v}"
+
+
+def test_the_install_script_defaults_to_this_release() -> None:
+    m = _SCRIPT_VERSION.search(_text("deploy/install.sh"))
+    assert m and m.group(1) == _version()
