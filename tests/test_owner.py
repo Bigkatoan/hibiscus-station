@@ -282,7 +282,13 @@ def test_a_stale_flag_left_by_the_last_session_tick_does_not_block_the_next_star
     get_world("mock://leader").follow(get_world("mock://follower"))
     hub = station.hub
     time.sleep(0.2)
-    hub.read_latest_all(max_age_ms=0.001)  # what a slow last session tick leaves behind
+    # what a slow last session tick leaves behind: a frame older than the tick's limit. The camera
+    # holds its frame for 50 ms first, so the read is stale for sure (a 1 ms limit alone raced the
+    # camera's next frame: CI run 44051727232, macOS)
+    hub.camera("wrist").stall(True)
+    time.sleep(0.05)
+    hub.read_latest_all(max_age_ms=1)
+    hub.camera("wrist").stall(False)
     assert hub.status()[0]["stale"]
     station.start_record(RecordRequest(dataset="qd3", task="t", num_episodes=1, episode_time_s=5))
     assert station.owner.state == "recording"
