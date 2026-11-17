@@ -393,6 +393,27 @@ describe("station i18n", () => {
     expect(tv("record.done", { count: 1, name: "d" })).toBe("Đã lưu 1 tập vào bộ dữ liệu d");
   });
 
+  it('no "camera(s)" shortcuts: counts take real plurals (QC 0.2.9 QD-17)', () => {
+    const shortcuts = flatEntries(en).filter(([, v]) => /[a-z]\(s\)/i.test(v));
+    expect(shortcuts).toEqual([]);
+    registerStationI18n();
+    const t = i18n.getFixedT("en", "station");
+    expect(t("record.estimate", { count: 1, mb: "15", total: "0.10" })).toContain("with 1 camera,");
+    expect(t("record.estimate", { count: 2, mb: "15", total: "0.10" })).toContain("with 2 cameras,");
+    const line = t("run.summary_line", {
+      duration: "00:30",
+      episodes: t("run.summary_episodes", { count: 1 }),
+      alerts: t("run.summary_alerts", { count: 2 }),
+    });
+    expect(line).toBe("00:30 · 1 episode · 2 alerts");
+  });
+
+  it("the leader tooltip reads naturally in vi (QC 0.2.9 QD-17)", () => {
+    const tip = (vi_ as { health: { not_measured_title: string } }).health.not_measured_title;
+    expect(tip).not.toMatch(/vẫn đã/);
+    expect(tip).toMatch(/^Tay leader đã kết nối, nhưng servo/);
+  });
+
   it("a motor_hot refusal names the motor and its temperature, in vi too (QC 0.2.9 QD-3)", () => {
     registerStationI18n();
     const err = new StationApiError(409, {

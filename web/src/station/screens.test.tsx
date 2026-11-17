@@ -120,7 +120,7 @@ describe("Record (§6.6)", () => {
     await settle();
     await user.type(await screen.findByLabelText(/Dataset name/), "cube_demo");
     await user.type(screen.getByLabelText(/^Task/), "Pick the cube");
-    expect(screen.getByTestId("disk-estimate")).toHaveTextContent("2 camera(s)");
+    expect(screen.getByTestId("disk-estimate")).toHaveTextContent("2 cameras");
     await user.click(screen.getByRole("button", { name: "Start recording" }));
     await waitFor(() => {
       expect(h.sim.state).toBe("recording");

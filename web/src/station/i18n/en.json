@@ -220,7 +220,7 @@
     "unknown_title": "No value: this servo does not report it (the reading was impossible and is ignored).",
     "leader_note": "Moved by hand: shown for information, never an alarm.",
     "not_measured": "not measured",
-    "not_measured_title": "The leader's 5 V servos do not report this value. The leader is connected and working: its positions are read normally.",
+    "not_measured_title": "The leader is connected and working, but its 5 V servos do not report this value. Its joint positions are read normally.",
     "leader_connected": "Connected · {{n}}/{{total}} motors answer"
   },
   "camera": {
@@ -528,7 +528,8 @@
     "timeout_save": "Save it",
     "timeout_discard": "Discard and re-record",
     "video": "Encode video",
-    "estimate": "About {{mb}} MB per episode with {{cams}} camera(s), {{total}} GiB in total.",
+    "estimate_one": "About {{mb}} MB per episode with {{count}} camera, {{total}} GiB in total.",
+    "estimate_other": "About {{mb}} MB per episode with {{count}} cameras, {{total}} GiB in total.",
     "start": "Start recording",
     "controls": "Episode controls",
     "saved_episodes": "Saved episodes",
@@ -630,7 +631,11 @@
     "start": "Run on the robot",
     "running_model": "Model {{model}}",
     "summary": "Run summary",
-    "summary_line": "{{duration}} · {{episodes}} episode(s) · {{alerts}} alert(s)",
+    "summary_line": "{{duration}} · {{episodes}} · {{alerts}}",
+    "summary_episodes_one": "{{count}} episode",
+    "summary_episodes_other": "{{count}} episodes",
+    "summary_alerts_one": "{{count}} alert",
+    "summary_alerts_other": "{{count}} alerts",
     "session_telemetry": "Session telemetry",
     "eval_dataset_link": "Evaluation dataset"
   },

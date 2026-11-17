@@ -369,7 +369,7 @@ function RecordSetup() {
             {t("record.estimate", {
               mb: mb.toFixed(0),
               total: ((mb * form.num_episodes) / 1024).toFixed(2),
-              cams: cams.length,
+              count: cams.length,
             })}
           </p>
           <StationError error={start.error} className="sm:col-span-2" />
