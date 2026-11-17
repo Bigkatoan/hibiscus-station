@@ -4,6 +4,7 @@ assets (ADR-13 / P-1). Fast, offline; the full build + install runs in tools/rel
 from __future__ import annotations
 
 import importlib.util
+import os
 import re
 import shutil
 import sys
@@ -331,3 +332,40 @@ def test_installer_links_resolve_for_its_kind_of_release(version: str) -> None:
     header = text.split("& {", 1)[0]
     assert ("releases/latest" in header) is (not pre)
     assert "run the same install command again" not in text  # a versioned line reinstalls the same build
+
+
+def _docker_tags(ref: str, tmp_path: Path) -> dict[str, str]:
+    """Run the ``version`` step of docker.yml as GitHub would for ``ref``; return its outputs."""
+    import subprocess
+
+    import yaml
+
+    wf = yaml.safe_load((ROOT / ".github" / "workflows" / "docker.yml").read_text(encoding="utf-8"))
+    step = next(s for s in wf["jobs"]["image"]["steps"] if s.get("id") == "version")
+    out = tmp_path / "out"
+    out.write_text("", encoding="utf-8")
+    env = {
+        **os.environ,
+        "GITHUB_REF": ref,
+        "GITHUB_REF_NAME": ref.rsplit("/", 1)[-1],
+        "GITHUB_SHA": "0123456789abcdef",
+        "GITHUB_OUTPUT": str(out),
+    }
+    bash = shutil.which("bash")
+    assert bash, "bash runs the workflow step (Git Bash on Windows)"
+    subprocess.run([bash, "-euo", "pipefail", "-c", step["run"]], env=env, check=True)  # noqa: S603 - the repo's own workflow
+    return dict(line.split("=", 1) for line in out.read_text(encoding="utf-8").splitlines())
+
+
+def test_docker_image_tags_follow_the_pep440_version(tmp_path: Path) -> None:
+    """QD-1: the image of v1.0.0a1 is :1.0.0a1-cpu (what README / install.sh pull), and a
+    pre-release never moves the floating :cpu or :1.0-cpu tags."""
+    pre = _docker_tags("refs/tags/v1.0.0a1", tmp_path)
+    assert pre == {"version": "1.0.0a1", "tagged": "true", "stable": "false", "minor": "1.0"}
+    stable = _docker_tags("refs/tags/v1.0.2", tmp_path)
+    assert stable == {"version": "1.0.2", "tagged": "true", "stable": "true", "minor": "1.0"}
+    dev = _docker_tags("refs/heads/main", tmp_path)
+    assert dev["tagged"] == "false" and dev["stable"] == "false"
+    text = (ROOT / ".github" / "workflows" / "docker.yml").read_text(encoding="utf-8")
+    assert "type=semver" not in text  # semver would tag 1.0.0-a1
+    assert "value=${{ matrix.variant }},enable=${{ steps.version.outputs.stable }}" in text
