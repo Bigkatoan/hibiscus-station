@@ -445,12 +445,12 @@ def build_router() -> APIRouter:
     @r.post("/server/pair", tags=["server"])
     def pair(request: Request, body: PairRequest) -> wire.ServerLinkView:
         return _out(
-            wire.ServerLinkView, station(request).server.pair(body.url, body.token, body.workspace_id)
+            wire.ServerLinkView, station(request).pair_server(body.url, body.token, body.workspace_id)
         )
 
     @r.delete("/server", status_code=204, tags=["server"])
     def unpair(request: Request) -> Response:
-        station(request).server.unpair()
+        station(request).unpair_server()
         return Response(status_code=204)
 
     @r.get("/server/datasets", tags=["server"])

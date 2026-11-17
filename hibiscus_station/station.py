@@ -589,8 +589,25 @@ class Station:
                 raise StationError("busy", "this model is running")
             self.loaded = None
             self.owner.loaded_model = None
+            self.announce_status()  # every open page drops "Loaded: <key>" (QD-23 class sweep)
         if not self.registry.remove(key):
             raise StationError("not_found", f"no model {key}")
+
+    def pair_server(self, url: str, token: str, workspace_id: str | None = None) -> dict[str, Any]:
+        view = self.server.pair(url, token, workspace_id)
+        self.announce_status()
+        return view
+
+    def unpair_server(self) -> None:
+        self.server.unpair()
+        self.announce_status()
+
+    def announce_status(self) -> None:
+        """Send the status to every open page after a change made outside the owner's commands.
+
+        The UI never polls the status: it keeps the last ``state`` message, so a change without
+        one stays wrong on screen until a reload (QC 0.2.9 QD-23)."""
+        self.owner.emit("state", self.status())
 
 
 def demo_profile() -> RobotProfile:

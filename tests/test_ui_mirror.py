@@ -139,3 +139,27 @@ def test_device_lost_then_reconnect_keeps_no_alert_of_the_gone_bus(station: Stat
     time.sleep(1.0)  # a few telemetry rounds
     assert not any(a["motor"] == "gripper" for a in station.status()["alerts"])
     matches(station, ui, "reconnect")
+
+
+def test_deleting_the_loaded_model_reaches_open_pages(station: Station, ui: UiMirror) -> None:
+    """Class sweep: DELETE /models/<key> of the loaded model cleared ``loaded_model`` silently, so
+    Run model on another page still offered "Loaded: <key>" for a model that no longer exists."""
+    station.loaded = SimpleNamespace(key="ckpt_a")  # type: ignore[assignment]
+    station.owner.loaded_model = "ckpt_a"
+    station.owner.emit("state", station.status())  # as load_model announces it
+    matches(station, ui, "model loaded")
+    station.registry.remove = lambda key: True  # type: ignore[method-assign]
+    station.delete_model("ckpt_a")
+    assert station.status()["loaded_model"] is None
+    matches(station, ui, "loaded model deleted")
+
+
+def test_unpairing_reaches_open_pages(client: TestClient, station: Station, ui: UiMirror) -> None:
+    """Class sweep: pairing state is in the status (the Train lock, the server chip), but pair and
+    unpair sent no ``state``: other open pages kept "paired" after DELETE /server."""
+    station.server.data = {"url": "http://127.0.0.1:9/api/v1", "workspace_slug": "lab"}
+    station.owner.emit("state", station.status())
+    matches(station, ui, "paired")
+    assert client.delete("/api/v1/server").status_code == 204
+    assert station.status()["server"]["paired"] is False
+    matches(station, ui, "unpaired")
