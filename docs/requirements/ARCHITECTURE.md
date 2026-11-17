@@ -1,9 +1,9 @@
-# Hibiscus Station: Architecture v0.2 (2026-11-17) · trạng thái: bản nháp (vòng 1, sau Reconcile của BA)
+# Hibiscus Station: Architecture v1.0 (2026-11-17) · trạng thái: **đã duyệt** (khách hàng duyệt ngày 2026-11-17, đường cơ sở)
 
 Tài liệu kiến trúc cho **Hibiscus Station v1.0**. Người soạn: SA. Tham khảo: BA, Tech Lead. Khách hàng
 duyệt phần ảnh hưởng tới chi phí / nền tảng (lựa chọn công nghệ là việc của nhà cung cấp).
-Tài liệu cùng bộ: [BRD.md](BRD.md) v0.2 · [SRS.md](SRS.md) v0.2 · [FEATURES.md](FEATURES.md) v0.2 ·
-[ACCEPTANCE.md](ACCEPTANCE.md) v0.2 · [REGRESSION.md](REGRESSION.md) v0.2 · rà soát yêu cầu:
+Tài liệu cùng bộ: [BRD.md](BRD.md) v1.0 · [SRS.md](SRS.md) v1.0 · [FEATURES.md](FEATURES.md) v1.0 ·
+[FEATURES-APPROVED.md](FEATURES-APPROVED.md) v1.0 · [ACCEPTANCE.md](ACCEPTANCE.md) v1.0 · [REGRESSION.md](REGRESSION.md) v1.0 · rà soát yêu cầu:
 [REVIEW-SA.md](REVIEW-SA.md), [REVIEW-TECHLEAD.md](REVIEW-TECHLEAD.md).
 
 > **v0.2 (BA, Reconcile vòng 1).** Nội dung kiến trúc giữ như v0.1 của SA. Các flag ở REVIEW-SA đã được BA
@@ -11,6 +11,13 @@ Tài liệu cùng bộ: [BRD.md](BRD.md) v0.2 · [SRS.md](SRS.md) v0.2 · [FEATU
 > FR-9, FR-12, FR-13, FR-20, FR-33, FR-47, FR-63, FR-69, FR-73, FR-75) và FEATURES v0.2 (đề xuất P-1 – P-8,
 > lỗi D-19 – D-23). Bảng §6 còn ghi theo định nghĩa NFR v0.1; SA cập nhật §6 theo SRS v0.2 ở vòng 2. ADR-13
 > chờ quyết định QĐ-3; nền tảng §3.4 theo QĐ-2; gói `hibiscus` theo QĐ-4 (BRD §9).
+
+> **v1.0 (khách hàng duyệt 2026-11-17, QĐ-1 – QĐ-4 = A).** ADR-13 được chấp nhận (QĐ-3 = A: lệnh cài / cập nhật /
+> quay lại một dòng, phụ thuộc cố định, không cần git). §3.4: Windows Must, Ubuntu Should, Docker Linux x86_64
+> `-cpu` Could; Raspberry Pi 5, Jetson Orin, macOS, wheel arm64, Docker `-cuda` là **bản xem trước**, ngoài nghiệm
+> thu (QĐ-2 = A, W-9). ADR-12: ghim Hibiscus CLI **v0.1.2, Apache-2.0** khi chủ sở hữu phát hành (QĐ-4 = A,
+> phụ thuộc ngoài EXT-1). Việc còn mở của SA: cập nhật §6 theo SRS v1.0 và chốt tên `thermal_blind` / khoá cài
+> đặt giới hạn 10 phút (QĐ-1 = A) — OI-3.
 
 > **Cách đọc.** Đây là kiến trúc **như đã xây** của Station **0.2.8** (`main` `12f36da`), đúng với
 > quyết định của khách hàng ngày 2026-11-17: v1.0 = tính năng hiện có đưa lên chuẩn chất lượng, không
@@ -72,7 +79,7 @@ phối, **trừ một mục cần xử lý** (gói `hibiscus`, xem ADR-12 và fl
 | Tín hiệu | paho-mqtt | 2.1.0 | Khối "tín hiệu" / "nhận tin" (Could) | — | EPL-2.0 OR BSD-3-Clause (chọn BSD) |
 | Bí mật | keyring (Docker: tệp 0600) | 25.7.0 | Token máy chủ không nằm trong tệp thường | tệp thường | MIT |
 | HTTP ra ngoài | httpx | 0.28.1 | Dùng chung với Hibiscus CLI | requests | BSD-3-Clause |
-| Liên kết máy chủ | `hibiscus` (Hibiscus CLI) git `v0.1.1` | 0.1.1 | Dùng lại Uploader / Puller / HibiscusApi, không sao chép | Viết lại | **"Proprietary" trong metadata** → phải đổi (SA-L1) |
+| Liên kết máy chủ | `hibiscus` (Hibiscus CLI) git `v0.1.1` → `v0.1.2` | 0.1.1 → 0.1.2 | Dùng lại Uploader / Puller / HibiscusApi, không sao chép | Viết lại | 0.1.1: **"Proprietary" trong metadata**; QĐ-4 = A: **Apache-2.0** từ v0.1.2 (EXT-1, SA-L1) |
 | Dataset I/O | datasets / pyarrow / huggingface-hub / safetensors | 5.2.0 / 26.0.1 / 1.33.0 / 0.8.0 | Qua lerobot | — | Apache-2.0 |
 | Cấu hình lerobot | draccus | 0.11.6 | Qua lerobot | — | MIT |
 
@@ -161,10 +168,10 @@ phiên trước (`last_sent`) — sửa REG-10.
 |---|---|---|---|---|---|---|
 | **Windows 10/11 x64** (Must) | PowerShell: cài uv (không admin) → `uv tool install --python 3.12 [--torch-backend cpu] <wheel URL>`; lệnh `hibiscus-station` trong `%USERPROFILE%\.local\bin` | Cửa sổ console giữ tiến trình; trình duyệt mặc định (Edge) | `COM<n>`; Windows mở cổng **độc quyền** (tiến trình thứ hai nhận `Access is denied`); driver CH340 / CH343 của WCH (người dùng tự cài nếu Windows Update không có) | OpenCV backend MSMF → DSHOW theo số 0, 1, 2… (không có tên thiết bị) | CPU hoặc CUDA (nếu không thêm `--torch-backend cpu`) | CI `windows-latest`: pytest (bỏ qua test pty), build wheel, `uv tool install` + `--mock` smoke, MIME `.js`. **Chưa** chạy với cổng COM, camera, tay thật nào |
 | **Ubuntu 22.04 / 24.04 x86_64** (Should) | `uv tool install <wheel>`; tuỳ chọn `deploy/systemd/hibiscus-station.service` (user) | systemd hoặc terminal | `/dev/ttyACM*` (CH343, cdc_acm) / `/dev/ttyUSB*` (CH340); cần nhóm `dialout`; luật udev chỉ do `install.sh` (Docker) cài | V4L2 `/dev/video*` (`by-id`) | CPU / CUDA | CI ubuntu-24.04: toàn bộ pytest (gồm giả lập STS3215 pty), vitest, e2e Playwright Chromium, wheel smoke |
-| **Docker trên Linux x86_64** (Could) | `deploy/install.sh` (dò máy, hỏi trước khi cài Docker) → image `-cpu` / `-cuda`; `hibiscus-station-ctl` | compose, `restart`, `stop_grace_period 30s`, uid 10001 | bind `/dev` + `device_cgroup_rules` (cắm / rút nóng), `/dev/hibiscus/arm-*` | `/dev/v4l/by-id` | cpu / cuda | CI: build + chạy `--mock` tới `healthy` (cpu amd64) + Trivy. `-cuda` chỉ build khi có tag, chưa chạy thử |
-| **Raspberry Pi 5** (Could) | Docker `-cpu` arm64 qua `install.sh` (hoặc wheel aarch64) | như Docker | như Linux | như Linux | CPU (Cortex-A76): ACT chậm; FR-48 tạm dừng khi suy luận > 2 nhịp | Image arm64 chỉ build bằng QEMU khi có tag; chưa chạy trên Pi |
-| **Jetson Orin, JetPack 6** (Could) | Docker `-jetson` (base NGC PyTorch iGPU) qua `install.sh` (L4T ≠ R36 → dùng `-cpu`) | như Docker + NVIDIA runtime | như Linux | như Linux | CUDA iGPU | Chỉ build trên runner arm64 khi có tag; **chưa chạy trên Jetson**; tương thích base `26.02-py3-igpu` với L4T R36 cần chứng minh (SP-6) |
-| macOS 14+ (Could) | `uv tool install <wheel>` | terminal | `/dev/tty.usbmodem*` | AVFoundation theo số | CPU / MPS | CI macos-latest: chỉ cài + `--mock` smoke, **không** chạy pytest |
+| **Docker trên Linux x86_64** (Could: image `-cpu`; `-cuda` bản xem trước) | `deploy/install.sh` (dò máy, hỏi trước khi cài Docker) → image `-cpu` / `-cuda`; `hibiscus-station-ctl` | compose, `restart`, `stop_grace_period 30s`, uid 10001 | bind `/dev` + `device_cgroup_rules` (cắm / rút nóng), `/dev/hibiscus/arm-*` | `/dev/v4l/by-id` | cpu / cuda | CI: build + chạy `--mock` tới `healthy` (cpu amd64) + Trivy. `-cuda` chỉ build khi có tag, chưa chạy thử |
+| **Raspberry Pi 5** (bản xem trước, W-9) | Docker `-cpu` arm64 qua `install.sh` (hoặc wheel aarch64) | như Docker | như Linux | như Linux | CPU (Cortex-A76): ACT chậm; FR-48 tạm dừng khi suy luận > 2 nhịp | Image arm64 chỉ build bằng QEMU khi có tag; chưa chạy trên Pi |
+| **Jetson Orin, JetPack 6** (bản xem trước, W-9) | Docker `-jetson` (base NGC PyTorch iGPU) qua `install.sh` (L4T ≠ R36 → dùng `-cpu`) | như Docker + NVIDIA runtime | như Linux | như Linux | CUDA iGPU | Chỉ build trên runner arm64 khi có tag; **chưa chạy trên Jetson**; tương thích base `26.02-py3-igpu` với L4T R36 cần chứng minh (SP-6) |
+| macOS 14+ (bản xem trước, W-9) | `uv tool install <wheel>` | terminal | `/dev/tty.usbmodem*` | AVFoundation theo số | CPU / MPS | CI macos-latest: chỉ cài + `--mock` smoke, **không** chạy pytest |
 | Docker trên Windows | **Không hỗ trợ** (Docker Desktop không chuyển được USB serial; C-3) | — | — | — | — | — |
 
 **Đường dữ liệu cài đặt wheel (quan trọng cho QC):** `uv tool install <wheel>` **không dùng `uv.lock`**.
@@ -350,8 +357,8 @@ nền tảng đích; **Không đạt** = thiết kế hiện tại không đáp 
 | ADR-9 | Khoá thiết bị bằng tệp khoá theo hệ điều hành (`flock` / `msvcrt.locking` 1 byte ở 1 GiB) | Hai Station không bao giờ mở cùng cổng; đọc được PID người giữ | Không chặn tiến trình ngoài Station trên Linux (R-6) |
 | ADR-10 | Chạy thử (dry run) trên tay giả lập bắt buộc trước khi chạy chương trình trên robot | An toàn cho người mới | Kỹ sư tắt được (`programs.require_dry_run`) |
 | ADR-11 | Chỉ nhận trọng số `safetensors`; giải nén zip an toàn | Pickle chạy mã tuỳ ý | Model `.bin` / `.pt` phải chuyển đổi trước |
-| ADR-12 | Dùng lại gói `hibiscus` (Hibiscus CLI) cho liên kết máy chủ, ghim `v0.1.1` | Không sao chép mã tải lên / kéo | Metadata gói ghi "Proprietary" → phải phát hành lại với giấy phép tương thích AGPL (SA-L1) |
-| ADR-13 *(đề xuất, chờ QĐ-3 của khách)* | Bản phát hành v1.0 cố định toàn bộ phụ thuộc của wheel theo `uv.lock` (tệp constraints / wheelhouse đính kèm release) và không cần git trên máy khách | Chuẩn "kiểm đúng tệp người dùng cài"; quay lại ra đúng môi trường cũ | Cần SP-3; thay đổi lệnh cài trong README |
+| ADR-12 | Dùng lại gói `hibiscus` (Hibiscus CLI) cho liên kết máy chủ, ghim `v0.1.1` → `v0.1.2` | Không sao chép mã tải lên / kéo | Metadata v0.1.1 ghi "Proprietary"; QĐ-4 = A: chủ sở hữu phát hành v0.1.2 Apache-2.0 (EXT-1), Station ghim lại (SA-L1, AT-98) |
+| ADR-13 *(chấp nhận, QĐ-3 = A, 2026-11-17)* | Bản phát hành v1.0 cố định toàn bộ phụ thuộc của wheel theo `uv.lock` (tệp constraints / wheelhouse đính kèm release) và không cần git trên máy khách | Chuẩn "kiểm đúng tệp người dùng cài"; quay lại ra đúng môi trường cũ | Cần SP-3; thay đổi lệnh cài trong README |
 
 ## 8. Rà soát yêu cầu
 

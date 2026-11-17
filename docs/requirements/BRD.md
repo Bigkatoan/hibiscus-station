@@ -1,11 +1,15 @@
-# Hibiscus Station: BRD v0.2 (2026-11-17) · trạng thái: bản nháp (vòng 1, sau rà soát SA + Tech Lead)
+# Hibiscus Station: BRD v1.0 (2026-11-17) · trạng thái: **đã duyệt** (khách hàng duyệt ngày 2026-11-17, đường cơ sở)
 
 Tài liệu yêu cầu nghiệp vụ (Business Requirements Document) cho **Hibiscus Station v1.0**.
 Người soạn: BA. Người duyệt: khách hàng. Tham khảo: SA ([REVIEW-SA.md](REVIEW-SA.md)), Tech Lead
 ([REVIEW-TECHLEAD.md](REVIEW-TECHLEAD.md)).
-Tài liệu cùng bộ: [SRS.md](SRS.md) v0.2 · [FEATURES.md](FEATURES.md) v0.2 ·
-[ACCEPTANCE.md](ACCEPTANCE.md) v0.2 · [REGRESSION.md](REGRESSION.md) v0.2 ·
-[ARCHITECTURE.md](ARCHITECTURE.md) v0.2 · [CHANGELOG.md](CHANGELOG.md).
+Tài liệu cùng bộ: [SRS.md](SRS.md) v1.0 · [FEATURES.md](FEATURES.md) v1.0 ·
+[FEATURES-APPROVED.md](FEATURES-APPROVED.md) v1.0 · [ACCEPTANCE.md](ACCEPTANCE.md) v1.0 ·
+[REGRESSION.md](REGRESSION.md) v1.0 · [ARCHITECTURE.md](ARCHITECTURE.md) v1.0 · [CHANGELOG.md](CHANGELOG.md).
+
+> **Phê duyệt (2026-11-17).** Khách hàng chọn "1. A, 2. A, 3. A, 4. A" cho QĐ-1 – QĐ-4 và duyệt toàn bộ bộ
+> tài liệu: "Duyệt, bắt đầu làm". v1.0 = v0.2 với bốn quyết định đã chốt (§9). Mọi thay đổi sau ngày này là
+> yêu cầu thay đổi (CR) và ghi ở [CHANGELOG.md](CHANGELOG.md).
 
 > **Cách đọc.** Đây là **đường cơ sở "như đã xây" (as-built baseline)**: mô tả những gì Station
 > 0.2.8 (nhánh `main`, commit `12f36da`) đang làm, để khách hàng duyệt đúng phạm vi v1.0. v1.0
@@ -94,16 +98,16 @@ khỏi v1.0 nếu không đạt) · Won't (không làm trong v1.0). Nguồn: QĐ
 
 | ID | Nhu cầu | Ưu tiên | Nguồn | Tính năng |
 |---|---|---|---|---|
-| BR-1 | Người mới cài và chạy Station trên Windows 10/11 chỉ bằng lệnh cài đặt (v0.2: một lệnh, cũng dùng để cập nhật, QĐ-3); mọi việc khác làm trên giao diện, từng bước, bằng tiếng Việt; lệnh hỗ trợ `doctor` chép-dán khi có sự cố | Must | QĐ "người dùng là người mới (tiếng Việt, từng bước, không lệnh nào ngoài cài đặt)"; FR-0.2.1 | F-1, F-4, F-7, F-67 |
+| BR-1 | Người mới cài và chạy Station trên Windows 10/11 chỉ bằng lệnh cài đặt (QĐ-3 A: một lệnh, cũng dùng để cập nhật và quay lại bản cũ); mọi việc khác làm trên giao diện, từng bước, bằng tiếng Việt; lệnh hỗ trợ `doctor` chép-dán khi có sự cố | Must | QĐ "người dùng là người mới (tiếng Việt, từng bước, không lệnh nào ngoài cài đặt)"; FR-0.2.1 | F-1, F-4, F-7, F-67 |
 | BR-2 | Station luôn điều khiển đúng tay thật; không bao giờ lẫn tay giả lập; không nhầm leader với follower | Must | FR-0.2.2, FR-0.2.6 | F-5, F-8 – F-12, F-15 |
 | BR-3 | Hiệu chỉnh theo chuẩn LeLab: ghi biên độ cho **mọi** khớp (kể cả `wrist_roll`); đơn giản; dùng lại được file LeLab; hiệu chỉnh xong thì teleop chạy được | Must | FR-0.2.4/0.2.5 ("khách muốn hiệu chỉnh chuẩn LeLab: ghi biên độ mọi khớp"), FR-0.2.7 | F-16 – F-20 |
 | BR-4 | Teleop mượt, không trễ hơn LeLab | Must | FR-0.2.6 | F-24 – F-26 |
 | BR-5 | An toàn khi tay chuyển động: e-stop, bảo vệ nhiệt, dead-man, giới hạn bước; tay không rơi ngoài ý muốn; sau mọi lần dừng luôn có đường phục hồi và lần chạy sau bắt đầu lại từ đầu | Must | Spec R1; FR-0.2.8 | F-28 – F-36 |
 | BR-6 | Mọi con số, đơn vị, trạng thái hiển thị đều đúng và hợp lý; không báo động giả; số đo vô lý hiện là "không rõ" | Must | FR-0.2.3, FR-0.2.8 | F-31 – F-34 |
 | BR-7 | Thu dữ liệu LeRobot với camera, xem lại được (kèm nhiệt độ từng tập) | Must | Spec mục tiêu 2 | F-21 – F-23, F-38 – F-40 |
-| BR-8 | Đưa dữ liệu lên máy chủ Hibiscus để huấn luyện và kéo model đã huấn luyện về | Should (xem Q-2) | Spec mục tiêu 8 | F-41 – F-44 |
+| BR-8 | Đưa dữ liệu lên máy chủ Hibiscus để huấn luyện và kéo model đã huấn luyện về | Should (Q-2) | Spec mục tiêu 8 | F-41 – F-44 |
 | BR-9 | Chạy model trên robot, thấy đúng khung hình camera model nhận và sức khoẻ động cơ | Must | Spec R2 | F-45 – F-51 |
-| BR-10 | Lập trình tay robot không cần huấn luyện: quỹ đạo, tư thế, nhận diện camera, chương trình khối, chạy thử trước khi chạy thật | Should (xem Q-3) | Spec programs v0.1; FR-0.2.7, FR-0.2.8 | F-52 – F-62 |
+| BR-10 | Lập trình tay robot không cần huấn luyện: quỹ đạo, tư thế, nhận diện camera, chương trình khối, chạy thử trước khi chạy thật | Should (Q-3) | Spec programs v0.1; FR-0.2.7, FR-0.2.8 | F-52 – F-62 |
 | BR-11 | Kỹ sư có tuỳ chọn nâng cao (fps, giới hạn an toàn, file hiệu chỉnh, API, tín hiệu) mà không làm rối người mới | Must | QĐ "và kỹ sư (tuỳ chọn nâng cao)" | F-18, F-30, F-48, F-59, F-66 |
 | BR-12 | Khi có sự cố, khách tự tạo được một báo cáo chẩn đoán để gửi cho nhà cung cấp | Must | FR-0.2.2 | F-63, F-64 |
 | BR-13 | Không lỗi hiện trường nào từ 0.2.1 đến 0.2.8 tái diễn | Must | QĐ "zero-defect" | REGRESSION.md |
@@ -166,80 +170,79 @@ khỏi v1.0 nếu không đạt) · Won't (không làm trong v1.0). Nguồn: QĐ
 **Ràng buộc:**
 * C-1 Giấy phép AGPL-3.0, repo công khai: tài liệu không chứa email, đường dẫn máy cá nhân hay dữ liệu
   khách hàng. Mọi gói phân phối cùng Station phải có giấy phép tương thích AGPL; gói `hibiscus` (Hibiscus
-  CLI v0.1.1) hôm nay khai "Proprietary" → quyết định QĐ-4 (SA-L1).
+  CLI v0.1.1) hôm nay khai "Proprietary" → QĐ-4 A: Station dùng Hibiscus CLI **v0.1.2** phát hành với giấy
+  phép **Apache-2.0** (phụ thuộc ngoài EXT-1 bên dưới, SA-L1).
 * C-2 lerobot 0.7.1 (commit `fe1c545`) là nền; tệp hiệu chỉnh phải dùng chung được với LeLab / lerobot.
 * C-3 Python 3.12. Docker chỉ cho Linux (Docker Desktop trên Windows không chuyển được cổng USB serial).
 * C-4 E-stop là phần mềm và phím Space chỉ có tác dụng khi cửa sổ Station đang được chọn; luôn phải có
   cách ngắt nguồn tay robot bằng tay. Khuyến nghị (điều kiện của UAT chuyển động): một **công tắc ngắt
   nguồn** trên dây nguồn follower (công tắc DC hoặc nút nấm, SA-S2); AT-94 kiểm Station xử lý đúng khi mất
   nguồn giữa chuyển động.
+* C-5 (QĐ-2 A) Nền tảng thuộc nghiệm thu v1.0: Windows 10/11 x64 = Must (UAT của khách); Ubuntu 22.04 /
+  24.04 x86_64 = Should (vendor kiểm); Docker trên PC Linux x86_64, image `-cpu` = Could (vendor kiểm). macOS,
+  wheel Linux arm64, Docker `-cuda`, Raspberry Pi 5, Jetson Orin = **bản xem trước**, ngoài nghiệm thu (W-9).
 
+**Phụ thuộc ngoài (không làm trong repo Station):**
+* **EXT-1 (QĐ-4 A)** Chủ sở hữu nền tảng Hibiscus phát hành gói `hibiscus` (Hibiscus CLI) **v0.1.2** với giấy
+  phép **Apache-2.0** và tệp LICENSE, không đổi mã so với v0.1.1. Việc này làm trong repo của nền tảng Hibiscus,
+  ghi là CR bên ngoài (CR-EXT-1); nhóm Station không sửa repo khác. Sau khi v0.1.2 có, Station ghim lại `hibiscus`
+  v0.1.2 (một thay đổi phụ thuộc trong Station, kiểm bằng AT-98). **Chặn phát hành v1.0:** AT-98 (F-6, Must)
+  chỉ đạt khi Station ghim v0.1.2; cần có trước khi QC bản ứng viên M1.
 ## 8. Rủi ro
 
 | ID | Rủi ro | Tác động | Giảm thiểu |
 |---|---|---|---|
-| RK-1 | Servo của khách đọc 0 °C và dòng ~1000 (thô): bảo vệ nhiệt không hoạt động trên tay của khách | Không phát hiện quá nhiệt thật → servo tự ngắt, tay rơi | REG-13: cần báo cáo `hibiscus-station doctor --verbose` của khách; `doctor` hiện chưa đọc dòng và tải (SRS K-11), nhà cung cấp phải bổ sung trước khi xin báo cáo; QĐ-1 quyết định hành vi khi không đọc được nhiệt; `doctor` mới ở M0 và UAT-0 (SP-1) |
+| RK-1 | Servo của khách đọc 0 °C và dòng ~1000 (thô): bảo vệ nhiệt không hoạt động trên tay của khách | Không phát hiện quá nhiệt thật → servo tự ngắt, tay rơi | REG-13: cần báo cáo `hibiscus-station doctor --verbose` của khách; `doctor` hiện chưa đọc dòng và tải (SRS K-11), nhà cung cấp phải bổ sung trước khi xin báo cáo; QĐ-1 A: cho chạy, xác nhận mỗi lần kết nối, banner cam, phiên không người cầm leader dừng sau 10 phút; `doctor` mới ở M0 và UAT-0 (SP-1) |
 | RK-2 | Nhà cung cấp không kiểm được Windows + tay thật | Lỗi chỉ lộ ở UAT | Bộ giả lập STS3215 có thời gian thật, CI Windows, danh sách UAT ngắn, có video |
-| RK-3 | Quy tắc zero-defect: một lỗi nhỏ loại cả tính năng và tính năng phụ thuộc | Tính năng Should/Could có thể bị loại khỏi v1.0 | Q-2, Q-3 để khách chọn trước phần nào có thể bỏ |
+| RK-3 | Quy tắc zero-defect: một lỗi nhỏ loại cả tính năng và tính năng phụ thuộc | Tính năng Should/Could có thể bị loại khỏi v1.0 | Q-2, Q-3 (đã duyệt): Should / Could không đạt thì ra khỏi v1.0, không chặn |
 | RK-4 | Phạm vi rộng (71 tính năng) | Thời gian QC dài | Tech Lead đặt mốc; Could được cắt trước |
 | RK-5 | Tài liệu người dùng cũ mâu thuẫn với sản phẩm (xem SRS §8 "Khoảng trống") | Người mới làm sai theo hướng dẫn | Sửa tài liệu là một phần của Done |
-| RK-6 | Môi trường cài trên PC khách khác môi trường QC đã kiểm (phụ thuộc trôi theo ngày, cần git) | Lỗi chỉ có trên máy khách, không tái hiện được | P-1 / QĐ-3 (lệnh một dòng, phụ thuộc cố định) |
-| RK-7 | Gói `hibiscus` khai "Proprietary" trong khi Station là AGPL công khai | Rủi ro pháp lý khi phát hành công khai | QĐ-4 |
+| RK-6 | Môi trường cài trên PC khách khác môi trường QC đã kiểm (phụ thuộc trôi theo ngày, cần git) | Lỗi chỉ có trên máy khách, không tái hiện được | P-1 / QĐ-3 A (lệnh một dòng, phụ thuộc cố định) |
+| RK-7 | Gói `hibiscus` khai "Proprietary" trong khi Station là AGPL công khai | Rủi ro pháp lý khi phát hành công khai | QĐ-4 A: Hibiscus CLI v0.1.2 Apache-2.0 (EXT-1); chưa có v0.1.2 thì AT-98 FAIL và v1.0 không phát hành |
 | RK-8 | Nhiều lượt UAT do quy tắc zero-defect (mỗi lỗi khách thấy = sửa → QC → UAT lại) | Trễ lịch, tốn thời gian của khách | UAT chia 3 buổi ngắn (ACCEPTANCE "Kế hoạch UAT"); vendor chạy phần còn lại và gửi video |
 
-## 9. Quyết định của khách hàng và câu hỏi mở
+## 9. Quyết định của khách hàng (đã chốt) và việc còn mở
 
-Chỉ là quyết định của khách hàng (ưu tiên, bỏ gì, hành vi, từ ngữ, pháp lý). Mỗi câu có **phương án đề
-xuất** (đứng đầu). Tài liệu v0.2 đã viết theo phương án đề xuất; nếu khách chọn khác, BA sửa ở v0.3. Duyệt
-bộ tài liệu = đồng ý mọi phương án đề xuất chưa được khách đổi.
+Khách hàng trả lời ngày 2026-11-17: **"1. A, 2. A, 3. A, 4. A"**, rồi khi được hỏi có duyệt toàn bộ bộ tài liệu
+v0.2 không: **"Duyệt, bắt đầu làm"**. Bốn quyết định dưới đây đã chốt; các phương án không chọn ghi lại để truy
+vết. Muốn đổi một quyết định = yêu cầu thay đổi (CR).
 
-### Vòng 1 cần khách quyết định (QĐ-1 – QĐ-4)
+### Quyết định đã chốt (QĐ-1 – QĐ-4)
 
-**QĐ-1 (thay Q-5). Khi Station không đọc được nhiệt độ thật của bất kỳ động cơ follower nào, robot có được
-chạy không?** Tay của khách đang báo 0 °C ở mọi servo: bảo vệ nhiệt của Station không hoạt động, chỉ còn
-bảo vệ 70 °C của chính servo (servo tự ngắt → tay rơi). Trước khi chốt, vendor phát hành `doctor` mới (M0) và
-nhờ khách chạy một lần, kèm ảnh chụp công cụ Feetech FD (UAT-0, SP-1) để biết lỗi ở Station hay ở servo.
-* **A (đề xuất):** cho chạy, nhưng (1) mỗi lần kết nối hiện hộp xác nhận "Không đọc được nhiệt độ động cơ:
-  bảo vệ nhiệt của Station đang tắt"; (2) banner cam cố định trên mọi màn hình chuyển động; (3) phiên không
-  có người cầm leader (chạy model, phát lại, quỹ đạo, chương trình) tự dừng an toàn sau **10 phút** chạy
-  liên tục (kỹ sư đổi được trong Cài đặt); teleop và ghi dữ liệu không giới hạn (người cầm leader nhìn thấy
-  tay). Trên tay đó AT-42 ghi "không áp dụng" có chữ ký khách; AT-93 phải đạt. (P-3, SA-S1.)
-* B: như v0.1: chỉ banner cam, không giới hạn thời gian (rẻ hơn, nhưng dựa vào việc người mới đọc banner
-  khi chương trình chạy lâu không người canh).
-* C: chặn mọi phiên chuyển động cho tới khi đọc được nhiệt (an toàn nhất, nhưng tay của khách hôm nay
-  không dùng được).
+**QĐ-1 (thay Q-5) = A. Khi Station không đọc được nhiệt độ thật của bất kỳ động cơ follower nào, robot vẫn được
+chạy**, với ba điều kiện:
+1. Mỗi lần kết nối, Station hiện hộp xác nhận "Không đọc được nhiệt độ động cơ: bảo vệ nhiệt của Station đang
+   tắt" với "Tôi hiểu, tiếp tục" / "Ngắt kết nối"; người dùng phải xác nhận mới dùng được tay.
+2. Banner cam cố định trên mọi màn hình chuyển động.
+3. Phiên không có người cầm leader (chạy model, phát lại, phát quỹ đạo, chương trình) tự dừng an toàn sau
+   **10 phút** chạy liên tục (kỹ sư đổi được trong Cài đặt); teleop và ghi dữ liệu không giới hạn (người cầm
+   leader nhìn thấy tay).
 
-**QĐ-2 (thay Q-1). Nền tảng nào thuộc nghiệm thu v1.0?** Chuẩn chất lượng: nền tảng không kiểm được = không
-đạt. Vendor không có Windows, Pi 5, Jetson, máy Mac; image `-cuda`, `-jetson`, arm64 chưa từng chạy.
-* **A (đề xuất):** Windows 10/11 x64 (wheel) = **Must**, khách nghiệm thu bằng UAT; Ubuntu 22.04 / 24.04
-  x86_64 (wheel) = **Should**, vendor kiểm; Docker trên Linux x86_64 image `-cpu` = **Could**, vendor kiểm
-  (vào v1.0 nếu đạt). macOS, wheel Linux arm64, Docker `-cuda`, Raspberry Pi 5, Jetson Orin = **bản xem
-  trước** (W-9): vẫn cài được, README / ghi chú phát hành / `install.sh` ghi rõ "không thuộc nghiệm thu v1.0"
-  kèm lỗi đã biết; không chặn phát hành. (SA-P2; SA đề xuất Docker `-cpu` là Should, BA giữ Could để không
-  kéo dài mốc M2 vì QC Docker cần máy Linux riêng.)
-* B: giữ mọi nền tảng trong nghiệm thu v1.0: khách cấp (hoặc cho mượn) máy Pi 5, Jetson, Mac; thêm thời gian
-  kiểm cho mỗi máy.
-* C: chỉ Windows; bỏ hẳn Linux / Docker / macOS khỏi README cho tới bản sau.
+Trên tay không báo nhiệt, AT-42 ghi "không áp dụng" có chữ ký khách; AT-93 phải đạt. (P-3, SA-S1, FR-33.)
+Không chọn: B (chỉ banner), C (chặn mọi chuyển động).
 
-**QĐ-3 (thay Q-4). Lệnh cài và cập nhật trên Windows.** Hôm nay: hai lệnh (cài uv, rồi `uv tool install …`
-có số phiên bản), cần git trên máy, và thư viện được giải lại theo ngày cài nên PC của khách có thể khác bản
-QC đã kiểm (SA-P1).
-* **A (đề xuất):** **một** lệnh PowerShell chép-dán (`irm <địa chỉ bản phát hành>/install.ps1 | iex`): cài uv
-  nếu thiếu, cài Station với đúng bộ thư viện đã kiểm, không cần git / admin; cùng lệnh để cập nhật, thêm
-  số phiên bản để quay lại bản cũ. Không có nút cập nhật trong ứng dụng (W-6). Effort khoảng M (P-1, ADR-13).
-* B: giữ hai lệnh hiện tại, in sẵn trong hướng dẫn (rẻ hơn, nhưng vẫn cần git và không đảm bảo đúng bộ
-  thư viện đã kiểm).
+**QĐ-2 (thay Q-1) = A. Nền tảng thuộc nghiệm thu v1.0:**
+* Windows 10/11 x64 (wheel) = **Must**, khách nghiệm thu bằng UAT.
+* Ubuntu 22.04 / 24.04 x86_64 (wheel) = **Should**, vendor kiểm.
+* Docker trên PC Linux x86_64, image `-cpu` = **Could**, vendor kiểm (vào v1.0 nếu đạt).
+* macOS, wheel Linux arm64, Docker `-cuda`, Raspberry Pi 5, Jetson Orin = **bản xem trước** (W-9): vẫn cài được,
+  README / ghi chú phát hành / `install.sh` ghi rõ "bản xem trước, không thuộc nghiệm thu v1.0" kèm lỗi đã biết;
+  lỗi ở đó không chặn phát hành.
 
-**QĐ-4 (mới). Giấy phép của gói Hibiscus CLI.** Station (AGPL-3.0, công khai) kéo theo gói `hibiscus` v0.1.1
-(Hibiscus CLI, cùng chủ sở hữu) mà metadata ghi "Proprietary": người nhận không biết quyền dùng gói đó và
-AGPL đòi mã tương ứng của toàn bộ tác phẩm theo điều khoản tương thích (SA-L1). Chỉ chủ sở hữu làm được.
-* **A (đề xuất):** phát hành Hibiscus CLI **v0.1.2** với giấy phép **Apache-2.0** (hoặc MIT; tương thích AGPL,
-  không đổi mã) kèm tệp LICENSE; Station ghim lại v0.1.2.
-* B: phát hành Hibiscus CLI v0.1.2 với **AGPL-3.0** (cùng giấy phép với Station).
-* C: bỏ gói `hibiscus` khỏi Station: vendor viết lại phần liên kết máy chủ (ghép nối, tải lên, kéo model)
-  trong Station (thêm việc, ước khoảng L, F-41 – F-44 dời sang mốc sau).
+(C-5, NFR-9, SA-P2.) Không chọn: B (nghiệm thu mọi nền tảng), C (chỉ Windows).
 
-### Câu đã có đề xuất, duyệt cùng bộ tài liệu (khách có thể đổi khi góp ý)
+**QĐ-3 (thay Q-4) = A. Cài và cập nhật trên Windows bằng một lệnh.** **Một** lệnh PowerShell chép-dán (`irm <địa
+chỉ bản phát hành>/install.ps1 | iex`): không cần git, không cần quyền admin, không cần Python có sẵn; cài uv nếu
+thiếu; cài Station với **đúng bộ thư viện nhóm đã kiểm** (phụ thuộc cố định theo `uv.lock`). Dán lại **cùng lệnh**
+để cập nhật; cùng lệnh kèm số phiên bản để quay lại bản cũ (ra đúng bộ thư viện của bản đó). Không có nút cập nhật
+trong ứng dụng (W-6). (P-1, ADR-13, FR-1, FR-69, AT-1, AT-84.) Không chọn: B (hai lệnh, cần git).
+
+**QĐ-4 (mới) = A. Giấy phép Hibiscus CLI: Apache-2.0 trong bản v0.1.2.** Chủ sở hữu phát hành gói `hibiscus`
+(Hibiscus CLI) **v0.1.2** với giấy phép **Apache-2.0** kèm tệp LICENSE, không đổi mã; Station ghim lại v0.1.2.
+Việc phát hành nằm ngoài repo Station: phụ thuộc ngoài **EXT-1** (§7), CR bên ngoài CR-EXT-1. (C-1, NFR-14,
+ADR-12, AT-98, SA-L1.) Không chọn: B (AGPL-3.0), C (viết lại phần kết nối máy chủ).
+
+### Câu đã có đề xuất, duyệt cùng bộ tài liệu
 
 * **Q-2.** Liên kết máy chủ Hibiscus (F-41 – F-44) = **Should**: vendor kiểm với máy chủ thử theo hợp đồng
   v0.1.1; khách UAT nếu có tài khoản; không đạt thì ra khỏi v1.0, không chặn (nhập model bằng zip vẫn Must).
@@ -254,10 +257,23 @@ AGPL đòi mã tương ứng của toàn bộ tác phẩm theo điều khoản t
   lần đầu; "đặt lại" thay cho "reset" trong câu tiếng Việt (D-12).
 * **Q-1, Q-4, Q-5:** thay bằng QĐ-2, QĐ-3, QĐ-1.
 
+Không còn câu hỏi mở cho khách hàng về phạm vi hay hành vi của v1.0.
+
 ### Cần khách hàng cung cấp (không phải quyết định)
 
-* **UAT-0 (khoảng 15 phút, ngay sau M0):** cài bản M0, cắm cả hai tay, tắt Station và LeLab, chạy
-  `hibiscus-station doctor --verbose` và gửi tệp zip; mở công cụ Feetech FD trên cùng PC, chụp màn hình nhiệt
-  độ / điện áp / dòng của một servo follower. Kết quả đóng REG-13, chốt QĐ-1 và đích NFR-1 / NFR-2 cho Windows.
+* **UAT-0 (khoảng 15 phút, ngay sau M0):** cài bản M0 bằng lệnh một dòng, cắm cả hai tay, tắt Station và LeLab,
+  chạy `hibiscus-station doctor --verbose` và gửi tệp zip; mở công cụ Feetech FD trên cùng PC, chụp màn hình nhiệt
+  độ / điện áp / dòng của một servo follower. Kết quả đóng REG-13 (servo báo nhiệt thật hay không: nếu không thì
+  áp hành vi QĐ-1) và chốt đích NFR-1 / NFR-2 cho Windows (D-9).
 * Xác nhận lịch ba buổi UAT (ACCEPTANCE "Kế hoạch UAT") và loại bộ chuyển USB của hai tay (VID:PID có trong
   báo cáo `doctor`).
+
+### Việc còn mở của nhà cung cấp (không đổi phạm vi, theo dõi trong [FEATURES-APPROVED.md](FEATURES-APPROVED.md))
+
+* **OI-1** Tech Lead ước effort các mục ✚ (P-1 – P-3, P-6, P-7, SP-1 – SP-3, SP-7) khi bắt đầu M0; tổng 82 ngày
+  công chưa gồm các mục này.
+* **OI-2** QC xác nhận D-19 – D-23 bằng chạy thử (D-19 chỉ trên Windows: UAT-1 bước 14).
+* **OI-3** SA cập nhật ARCHITECTURE §6 theo định nghĩa NFR của SRS v1.0; chốt tên lý do dừng `thermal_blind` và tên
+  cài đặt giới hạn 10 phút (QĐ-1).
+* **OI-4** EXT-1: chờ chủ sở hữu nền tảng Hibiscus phát hành Hibiscus CLI v0.1.2 (Apache-2.0); sau đó Station ghim
+  lại (QĐ-4).

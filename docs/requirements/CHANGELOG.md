@@ -87,3 +87,50 @@ không kéo dài M2 (QC Docker cần máy riêng); SA-F5 chấp nhận "dọn ph
 **Bước tiếp theo:** khách đọc tóm tắt vòng 1 và trả lời QĐ-1 – QĐ-4 (hoặc "duyệt" để nhận mọi phương án đề
 xuất); vòng 2: Tech Lead ước các mục mới (P-1 – P-3, P-6, P-7, SP), QC xác nhận D-19 – D-23 và rà ACCEPTANCE v0.2,
 SA cập nhật ARCHITECTURE §6.
+
+## Phê duyệt · v1.0 (đường cơ sở) · 2026-11-17
+
+**Trạng thái:** **ĐÃ DUYỆT.** Bộ tài liệu v1.0 là đường cơ sở; Build bắt đầu từ đây. Mọi thay đổi sau ngày này là
+yêu cầu thay đổi (CR), ghi ở nhật ký này và nâng [FEATURES-APPROVED.md](FEATURES-APPROVED.md) lên v1.1, v1.2…
+
+**Lời của khách hàng (2026-11-17):**
+* Trả lời bốn quyết định của [ROUND-1-SUMMARY.md](ROUND-1-SUMMARY.md): **"1. A, 2. A, 3. A, 4. A"**
+* Khi được hỏi có duyệt toàn bộ bộ tài liệu v0.2 không: **"Duyệt, bắt đầu làm"**
+
+**Quyết định đã chốt (BRD §9):**
+* **QĐ-1 = A:** không đọc được nhiệt độ động cơ → robot vẫn chạy; mỗi lần kết nối Station hỏi xác nhận, hiện banner
+  cam; phiên không người cầm leader (chạy model, phát lại, quỹ đạo, chương trình) tự dừng sau 10 phút (P-3, AT-93).
+* **QĐ-2 = A:** nghiệm thu Windows 10/11 x64 = Must (UAT của khách), Ubuntu 22.04 / 24.04 x86_64 = Should (vendor),
+  Docker trên PC Linux x86_64 `-cpu` = Could (vendor); macOS, Raspberry Pi 5, Jetson Orin, wheel arm64, Docker `-cuda`
+  = bản xem trước, ngoài nghiệm thu (W-9).
+* **QĐ-3 = A:** Windows cài / cập nhật / quay lại bằng một lệnh chép-dán, không cần git, đúng bộ thư viện đã kiểm (P-1,
+  ADR-13 chấp nhận).
+* **QĐ-4 = A:** Hibiscus CLI phát hành v0.1.2 với giấy phép Apache-2.0; Station ghim lại. Việc phát hành làm trong repo
+  nền tảng Hibiscus, ghi là phụ thuộc ngoài **EXT-1 / CR-EXT-1** (BRD §7); nhóm Station không sửa repo khác. Chặn
+  AT-98 (F-6, Must) tới khi có v0.1.2.
+* Q-2, Q-3, Q-6 – Q-8 và P-1 – P-8 duyệt cùng bộ tài liệu như đề xuất.
+
+**BA đã làm:**
+* Mọi tài liệu lên **v1.0, trạng thái đã duyệt**: [BRD.md](BRD.md), [SRS.md](SRS.md), [ARCHITECTURE.md](ARCHITECTURE.md),
+  [FEATURES.md](FEATURES.md), [ACCEPTANCE.md](ACCEPTANCE.md), [REGRESSION.md](REGRESSION.md). Bản rà soát (REVIEW-SA,
+  REVIEW-TECHLEAD) và ROUND-1-SUMMARY giữ nguyên làm hồ sơ.
+* BRD: §9 viết lại thành quyết định đã chốt kèm lời khách; thêm C-5 (nền tảng), EXT-1 (§7), việc còn mở của vendor OI-1 –
+  OI-4; RK-1, RK-3, RK-6, RK-7 cập nhật. Không còn câu hỏi mở cho khách về phạm vi / hành vi.
+* SRS: FR-1, FR-3, FR-33, FR-69, NFR-6, NFR-9, NFR-14, §5.4, §7, §8 (K-8, K-9) ghi quyết định đã chốt; bỏ "phương án B".
+* ACCEPTANCE: AT-1 (bỏ bước phương án B), AT-4 (chỉ PC Linux x86_64 `-cpu`; kiểm nhãn "bản xem trước"), AT-84, AT-93
+  (thêm bước 0: mặc định 10 phút), AT-98 (Hibiscus CLI v0.1.2 Apache-2.0), môi trường (nền tảng nghiệm thu), Kế hoạch
+  UAT (UAT-0, bước 13).
+* FEATURES: F-1 mốc **M0 (P-1) / M1** (khớp bảng Mốc: P-1 / SP-3 ở M0 để khách cài bản M0 ở UAT-0); bảng Mốc: M1 = 43 Must
+  + 3 Should (F-2, F-18, F-26), M2 = 19 Should (bỏ F-2 khỏi dòng M2 vì cột mốc của F-2 là M1, theo Tech Lead); "Tech Lead
+  vòng 2" → OI-1.
+* ARCHITECTURE: ADR-12 (ghim v0.1.2 Apache-2.0), ADR-13 chấp nhận, §3.4 (Pi 5, Jetson, macOS = bản xem trước), bảng
+  công nghệ (`hibiscus`).
+* Tạo [FEATURES-APPROVED.md](FEATURES-APPROVED.md) v1.0: 71 tính năng (mốc, AT, Dev status = not started, QC result =
+  not tested, In release = -), P-1 – P-8, lỗi / khoảng trống theo mốc, số tính năng theo mốc, phạm vi và điều kiện kết
+  thúc M0, EXT-1 và OI-1 – OI-4, ma trận truy vết BR → FR / NFR → F → AT → QC result.
+
+**Số tính năng theo mốc (mốc chính):** M0 1 (F-63; thêm phần P-1 của F-1 và D-1 của F-17) · M1 46 · M2 19 · M3 5 (thêm
+phần LAN của F-6) · tổng 71 (44 Must / 22 Should / 5 Could).
+
+**Bước tiếp theo:** Tech Lead ước các mục ✚ (OI-1) và bắt đầu M0 trên nhánh tích hợp `release/v1`; khách hẹn UAT-0 khi
+có bản M0.

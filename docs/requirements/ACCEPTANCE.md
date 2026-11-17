@@ -1,4 +1,4 @@
-# Hibiscus Station: tài liệu nghiệm thu v0.2 (2026-11-17) · trạng thái: bản nháp (vòng 1, sau rà soát SA + Tech Lead)
+# Hibiscus Station: tài liệu nghiệm thu v1.0 (2026-11-17) · trạng thái: **đã duyệt** (khách hàng duyệt ngày 2026-11-17, đường cơ sở)
 
 BA viết; QC rà soát trước khi duyệt ("kiểm được như đã viết không?"); QC chạy sau khi xây. v0.2: mỗi AT
 ghi rõ công cụ và lệnh để chạy đúng như viết (test tự động có tên, lệnh chèn lỗi `POST /api/v1/mock/inject`
@@ -6,12 +6,16 @@ chỉ với `--mock`, máy chủ thử); bỏ yêu cầu nhiệt kế, đồng h
 Feetech FD và quan sát; video quay chậm điện thoại là tuỳ chọn); thêm AT-93 – AT-98; UAT của khách rút còn ba
 buổi ngắn (cuối tài liệu). Mỗi AT kiểm
 một tính năng F-n trong [FEATURES.md](FEATURES.md) hoặc một NFR trong [SRS.md](SRS.md). Danh sách hồi quy
-[REGRESSION.md](REGRESSION.md) chạy cùng.
+[REGRESSION.md](REGRESSION.md) chạy cùng. Kết quả QC từng tính năng ghi ở
+[FEATURES-APPROVED.md](FEATURES-APPROVED.md).
+
+v1.0: khách hàng chọn QĐ-1 – QĐ-4 = A và duyệt bộ tài liệu (2026-11-17). AT-1, AT-4, AT-84, AT-93, AT-98 và Kế
+hoạch UAT viết theo các quyết định đã chốt; mọi bước "phương án B" đã bỏ.
 
 ## Môi trường
 
 * **Bản kiểm:** đúng tệp người dùng cài: wheel `hibiscus_station-<v>-py3-none-any.whl` của bản ứng viên
-  cài bằng **lệnh trong hướng dẫn của chính bản đó** (QĐ-3 A: lệnh một dòng với bộ phụ thuộc cố định) trên
+  cài bằng **lệnh trong hướng dẫn của chính bản đó** (QĐ-3 = A: lệnh một dòng với bộ phụ thuộc cố định) trên
   máy / VM sạch; Docker image cùng phiên bản cho AT Docker. Bản ứng viên được phát hành nháp (pre-release)
   để AT-1 có đúng tệp (FL-12).
 * **Nền tảng:**
@@ -21,6 +25,10 @@ một tính năng F-n trong [FEATURES.md](FEATURES.md) hoặc một NFR trong [S
     leader + follower thật + camera USB thật. Nhà cung cấp không có Windows và tay thật, nên các AT này là
     **NOT VERIFIED** ở QC nội bộ và chỉ đạt khi khách hàng chạy (hoặc xem video) và ghi kết quả.
   * Một AT có cả hai nhãn: QC chạy phần [Vendor] trước; khách hàng chạy lại trên nền tảng của mình.
+  * **Nền tảng thuộc nghiệm thu (QĐ-2 = A):** Windows 10/11 x64 (Must, [UAT-KH]); Ubuntu 22.04 / 24.04 x86_64
+    (Should, [Vendor]); Docker trên PC Linux x86_64 image `-cpu` (Could, [Vendor]). macOS, wheel Linux arm64, Docker
+    `-cuda`, Raspberry Pi 5, Jetson Orin là **bản xem trước** (W-9): không có AT, không thuộc nghiệm thu; QC chỉ kiểm
+    README / ghi chú phát hành / `install.sh` ghi đúng nhãn "bản xem trước" (AT-4).
 * **Công cụ của vendor:** giả lập STS3215 `tests/sts_emulator.py` (pty, thời gian thật), `tests/teleop_bench.py`,
   `POST /api/v1/mock/inject` (chỉ `--mock`: nhiệt độ, dòng thô, "tay" leader giữ / theo follower, vật màu trên
   camera giả); webcam USB và một bộ chuyển CH340 / CH343 rẻ (không cần tay) cho F-9 – F-11, F-21, F-23; máy chủ
@@ -48,7 +56,7 @@ http://127.0.0.1:18210/api/v1/mock/inject` (token trong tệp `token` của thư
 Tiền điều kiện: Windows 10/11 x64 chưa từng cài Station, chưa có uv, **không có git**; tay chưa cắm; mạng
 ≥ 20 Mbps.
 1. Mở PowerShell (không cần admin), dán **một** lệnh cài trong hướng dẫn tiếng Việt của bản ứng viên (QĐ-3
-   phương án A; phương án B: dán lần lượt hai lệnh trong hướng dẫn).
+   = A).
 2. Khi lệnh xong, gõ `hibiscus-station --version`.
 3. [Vendor] Trên VM, chạy `uv pip list --python "$(uv tool dir)\hibiscus-station\Scripts\python.exe"` và so với
    danh sách thư viện của bản phát hành.
@@ -69,11 +77,13 @@ kết CI + danh sách bỏ qua.
 3. (Tuỳ chọn) cài unit systemd trong `deploy/systemd/`, khởi động lại máy.
 Kỳ vọng: giao diện mở; với systemd, Station tự chạy và `hibiscus-station health` thoát 0.
 
-**AT-4 (F-3) Docker** · [Vendor] (Linux x86_64; Pi 5 / Jetson: NOT VERIFIED nếu không có máy)
-1. `bash install.sh` trên máy sạch, đồng ý cài Docker. 2. `hibiscus-station-ctl status`, `url`, `ports`.
-3. Khởi động lại máy chưa cắm tay, cắm tay sau.
-Kỳ vọng: image đúng biến thể; `healthy` trong ≤ 3 phút sau khởi động lại; cắm tay sau vẫn kết nối được;
-`ports` hiện `/dev/serial/by-id/…` và `/dev/hibiscus/arm-*`.
+**AT-4 (F-3) Docker** · [Vendor] (PC Linux x86_64, image `-cpu`; QĐ-2 = A)
+1. `bash install.sh` trên PC Linux x86_64 sạch, đồng ý cài Docker. 2. `hibiscus-station-ctl status`, `url`, `ports`.
+3. Khởi động lại máy chưa cắm tay, cắm tay sau. 4. Đọc README / README.vi, ghi chú phát hành và lời nhắc của
+`install.sh` khi chọn `-cuda` / `-jetson` (không cần máy đó).
+Kỳ vọng: image `-cpu`; `healthy` trong ≤ 3 phút sau khởi động lại; cắm tay sau vẫn kết nối được;
+`ports` hiện `/dev/serial/by-id/…` và `/dev/hibiscus/arm-*`; (4) `-cuda`, Pi 5, Jetson (và macOS, wheel
+arm64 trong README) ghi "bản xem trước, không thuộc nghiệm thu v1.0" kèm lỗi đã biết (W-9).
 
 **AT-5 (F-4, REG-1, REG-17) Khởi động và đăng nhập** · [Vendor] + [UAT-KH]
 1. Chạy `hibiscus-station`. 2. Quan sát trình duyệt. 3. Xem thanh địa chỉ và lịch sử.
@@ -634,7 +644,7 @@ bàn phím.
 
 **AT-84 (F-69) Cập nhật và quay lại trên Windows** · [UAT-KH] (+ [Vendor] VM Windows sạch và Linux)
 Tiền điều kiện: bản cũ (0.2.8) đã dùng: có hồ sơ, hiệu chỉnh, dataset, model, quỹ đạo, chương trình.
-1. Dán lệnh cập nhật trong ghi chú phát hành (QĐ-3 A: cùng lệnh cài một dòng). 2. Mở Station, kiểm mọi thứ.
+1. Dán lệnh cập nhật trong ghi chú phát hành (QĐ-3 = A: cùng lệnh cài một dòng). 2. Mở Station, kiểm mọi thứ.
 3. Dán lệnh quay lại trong hướng dẫn (cùng lệnh kèm số phiên bản), kiểm lại. 4. [Vendor] So bộ thư viện sau
 bước 3 với bộ của bản cũ.
 Kỳ vọng: phiên bản mới hiện ở Cài đặt; mọi dữ liệu còn và dùng được (kết nối không cần hiệu chỉnh lại, quỹ đạo
@@ -694,16 +704,17 @@ token sai, model không tương thích, dataset chưa hoàn tất. Kỳ vọng: 
 placeholder / debug / stack trace / `internal_error` thô; 0 cảnh báo giả; mỗi lỗi có câu dịch và đường thoát.
 
 
-## Các AT thêm ở v0.2
+## Các AT thêm ở v0.2 (đã duyệt ở v1.0)
 
 **AT-93 (F-33, F-32, NFR-6, QĐ-1, P-3) Chạy khi không đọc được nhiệt độ** · [Vendor] + [UAT-KH] (tay của khách nếu vẫn báo 0 °C)
-Viết theo QĐ-1 phương án A; nếu khách chọn khác, BA sửa AT này ở v0.3.
+Theo QĐ-1 = A (đã chốt 2026-11-17).
+0. [Vendor] Mở Cài đặt, xem giới hạn thời gian khi không đọc được nhiệt độ.
 1. [Vendor] `--mock`: inject `{"port":"mock://follower","temp_c":0}` cho cả 6 động cơ follower; Kết nối.
 2. Trong hộp xác nhận, bấm "Ngắt kết nối"; kết nối lại, bấm "Tôi hiểu, tiếp tục". 3. Xem các màn hình Teleop,
 Ghi, Chạy model, Chương trình. 4. [Vendor] Đặt giới hạn thời gian trong Cài đặt còn 60 s; chạy model (giả) và
 phát một quỹ đạo, mỗi cái liên tục quá 60 s. 5. Đặt lại; teleop 2 phút (quá 60 s). 6. [UAT-KH] Trên tay của
 khách: lặp bước 1 – 3 (không cần inject), chạy model 1 tập ngắn.
-Kỳ vọng: (1) hộp xác nhận "Không đọc được nhiệt độ động cơ: bảo vệ nhiệt của Station đang tắt…"; (2) "Ngắt kết
+Kỳ vọng: (0) mặc định 10 phút; (1) hộp xác nhận "Không đọc được nhiệt độ động cơ: bảo vệ nhiệt của Station đang tắt…"; (2) "Ngắt kết
 nối" về Chưa kết nối, "Tôi hiểu, tiếp tục" về Sẵn sàng; hộp hiện lại ở **mỗi** lần kết nối; (3) banner cam cố
 định trên mọi màn hình chuyển động; (4) sau 60 s phiên dừng an toàn với lý do "chạy quá giới hạn khi không đọc
 được nhiệt độ", đặt lại được ngay; (5) teleop không bị dừng; (6) như (1) – (3).
@@ -741,7 +752,7 @@ nhịp + 1 lần suy luận.
 1. Cài bản ứng viên như AT-1 (VM), xuất danh sách gói và giấy phép từ metadata (`uv pip list --python … --format
 json` + trường `License` / classifier của từng gói). 2. So với bảng giấy phép ARCHITECTURE §2. 3. Xem cấu hình
 `pnpm audit` / các GHSA bị bỏ qua trong `web/package.json` và kết quả CodeQL, gitleaks, Trivy của commit phát hành.
-Kỳ vọng: (1–2) mọi gói có giấy phép tương thích AGPL-3.0, gồm `hibiscus` (theo QĐ-4), khớp bảng; (3) mỗi GHSA bị bỏ
+Kỳ vọng: (1–2) mọi gói có giấy phép tương thích AGPL-3.0, gồm `hibiscus` = Hibiscus CLI **v0.1.2, Apache-2.0** có tệp LICENSE (QĐ-4 = A, EXT-1), khớp bảng; (3) mỗi GHSA bị bỏ
 qua có lý do ghi lại (hoặc đã nâng cấp), 0 phát hiện mở; tệp LICENSE / ghi công có trong wheel.
 
 ---
@@ -753,16 +764,16 @@ qua có lý do ghi lại (hoặc đã nâng cấp), 0 phát hiện mở; tệp L
 | QC (nội bộ) | | | | |
 | Khách hàng (UAT) | | | | |
 
-## Kế hoạch UAT của khách hàng (v0.2: ba buổi ngắn, SA-Q1, FL-6)
+## Kế hoạch UAT của khách hàng (ba buổi ngắn, SA-Q1, FL-6; đã duyệt ở v1.0)
 
 Vendor chạy mọi phần [Vendor] trước (QC nội bộ, kèm video màn hình để khách xem nếu muốn). Khách chỉ chạy những gì
 **chỉ Windows + tay SO-101 thật** chứng minh được. Không cần nhiệt kế, đồng hồ vạn năng hay máy quay tốc độ cao.
 Mỗi lỗi khách thấy thành một D-n mới (sửa → QC → UAT lại đúng bước đó, không chạy lại cả buổi trừ khi bản sửa
-chạm phần chung). Lịch ba buổi do khách xác nhận khi duyệt bộ tài liệu.
+chạm phần chung). Khách đã duyệt kế hoạch ba buổi (2026-11-17); ngày cụ thể hẹn khi bản M0 sẵn sàng.
 
 **UAT-0 · khoảng 15 phút · ngay sau M0.** Cài bản M0 (AT-1); cắm hai tay; tắt Station và LeLab; chạy
 `hibiscus-station doctor --verbose`, gửi tệp zip (AT-77); mở Feetech FD, chụp màn hình nhiệt độ / điện áp / dòng
-của một servo follower. Mục đích: đóng REG-13 / SP-1, chốt QĐ-1, lấy số đo bus của PC khách cho D-9 / NFR-2.
+của một servo follower. Mục đích: đóng REG-13 / SP-1 (servo có báo nhiệt thật không; nếu không thì áp QĐ-1 A, AT-93), lấy số đo bus của PC khách cho D-9 / NFR-2.
 Không thử tính năng.
 
 **UAT-1 · khoảng 60 – 90 phút · sau M1 (các tính năng Must).** Mười lăm bước; trong suốt buổi khách để ý số liệu
@@ -782,7 +793,7 @@ và chữ trên màn hình (AT-92).
 | 10 | Teleop, rút USB follower, cắm sang ổ USB khác, Kết nối lại | AT-18 |
 | 11 | Ghi 3 tập bằng phím → / ← / Esc; rút camera giữa một tập; bóp kẹp vào vật | AT-30, AT-44, AT-48 |
 | 12 | Nhập model zip, nạp, chạy 2 tập; Space giữa tập → Đặt lại → "Về tư thế nghỉ"; chạy lại, đóng tab giữa chừng | AT-38, AT-45, AT-59, AT-60 |
-| 13 | So nhiệt độ / điện áp / dòng với Feetech FD; nếu không đọc được nhiệt độ: hộp xác nhận và banner (QĐ-1); nếu đọc được: dừng nhiệt với ngưỡng hạ | AT-40, AT-42 hoặc AT-93 |
+| 13 | So nhiệt độ / điện áp / dòng với Feetech FD; nếu không đọc được nhiệt độ: hộp xác nhận, banner, dừng sau 10 phút khi không cầm leader (QĐ-1 A); nếu đọc được: dừng nhiệt với ngưỡng hạ | AT-40, AT-42 hoặc AT-93 |
 | 14 | Đóng cửa sổ PowerShell khi đang teleop, rồi khi đang ghi; mở lại | AT-95 |
 | 15 | Teleop 10 phút + ghi 10 tập (có thể chạy trong lúc làm bước 11); cập nhật / quay lại bằng lệnh một dòng; xem `station.log` | AT-78, AT-84, AT-89 |
 

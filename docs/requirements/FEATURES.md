@@ -1,4 +1,4 @@
-# Hibiscus Station: danh sách tính năng v0.2 (2026-11-17) · trạng thái: bản nháp (vòng 1, sau rà soát)
+# Hibiscus Station: danh sách tính năng v1.0 (2026-11-17) · trạng thái: **đã duyệt** (khách hàng duyệt ngày 2026-11-17, đường cơ sở)
 
 Đường cơ sở "như đã xây" của Station **0.2.8** (`main` `12f36da`). Mọi dòng có trạng thái
 **hiện có** (existing): tính năng đã có trong sản phẩm, v1.0 phải đưa nó lên chuẩn chất lượng
@@ -8,9 +8,13 @@
 Bản v0.2 áp dụng rà soát vòng 1 của SA ([REVIEW-SA.md](REVIEW-SA.md)) và Tech Lead
 ([REVIEW-TECHLEAD.md](REVIEW-TECHLEAD.md)). Thay đổi so với v0.1: [CHANGELOG.md](CHANGELOG.md).
 
-* **Ưu tiên**: đề xuất của BA. Q-2 (máy chủ Hibiscus = Should) và Q-3 (Chương trình = Should, tín hiệu
-  ngoài và model trong chương trình = Could) giữ như v0.1 và được duyệt cùng bộ tài liệu; nền tảng theo
-  quyết định **QĐ-2** (BRD §9), ghi theo phương án đề xuất.
+**v1.0 (2026-11-17):** khách hàng chọn QĐ-1 – QĐ-4 = A ("1. A, 2. A, 3. A, 4. A") và duyệt toàn bộ bộ tài liệu
+("Duyệt, bắt đầu làm"). Danh sách này cùng với P-1 – P-8 được đóng băng trong
+[FEATURES-APPROVED.md](FEATURES-APPROVED.md) v1.0; theo dõi trạng thái dev / QC ở đó. Cột "Trạng thái" dưới đây
+là kết quả kiểm sơ bộ vòng 1, giữ để tham khảo.
+
+* **Ưu tiên**: đã duyệt. Q-2 (máy chủ Hibiscus = Should) và Q-3 (Chương trình = Should, tín hiệu
+  ngoài và model trong chương trình = Could) duyệt cùng bộ tài liệu; nền tảng theo **QĐ-2 = A** (BRD §9).
 * **Effort** (Tech Lead, công dev để đạt zero-defect gồm sửa lỗi + tự động hoá AT + tài liệu):
   **S** ≈ 0,5 ngày, **M** ≈ 2 ngày, **L** ≈ 5 ngày. **Milestone** M0 – M3: xem [§ Mốc](#mốc-tech-lead).
 * **Trạng thái** (kiểm sơ bộ vòng 1 trên Linux, đúng wheel 0.2.8; *chưa phải kết quả QC*):
@@ -27,7 +31,7 @@ Bản v0.2 áp dụng rà soát vòng 1 của SA ([REVIEW-SA.md](REVIEW-SA.md)) 
 
 | ID | Tính năng | Giá trị cho người dùng | Nơi | Traces | Ưu tiên | Phụ thuộc | Effort | Milestone | AT | REG | Lỗi / khoảng trống đã biết | Trạng thái |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| F-1 | Cài đặt trên Windows 10/11 x64 bằng uv + wheel. **v0.2 (đề xuất P-1, quyết định QĐ-3):** **một** lệnh PowerShell chép-dán cài uv nếu thiếu và cài Station với bộ phụ thuộc cố định đã kiểm, không cần git / admin / Python có sẵn; tuỳ chọn torch CPU | Người mới cài được bằng chép-dán | CLI | BR-1, BR-15, FR-1, NFR-9, NFR-18 | Must | — | M (+ M cho P-1, SA ước, Tech Lead xác nhận vòng 2) | M1 | AT-1, AT-2 | REG-1, REG-17, REG-18, REG-19 | K-8, P-1 (môi trường cài không cố định, SA-P1), K-10 | hiện có · KHÔNG KIỂM ĐƯỢC |
+| F-1 | Cài đặt trên Windows 10/11 x64 bằng uv + wheel. **P-1, QĐ-3 = A:** **một** lệnh PowerShell chép-dán cài uv nếu thiếu và cài Station với bộ phụ thuộc cố định đã kiểm, không cần git / admin / Python có sẵn; tuỳ chọn torch CPU | Người mới cài được bằng chép-dán | CLI | BR-1, BR-15, FR-1, NFR-9, NFR-18 | Must | — | M (+ M cho P-1, SA ước; Tech Lead xác nhận, OI-1) | M0 (P-1) / M1 | AT-1, AT-2 | REG-1, REG-17, REG-18, REG-19 | K-8, P-1 (môi trường cài không cố định, SA-P1), K-10 | hiện có · KHÔNG KIỂM ĐƯỢC |
 | F-2 | Cài đặt trên Ubuntu 22.04 / 24.04 x86_64 bằng wheel, kèm unit systemd tuỳ chọn (wheel arm64: bản xem trước, W-9) | Kỹ sư Linux | CLI | BR-1, FR-2, NFR-9 | Should | — | S | M1 | AT-3 | — | — | hiện có · ĐẠT\* |
 | F-3 | Cài đặt Docker trên **Linux x86_64, image `-cpu`** (v0.2, QĐ-2; `-cuda`, Raspberry Pi 5, Jetson Orin: bản xem trước, W-9): `install.sh` (dò máy, chọn image cpu / cuda / jetson, luật udev, tự khởi động), `hibiscus-station-ctl` (status, logs, url, ports) | Máy robot không màn hình | CLI | BR-1, FR-3, NFR-9 | Could | — | M | M3 | AT-4 | — | D-18 (= K-1) | hiện có · LỖI |
 | F-4 | Khởi động `hibiscus-station`: mở trình duyệt bằng liên kết đăng nhập một lần, chỉ một phiên bản chạy (lần chạy thứ hai in liên kết của bản đang chạy), `hibiscus-station url` in lại liên kết, `--port`, `--no-browser`, `--home` | Mở được giao diện ngay | CLI, UI | BR-1, BR-5, FR-4, FR-75, NFR-5, NFR-10 | Must | F-1 hoặc F-2 | S | M1 | AT-5, AT-6, AT-87, AT-95 | — | D-3, D-4, D-19 | hiện có · LỖI |
@@ -160,7 +164,7 @@ Bản v0.2 áp dụng rà soát vòng 1 của SA ([REVIEW-SA.md](REVIEW-SA.md)) 
 
 | ID | Tính năng | Giá trị | Nơi | Traces | Ưu tiên | Phụ thuộc | Effort | Milestone | AT | REG | Lỗi / khoảng trống đã biết | Trạng thái |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| F-69 | Cập nhật bản wheel (Windows / Linux): chạy lại lệnh cài đặt với phiên bản mới; hồ sơ, hiệu chỉnh, dataset, model, quỹ đạo, chương trình giữ nguyên; quay lại bản cũ bằng cùng cách; v0.2 (P-1, QĐ-3): cùng lệnh một dòng, thêm số phiên bản để quay lại | Lên bản mới không mất gì | CLI | BR-15, FR-69 | Must | F-1 | M | M1 | AT-84 | — | K-8, D-18 (= K-6), P-1 | hiện có · KHÔNG KIỂM ĐƯỢC |
+| F-69 | Cập nhật bản wheel (Windows / Linux): chạy lại lệnh cài đặt với phiên bản mới; hồ sơ, hiệu chỉnh, dataset, model, quỹ đạo, chương trình giữ nguyên; quay lại bản cũ bằng cùng cách; P-1, QĐ-3 = A: cùng lệnh một dòng, thêm số phiên bản để quay lại | Lên bản mới không mất gì | CLI | BR-15, FR-69 | Must | F-1 | M | M1 | AT-84 | — | K-8, D-18 (= K-6), P-1 | hiện có · KHÔNG KIỂM ĐƯỢC |
 | F-70 | Docker: `hibiscus-station-ctl backup [--full]`, `restore`, `update [TAG]` (sao lưu, kéo image, khởi động lại, kiểm tra sức khoẻ, tự quay lại khi lỗi), `rollback` | Máy robot tự quản | CLI | BR-15, FR-70 | Could | F-3 | M | M3 | AT-85 | — | — | hiện có · KHÔNG KIỂM ĐƯỢC |
 | F-71 | Dữ liệu tách bạch và bền: ghi tệp nguyên tử, UTF-8, thư mục dữ liệu riêng cho demo; dataset là LeRobot nguyên bản; telemetry đi kèm nằm cạnh | Không hỏng dữ liệu | — | BR-15, FR-71, NFR-15, NFR-16 | Must | F-4 | S | M1 | AT-86 | REG-2, REG-18 | — | hiện có · ĐẠT\* |
 
@@ -171,7 +175,7 @@ Lỗi so với chuẩn chất lượng trong bản 0.2.8. Theo quy tắc zero-de
 Low) làm tính năng của nó FAIL cho tới khi sửa, có test fail-trước-pass-sau và QC chạy lại AT; chỉ khách
 hàng miễn được, bằng văn bản, theo **mã lỗi**. D-1 – D-18: Tech Lead tái hiện bằng chạy thử
 ([REVIEW-TECHLEAD.md](REVIEW-TECHLEAD.md) §4, có bước tái hiện). D-19 – D-23: SA tìm ra khi đọc mã
-([REVIEW-SA.md](REVIEW-SA.md)); QC xác nhận bằng chạy thử ở vòng 2 (D-19 chỉ xác nhận được trên Windows).
+([REVIEW-SA.md](REVIEW-SA.md)); QC xác nhận bằng chạy thử khi bắt đầu M1 (OI-2; D-19 chỉ xác nhận được trên Windows).
 
 | D | Mức | Tính năng | Yêu cầu / AT | Lỗi (tóm tắt) | Nguồn | Sửa ở mốc |
 |---|---|---|---|---|---|---|
@@ -211,22 +215,23 @@ F-31, F-33, chờ SP-1).
 **Khoảng trống quy trình (không phải lỗi của tính năng, chặn phát hành):** P-1 môi trường cài trên PC khách
 khác môi trường đã kiểm (SA-P1); CI Windows bỏ qua ≈ 16 test bus pty (SA-C1, NFR-18); không có e2e trên
 Edge / Firefox (SA-C2); gói `hibiscus` khai giấy phép "Proprietary" và 3 cảnh báo GHSA bị bỏ qua chưa có lý
-do (SA-L1, NFR-14, quyết định QĐ-4).
+do (SA-L1, NFR-14; QĐ-4 = A: Hibiscus CLI v0.1.2 Apache-2.0, phụ thuộc ngoài **EXT-1**,
+BRD §7, chặn AT-98).
 
-## Đề xuất thay đổi (P-n) · duyệt cùng bộ tài liệu
+## Đề xuất thay đổi (P-n) · đã duyệt cùng bộ tài liệu v1.0 (2026-11-17)
 
-Mỗi mục là sửa lỗi hoặc đóng gói để đạt chuẩn; không thêm màn hình hay chức năng mới. Chỉ được làm khi
-khách duyệt bộ v0.x chứa nó.
+Mỗi mục là sửa lỗi hoặc đóng gói để đạt chuẩn; không thêm màn hình hay chức năng mới. Khách đã duyệt cả tám
+mục cùng bộ v1.0.
 
 | P | Thay đổi | Lý do | Tính năng / yêu cầu | Đóng lỗi / flag | Effort |
 |---|---|---|---|---|---|
-| P-1 | Lệnh cài **một dòng** PowerShell (`install.ps1` đính kèm bản phát hành): cài uv nếu thiếu, cài Station với bộ phụ thuộc cố định từ `uv.lock` và wheel dựng sẵn của lerobot / hibiscus (không cần git); cùng lệnh để **cập nhật**, thêm số phiên bản để **quay lại** | `uv tool install <wheel>` giải lại phụ thuộc theo ngày cài và cần git: PC khách nhận thư viện khác bản QC đã kiểm | F-1, F-69, FR-1, FR-69, AT-1, AT-84 | SA-P1, Q-4, K-8 · **QĐ-3** | M (SA), Tech Lead xác nhận vòng 2 |
-| P-2 | Từ chối chạy model khi lần suy luận khởi động trên máy đó > 500 ms (½ dead-man), câu "Model quá chậm trên máy này cho an toàn dead-man. Dùng CUDA hoặc model nhỏ hơn" | Dead-man / lệnh giữ trễ bằng thời gian suy luận | F-47, F-48, NFR-4, AT-97 | D-20, SA-N3 | Tech Lead vòng 2 |
-| P-3 | Khi **không** động cơ follower nào báo nhiệt độ thật: xác nhận rõ ràng mỗi lần kết nối; phiên không có người cầm leader (chạy model, phát lại, quỹ đạo, chương trình) dừng sau 10 phút liên tục (kỹ sư đổi được); teleop / ghi không giới hạn | Bảo vệ nhiệt của Station không hoạt động trên tay của khách (0 °C); chỉ banner là chưa đủ | F-33, FR-33, NFR-6, AT-93 | SA-S1, Q-5 · **QĐ-1** | Tech Lead vòng 2 |
+| P-1 | Lệnh cài **một dòng** PowerShell (`install.ps1` đính kèm bản phát hành): cài uv nếu thiếu, cài Station với bộ phụ thuộc cố định từ `uv.lock` và wheel dựng sẵn của lerobot / hibiscus (không cần git); cùng lệnh để **cập nhật**, thêm số phiên bản để **quay lại** | `uv tool install <wheel>` giải lại phụ thuộc theo ngày cài và cần git: PC khách nhận thư viện khác bản QC đã kiểm | F-1, F-69, FR-1, FR-69, AT-1, AT-84 | SA-P1, Q-4, K-8 · **QĐ-3 = A** | M (SA), Tech Lead xác nhận (OI-1) |
+| P-2 | Từ chối chạy model khi lần suy luận khởi động trên máy đó > 500 ms (½ dead-man), câu "Model quá chậm trên máy này cho an toàn dead-man. Dùng CUDA hoặc model nhỏ hơn" | Dead-man / lệnh giữ trễ bằng thời gian suy luận | F-47, F-48, NFR-4, AT-97 | D-20, SA-N3 | Tech Lead ước khi bắt đầu M0 (OI-1) |
+| P-3 | Khi **không** động cơ follower nào báo nhiệt độ thật: xác nhận rõ ràng mỗi lần kết nối; phiên không có người cầm leader (chạy model, phát lại, quỹ đạo, chương trình) dừng sau 10 phút liên tục (kỹ sư đổi được); teleop / ghi không giới hạn | Bảo vệ nhiệt của Station không hoạt động trên tay của khách (0 °C); chỉ banner là chưa đủ | F-33, FR-33, NFR-6, AT-93 | SA-S1, Q-5 · **QĐ-1 = A** | Tech Lead ước khi bắt đầu M0 (OI-1) |
 | P-4 | Chế độ demo: tay leader giả đứng theo follower khi bắt đầu phiên và khi Kiểm tra | Demo phải chạy ổn định cho người mới | F-5, FR-5, AT-7 | D-8, FL-10 | trong F-5 (M) |
 | P-5 | Người dùng chỉ thấy câu dịch theo `code`; lý do thô của Station nằm trong mục "Chi tiết kỹ thuật" thu gọn (cho kỹ sư) và trong log / `doctor` | "Lý do chính xác của Station" mâu thuẫn với "không chữ máy / tiếng Anh" | F-7, FR-7, FR-73, AT-10 | D-5, FL-1 | trong F-7 (S) |
-| P-6 | Windows: bắt sự kiện đóng cửa sổ / đăng xuất / tắt máy, chạy đường dừng rút gọn ≤ 4 s (e-stop giữ → tắt mô-men theo hồ sơ, bỏ bước về nghỉ → `finalize` dataset nếu kịp) | Người mới hay đóng cửa sổ; hôm nay tay giữ mô-men, tập ghi dở có thể hỏng | F-4, FR-75, AT-95 | D-19, SA-W3 | Tech Lead vòng 2 (SP-7) |
-| P-7 | Linux: trước khi mở cổng, kiểm tiến trình khác đang giữ (như `doctor` đã làm) → `port_busy` nêu tên tiến trình | Tránh hai chương trình cùng lái bus | F-12, FR-12, AT-96 | D-22, SA-F2 | Tech Lead vòng 2 (SP-5) |
+| P-6 | Windows: bắt sự kiện đóng cửa sổ / đăng xuất / tắt máy, chạy đường dừng rút gọn ≤ 4 s (e-stop giữ → tắt mô-men theo hồ sơ, bỏ bước về nghỉ → `finalize` dataset nếu kịp) | Người mới hay đóng cửa sổ; hôm nay tay giữ mô-men, tập ghi dở có thể hỏng | F-4, FR-75, AT-95 | D-19, SA-W3 | Tech Lead ước khi bắt đầu M0 (OI-1; SP-7) |
+| P-7 | Linux: trước khi mở cổng, kiểm tiến trình khác đang giữ (như `doctor` đã làm) → `port_busy` nêu tên tiến trình | Tránh hai chương trình cùng lái bus | F-12, FR-12, AT-96 | D-22, SA-F2 | Tech Lead ước khi bắt đầu M0 (OI-1; SP-5) |
 | P-8 | Nếu SP-1 không xác nhận được đơn vị dòng của STS3215: hiện dòng là "—" ở mọi nơi và bỏ dòng "giới hạn dòng X A" khỏi ngăn chi tiết (ghi trong ghi chú phát hành) | Không hiện số chưa chắc đúng | F-31, FR-31, NFR-13, AT-40 | SA-N4 | S |
 
 ## Mốc (Tech Lead)
@@ -237,13 +242,13 @@ thúc bằng QC trên đúng bản cài của mốc.
 | Mốc | Nội dung | Effort dev (Tech Lead) | Kết thúc khi |
 |---|---|---|---|
 | **M0 · Nền kiểm** (tuần 1) | D-1 (e2e xanh); CI xanh Linux / Windows / macOS; ma trận ảnh Playwright × sáng / tối × 1280 / 390 + axe tự động (FL-7); `doctor` đọc dòng / tải + dump thô (K-11, D-15, ✚ D-21, ✚ SP-1); chạy thử phát hành nháp (FL-12); ✚ SP-2 (cổng COM ảo trên CI Windows); ✚ SP-3 + P-1 (cài trên Windows sạch không git) | 10 ngày (+ ✚ chưa ước) | Khách nhận bản `doctor` mới → **UAT-0** |
-| **M1 · Must** | 44 tính năng Must: D-2 – D-14, D-16 – D-18, K-2 – K-5, K-8, D-9 (sau số đo UAT-0), REG-13 + QĐ-1; ✚ D-19 / P-6, D-20 / P-2, D-22 / P-7, D-23, P-3, P-8 | 48 ngày (+ ✚ chưa ước) | QC nội bộ PASS mọi phần [Vendor] của Must → **UAT-1** |
-| **M2 · Should** | Máy chủ Hibiscus (F-41 – F-44), Chương trình (F-52 – F-58, F-61, F-62), Phiên, Bộ dữ liệu nâng cao, phát lại, F-2 | 17 ngày | QC PASS → **UAT-2** |
+| **M1 · Must** | 43 tính năng Must (F-63 ở M0) cùng 3 Should có mốc M1 (F-2, F-18, F-26): D-2 – D-14, D-16 – D-18, K-2 – K-5, K-8, D-9 (sau số đo UAT-0), REG-13 + QĐ-1; ✚ D-19 / P-6, D-20 / P-2, D-22 / P-7, D-23, P-3, P-8 | 48 ngày (+ ✚ chưa ước) | QC nội bộ PASS mọi phần [Vendor] của Must → **UAT-1** |
+| **M2 · Should** | 19 tính năng Should: máy chủ Hibiscus (F-41 – F-44), Chương trình (F-52 – F-58, F-61, F-62), Phiên (F-37), Bộ dữ liệu nâng cao (F-39), phát lại (F-27), model nâng cao (F-49 – F-51) | 17 ngày | QC PASS → **UAT-2** |
 | **M3 · Could** | Docker x86_64 `-cpu` (F-3, F-70), LAN (phần LAN của F-6), tín hiệu ngoài (F-59), model trong chương trình (F-60), `health` (F-65) | 7 ngày | Đạt thì vào v1.0; không đạt thì ra khỏi v1.0, không chặn |
 
 **Tổng đã ước: ≈ 82 ngày công dev** (48 S + 21 M + 2 L = 76 theo tính năng, + 6 cho nền kiểm), chưa tính QC
 (~30 %) và chờ UAT; với 3 dev song song ≈ 6 – 7 tuần lịch. Các mục ✚ (P-1 – P-3, P-6, P-7, SP-1 – SP-3, SP-7)
-Tech Lead ước ở vòng 2. Phát hành v1.0 = M0 + M1 + M2 đạt (M3 nếu đạt). Đường găng: báo cáo `doctor` của
+Tech Lead ước khi bắt đầu M0 (OI-1). Phát hành v1.0 = M0 + M1 + M2 đạt (M3 nếu đạt). Đường găng: báo cáo `doctor` của
 khách ở UAT-0 (REG-13, F-31, F-33, QĐ-1) và số đo adapter (D-9, F-24).
 
 ## Ma trận truy vết
@@ -293,7 +298,7 @@ Kiểm tra: 71 / 71 tính năng có ≥ 1 AT; 16 / 16 BR trong phạm vi có ≥
 | W-6 | Thông báo "có bản mới" / cập nhật trong ứng dụng | Không phải tính năng hiện có; cập nhật bằng lệnh một dòng (P-1) | Đề xuất CR |
 | W-7 | Đẩy lên HF Hub, sửa / gộp dataset | Máy chủ đã có | — |
 | W-8 | Suy luận ONNX / bất đồng bộ / từ xa | Phạm vi | — |
-| W-9 | **Nền tảng bản xem trước** (theo QĐ-2): macOS, wheel Linux arm64, Docker `-cuda`, Raspberry Pi 5, Jetson Orin | Nhà cung cấp không có máy để kiểm; chuẩn chất lượng không cho nghiệm thu nền tảng chưa kiểm. Vẫn cài được, README / ghi chú phát hành / `install.sh` ghi "bản xem trước, không thuộc nghiệm thu v1.0" kèm lỗi đã biết; lỗi ở đó không tính là lỗi của v1.0 | Nghiệm thu khi có máy (CR) |
+| W-9 | **Nền tảng bản xem trước** (QĐ-2 = A): macOS, wheel Linux arm64, Docker `-cuda`, Raspberry Pi 5, Jetson Orin | Nhà cung cấp không có máy để kiểm; chuẩn chất lượng không cho nghiệm thu nền tảng chưa kiểm. Vẫn cài được, README / ghi chú phát hành / `install.sh` ghi "bản xem trước, không thuộc nghiệm thu v1.0" kèm lỗi đã biết; lỗi ở đó không tính là lỗi của v1.0 | Nghiệm thu khi có máy (CR) |
 | W-10 | Nút "Tạo báo cáo chẩn đoán" trong Cài đặt (thay lệnh `doctor`) | FL-5; v1.0 giữ lệnh chép-dán | Đề xuất CR |
 | W-11 | Phím dừng toàn cục / nút dừng USB (khi cửa sổ Station không được chọn) | SA-S2; v1.0: hướng dẫn nói rõ Space chỉ có tác dụng khi cửa sổ Station đang được chọn, khuyến nghị công tắc ngắt nguồn follower | Đề xuất CR |
 | W-12 | Nhận diện camera theo đường dẫn thiết bị trên Windows (thay số 0, 1, 2…) | SA-W4; v1.0: hướng dẫn và UAT có bước "Thử từng camera" sau khi cắm lại | Đề xuất CR |

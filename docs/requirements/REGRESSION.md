@@ -1,4 +1,4 @@
-# Hibiscus Station: danh sách hồi quy v0.2 (2026-11-17) · trạng thái: bản nháp (vòng 1, sau rà soát SA + Tech Lead)
+# Hibiscus Station: danh sách hồi quy v1.0 (2026-11-17) · trạng thái: **đã duyệt** (khách hàng duyệt ngày 2026-11-17, đường cơ sở)
 
 Mỗi mục REG-n là một lỗi hiện trường đã xảy ra (người dùng Windows của khách hàng với tay SO-101
 thật, bản 0.2.1 – 0.2.8) hoặc một lỗi đã sửa ghi trong `CHANGELOG.md` của sản phẩm. Theo chuẩn
@@ -60,7 +60,7 @@ không đạt là một lỗi mở và chặn phát hành của tính năng liê
   kết nối; teleop 5 phút.
 * **Kỳ vọng:** không cảnh báo nhiệt, không dừng; ô nhiệt hiện "—" (không rõ) có giải thích; ngưỡng
   vẫn là 50 / 60 / 65 °C; khi không động cơ nào báo nhiệt thật → cảnh báo "Không đọc được thông số
-  động cơ" (không phải quá nhiệt) — hành vi chạy theo quyết định QĐ-1 (AT-93).
+  động cơ" (không phải quá nhiệt) — hành vi chạy theo QĐ-1 = A (AT-93).
 * **Test tự động:** `tests/test_units.py`, `tests/test_field_028.py`. **Nền tảng:** [Vendor] giả lập;
   [UAT-KH] tay của khách (đang báo 0 °C).
 
@@ -150,10 +150,10 @@ không đạt là một lỗi mở và chặn phát hành của tính năng liê
   (hai tay cắm, Station và LeLab đã tắt), kèm ảnh chụp công cụ Feetech FD trên cùng servo (đối chứng độc lập
   với lerobot / rustypot).
 * **Hạn:** nếu 1 tuần sau ngày hẹn UAT-0 vẫn chưa có dữ liệu: đóng với kết luận "servo không báo nhiệt (chưa
-  rõ vì sao)" và áp hành vi QĐ-1 (BRD G-4).
+  rõ vì sao)" và áp hành vi QĐ-1 = A (BRD G-4).
 * **Kỳ vọng để đóng:** (1) nguyên nhân được xác định và ghi lại (firmware / thanh ghi / đơn vị / phần
   cứng); (2) nếu là lỗi của Station: sửa, Station hiện đúng nhiệt độ và dòng của tay khách (NFR-13); nếu
-  là đặc tính của servo: Station hiện "không rõ" (đã có) và hành vi chạy theo QĐ-1 (AT-93), kèm lời giải thích
+  là đặc tính của servo: Station hiện "không rõ" (đã có) và hành vi chạy theo QĐ-1 = A (AT-93), kèm lời giải thích
   cho người dùng; (3) mục HIL "đơn vị dòng 6,5 mA/bước" và "bố cục bit Status" được xác nhận hoặc sửa.
 * **Nền tảng:** [UAT-KH] (chỉ tay của khách tái hiện được).
 
