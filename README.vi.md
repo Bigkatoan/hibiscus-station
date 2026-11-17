@@ -80,10 +80,10 @@ less install.sh && bash install.sh
 
 | Máy của bạn | `install.sh` chọn | Danh sách kiểm tra lần đầu |
 |---|---|---|
-| PC / mini PC x86_64 | `ghcr.io/bigkatoan/hibiscus-station:0.2.1-cpu` | - |
-| x86_64 + GPU NVIDIA | `…:0.2.1-cuda` (cần NVIDIA Container Toolkit) | - |
-| Jetson Orin, JetPack 6 | `…:0.2.1-jetson` (runtime NVIDIA) | [first-boot-jetson.md](docs/first-boot-jetson.md) |
-| Raspberry Pi 5 | `…:0.2.1-cpu` (arm64) | [first-boot-pi5.md](docs/first-boot-pi5.md) |
+| PC / mini PC x86_64 | `ghcr.io/bigkatoan/hibiscus-station:0.2.8-cpu` | - |
+| x86_64 + GPU NVIDIA | `…:0.2.8-cuda` (cần NVIDIA Container Toolkit) | - |
+| Jetson Orin, JetPack 6 | `…:0.2.8-jetson` (runtime NVIDIA) | [first-boot-jetson.md](docs/first-boot-jetson.md) |
+| Raspberry Pi 5 | `…:0.2.8-cpu` (arm64) | [first-boot-pi5.md](docs/first-boot-pi5.md) |
 
 Sau đó mở đường link được in ra trên chính máy đó (`hibiscus-station-ctl url` in lại link). Từ
 laptop: `ssh -N -L 18210:127.0.0.1:18210 ban@may-robot` rồi mở cùng link đó. Station chỉ nghe trên
@@ -102,14 +102,24 @@ File dịch vụ systemd cho cách cài này nằm ở [deploy/systemd/](deploy/
 
 ### Windows 10/11
 
-Trong PowerShell (x64, không cần quyền admin):
+Mở PowerShell (x64, không cần quyền admin, không cần cài git hay Python) và dán **một** dòng:
 
 ```powershell
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"   # cài uv, một lần
-uv tool install --python 3.12 https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.8/hibiscus_station-0.2.8-py3-none-any.whl
-# không có GPU NVIDIA: thêm --torch-backend cpu
+irm https://github.com/Bigkatoan/hibiscus-station/releases/latest/download/install.ps1 | iex
+```
+
+Lệnh này cài uv (kiểm tra SHA-256), Python 3.12 và Station với đúng bộ thư viện đã kiểm thử cho bản
+phát hành đó (PyTorch CPU). **Cập nhật**: chạy lại đúng dòng đó. **Quay lại** một phiên bản: cùng dòng
+với liên kết của bản đó, ví dụ
+`irm https://github.com/Bigkatoan/hibiscus-station/releases/download/vX.Y.Z/install.ps1 | iex`.
+Bản thử nghiệm (pre-release, ví dụ 1.0.0a1) chỉ cài được bằng liên kết có số phiên bản:
+`.../releases/download/v1.0.0a1/install.ps1`. Hồ sơ, hiệu chỉnh, dữ liệu và model được giữ nguyên.
+Sau đó, trong một cửa sổ PowerShell mới:
+
+```powershell
 hibiscus-station --mock          # thử khi chưa có robot
 hibiscus-station                 # khi đã cắm tay robot; trình duyệt tự mở
+hibiscus-station doctor          # gặp lỗi? tạo tệp zip báo cáo để gửi cho chúng tôi
 ```
 
 * **Tắt LeLab (và mọi script lerobot) trước.** Trên Windows mỗi cổng COM và mỗi camera chỉ có một
@@ -131,7 +141,7 @@ Dùng hằng ngày với Docker:
 ```bash
 hibiscus-station-ctl status | logs -f | url | ports
 hibiscus-station-ctl backup                 # hồ sơ, hiệu chỉnh, quỹ đạo, chương trình, bộ nhận diện
-hibiscus-station-ctl update 0.2.1-cpu       # sao lưu, kéo image, khởi động lại, kiểm tra, tự quay lại nếu lỗi
+hibiscus-station-ctl update 0.2.8-cpu       # sao lưu, kéo image, khởi động lại, kiểm tra, tự quay lại nếu lỗi
 hibiscus-station-ctl rollback
 ```
 

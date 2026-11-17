@@ -1,5 +1,6 @@
 # Hibiscus Station CI. Every job is also runnable locally through the Makefile (`make check`,
-# `make e2e`, `make shellcheck`, `make image`). No GPU and no robot here: the tests use the mocks.
+# `make e2e`, `make shellcheck`, `make image`) or tools/release/dry_run.sh (release assets and the
+# install). No GPU and no robot here: the tests use the mocks.
 name: ci
 
 on:
@@ -25,11 +26,23 @@ env:
 
 jobs:
   python:
-    name: python (ruff, mypy, pytest)
-    runs-on: ubuntu-24.04
+    # NFR-18 / AT-2: the full non-hardware suite on the three platforms, for the exact commit. Every
+    # SKIPPED test must be in tools/ci/allowed-skips.toml for that platform (check_skips.py).
+    name: python (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-24.04, platform: linux}
+          - {os: windows-latest, platform: windows}
+          - {os: macos-latest, platform: macos}
+    defaults:
+      run: {shell: bash}
     steps:
       - uses: actions/checkout@v7.0.1
       - name: Free disk space (torch / LeRobot wheels)
+        if: runner.os == 'Linux'
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
           df -h /
@@ -41,16 +54,29 @@ jobs:
       - name: Sync
         run: uv lock --check && uv sync --locked --python "$PYTHON_VERSION"
       - name: Ruff
+        if: runner.os == 'Linux'
         run: uv run ruff check . && uv run ruff format --check .
-      - name: Mypy (strict; Linux, plus the Windows and macOS branches)
+      - name: Mypy (strict; Linux, plus the Windows and macOS branches; release tools)
+        if: runner.os == 'Linux'
         run: |
           uv run mypy --strict hibiscus_station
           uv run mypy --strict --platform win32 hibiscus_station
           uv run mypy --strict --platform darwin hibiscus_station
+          uv run mypy --strict tools/release tools/ci
+      - name: One version everywhere (FR-76)
+        if: runner.os == 'Linux'
+        run: uv run python tools/release/check_versions.py
       - name: Tests (mock hardware, CPU)
-        run: uv run pytest -q
+        run: uv run pytest -q -ra --junitxml=pytest-junit.xml
+      - name: Skipped tests are in the published list (NFR-18)
+        if: ${{ !cancelled() && hashFiles('pytest-junit.xml') != '' }}
+        run: uv run python tools/ci/check_skips.py --platform "${{ matrix.platform }}" pytest-junit.xml
       - name: openapi.json up to date
-        run: uv run hibiscus-station openapi /tmp/station-openapi.json && diff -u openapi.json /tmp/station-openapi.json
+        if: runner.os == 'Linux'
+        run: uv run hibiscus-station openapi "$RUNNER_TEMP/station-openapi.json" && diff -u openapi.json "$RUNNER_TEMP/station-openapi.json"
+      - uses: actions/upload-artifact@v5
+        if: ${{ !cancelled() }}
+        with: {name: "pytest-${{ matrix.platform }}", path: pytest-junit.xml, retention-days: 30, if-no-files-found: ignore}
 
   web:
     name: web (eslint, prettier, tsc, vitest, build + CSP check)
@@ -79,12 +105,68 @@ jobs:
         with: {name: web-dist, path: web/dist, retention-days: 7}
 
   e2e:
-    name: e2e (Playwright, hibiscus-station --mock)
+    # D-1 / FL-7 / BR-1: the built UI against a real `hibiscus-station --mock` in Chromium. Linux runs
+    # the whole suite (novice flows in vi and en, the STS3215-emulator flow, the screen matrix with
+    # scroll + axe checks); windows-latest runs the novice flows (the emulator needs pseudo-terminals,
+    # listed in tools/ci/allowed-skips.toml; the matrix baseline is Linux fonts). A missing browser,
+    # UI build or axe-core fails the job instead of skipping (HIBISCUS_E2E_REQUIRED=1).
+    name: e2e (${{ matrix.platform }}, Playwright, hibiscus-station --mock)
+    runs-on: ${{ matrix.os }}
+    needs: [web]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-24.04, platform: linux, tests: tests/e2e, browser: "--with-deps chromium"}
+          - {os: windows-latest, platform: windows, tests: tests/e2e/test_station_ui.py, browser: chromium}
+    defaults:
+      run: {shell: bash}
+    env:
+      HIBISCUS_E2E_REQUIRED: "1"
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Free disk space (torch / LeRobot wheels)
+        if: runner.os == 'Linux'
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+      - uses: actions/download-artifact@v6
+        with: {name: web-dist, path: web/dist}
+      - uses: pnpm/action-setup@v6.1.1
+        with: {version: "${{ env.PNPM_VERSION }}"}
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: "${{ env.NODE_VERSION }}"
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - name: axe-core for the screen matrix (web/node_modules)
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          version: "${{ env.UV_VERSION }}"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - run: uv sync --locked --python "$PYTHON_VERSION" && uv run playwright install ${{ matrix.browser }}
+      - run: uv run pytest -q -ra "${{ matrix.tests }}" -m e2e --junitxml=e2e-junit.xml
+      - name: Skipped e2e tests are in the published list (D-1, NFR-18)
+        if: ${{ !cancelled() && hashFiles('e2e-junit.xml') != '' }}
+        run: uv run python tools/ci/check_skips.py --platform "${{ matrix.platform }}" e2e-junit.xml
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with: {name: "e2e-screenshots-${{ matrix.platform }}", path: screenshots/e2e, retention-days: 7, if-no-files-found: ignore}
+
+  release-assets:
+    # ADR-13 / FL-12 / SP-3 on Linux: build the release assets (wheel, constraints.txt, overrides.txt,
+    # lerobot + hibiscus wheels, install.ps1, SHA256SUMS), check them, install them with the real
+    # install.ps1 in a PowerShell container with no git into an empty home, compare the installed
+    # libraries with uv.lock and smoke-launch --mock. Same script as a local dry run.
+    name: release assets (build, verify, install.ps1 dry run without git)
     runs-on: ubuntu-24.04
     needs: [web]
     steps:
       - uses: actions/checkout@v7.0.1
-      - name: Free disk space (torch / LeRobot wheels)
+      - name: Free disk space (torch / LeRobot wheels, twice)
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
           df -h /
@@ -95,60 +177,54 @@ jobs:
           version: "${{ env.UV_VERSION }}"
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-      - run: uv sync --locked --python "$PYTHON_VERSION" && uv run playwright install --with-deps chromium
-      - run: uv run pytest -q tests/e2e -m e2e
+      - name: tools/release/dry_run.sh
+        run: tools/release/dry_run.sh --out "$RUNNER_TEMP/release" --port 18210
       - uses: actions/upload-artifact@v5
-        if: always()
-        with: {name: e2e-screenshots, path: screenshots/e2e, retention-days: 7, if-no-files-found: ignore}
+        with: {name: release-assets, path: "${{ runner.temp }}/release", retention-days: 7}
 
-  wheel:
-    name: wheel (build, install, smoke)
-    runs-on: ubuntu-24.04
-    needs: [web]
-    steps:
-      - uses: actions/checkout@v7.0.1
-      - uses: actions/download-artifact@v6
-        with: {name: web-dist, path: web/dist}
-      - uses: astral-sh/setup-uv@v10.3.3
-        with: {version: "${{ env.UV_VERSION }}"}
-      - run: uv build --out-dir dist
-      - name: uv tool install (CPU torch) and serve the UI in mock mode
-        run: |
-          uv tool install --python "$PYTHON_VERSION" --torch-backend cpu dist/*.whl
-          hibiscus-station --version
-          hibiscus-station --mock --no-browser --port 18210 --home "$RUNNER_TEMP/station" &
-          for _ in $(seq 60); do hibiscus-station health --home "$RUNNER_TEMP/station" && break; sleep 2; done
-          curl -fsS http://127.0.0.1:18210/ | grep -q "<title>Hibiscus Station</title>"
-          kill %1
-      - uses: actions/upload-artifact@v5
-        with: {name: dist, path: dist, retention-days: 7}
-
-  windows:
-    name: windows (pytest, wheel build, uv tool install smoke)
+  windows-install:
+    # P-1 / AT-1 [Vendor] approximated on windows-latest: Windows PowerShell 5.1 runs install.ps1
+    # with git removed from PATH (uv downloaded and checked by the script itself), then the
+    # installed libraries are compared with uv.lock and Station is smoke-launched. A clean Windows 11
+    # VM without git (SP-3) stays a QC step: the runner image has Python, git and VC++ preinstalled.
+    name: windows (install.ps1 without git, libraries == uv.lock, --mock smoke)
     runs-on: windows-latest
-    needs: [web]
-    defaults:
-      run: {shell: pwsh}
+    needs: [release-assets]
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/download-artifact@v6
-        with: {name: web-dist, path: web/dist}
+        with: {name: release-assets, path: release}
+      - name: install.ps1 (Windows PowerShell 5.1, no git on PATH)
+        shell: powershell
+        run: |
+          $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -and -not (Test-Path (Join-Path $_ 'git.exe')) }) -join ';'
+          if (Get-Command git -ErrorAction SilentlyContinue) { Write-Error "git is still on PATH"; exit 1 }
+          $env:HIBISCUS_STATION_BASE_URL = (Resolve-Path release).Path
+          Get-Content -Raw release\install.ps1 | Invoke-Expression
+          # where the script's own uv put the tool (read by the next steps)
+          $uv = Join-Path $env:LOCALAPPDATA "HibiscusStation\uv-$env:UV_VERSION\uv.exe"
+          [IO.File]::AppendAllText($env:GITHUB_ENV, "STATION_TOOL_DIR=$(& $uv --no-config tool dir)`n")
+          [IO.File]::AppendAllText($env:GITHUB_ENV, "STATION_TOOL_BIN=$(& $uv --no-config tool dir --bin)`n")
       - uses: astral-sh/setup-uv@v10.3.3
         with:
           version: "${{ env.UV_VERSION }}"
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-      - name: Sync
-        run: uv sync --locked --python "$env:PYTHON_VERSION"
-      - name: Tests (mock hardware, CPU)
-        run: uv run pytest -q -ra
-      - name: Build the wheel (UI included)
-        run: uv build --out-dir dist
-      - name: uv tool install (CPU torch) and serve the UI in mock mode
+      - name: Installed libraries == uv.lock (AT-1 step 3)
+        shell: pwsh
         run: |
-          $wheel = (Get-Item dist\*.whl).FullName
-          uv tool install --python "$env:PYTHON_VERSION" --torch-backend cpu "$wheel"
-          $env:PATH = "$(uv tool dir --bin);$env:PATH"
+          $env:UV_PROJECT_ENVIRONMENT = Join-Path $env:RUNNER_TEMP "ref-venv"
+          uv sync --locked --no-dev --no-install-project --python "$env:PYTHON_VERSION" -q
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          $ref = Join-Path $env:UV_PROJECT_ENVIRONMENT "Scripts\python.exe"
+          $tool = Join-Path $env:STATION_TOOL_DIR "hibiscus-station\Scripts\python.exe"
+          $version = (Select-String -Path hibiscus_station\__init__.py -Pattern '^__version__ = "(.+)"$').Matches[0].Groups[1].Value
+          & $ref tools\release\compare_envs.py $tool $ref $version
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: Serve the UI in mock mode (health, index, JS MIME type, login link)
+        shell: pwsh
+        run: |
+          $env:PATH = "$env:STATION_TOOL_BIN;$env:PATH"
           hibiscus-station --version
           if ($LASTEXITCODE -ne 0) { exit 1 }
           if (-not (hibiscus-station --help | Out-String).Contains("COM3")) { Write-Error "--help: no COM ports"; exit 1 }
@@ -175,26 +251,23 @@ jobs:
           hibiscus-station url --home "$home_" | Select-String "auth\?t="
           Stop-Process -Id $proc.Id -Force
           Get-Content $out, $err -ErrorAction SilentlyContinue
-      - uses: actions/upload-artifact@v5
-        with: {name: dist-windows, path: dist, retention-days: 7}
 
-  macos:
-    name: macos (uv tool install smoke)
+  macos-install:
+    # macOS is a preview platform (decision 2 = A): the same assets, installed by the bash path of
+    # the dry run (git hidden), libraries == uv.lock, --mock smoke.
+    name: macos (preview; release assets install, libraries == uv.lock, --mock smoke)
     runs-on: macos-latest
-    needs: [wheel]
+    needs: [release-assets]
     steps:
+      - uses: actions/checkout@v7.0.1
       - uses: actions/download-artifact@v6
-        with: {name: dist, path: dist}
+        with: {name: release-assets, path: release}
       - uses: astral-sh/setup-uv@v10.3.3
-        with: {version: "${{ env.UV_VERSION }}"}
-      - name: uv tool install (CPU torch) and serve the UI in mock mode
-        run: |
-          uv tool install --python "$PYTHON_VERSION" --torch-backend cpu dist/*.whl
-          hibiscus-station --version
-          hibiscus-station --mock --no-browser --port 18210 --home "$RUNNER_TEMP/station" &
-          for _ in $(seq 90); do hibiscus-station health --home "$RUNNER_TEMP/station" && break; sleep 2; done
-          curl -fsS http://127.0.0.1:18210/ | grep -q "<title>Hibiscus Station</title>"
-          kill %1
+        with:
+          version: "${{ env.UV_VERSION }}"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - run: tools/release/dry_run.sh --no-docker --assets release --port 18210
 
   deploy-lint:
     name: deploy (shellcheck, hadolint, compose, actionlint)
@@ -202,7 +275,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
       - name: shellcheck
-        run: make shellcheck
+        run: |
+          make shellcheck
+          docker run --rm -v "$PWD":/mnt -w /mnt koalaman/shellcheck:v0.11.0 -x -S style tools/release/dry_run.sh
       - name: hadolint
         run: |
           for f in docker/Dockerfile docker/Dockerfile.jetson; do

@@ -79,10 +79,10 @@ less install.sh && bash install.sh
 
 | Your machine | What `install.sh` picks | First-boot checklist |
 |---|---|---|
-| x86_64 PC / mini PC | `ghcr.io/bigkatoan/hibiscus-station:0.2.1-cpu` | - |
-| x86_64 + NVIDIA GPU | `…:0.2.1-cuda` (needs the NVIDIA Container Toolkit) | - |
-| Jetson Orin, JetPack 6 | `…:0.2.1-jetson` (NVIDIA runtime) | [first-boot-jetson.md](docs/first-boot-jetson.md) |
-| Raspberry Pi 5 | `…:0.2.1-cpu` (arm64) | [first-boot-pi5.md](docs/first-boot-pi5.md) |
+| x86_64 PC / mini PC | `ghcr.io/bigkatoan/hibiscus-station:0.2.8-cpu` | - |
+| x86_64 + NVIDIA GPU | `…:0.2.8-cuda` (needs the NVIDIA Container Toolkit) | - |
+| Jetson Orin, JetPack 6 | `…:0.2.8-jetson` (NVIDIA runtime) | [first-boot-jetson.md](docs/first-boot-jetson.md) |
+| Raspberry Pi 5 | `…:0.2.8-cpu` (arm64) | [first-boot-pi5.md](docs/first-boot-pi5.md) |
 
 Then open the printed link on that machine (`hibiscus-station-ctl url` prints it again). From a
 laptop: `ssh -N -L 18210:127.0.0.1:18210 you@robot-pc` and open the same link. Station listens on
@@ -102,12 +102,21 @@ A systemd user unit for this install is in [deploy/systemd/](deploy/systemd/hibi
 
 ### Windows 10/11
 
-In PowerShell (x64, no admin rights needed):
+Open PowerShell (x64, no admin rights, no git or Python needed) and paste **one** line:
 
 ```powershell
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"   # uv, once
-uv tool install --python 3.12 https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.8/hibiscus_station-0.2.8-py3-none-any.whl
-# no NVIDIA GPU: add --torch-backend cpu
+irm https://github.com/Bigkatoan/hibiscus-station/releases/latest/download/install.ps1 | iex
+```
+
+It installs uv (checked by SHA-256), Python 3.12 and Station with exactly the libraries tested for
+that release (CPU PyTorch). **Update**: run the same line again. **Go back** to a version: the same
+line with that release's link, e.g.
+`irm https://github.com/Bigkatoan/hibiscus-station/releases/download/vX.Y.Z/install.ps1 | iex`.
+A test build (pre-release, e.g. 1.0.0a1) is only reachable by its versioned link:
+`.../releases/download/v1.0.0a1/install.ps1`. Profiles, calibration, datasets and models are kept.
+Then, in a new PowerShell window:
+
+```powershell
 hibiscus-station --mock          # demo without hardware (simulated arms, data in ~/.hibiscus/station-demo)
 hibiscus-station                 # with the arms plugged in; the browser opens by itself
 hibiscus-station doctor          # something wrong? writes a report zip to send us
@@ -132,7 +141,7 @@ Day to day with Docker:
 ```bash
 hibiscus-station-ctl status | logs -f | url | ports
 hibiscus-station-ctl backup                 # profiles, calibration, trajectories, programs, detectors
-hibiscus-station-ctl update 0.2.1-cpu       # backup, pull, restart, health check, auto-rollback
+hibiscus-station-ctl update 0.2.8-cpu       # backup, pull, restart, health check, auto-rollback
 hibiscus-station-ctl rollback
 ```
 
