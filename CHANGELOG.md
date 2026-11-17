@@ -65,6 +65,18 @@ Field report on 0.2.8 (Windows, real SO-101, 2026-11-17) and the customer's deci
 - **A finished program run keeps its time** (it kept counting: "360.7 s" for a 3.3 s run).
 - Wording: the Vietnamese leader tooltip reads naturally; "2 cameras", "1 episode · 2 alerts"
   (was "camera(s)", "episode(s)", "alert(s)").
+- **No English server text under a translated banner.** The dead-man stop printed "no heartbeat
+  from the UI for 1.0 s" under the Vietnamese banner and on the locked steps. Station's own lines
+  (dead-man stop, hot motor, motor fault bits, low voltage, missing or refused calibration) now read
+  in your language; any other server line (an error's detail, an OS error, a program fault) sits
+  behind a closed "Technical details" / "Chi tiết kỹ thuật".
+- **No console 404 after a recording that kept no episode** (the page asked again for the dataset
+  Station had just removed).
+- **Sizes in MB / GB.** The Record form said "0.00 GiB in total" for a short recording; it now says
+  "about 3 MB in total". Dataset, model and upload sizes use decimal kB / MB / GB, and decimals
+  follow the language ("1,5" in Vietnamese).
+- Counts: "1 step" in a program run, "1 sample" in a trajectory take, "1 frame" (were "1 steps",
+  "1 samples", "1 frames"); speed hints read "°/s".
 
 ### Changed
 - **Stop holds the arm where it is (CR-1).** Pressing Stop in teleop, record, replay, run model,
