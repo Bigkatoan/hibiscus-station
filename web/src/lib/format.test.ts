@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { alignSeries, appendPoint, lastFinite, smooth } from "@/components/charts/series";
 import {
   formatBytes,
+  formatSize,
   formatDuration,
   formatInt,
   formatNumber,
@@ -10,6 +11,25 @@ import {
   formatRelative,
   shortId,
 } from "./format";
+
+describe("formatSize: human sizes, never 0.00 (QC 0.2.9 QD-21)", () => {
+  it("uses kB / MB / GB with one decimal under 10, none above", () => {
+    expect(formatSize(0)).toBe("0 B");
+    expect(formatSize(512)).toBe("512 B");
+    expect(formatSize(3.04e6)).toBe("3 MB");
+    expect(formatSize(3.4e6)).toBe("3.4 MB");
+    expect(formatSize(12.4e6)).toBe("12 MB");
+    expect(formatSize(999.7e3)).toBe("1 MB");
+    expect(formatSize(1.5e9)).toBe("1.5 GB");
+    expect(formatSize(250e9)).toBe("250 GB");
+    expect(formatSize(3.4e6, "vi")).toBe("3,4 MB");
+    expect(formatSize(null)).toBe("—");
+    expect(formatSize(Number.NaN)).toBe("—");
+  });
+  it("never prints a zero for a size that is not zero", () => {
+    for (const b of [1, 999, 1001, 4.9e6, 9.99e6, 1e12, 7e15]) expect(formatSize(b)).not.toMatch(/^0[.,]?0*\s/);
+  });
+});
 
 describe("format helpers", () => {
   it("formats bytes with binary units", () => {

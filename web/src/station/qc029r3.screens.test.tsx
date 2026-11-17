@@ -4,6 +4,7 @@
  * Station's English detail (QD-19).
  */
 import { screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { i18n } from "@/lib/i18n";
 import { server } from "@/test/server";
@@ -128,5 +129,42 @@ describe("Stop banners and locked steps never show the Station's English detail 
     expect(within(tech).getByText("follower: motor ID 3 timed out")).not.toBeVisible();
     // the wizard rail never shows the server line
     expect(screen.getByRole("navigation", { name: "Các bước Station" })).not.toHaveTextContent("timed out");
+  });
+});
+
+describe("Record form: the size estimate a user believes (QD-21)", () => {
+  async function estimate(
+    episodes: string,
+    seconds: string,
+    labels: [RegExp, RegExp] = [/^Episodes/, /^Episode length/],
+  ): Promise<HTMLElement> {
+    const user = userEvent.setup();
+    const field = async (label: RegExp, v: string) => {
+      const el = await screen.findByLabelText(label);
+      await user.clear(el);
+      await user.type(el, v);
+    };
+    await field(labels[0], episodes);
+    await field(labels[1], seconds);
+    return screen.getByTestId("disk-estimate");
+  }
+
+  it("1 episode of 5 s with 2 cameras: MB, never 0.00 GiB", async () => {
+    const h = setupStation({ paired: true });
+    renderStation("/record", h);
+    await settle();
+    const line = await estimate("1", "5");
+    expect(line).toHaveTextContent(/^About \d+(\.\d)? MB per episode with 2 cameras, about \d+(\.\d)? MB in total\.$/);
+    expect(line).not.toHaveTextContent(/0\.00|GiB/);
+  });
+
+  it("many long episodes read in GB, in vi too", async () => {
+    const h = setupStation({ paired: true });
+    await i18n.changeLanguage("vi");
+    renderStation("/record", h);
+    await settle();
+    const line = await estimate("100", "600", [/^Số tập/, /^Độ dài tập/]);
+    expect(line).toHaveTextContent(/tổng khoảng \d+(,\d)? GB\.$/);
+    expect(line).not.toHaveTextContent(/GiB|0,00/);
   });
 });

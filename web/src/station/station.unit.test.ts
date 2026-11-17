@@ -398,8 +398,8 @@ describe("station i18n", () => {
     expect(shortcuts).toEqual([]);
     registerStationI18n();
     const t = i18n.getFixedT("en", "station");
-    expect(t("record.estimate", { count: 1, mb: "15", total: "0.10" })).toContain("with 1 camera,");
-    expect(t("record.estimate", { count: 2, mb: "15", total: "0.10" })).toContain("with 2 cameras,");
+    expect(t("record.estimate", { count: 1, size: "15 MB", total: "150 MB" })).toContain("with 1 camera,");
+    expect(t("record.estimate", { count: 2, size: "15 MB", total: "150 MB" })).toContain("with 2 cameras,");
     const line = t("run.summary_line", {
       duration: "00:30",
       episodes: t("run.summary_episodes", { count: 1 }),

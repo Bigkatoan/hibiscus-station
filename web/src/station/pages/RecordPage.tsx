@@ -14,6 +14,7 @@ import { Mascot } from "@/components/Mascot";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox, Input, NativeSelect } from "@/components/ui/input";
+import { formatSize } from "@/lib/format";
 import { api } from "../api/client";
 import { qk, useDataset, useDatasets, useStationMutation } from "../api/hooks";
 import type { CameraStatus, RecordRequest, Session } from "../api/types";
@@ -196,7 +197,7 @@ function RecordLive({ session }: { session: Session }) {
 }
 
 function RecordSetup() {
-  const { t } = useTranslation("station");
+  const { t, i18n } = useTranslation("station");
   const status = useStatus();
   const datasets = useDatasets();
   const [form, setForm] = useState<RecordForm>({
@@ -371,8 +372,8 @@ function RecordSetup() {
           </label>
           <p className="text-sm text-muted-foreground sm:col-span-2" data-testid="disk-estimate">
             {t("record.estimate", {
-              mb: mb.toFixed(0),
-              total: ((mb * form.num_episodes) / 1024).toFixed(2),
+              size: formatSize(mb * 1e6, i18n.language),
+              total: formatSize(mb * 1e6 * form.num_episodes, i18n.language),
               count: cams.length,
             })}
           </p>
