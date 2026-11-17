@@ -53,6 +53,19 @@
 * **Date:** 2026-11-17. QC inspector: independent. Developer summaries and the CHANGELOG text were
   not used as evidence. Earlier QC reports were used only for their list of checks and defects.
 
+## Customer waiver (2026-11-17)
+
+* **Date:** 2026-11-17.
+* **Customer's choice:** "Phát hành ngay, lỗi cũ vào M1" (release now, old defects go to M1). The
+  option read: confirm on 0.2.8, waive by defect id, release 0.2.9, fix in M1.
+* **Basis:** `QC-0.2.9-waiver-check.md` reproduced QD-24, QD-25, QD-26 and QD-27 on the published
+  v0.2.8 wheel. They are pre-existing, not regressions of 0.2.9.
+* **Waived for 0.2.9, by defect id:** QD-24 (Medium), QD-25 (Low), QD-26 (Low), QD-27 (Low).
+  Every other hotfix-gate item passed on commit `7962181`. No other defect is waived.
+* **Follow-up:** all four are fixed in M1 (1.0). They are listed under "Known issues" in the
+  CHANGELOG 0.2.9 section and in the release notes.
+* **Decision:** the Lead released 0.2.9 on this waiver.
+
 ## Round 4 defects: re-test on the installed artifact
 
 | QD | Round 4 defect | Result | Evidence |

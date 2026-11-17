@@ -112,6 +112,23 @@ Field report on 0.2.8 (Windows, real SO-101, 2026-11-17) and the customer's deci
   until you press "Set Home now" (one click). The Relax buttons outside programs always ask you to
   support the arm.
 
+### Known issues (also in 0.2.8; waived by the customer for this hotfix, fixed in 1.0)
+These four on-screen messages are wrong or out of date in 0.2.8 as well; 0.2.9 does not add them.
+The robot itself always stops safely. Waived by the customer on 2026-11-17 (QC-0.2.9-r5,
+QD-24 to QD-27).
+- **QD-24:** during an over-temperature stop, the arm first moves back toward Home for about two
+  seconds with torque on, but the red banner already says "Robot stopped, torque off" and "The arm
+  is held in place". Keep clear of the arm until it is still.
+- **QD-25:** after a hot motor has cooled down, the page still says it is at the old temperature
+  (for example 66 °C) and "Let it cool down" until you press "I'm clear, reset". The reset works as
+  soon as the motor is cool; the message does not tell you so.
+- **QD-26:** after Disconnect or an unplugged USB cable, the open page keeps showing the last motor
+  temperatures (and, after an unplug, the last FPS) as if they were live. Reload the page to see
+  the real state.
+- **QD-27:** while the robot is disconnected, Teleop says "No camera configured." and the Record
+  estimate says "with 0 cameras" even though the profile has cameras. Connect the robot and the
+  right numbers come back.
+
 ## [0.2.8] - 2026-11-16
 
 ### Fixed
