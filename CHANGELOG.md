@@ -51,6 +51,20 @@ Field report on 0.2.8 (Windows, real SO-101, 2026-11-17) and the customer's deci
 - Motor health tables fit beside Robot 3D on the Robot page at 1280 px; "1 episode" (was
   "1 episodes"); a draft trajectory says why Play is disabled (save the take first); Vietnamese
   says "Hiệu chỉnh" everywhere (was "Hiệu chuẩn" in a few places).
+- **A recording that kept no episode says so.** An e-stop in episode 1, or Stop during the
+  countdown, ended with "0 episodes saved" and an Upload button for a dataset that did not exist.
+  The card now says "No episode was saved.", why (for example "Episode 1 was stopped (e-stop
+  pressed), so it was not kept."), that the new dataset was not created, and offers Record again
+  only. An e-stop in a later episode adds that line under "N episodes saved". The page of a
+  dataset that no longer exists says so plainly.
+- **The Docker route installs this release.** `install.sh`, the README image table,
+  `deploy/.env.example`, `docs/deploy.md` and the systemd unit comment still named 0.2.1.
+- **No raw words on screen.** The Sessions page showed keys such as `session.kind_program` and
+  the English "stopped" in Vietnamese; the Cameras page showed "held · None" for a camera in use;
+  some job phases, model compatibility problems and a motor fault bit showed their internal names.
+- **A finished program run keeps its time** (it kept counting: "360.7 s" for a 3.3 s run).
+- Wording: the Vietnamese leader tooltip reads naturally; "2 cameras", "1 episode · 2 alerts"
+  (was "camera(s)", "episode(s)", "alert(s)").
 
 ### Changed
 - **Stop holds the arm where it is (CR-1).** Pressing Stop in teleop, record, replay, run model,
