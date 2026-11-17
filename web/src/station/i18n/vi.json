@@ -770,6 +770,7 @@
       "thumb_label": "Đồ thị khớp của {{name}}",
       "meta": "{{s}} · {{fps}} fps · đỉnh {{speed}}°/s",
       "needs_check_hint": "Hiệu chỉnh đã đổi từ khi ghi: phát lại ở 25 % và xác nhận vẫn đúng.",
+      "draft_hint": "Chưa lưu: mở Sửa rồi bấm Lưu lượt ghi để phát.",
       "speed": "Tốc độ",
       "play": "Phát",
       "check_play": "Kiểm tra ở 25 %",

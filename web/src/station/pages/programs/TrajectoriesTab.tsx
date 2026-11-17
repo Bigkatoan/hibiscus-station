@@ -465,6 +465,8 @@ function TrajectoryCard({
   const del = useStationMutation(() => api.del(`/trajectories/${enc(tr.id)}`), [qk.trajectories]);
   const idle = status?.state === "idle";
   const needsCheck = tr.status === "needs_check";
+  const draft = tr.status === "draft";
+  const draftHintId = `traj-draft-hint-${tr.id}`;
   return (
     <li
       className={cn(
@@ -495,6 +497,12 @@ function TrajectoryCard({
       {needsCheck ? (
         <p className="text-xs text-warning-foreground">{t("programs.traj.needs_check_hint")}</p>
       ) : null}
+      {draft ? (
+        // QC 0.2.9 QD-7: a take left before "Save take" is a draft; say why Play is greyed out
+        <p id={draftHintId} className="text-xs text-muted-foreground" data-testid="traj-draft-hint">
+          {t("programs.traj.draft_hint")}
+        </p>
+      ) : null}
       <div className="flex flex-wrap items-end gap-2">
         {!needsCheck ? (
           <>
@@ -514,6 +522,7 @@ function TrajectoryCard({
             </Field>
             <Button
               disabled={!idle || play.isPending || tr.status !== "ready"}
+              aria-describedby={draft ? draftHintId : undefined}
               onClick={() => {
                 play.mutate({ speed_pct: speed });
               }}

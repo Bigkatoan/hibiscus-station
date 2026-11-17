@@ -119,6 +119,19 @@ describe("Programs screen", () => {
     });
   });
 
+  it("a draft take says why Play is disabled: save it first (QC 0.2.9 QD-7)", async () => {
+    const h = setupStation();
+    const take = h.sim.programs.takes[0];
+    if (!take) throw new Error("no take");
+    take.meta.status = "draft";
+    await openTab(h, "trajectories");
+    const card = await screen.findByTestId(`traj-${take.meta.id}`);
+    const play = within(card).getByRole("button", { name: "Play" });
+    expect(play).toBeDisabled();
+    expect(play).toHaveAccessibleDescription("Not saved yet: open Edit, then press Save take to play it.");
+    expect(within(card).getByRole("button", { name: "Edit" })).toBeEnabled();
+  });
+
   it("a trajectory that needs a check offers only the 25 % check replay and the confirm", async () => {
     const h = setupStation();
     await openTab(h, "trajectories");

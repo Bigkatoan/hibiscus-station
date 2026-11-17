@@ -770,6 +770,7 @@
       "thumb_label": "Joint plot of {{name}}",
       "meta": "{{s}} · {{fps}} fps · peak {{speed}}°/s",
       "needs_check_hint": "The calibration changed since this take: replay it at 25 % and confirm it is still right.",
+      "draft_hint": "Not saved yet: open Edit, then press Save take to play it.",
       "speed": "Speed",
       "play": "Play",
       "check_play": "Check at 25 %",
