@@ -7,6 +7,7 @@ delaying it, and the relative-target cap must not make the follower chase a norm
 
 from __future__ import annotations
 
+import itertools
 import time
 from typing import Any
 
@@ -57,34 +58,37 @@ def test_teleop_defaults_to_the_fast_lean_loop(connected: Station) -> None:
 
 
 def test_lean_tick_never_reads_telemetry_and_observation_in_one_tick(connected: Station) -> None:
+    """Counted per tick by the bus calls made between two tick ends, not by timestamps: on Windows
+    (Python < 3.13) ``time.monotonic()``, which the fake bus stamps calls with, moves in 15.6 ms
+    steps while the tick starts are ``perf_counter()`` values, so bucketing by time put four 250 Hz
+    ticks into one bucket and read as "5 reads per tick" (QD-5)."""
     st = connected
     fol, lead = get_world("mock://follower"), get_world("mock://leader")
     st.start_teleop(TeleopRequest(fps=250))
     time.sleep(0.3)
-    marks: list[tuple[float, int]] = []
+    fol.calls.clear()
+    lead.calls.clear()
+    fol.record_calls = lead.record_calls = True
+    ends: list[tuple[int, int]] = []  # (follower calls, leader calls) when each tick ended
     orig = st.owner.stats.tick
 
     def tick(start: float, duration: float, period: float) -> None:
-        marks.append((start, st.owner.tick))
+        ends.append((len(fol.calls), len(lead.calls)))  # the owner thread makes every bus call
         orig(start, duration, period)
 
     st.owner.stats.tick = tick  # type: ignore[method-assign]
-    fol.record_calls = lead.record_calls = True
     time.sleep(2.0)
+    st.owner.stats.tick = orig  # type: ignore[method-assign]
     fol.record_calls = lead.record_calls = False
     st.owner.call("control", action="stop")
-    # bucket every follower/leader read between two tick starts
-    starts = [m[0] for m in marks]
-    per_tick: dict[int, int] = {}
-    import bisect
-
-    for t, _, op, _reg in fol.calls + lead.calls:
-        if op != "sync_read":
-            continue
-        k = bisect.bisect_right(starts, t)
-        per_tick[k] = per_tick.get(k, 0) + 1
+    assert len(ends) > 100, len(ends)
+    per_tick: list[int] = []
+    for (f0, l0), (f1, l1) in itertools.pairwise(ends):
+        calls = fol.calls[f0:f1] + lead.calls[l0:l1]
+        per_tick.append(sum(1 for _, _, op, _reg in calls if op == "sync_read"))
     # leader read + at most one more transaction (observation OR telemetry)
-    assert per_tick and max(per_tick.values()) <= 2, sorted(per_tick.values())[-5:]
+    assert max(per_tick) <= 2, sorted(per_tick)[-5:]
+    assert min(per_tick) >= 1  # the leader is read on every tick
 
 
 def test_estop_in_the_lean_loop_freezes_within_one_tick(connected: Station) -> None:
