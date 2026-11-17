@@ -350,6 +350,14 @@ function flatKeys(o: Record<string, unknown>, prefix = ""): string[] {
   );
 }
 
+function flatEntries(o: Record<string, unknown>, prefix = ""): [string, string][] {
+  return Object.entries(o).flatMap(([k, v]): [string, string][] =>
+    typeof v === "object" && v !== null
+      ? flatEntries(v as Record<string, unknown>, `${prefix}${k}.`)
+      : [[`${prefix}${k}`, String(v)]],
+  );
+}
+
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((f) => {
     const p = join(dir, f);
@@ -362,6 +370,11 @@ describe("station i18n", () => {
   const enKeys = flatKeys(en);
   it("vi and en have the same keys", () => {
     expect(flatKeys(vi_).sort()).toEqual([...enKeys].sort());
+  });
+
+  it('vi says "Hiệu chỉnh" for calibration, never "Hiệu chuẩn" (QC 0.2.9 QD-9)', () => {
+    const wrong = flatEntries(vi_).filter(([, v]) => /hiệu chuẩn/i.test(v));
+    expect(wrong).toEqual([]);
   });
 
   it("every literal key used in the station UI exists", () => {
