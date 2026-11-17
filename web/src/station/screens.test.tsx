@@ -146,7 +146,14 @@ describe("Record (§6.6)", () => {
       expect(h.sim.state).toBe("idle");
     });
     const done = await screen.findByTestId("record-done");
-    expect(done).toHaveTextContent("1 episode saved in ~/.hibiscus/station/datasets/cube_demo");
+    // QC 0.2.9 QD-11: the dataset name; the local path only on request
+    expect(within(done).getByText("1 episode saved in dataset cube_demo")).toBeVisible();
+    const where = within(done).getByTestId("record-path");
+    expect(within(where).getByText("~/.hibiscus/station/datasets/cube_demo")).not.toBeVisible();
+    fireEvent.click(within(where).getByText("Where is it on this computer?"));
+    await waitFor(() => {
+      expect(within(where).getByText("~/.hibiscus/station/datasets/cube_demo")).toBeVisible();
+    });
     expect(within(done).getByRole("link", { name: "Upload" })).toHaveAttribute(
       "href",
       "/datasets/cube_demo?upload=1",

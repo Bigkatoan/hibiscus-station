@@ -514,8 +514,11 @@
     "start": "Bắt đầu ghi",
     "controls": "Điều khiển tập",
     "saved_episodes": "Các tập đã lưu",
-    "done_one": "Đã lưu {{count}} tập trong {{path}}",
-    "done_other": "Đã lưu {{count}} tập trong {{path}}",
+    "done_one": "Đã lưu {{count}} tập vào bộ dữ liệu {{name}}",
+    "done_other": "Đã lưu {{count}} tập vào bộ dữ liệu {{name}}",
+    "path_show": "Nằm ở đâu trên máy này?",
+    "path_copy": "Sao chép đường dẫn",
+    "path_copied": "Đã sao chép",
     "upload": "Tải lên",
     "more": "Ghi thêm",
     "saving_note": "Đang lưu tập. Tay robot giữ nguyên vị trí; bạn có thể rời trang này."

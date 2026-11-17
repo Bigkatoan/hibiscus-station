@@ -348,6 +348,18 @@ def test_station_ui_end_to_end(browser: Any, station_proc: tuple[str, str, Path]
     expect(done).to_be_visible(timeout=20000)
     expect(done).to_contain_text("2 episodes saved")
     shot("08-record-done")
+    # QC 0.2.9 QD-11: at 390 px the text wraps above the buttons (never a one-word column under
+    # "Upload"), and the local path only shows on request
+    page.set_viewport_size({"width": 390, "height": 844})
+    page.wait_for_timeout(300)
+    text_box = page.get_by_test_id("record-done-text").bounding_box()
+    up_box = done.get_by_role("link", name="Upload").bounding_box()
+    assert text_box and up_box
+    assert text_box["width"] >= 200, text_box
+    assert up_box["y"] >= text_box["y"] + text_box["height"] - 1, (text_box, up_box)
+    expect(done.get_by_text(str(home / "datasets" / DATASET))).to_be_hidden()
+    shot("08-record-done-390")
+    page.set_viewport_size({"width": 1440, "height": 1000})
 
     # ---------------------------------------------------------------- 7. the dataset is a valid LeRobotDataset
     detail = api("GET", f"/datasets/{DATASET}")

@@ -514,8 +514,11 @@
     "start": "Start recording",
     "controls": "Episode controls",
     "saved_episodes": "Saved episodes",
-    "done_one": "{{count}} episode saved in {{path}}",
-    "done_other": "{{count}} episodes saved in {{path}}",
+    "done_one": "{{count}} episode saved in dataset {{name}}",
+    "done_other": "{{count}} episodes saved in dataset {{name}}",
+    "path_show": "Where is it on this computer?",
+    "path_copy": "Copy path",
+    "path_copied": "Copied",
     "upload": "Upload",
     "more": "Record more",
     "saving_note": "The episode is being saved. The arm holds its position; you can leave this page."

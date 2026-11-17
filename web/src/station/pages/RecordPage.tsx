@@ -384,6 +384,38 @@ function RecordSetup() {
   );
 }
 
+/** The dataset's folder on this computer, shown on request, with a copy button. */
+function DatasetPath({ path }: { path: string }) {
+  const { t } = useTranslation("station");
+  const [copied, setCopied] = useState(false);
+  // navigator.clipboard exists only in a secure context (127.0.0.1 is one; a LAN address is not)
+  const canCopy = typeof navigator !== "undefined" && "clipboard" in navigator;
+  return (
+    <details className="mt-1 text-sm" data-testid="record-path">
+      <summary className="cursor-pointer text-muted-foreground underline">{t("record.path_show")}</summary>
+      <div className="mt-1 flex flex-wrap items-center gap-2">
+        <code className="min-w-0 break-all text-xs">{path}</code>
+        {canCopy ? (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              navigator.clipboard.writeText(path).then(
+                () => {
+                  setCopied(true);
+                },
+                () => undefined,
+              );
+            }}
+          >
+            <PxIcon name="copy" /> {copied ? t("record.path_copied") : t("record.path_copy")}
+          </Button>
+        ) : null}
+      </div>
+    </details>
+  );
+}
+
 export function RecordPage() {
   const { t } = useTranslation("station");
   const status = useStatus();
@@ -413,12 +445,15 @@ export function RecordPage() {
       {session ? <RecordLive session={session} /> : null}
       {!session && ended ? (
         <Card data-testid="record-done">
+          {/* QC 0.2.9 QD-11: at 390 px the text wraps under the mascot / above the buttons instead of
+              squeezing into a one-word column; the local path sits behind a disclosure. */}
           <CardContent className="flex flex-wrap items-center gap-4 pt-3 sm:pt-4">
             <Mascot mood="happy" />
-            <div className="min-w-0 flex-1">
-              <p className="font-extrabold text-base">
-                {t("record.done", { count: ended.episode.saved, path: endedPath ?? ended.dataset ?? "" })}
+            <div className="min-w-[min(14rem,100%)] flex-1" data-testid="record-done-text">
+              <p className="break-words font-extrabold text-base">
+                {t("record.done", { count: ended.episode.saved, name: ended.dataset ?? "" })}
               </p>
+              {endedPath ? <DatasetPath path={endedPath} /> : null}
             </div>
             <div className="flex flex-wrap gap-2">
               <Button asChild>
