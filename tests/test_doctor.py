@@ -996,8 +996,11 @@ def test_report_text_has_no_python_containers_anywhere(
     assert "    calibration file vs motors: all 6 match" in lines, text
     assert "    calibration file vs motors: 5 of 6 match; gripper: motor did not answer" in lines, text
     carry = [x for x in lines if x.startswith("    motors carry the calibration of: ")]
-    assert carry[0].endswith("so_follower/arm_follower.json, " + str(lelab / "arm_follower.json")), carry
+    assert carry[0].endswith(
+        str(Path("so_follower", "arm_follower.json")) + ", " + str(lelab / "arm_follower.json")
+    ), carry
     assert "  /dev/video0  V4L2  640x480 30 fps MJPG" in lines, text
     bus = next(x for x in lines if x.startswith("    bus errors: ") and "ping Model_Number [6] x" in x)
     assert "retried ok (" in bus and "; last error: " in bus, bus
     assert "    alert warning bus.slow: arm leader, ids 1, 2" in lines, text
+

@@ -431,7 +431,7 @@ def _release_notes(tmp_path: Path, version: str, pre: bool) -> str:
     bash = shutil.which("bash")
     assert bash, "bash runs the workflow step (Git Bash on Windows)"
     cmd = [bash, "-euo", "pipefail", "-c", step["run"]]
-    r = subprocess.run(cmd, env=env, cwd=tmp_path, capture_output=True, text=True)  # noqa: S603 - the repo's own workflow
+    r = subprocess.run(cmd, env=env, cwd=tmp_path, capture_output=True, text=True, encoding="utf-8")  # noqa: S603 - the repo's own workflow
     assert r.returncode == 0, f"release notes step failed ({r.returncode}): {r.stderr[-2000:]}"
     return (tmp_path / "RELEASE_NOTES.md").read_text(encoding="utf-8")
 
