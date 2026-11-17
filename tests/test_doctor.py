@@ -808,3 +808,82 @@ def test_a_calibration_file_that_differs_from_the_motors_is_a_likely_problem(
     ) in problems, problems
     assert "  ! arm leader: motor id(s) 6 do not answer (power? cable?)" in problems
     assert not any("follower" in p for p in problems), problems
+
+
+def _status(calibrated: bool, issue: str | None, last: str | None) -> dict[str, Any]:
+    arm = {"calibrated": calibrated, "issue": issue, "bus_errors": 0 if last is None else 2}
+    return {
+        "pid": 1697856,
+        "http": 200,
+        "status": {
+            "state": "idle",
+            "reason": None,
+            "detail": None,
+            "station": {"mock": False},
+            "robot": {
+                "id": "desk",
+                "mock": False,
+                "arms": {
+                    "follower": dict(arm, last_bus_error=last),
+                    "leader": dict(arm, bus_errors=0, last_bus_error=None),
+                },
+            },
+            "alerts": [],
+        },
+    }
+
+
+@pytest.mark.parametrize("log_lines", [0, 1, 3])
+def test_report_has_no_python_values_and_counts_log_lines_in_words(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, log_lines: int
+) -> None:
+    """QD-11: Station running and connected; no None / False / True, "1 log line"."""
+    monkeypatch.setenv("HF_LEROBOT_CALIBRATION", str(tmp_path / "calibration"))
+    home = tmp_path / "home"
+    if log_lines:
+        (home / "logs").mkdir(parents=True)
+        (home / "logs" / "station.log").write_text("x\n" * log_lines, encoding="utf-8")
+    issue = "no calibration file /c/robots/so_follower/desk_follower.json"
+    monkeypatch.setattr(doctor, "running_status", lambda _p: _status(False, issue, None))
+    real_versions = doctor.versions()
+    monkeypatch.setattr(doctor, "versions", lambda: dict(real_versions, rustypot=None))
+    text, _t = doctor.run(home, tmp_path / "out", ping=False, probe_cameras=False, echo=lambda _s: None)
+    for word in ("None", "False", "True"):
+        assert word not in text.split(), (word, text)
+    running = text.split("Running Station:\n")[1].split("\n\n")[0].splitlines()
+    assert running[0] == "  pid 1697856: mode real, state idle", running
+    assert running[2] == f"    follower: not calibrated ({issue}), bus errors 0", running
+    assert "rustypot not installed" in text
+    want = {
+        0: "No Station log found (logs/station.log).",
+        1: "The last log line is in the zip.",
+        3: "The last 3 log lines are in the zip.",
+    }[log_lines]
+    assert want in text.splitlines(), text
+
+    monkeypatch.setattr(doctor, "running_status", lambda _p: _status(True, None, "follower: timeout id 3"))
+    text, _t = doctor.run(home, tmp_path / "out", ping=False, probe_cameras=False, echo=lambda _s: None)
+    running = text.split("Running Station:\n")[1].split("\n\n")[0].splitlines()
+    assert running[2] == "    follower: calibrated, bus errors 2, last: follower: timeout id 3", running
+    assert running[3] == "    leader: calibrated, bus errors 0", running
+
+
+def test_raw_dump_line_of_a_servo_that_answered_one_block_has_no_python_values() -> None:
+    """QD-11: only block 56-70 answered: the values of the other blocks are "-", not None."""
+    live = bytes(range(15))
+    dump = {
+        "baud": 1_000_000,
+        "motors": {
+            "1": {
+                "blocks": {
+                    "0-4": {"answer": None, "error": "no answer"},
+                    "13-15": {"answer": None, "error": "no answer"},
+                    "56-70": {"answer": "ff", "data": live.hex(" "), "error_byte": 0},
+                },
+                "decoded": doctor.decode_raw({56 + i: b for i, b in enumerate(live)}),
+            }
+        },
+    }
+    text = "\n".join(doctor._raw_lines(dump))
+    assert "None" not in text.split(), text
+    assert "-> fw - model - " in text and "(max limit - C)" in text
