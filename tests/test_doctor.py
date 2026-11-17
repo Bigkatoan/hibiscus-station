@@ -298,3 +298,25 @@ def test_doctor_on_a_slow_wch_adapter_does_not_mention_the_latency_timer(
     assert f"- no profile on {emu.port}: slow bus (" in problems, problems
     assert "slow USB adapter / hub: plug the arm straight into the PC" in problems
     assert "latency timer to 1 ms" not in text
+
+
+# ---------------------------------------------------------------------- what to send, secrets
+def test_doctor_ends_with_what_to_send_in_english_and_vietnamese(
+    tmp_path: Path, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    f, ld = emus
+    home = _calibrated_home(tmp_path, f, ld, monkeypatch)
+    text, target = _run(home, tmp_path / "out")
+    tail = text.split("WHAT TO SEND / CẦN GỬI GÌ\n")[1]
+    assert f"  EN: Send us this one file: {target.resolve()}" in tail
+    assert f"  VI: Bạn chỉ cần gửi cho chúng tôi một tệp: {target.resolve()}" in tail
+    assert "Feetech FD" in tail and "tệp hiệu chỉnh" in tail
+    assert "incomplete" not in tail and "chưa đủ" not in tail  # both arms were read
+    with zipfile.ZipFile(target) as z:
+        assert "WHAT TO SEND / CẦN GỬI GÌ" in z.read("report.txt").decode()
+
+    monkeypatch.setattr(doctor, "station_lock_holder", lambda _p, _d: 4242)
+    text, _target = _run(home, tmp_path / "out2")
+    tail = text.split("WHAT TO SEND / CẦN GỬI GÌ\n")[1]
+    assert "The motor check is incomplete" in tail and "run `hibiscus-station doctor --verbose` again" in tail
+    assert "Phần kiểm tra động cơ chưa đủ" in tail and "tắt Station và LeLab" in tail

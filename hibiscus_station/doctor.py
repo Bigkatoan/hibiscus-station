@@ -584,6 +584,7 @@ def collect(
     if ping:
         arms = check_arms(paths, report, echo)
     report["arms"] = arms
+    report["ping"] = ping
     report["warnings"] = warnings(report)
     report["log_tail"] = log_tail(paths)
     return report
@@ -751,8 +752,52 @@ def warnings(report: dict[str, Any]) -> list[str]:
     return out
 
 
-def summary(report: dict[str, Any]) -> str:
-    """Human-readable lines (what the terminal shows)."""
+def motor_check_incomplete(report: dict[str, Any]) -> bool:
+    """True when the motor check could not read every arm (skipped, held, no port, --no-ping)."""
+    arms = report.get("arms") or []
+    if not report.get("ping", True) or not arms:
+        return True
+    return any(a.get("skipped") or a.get("error") for a in arms)
+
+
+def send_instructions(report: dict[str, Any], target: Path | None) -> list[str]:
+    """The last lines, English then Vietnamese: the one file to send, and when to run again."""
+    name = str(target.resolve()) if target is not None else "hibiscus-station-doctor-<time>.zip"
+    again = motor_check_incomplete(report)
+    lines = [
+        "WHAT TO SEND / CẦN GỬI GÌ",
+        f"  EN: Send us this one file: {name}",
+        "      It holds this report, the last log lines, the robot profiles and the calibration files;",
+        "      no login token and no access token.",
+    ]
+    if again:
+        lines += [
+            "      The motor check is incomplete (see LIKELY PROBLEMS): close Station and LeLab, keep both",
+            "      arms plugged in and powered, run `hibiscus-station doctor --verbose` again and send the",
+            "      new file instead.",
+        ]
+    lines += [
+        "      If we asked for it, add a screenshot of Feetech FD showing the temperature, voltage and",
+        "      current of the same servos.",
+        f"  VI: Bạn chỉ cần gửi cho chúng tôi một tệp: {name}",
+        "      Tệp này có báo cáo này, các dòng nhật ký cuối, hồ sơ robot và các tệp hiệu chỉnh;",
+        "      không có token đăng nhập hay token truy cập.",
+    ]
+    if again:
+        lines += [
+            "      Phần kiểm tra động cơ chưa đủ (xem LIKELY PROBLEMS): tắt Station và LeLab, giữ cả hai tay",
+            "      cắm cáp và có điện, chạy lại `hibiscus-station doctor --verbose` rồi gửi tệp mới thay cho",
+            "      tệp này.",
+        ]
+    lines += [
+        "      Nếu chúng tôi có nhờ, gửi kèm ảnh chụp màn hình Feetech FD có nhiệt độ, điện áp và dòng",
+        "      của cùng các động cơ.",
+    ]
+    return lines
+
+
+def summary(report: dict[str, Any], target: Path | None = None) -> str:
+    """Human-readable lines (what the terminal shows), ending with what to send."""
     v = report["versions"]
     problems = report.get("warnings") or []
     lines = [
@@ -898,7 +943,8 @@ def summary(report: dict[str, Any]) -> str:
         be = a.get("bus_errors") or {}
         if be.get("errors"):
             lines.append(f"    bus errors: {be}")
-    lines += ["", f"Last {len(report['log_tail'])} log lines are in the zip."]
+    lines += ["", f"Last {len(report['log_tail'])} log lines are in the zip.", ""]
+    lines += send_instructions(report, target)
     return redact("\n".join(lines))
 
 
@@ -938,19 +984,29 @@ def _raw_lines(dump: dict[str, Any] | None) -> list[str]:
     return out
 
 
-def write_zip(report: dict[str, Any], paths: StationPaths, out_dir: Path) -> Path:
+def zip_target(out_dir: Path) -> Path:
+    return out_dir / f"hibiscus-station-doctor-{time.strftime('%Y%m%d-%H%M%S')}.zip"
+
+
+def write_zip(report: dict[str, Any], paths: StationPaths, out_dir: Path, target: Path | None = None) -> Path:
+    """The zip to send. The token file and ``server.json`` are never added."""
     out_dir.mkdir(parents=True, exist_ok=True)
-    ts = time.strftime("%Y%m%d-%H%M%S")
-    target = out_dir / f"hibiscus-station-doctor-{ts}.zip"
-    text = summary(report)
+    target = target or zip_target(out_dir)
+
+    def clean(text: str) -> str:
+        return redact(text)
+
+    def read(f: Path) -> str:
+        return clean(f.read_text(encoding="utf-8", errors="replace"))
+
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as z:
-        z.writestr("report.txt", text)
-        z.writestr("report.json", redact(json.dumps(report, indent=2, default=str)))
-        z.writestr("station.log.tail", "\n".join(report["log_tail"]))
+        z.writestr("report.txt", clean(summary(report, target)))
+        z.writestr("report.json", clean(json.dumps(report, indent=2, default=str)))
+        z.writestr("station.log.tail", clean("\n".join(report["log_tail"])))
         for name in ("robots.yaml", "settings.yaml"):
             f = paths.home / name
             if f.is_file():
-                z.writestr(name, redact(f.read_text(encoding="utf-8", errors="replace")))
+                z.writestr(name, read(f))
         for c in report["calibrations"]:
             p = Path(c["path"])
             if p.is_file() and p.stat().st_size < 64 * 1024:
@@ -960,9 +1016,7 @@ def write_zip(report: dict[str, Any], paths: StationPaths, out_dir: Path) -> Pat
                 )
         metas = sorted(paths.sessions.glob("*/session.json"), key=lambda f: f.stat().st_mtime)
         for f in metas[-5:] if paths.sessions.is_dir() else []:
-            z.writestr(
-                f"sessions/{f.parent.name}.json", redact(f.read_text(encoding="utf-8", errors="replace"))
-            )
+            z.writestr(f"sessions/{f.parent.name}.json", read(f))
     return target
 
 
@@ -976,5 +1030,5 @@ def run(
 ) -> tuple[str, Path]:
     paths = StationPaths(home)
     report = collect(paths, calibration_root(), ping=ping, probe_cameras=probe_cameras, echo=echo)
-    target = write_zip(report, paths, out_dir)
-    return summary(report), target
+    target = write_zip(report, paths, out_dir, zip_target(out_dir))
+    return summary(report, target), target
