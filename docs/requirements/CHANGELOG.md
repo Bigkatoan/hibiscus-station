@@ -134,3 +134,12 @@ phần LAN của F-6) · tổng 71 (44 Must / 22 Should / 5 Could).
 
 **Bước tiếp theo:** Tech Lead ước các mục ✚ (OI-1) và bắt đầu M0 trên nhánh tích hợp `release/v1`; khách hẹn UAT-0 khi
 có bản M0.
+
+## Sửa câu chữ AT-2 · v1.0 (không đổi phạm vi) · 2026-11-17
+
+**Trạng thái:** sửa câu chữ theo ghi chú QC [QC-M0-r2.md](qc/QC-M0-r2.md) §6; không đổi tính năng, mốc hay kỳ vọng
+người dùng thấy. Đưa khách xem ở lần duyệt tiếp theo.
+
+* [ACCEPTANCE.md](ACCEPTANCE.md) AT-2: bản cũ ghi `windows-latest` "build wheel", nhưng CI build bộ tệp phát hành
+  (wheel thuần Python `py3-none-any`, `install.ps1`, `SHA256SUMS`) **một lần** trên Linux và job Windows cài **chính
+  tệp wheel đó** bằng `install.ps1` (đúng tệp người dùng cài). AT-2 nay ghi đúng như vậy; macOS cài smoke cùng bộ tệp.

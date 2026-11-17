@@ -67,8 +67,10 @@ Bằng chứng: ảnh PowerShell; (Vendor) tệp so sánh.
 **AT-2 (F-1, NFR-18, REG-17) CI trên Linux / Windows / macOS** · [Vendor]
 1. Mở lần chạy CI của commit phát hành. 2. Mở danh sách test được phép bỏ qua theo nền tảng (trong repo,
 NFR-18). 3. Trong log pytest của từng job, lọc các dòng `SKIPPED`.
-Kỳ vọng: mọi job xanh: Linux (pytest, vitest, e2e Chromium + Firefox), `windows-latest` (pytest, build wheel,
-cài + `--mock` smoke, kiểm MIME `.js`, e2e Edge `--mock`), macOS (cài smoke); mỗi test `SKIPPED` có trong danh
+Kỳ vọng: mọi job xanh: Linux (pytest, vitest, e2e Chromium + Firefox, build bộ tệp phát hành một lần: wheel
+thuần Python `py3-none-any`, `install.ps1`, `SHA256SUMS`), `windows-latest` (pytest, cài **chính tệp wheel phát
+hành đó** bằng `install.ps1` + `--mock` smoke, kiểm MIME `.js`, e2e Edge `--mock`), macOS (cài smoke cùng bộ
+tệp); mỗi test `SKIPPED` có trong danh
 sách với lý do và AT / UAT phủ thay; 0 test bỏ qua ngoài danh sách; e2e của repo xanh (D-1). Bằng chứng: liên
 kết CI + danh sách bỏ qua.
 
