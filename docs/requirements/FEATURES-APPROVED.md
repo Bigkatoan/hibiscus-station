@@ -30,7 +30,7 @@ khách duyệt, danh sách lên v1.1, v1.2… Ý tưởng của nhóm dev gửi 
 
 | ID | Tính năng | Ưu tiên | Milestone | Acceptance tests | Lỗi / khoảng trống phải đóng | Dev status | QC result | In release |
 |---|---|---|---|---|---|---|---|---|
-| F-1 | Cài đặt trên Windows 10/11 x64 bằng một lệnh PowerShell (P-1, QĐ-3 = A) | Must | M0 (P-1) / M1 | AT-1, AT-2 | K-8, P-1 (môi trường cài không cố định, SA-P1), K-10 | in progress (phần M0 P-1: mã + test xong, chưa chạy trên Windows thật / CI) | PASS (M0 P-1: QD-1, QD-2, QD-17, QD-18, QD-20 đã đóng; AT-2 PASS; CI Windows PowerShell 5.1 không git PASS; VM Windows 11 sạch NOT VERIFIED (UAT-0); phần M1 not tested; [QC-M0-r9](qc/QC-M0-r9.md)) | - |
+| F-1 | Cài đặt trên Windows 10/11 x64 bằng một lệnh PowerShell (P-1, QĐ-3 = A) | Must | M0 (P-1) / M1 | AT-1, AT-2 | K-8, P-1 (môi trường cài không cố định, SA-P1), K-10 | in progress (phần M0 P-1: mã + test xong, chưa chạy trên Windows thật / CI) | PASS (M0 P-1: QD-1, QD-2, QD-17, QD-18, QD-20 đã đóng; AT-2 PASS; CI Windows PowerShell 5.1 không git PASS; VM Windows 11 sạch NOT VERIFIED (UAT-0); phần M1 not tested; [QC-M0-r10](qc/QC-M0-r10.md)) | - |
 | F-2 | Cài đặt trên Ubuntu 22.04 / 24.04 x86_64 (wheel, systemd tuỳ chọn) | Should | M1 | AT-3 | — | not started | not tested | - |
 | F-3 | Cài đặt Docker trên PC Linux x86_64, image `-cpu` | Could | M3 | AT-4 | D-18 (= K-1) | not started | not tested | - |
 | F-4 | Khởi động `hibiscus-station` | Must | M1 | AT-5, AT-6, AT-87, AT-95 | D-3, D-4, D-19 | not started | not tested | - |
@@ -46,7 +46,7 @@ khách duyệt, danh sách lên v1.1, v1.2… Ý tưởng của nhóm dev gửi 
 | F-14 | Mô-men follower | Must | M1 | AT-20 | — | not started | not tested | - |
 | F-15 | Bảo vệ khỏi hồ sơ demo | Must | M1 | AT-21 | — | not started | not tested | - |
 | F-16 | Kiểm tra hiệu chỉnh khi vào trang | Must | M1 | AT-22 | — | not started | not tested | - |
-| F-17 | Luồng hiệu chỉnh có hướng dẫn | Must | M0 (D-1) / M1 | AT-23, AT-24 | D-1, D-17, K-2 | in progress (phần M0 D-1 done; phần M1 chưa làm) | PASS (M0 D-1, QD-3 đã đóng; phần M1 not tested; [QC-M0-r9](qc/QC-M0-r9.md)) | - |
+| F-17 | Luồng hiệu chỉnh có hướng dẫn | Must | M0 (D-1) / M1 | AT-23, AT-24 | D-1, D-17, K-2 | in progress (phần M0 D-1 done; phần M1 chưa làm) | PASS (M0 D-1, QD-3 đã đóng; phần M1 not tested; [QC-M0-r10](qc/QC-M0-r10.md)) | - |
 | F-18 | Nâng cao: các tệp hiệu chỉnh | Should | M1 | AT-25 | — | not started | not tested | - |
 | F-19 | Kiểm tra hai tay | Must | M1 | AT-26 | D-7 | not started | not tested | - |
 | F-20 | Tệp hiệu chỉnh dùng chung hai chiều với lerobot và LeLab | Must | M1 | AT-27 | — | not started | not tested | - |
@@ -92,7 +92,7 @@ khách duyệt, danh sách lên v1.1, v1.2… Ý tưởng của nhóm dev gửi 
 | F-60 | Khối "chạy mô hình" trong chương trình | Could | M3 | AT-74 | — | not started | not tested | - |
 | F-61 | Robot 3D | Should | M2 | AT-75 | — | not started | not tested | - |
 | F-62 | Xem trước quỹ đạo bằng tay mờ | Should | M2 | AT-76 | — | not started | not tested | - |
-| F-63 | `hibiscus-station doctor` (báo cáo chẩn đoán) | Must | M0 | AT-77 | D-15, D-21, K-11 | done (M0; chờ QC) | FAIL (QD-28: một gói hỏng có byte id bị đổi làm servo mất điện thành "answers only with corrupted packets", mất "do not answer (power? cable?)"; QD-29: khi mọi câu trả lời bị cụt, servo 2, 4, 6 bị gọi "do not answer" dù dump thô ghi chúng gửi gói cụt; QD-30: câu trả lời trễ bị tính cho servo, servo trả lời 20 / 20 sync read bị gọi "answer only now and then"; QD-31: tốc độ bus đo sai khi bộ chuyển chậm bằng / hơn thời gian chờ (50 ms → 44.66 ms + "unreliable bus"; 260 ms → ~24 Hz); mọi bước AT-77 [Vendor] đạt trên bản cài; 0 giá trị thanh ghi sai ở 922 lượt lưới lỗi; QD-4, QD-7, QD-10 – QD-14, QD-16, QD-18, QD-19, QD-21 – QD-27 đã đóng; VID:PID / WCH thật NOT VERIFIED (UAT-0); [QC-M0-r9](qc/QC-M0-r9.md)) | - |
+| F-63 | `hibiscus-station doctor` (báo cáo chẩn đoán) | Must | M0 | AT-77 | D-15, D-21, K-11 | done (M0; chờ QC) | FAIL (QD-32: một gói hỏng lạc (nhiễu) trong lúc hỏi servo mất điện làm nó thành "answers only with corrupted packets", mất "do not answer (power? cable?)", dù dump thô cùng báo cáo ghi "no answer"; QD-33: một lần khựng USB từ 350 ms lúc ping (700 ms lúc quét) làm servo trả lời mọi lệnh bị gọi "answer only now and then" + lời khuyên kiểm cáp / nguồn; QD-34: bộ chuyển chậm đều 49 ms bị kết luận "unreliable bus … check the 3-pin cables" cạnh "slow bus"; mọi bước AT-77 [Vendor] đạt trên bản cài; 0 giá trị thanh ghi sai, 0 lệnh ghi ở 1 609 lượt lưới lỗi; QD-4, QD-7, QD-10 – QD-14, QD-16, QD-18, QD-19, QD-21 – QD-31 đã đóng; VID:PID / WCH thật NOT VERIFIED (UAT-0); [QC-M0-r10](qc/QC-M0-r10.md)) | - |
 | F-64 | Nhật ký `station.log` | Must | M1 | AT-78 | — | not started | not tested | - |
 | F-65 | `hibiscus-station health` | Could | M3 | AT-79 | — | not started | not tested | - |
 | F-66 | Trang Cài đặt | Must | M1 | AT-80 | D-5 | not started | not tested | - |
@@ -108,7 +108,7 @@ Sửa lỗi / đóng gói để đạt chuẩn, không phải tính năng mới;
 
 | P | Thay đổi | Tính năng | Milestone | AT | Dev status | QC result |
 |---|---|---|---|---|---|---|
-| P-1 | Lệnh cài / cập nhật / quay lại một dòng PowerShell, phụ thuộc cố định, không cần git (QĐ-3 = A) | F-1, F-69 | M0 (cài, SP-3) / M1 (cập nhật, quay lại) | AT-1, AT-84 | in progress (cài: mã + test + dry run PowerShell 7 trên Linux; chưa chạy trên Windows PowerShell 5.1 / VM sạch) | PASS (cài, M0: QD-1, QD-2, QD-17, QD-18, QD-20 đã đóng; AT-2 PASS; VM Windows 11 sạch NOT VERIFIED (UAT-0); cập nhật / quay lại (M1) not tested; [QC-M0-r9](qc/QC-M0-r9.md)) |
+| P-1 | Lệnh cài / cập nhật / quay lại một dòng PowerShell, phụ thuộc cố định, không cần git (QĐ-3 = A) | F-1, F-69 | M0 (cài, SP-3) / M1 (cập nhật, quay lại) | AT-1, AT-84 | in progress (cài: mã + test + dry run PowerShell 7 trên Linux; chưa chạy trên Windows PowerShell 5.1 / VM sạch) | PASS (cài, M0: QD-1, QD-2, QD-17, QD-18, QD-20 đã đóng; AT-2 PASS; VM Windows 11 sạch NOT VERIFIED (UAT-0); cập nhật / quay lại (M1) not tested; [QC-M0-r10](qc/QC-M0-r10.md)) |
 | P-2 | Từ chối chạy model khi suy luận khởi động > 500 ms | F-47, F-48 | M1 | AT-97 | not started | not tested |
 | P-3 | Không đọc được nhiệt độ: xác nhận mỗi lần kết nối, banner cam, dừng sau 10 phút khi không cầm leader (QĐ-1 = A) | F-33 | M1 | AT-93 | not started | not tested |
 | P-4 | Demo: tay leader giả đứng theo follower khi bắt đầu phiên và khi Kiểm tra | F-5 | M1 | AT-7 | not started | not tested |
