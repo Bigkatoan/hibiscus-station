@@ -1,10 +1,12 @@
-"""Release tooling (tools/release): version consistency (FR-76 / D-18)."""
+"""Release tooling (tools/release): version consistency (FR-76 / D-18) and the pinned installer
+assets (ADR-13 / P-1). Fast, offline; the full build + install runs in tools/release/dry_run.sh."""
 
 from __future__ import annotations
 
 import importlib.util
 import shutil
 import sys
+import zipfile
 from pathlib import Path
 from types import ModuleType
 
@@ -24,6 +26,7 @@ def _load(name: str) -> ModuleType:
 
 
 check_versions = _load("check_versions")
+build_release = _load("build_release")
 
 
 # =========================================================================== FR-76 / D-18
@@ -92,3 +95,109 @@ def test_changelog_needs_a_section_and_links_for_the_version() -> None:
     assert check_versions.check_changelog(text, "1.0.1")  # no section for the package version
     broken = text.replace(f"[1.0.0]: {repo}/compare/v0.9.0...v1.0.0\n", "")
     assert any("[1.0.0] link" in e for e in check_versions.check_changelog(broken, "1.0.0"))
+
+
+# =========================================================================== ADR-13 assets
+def test_export_splits_pins_from_git_dependencies() -> None:
+    export = (
+        "fastapi==0.163.1\n"
+        "nvidia-cublas==13.4.1.3 ; sys_platform == 'linux'\n"
+        "hibiscus @ git+https://github.com/Bigkatoan/Hibiscus.git@" + "a" * 40 + "#subdirectory=cli\n"
+        "lerobot @ git+https://github.com/huggingface/lerobot.git@" + "b" * 40 + "\n"
+    )
+    pins, git = build_release.split_export(export)
+    assert pins == ["fastapi==0.163.1", "nvidia-cublas==13.4.1.3 ; sys_platform == 'linux'"]
+    assert [(d.name, d.rev, d.subdirectory) for d in git] == [
+        ("hibiscus", "a" * 40, "cli"),
+        ("lerobot", "b" * 40, None),
+    ]
+    with pytest.raises(SystemExit):
+        build_release.split_export("lerobot @ git+https://github.com/x/y.git@main\n")  # not a full commit
+    with pytest.raises(SystemExit):
+        build_release.split_export("fastapi>=0.115\n")  # not pinned
+
+
+def test_override_names_the_whole_self_extra_closure(tmp_path: Path) -> None:
+    """An override replaces every requirement on the package, its own self-references too: with only
+    ``[feetech,dataset]`` the dry run installed lerobot without av, pyserial and rustypot."""
+    wheel = tmp_path / "lerobot-0.7.1-py3-none-any.whl"
+    meta = "\n".join(
+        [
+            "Metadata-Version: 2.4",
+            "Name: lerobot",
+            "Version: 0.7.1",
+            'Requires-Dist: lerobot[av-dep]; extra == "dataset"',
+            'Requires-Dist: datasets<6,>=4.8; extra == "dataset"',
+            'Requires-Dist: lerobot[serial-motors]; extra == "feetech"',
+            'Requires-Dist: lerobot[pyserial-dep,rustypot-dep]; extra == "serial-motors"',
+            'Requires-Dist: av<16,>=15; extra == "av-dep"',
+            'Requires-Dist: lerobot[pi]; extra == "all"',
+        ]
+    )
+    with zipfile.ZipFile(wheel, "w") as z:
+        z.writestr("lerobot-0.7.1.dist-info/METADATA", meta)
+    closure = build_release.extras_closure(wheel, ["feetech", "dataset"])
+    assert closure == ["feetech", "dataset", "serial-motors", "av-dep", "pyserial-dep", "rustypot-dep"]
+    assert build_release.extras_spec(closure).startswith("[feetech,dataset,")
+    assert build_release.requested_extras("lerobot") == ["feetech", "dataset"]
+
+
+def test_packages_from_another_index_are_pinned_by_url_per_platform() -> None:
+    lock = {
+        "package": [
+            {"name": "fastapi", "version": "1", "source": {"registry": build_release.PYPI}},
+            {
+                "name": "torchcodec",
+                "version": "0.17.0",
+                "source": {"registry": build_release.PYPI},
+                "resolution-markers": ["sys_platform == 'win32'"],
+            },
+            {
+                "name": "torchcodec",
+                "version": "0.17.0+cpu",
+                "source": {"registry": "https://download.pytorch.org/whl/cpu"},
+                "wheels": [
+                    {
+                        "url": "https://download.pytorch.org/whl/cpu/torchcodec-0.17.0%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl",
+                        "hash": "sha256:" + "c" * 64,
+                    },
+                    {
+                        "url": "https://download.pytorch.org/whl/cpu/torchcodec-0.17.0%2Bcpu-cp313-cp313-manylinux_2_28_x86_64.whl",
+                        "hash": "sha256:" + "d" * 64,
+                    },
+                ],
+            },
+        ]
+    }
+    lines, names = build_release.index_overrides(lock)
+    assert names == {"torchcodec"}
+    assert lines == [
+        "torchcodec==0.17.0 ; (sys_platform == 'win32')",
+        "torchcodec @ https://download.pytorch.org/whl/cpu/torchcodec-0.17.0%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl"
+        "#sha256=" + "c" * 64 + " ; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    ]
+
+
+def test_installer_is_ascii_and_keeps_vietnamese_text() -> None:
+    text = build_release.render_installer(
+        version="9.9.9", base_url="https://example.invalid/r", uv_sha256="e" * 64
+    )
+    assert text.isascii()
+    assert "$Version = '9.9.9'" in text and "$UvSha256 = '" + "e" * 64 + "'" in text
+    assert "$([char]0x0110)ang c$([char]0x00E0)i" in text  # "Đang cài" survives Windows PowerShell 5.1
+    assert "--constraints" in text and "--overrides" in text and "--force" in text
+    assert "--torch-backend" not in text  # the lock's torch, not a re-resolved one
+    with pytest.raises(SystemExit):
+        build_release.ps_ascii("# Hiệu chỉnh\n")  # non-ASCII outside a string
+
+
+def test_wheel_platform_markers() -> None:
+    m = build_release.wheel_marker
+    assert m("x-1-cp312-cp312-win_amd64.whl") == "sys_platform == 'win32' and platform_machine == 'AMD64'"
+    assert (
+        m("x-1-cp312-cp312-macosx_14_0_arm64.whl")
+        == "sys_platform == 'darwin' and platform_machine == 'arm64'"
+    )
+    assert m("x-1-py3-none-any.whl") == ""
+    with pytest.raises(ValueError):
+        m("x-1-cp311-cp311-win_amd64.whl")
