@@ -292,3 +292,34 @@ def test_keyframe_camera_rejects_windows_separators(tmp_path: Path) -> None:
 )
 def test_camera_index_from_the_ui_opens_as_an_index(given: int | str, want: int | Path) -> None:
     assert cameras.camera_target(given) == want
+
+
+def test_a_browser_closing_its_socket_is_not_logged_as_an_error(caplog: pytest.LogCaptureFixture) -> None:
+    """QD-3: on Windows the Proactor loop logs ``ERROR:asyncio: Exception in callback
+    _ProactorBasePipeTransport._call_connection_lost`` with ``ConnectionResetError: [WinError 10054]``
+    each time the browser drops a connection (page change, tab closed). The peer is gone, nothing
+    is lost: it must not reach the log as an error. Any other loop error still does."""
+    import asyncio
+    import logging
+
+    loop = asyncio.new_event_loop()
+    try:
+        oscompat.quiet_peer_resets(loop)
+        caplog.set_level(logging.DEBUG, logger="asyncio")
+        for exc in (
+            ConnectionResetError(10054, "An existing connection was forcibly closed by the remote host"),
+            ConnectionAbortedError(10053, "An established connection was aborted"),
+        ):
+            loop.call_exception_handler(
+                {
+                    "message": "Exception in callback _ProactorBasePipeTransport._call_connection_lost(None)",
+                    "exception": exc,
+                }
+            )
+        assert not [r for r in caplog.records if r.levelno >= logging.WARNING]
+        loop.call_exception_handler(
+            {"message": "Task exception was never retrieved", "exception": ValueError("x")}
+        )
+        assert [r for r in caplog.records if r.levelno >= logging.ERROR]
+    finally:
+        loop.close()

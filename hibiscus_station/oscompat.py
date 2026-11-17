@@ -6,6 +6,7 @@ Everything here is a no-op on POSIX unless stated.
 
 from __future__ import annotations
 
+import asyncio
 import io
 import mimetypes
 import os
@@ -13,6 +14,7 @@ import string
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 WINDOWS = sys.platform == "win32"
 
@@ -53,6 +55,28 @@ def utf8_console() -> None:
             stream.reconfigure(encoding="utf-8", errors="replace")
         except (ValueError, OSError):  # pragma: no cover - detached / closed stream
             pass
+
+
+def quiet_peer_resets(loop: asyncio.AbstractEventLoop) -> None:
+    """Do not log a browser dropping its connection as an error (all platforms; seen on Windows).
+
+    Windows' Proactor loop shuts the socket down in ``_call_connection_lost`` after the peer has
+    already reset it, and logs ``ConnectionResetError: [WinError 10054]`` as an ``ERROR:asyncio``
+    traceback each time a page or tab closes. The peer is gone and nothing is lost; any other
+    error goes to the previous handler unchanged."""
+    previous = loop.get_exception_handler()
+
+    def handler(lp: asyncio.AbstractEventLoop, context: dict[str, Any]) -> None:
+        exc = context.get("exception")
+        where = str(context.get("message", "")) + repr(context.get("handle", ""))
+        if isinstance(exc, ConnectionResetError | ConnectionAbortedError) and "connection_lost" in where:
+            return
+        if previous is not None:
+            previous(lp, context)
+        else:
+            lp.default_exception_handler(context)
+
+    loop.set_exception_handler(handler)
 
 
 def high_resolution_timer() -> None:
