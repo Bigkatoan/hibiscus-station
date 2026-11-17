@@ -80,6 +80,8 @@ export function SafetyBanners() {
   if (critical?.motor && critical.arm) {
     const h = tempHist[critical.arm as "follower" | "leader"]?.[critical.motor];
     if (h) eta = coolingEtaS(h.t, h.v, DEFAULT_THRESHOLDS.temp_hot_c);
+    // Already cool (0) is no countdown: "about 0 s" read as wrong (QC 0.2.9 QD-23).
+    if (eta !== null && eta <= 0) eta = null;
   }
 
   return (
