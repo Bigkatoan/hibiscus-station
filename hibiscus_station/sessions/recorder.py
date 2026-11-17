@@ -7,6 +7,8 @@ import json
 import logging
 import re
 import shutil
+import threading
+import time
 from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
@@ -17,6 +19,29 @@ from hibiscus_station.settings import write_private
 
 log = logging.getLogger(__name__)
 NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
+
+#: Datasets whose last episodes are still being encoded / finalized after their session ended
+#: (field report 0.2.9: never in the control loop). Keyed by dataset root.
+_CLOSING: dict[Path, Future[None]] = {}
+_CLOSING_LOCK = threading.Lock()
+
+
+def wait_closed(root: Path, timeout: float) -> None:
+    """Wait for a background finalize of ``root`` (a new session on the same dataset)."""
+    with _CLOSING_LOCK:
+        fut = _CLOSING.get(root)
+    if fut is None:
+        return
+    try:
+        fut.result(timeout=timeout)
+    except TimeoutError as exc:
+        raise StationError(
+            "busy",
+            "the last episode of this dataset is still being saved; try again in a moment",
+            params={"dataset": root.name, "state": "saving"},
+        ) from exc
+    except Exception:  # noqa: S110 - the failure was reported (alert + log) by the closer
+        pass
 
 
 def check_name(name: str) -> str:
@@ -78,6 +103,7 @@ class DatasetRecorder:
         self.saving: Future[int] | None = None
         self._pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix=f"ds-{name}")
         self.saved_episodes: list[int] = []
+        self.save_s: list[float] = []  # encode + write time of each saved episode (evidence)
         self.finalized = False
 
     # ------------------------------------------------------------------ open
@@ -157,12 +183,15 @@ class DatasetRecorder:
         self.frames_in_episode = 0
 
         def work() -> int:
+            t0 = time.monotonic()
             self.dataset.save_episode(parallel_encoding=False)
             eb = EpisodeBuffer()
             eb.lines = buffer_lines
             eb.save(episode_file(self.datasets_root, self.name, index))
             self.saved_episodes.append(index)
-            log.info("saved episode %d of %s (%d frames)", index, self.name, frames)
+            took = time.monotonic() - t0
+            self.save_s.append(round(took, 2))
+            log.info("saved episode %d of %s (%d frames) in %.1f s", index, self.name, frames, took)
             return index
 
         self.saving = self._pool.submit(work)
@@ -174,10 +203,44 @@ class DatasetRecorder:
         self.frames_in_episode = 0
         self.buffer.discard()
 
-    def wait_saving(self, timeout: float | None = 60.0) -> None:
+    def wait_saving(self, timeout: float | None = None) -> None:
+        """Wait for the episode being saved. No default timeout: a slow encoder (a Windows laptop
+        needs tens of seconds for a 30 s episode) must never abandon a save half written."""
         if self.saving is not None:
             self.saving.result(timeout=timeout)
             self.saving = None
+
+    def close_async(self, save_pending: bool, on_error: Any = None) -> Future[None]:
+        """Finish the save in flight, save the buffered episode when ``save_pending``, finalize:
+        on a background thread, so the control loop (e-stop relax, telemetry, cameras) never waits
+        for an encoder. :func:`wait_closed` lets the next session on this dataset wait for it."""
+        fut: Future[None] = Future()
+
+        def work() -> None:
+            try:
+                try:
+                    self.wait_saving()
+                    if save_pending:
+                        self.save_async()
+                        self.wait_saving()
+                finally:
+                    self.finalize()
+            except BaseException as exc:
+                log.exception("closing dataset %s failed", self.name)
+                if on_error is not None:
+                    on_error(exc)
+                fut.set_exception(exc)
+            else:
+                fut.set_result(None)
+            finally:
+                with _CLOSING_LOCK:
+                    if _CLOSING.get(self.root) is fut:
+                        del _CLOSING[self.root]
+
+        with _CLOSING_LOCK:
+            _CLOSING[self.root] = fut
+        threading.Thread(target=work, name=f"ds-close-{self.name}", daemon=False).start()
+        return fut
 
     def finalize(self) -> None:
         if self.finalized:

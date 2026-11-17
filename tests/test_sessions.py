@@ -127,7 +127,8 @@ def test_estop_during_recording_finalizes_dataset(connected: Station) -> None:
     st.owner.press_estop("user")
     wait_for(lambda: st.owner.state == "estopped", 6)
     root = st.paths.datasets / "halt"
-    assert check_recording(root).complete
+    # the buffered episode is saved and the dataset finalized off the control loop (0.2.9)
+    wait_for(lambda: check_recording(root).complete, 20)
     assert catalog.summary(st.paths.datasets, "halt")["episodes"] == 1  # type: ignore[index]
     st.owner.call("estop_reset")
 

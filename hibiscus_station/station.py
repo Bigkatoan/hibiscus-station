@@ -28,7 +28,7 @@ from hibiscus_station.programs.hub import ProgramsHub
 from hibiscus_station.remote import ServerLink, pull_model, upload_dataset
 from hibiscus_station.sessions.base import MotionSession
 from hibiscus_station.sessions.record import RecordSession
-from hibiscus_station.sessions.recorder import DatasetRecorder, check_name
+from hibiscus_station.sessions.recorder import DatasetRecorder, check_name, wait_closed
 from hibiscus_station.sessions.replay import ReplaySession, load_episode_actions
 from hibiscus_station.sessions.rest import RestSession
 from hibiscus_station.sessions.run import RunSession
@@ -332,6 +332,8 @@ class Station:
     def start_record(self, req: RecordRequest) -> dict[str, Any]:
         profile = self._profile()
         check_name(req.dataset)
+        # the previous session may still be saving its last episode in the background
+        wait_closed(self.paths.datasets / req.dataset, timeout=15.0)
 
         def build(owner: HardwareOwner) -> MotionSession:
             rec = DatasetRecorder(
