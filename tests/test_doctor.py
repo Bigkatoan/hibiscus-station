@@ -1002,6 +1002,34 @@ def test_the_scan_line_agrees_with_the_pings(
     assert "    id 4: model 777 fw 3.10 " in fol, fol
 
 
+def test_a_register_that_could_not_be_read_is_not_a_calibration_mismatch(
+    tmp_path: Path, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """QD-26: a read of id 1's position limits never got an answer; the report said the matching
+    calibration file "does not match the motors (... motor error: Failed to read ...)" and to
+    calibrate the arm again. A register that could not be read is a bus problem."""
+    f, ld = emus
+    home = _calibrated_home(tmp_path, f, ld, monkeypatch)
+    handle = f.handle
+
+    def no_limits(pkt_id: int, instr: int, params: bytes) -> bytes:
+        out = handle(pkt_id, instr, params)
+        if instr == 0x02 and pkt_id == 1 and params[0] <= 11 < params[0] + params[1]:
+            return b""  # every read that covers Max_Position_Limit of id 1 is lost
+        return out
+
+    f.handle = no_limits  # type: ignore[method-assign]
+    text, target = _run(home, tmp_path / "out")
+    problems = text.split("\n\n")[0]
+    assert "calibrate the arm again" not in text and "does not match" not in text, problems
+    mine = [p for p in problems.splitlines() if p.startswith("  ! arm follower: could not read register(s) ")]
+    assert len(mine) == 1 and "Max_Position_Limit of shoulder_pan" in mine[0], problems
+    assert "(a bus problem, not the calibration)" in mine[0], mine
+    cmp = _arm(_report(target), "follower")["calibration_vs_eeprom"]
+    assert cmp["shoulder_pan"].startswith("could not read ") and "Max_Position_Limit" in cmp["shoulder_pan"]
+    assert all(v == "match" for k, v in cmp.items() if k != "shoulder_pan"), cmp
+
+
 # ------------------------------------------------------------------ invariants over a fault grid
 GRID_DROP = (0.0, 0.01, 0.05, 0.2, 0.35, 0.4, 1.0)
 GRID_CORRUPT = (0.0, 0.05, 0.4)

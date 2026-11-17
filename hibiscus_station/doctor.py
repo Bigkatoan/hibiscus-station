@@ -664,25 +664,43 @@ def teleop_estimate(ms_per_read: float | None, chip: str | None = None) -> dict[
 
 
 NO_ANSWER = "motor did not answer"
+#: Start of a comparison whose registers could not be read: a bus problem, never a mismatch (QD-26).
+COULD_NOT_READ = "could not read"
+CALIBRATION_REGISTERS = (
+    ("homing_offset", "Homing_Offset"),
+    ("range_min", "Min_Position_Limit"),
+    ("range_max", "Max_Position_Limit"),
+)
 
 
 def _compare(cal: dict[str, Any], motors: dict[str, Any]) -> dict[str, Any]:
+    """Each motor of a calibration file against the motor's EEPROM: ``"match"``, the values that
+    differ, :data:`NO_ANSWER`, or ``"could not read <registers>"`` when a register needed for the
+    comparison could not be read (QD-26): that is a bus problem, never a calibration mismatch."""
     out: dict[str, Any] = {}
     for name, v in cal.items():
         row = motors.get(str(v.get("id")), {})
         if not row or row.get("error"):
             out[name] = NO_ANSWER  # listed as "do not answer", never as a calibration mismatch
             continue
-        diffs = []
-        for key, reg in (
-            ("homing_offset", "Homing_Offset"),
-            ("range_min", "Min_Position_Limit"),
-            ("range_max", "Max_Position_Limit"),
-        ):
-            if row.get(reg) != v.get(key):
-                diffs.append(f"{key}: file {v.get(key)} motor {row.get(reg)}")
-        out[name] = "match" if not diffs else "; ".join(diffs)
+        diffs, unread = [], []
+        for key, reg in CALIBRATION_REGISTERS:
+            value = row.get(reg)
+            if not isinstance(value, int) or isinstance(value, bool):
+                unread.append(reg)
+            elif value != v.get(key):
+                diffs.append(f"{key}: file {v.get(key)} motor {value}")
+        if diffs:
+            out[name] = "; ".join(diffs + ([f"{COULD_NOT_READ} {', '.join(unread)}"] if unread else []))
+        elif unread:
+            out[name] = f"{COULD_NOT_READ} {', '.join(unread)}"
+        else:
+            out[name] = "match"
     return out
+
+
+def _unread(d: Any) -> bool:
+    return isinstance(d, str) and d.startswith(COULD_NOT_READ)
 
 
 # ------------------------------------------------------------------------------------- the report
@@ -933,7 +951,16 @@ def warnings(report: dict[str, Any]) -> list[str]:
         if verdict.get("problem"):
             out.append(f"{a['robot']} {a['arm']}: {verdict['problem']}")
         cmp = a.get("calibration_vs_eeprom") or {}
-        diffs = {m: d for m, d in cmp.items() if d not in ("match", NO_ANSWER)}
+        diffs = {m: d for m, d in cmp.items() if d not in ("match", NO_ANSWER) and not _unread(d)}
+        unread = {m: str(d)[len(COULD_NOT_READ) + 1 :] for m, d in cmp.items() if _unread(d)}
+        if unread:
+            name = Path(str(a.get("calibration_file") or "")).stem or "?"
+            what = "; ".join(f"{regs} of {m}" for m, regs in unread.items())
+            out.append(
+                f"{a['robot']} {a['arm']}: could not read register(s) {what} (a bus problem, not the "
+                f"calibration): the calibration file '{name}' could not be checked for "
+                f"{len(unread)} of {len(cmp)} motors; fix the bus and run the doctor again"
+            )
         if diffs:
             names = list(diffs)
             first = f"{names[0]} {diffs[names[0]].split('; ')[0]}"

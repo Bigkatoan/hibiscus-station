@@ -51,6 +51,11 @@ with its own line (see the README); GitHub never offers a pre-release as its "la
 - **The doctor report always starts with LIKELY PROBLEMS**, or "No likely problems found".
 
 ### Fixed
+- **The doctor told you to calibrate a correctly calibrated arm again when a read failed.** A
+  register it could not read (a lost or damaged answer on the bus) was counted as a calibration
+  mismatch ("does not match the motors ... calibrate the arm again"). It now says "could not read
+  register(s) Max_Position_Limit of shoulder_pan (a bus problem, not the calibration)" and only a
+  value it did read and that differs from the file is a mismatch.
 - **The doctor said "ConnectError" when Station was not running.** After Station was closed (or
   killed and left its `station.pid` behind) the report now says "Station is not running".
 - **A port held by another program is now a likely problem**, with that program's name and what to
