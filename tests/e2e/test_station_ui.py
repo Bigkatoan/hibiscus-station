@@ -3,8 +3,10 @@
 Drives Chromium (Playwright) through the novice flow: connect → guided calibration (follower,
 leader, pose check) → cameras → teleop → over-temperature safe stop → record 2 episodes with the
 keyboard → the LeRobotDataset loads → import the ACT checkpoint → run it with every camera, joints,
-temperatures → Space e-stop → reset. Controls are found by their UI string keys, so the same flow
-runs in English and Vietnamese. Screenshots go to ``screenshots/e2e/`` (git-ignored;
+temperatures → Space e-stop → reset → Programs. Controls are found by their UI string keys, so
+one flow runs as ``mock-en`` (thermal safe stop), ``mock-vi`` and ``sts-vi`` (Space e-stop, relax,
+reset; ``sts`` = the real serial stack against two STS3215 chains on pseudo-terminals, POSIX only,
+also marked ``slow``). Screenshots go to ``screenshots/e2e/`` (git-ignored;
 ``HIBISCUS_E2E_SHOTS`` overrides). See ``conftest.py`` for what the tests need.
 
     uv run pytest tests/e2e -m e2e
@@ -14,6 +16,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -149,6 +152,18 @@ def estop_relax_reset(d: Driver) -> None:
 
 FLOWS = [
     pytest.param("mock", "en", id="mock-en"),
+    # the customer's flow (BR-1): Vietnamese, as a vi-VN browser opens it
+    pytest.param("mock", "vi", id="mock-vi"),
+    # the real serial stack (rustypot, lerobot SO-101 types) against emulated STS3215 chains
+    pytest.param(
+        "sts",
+        "vi",
+        id="sts-vi",
+        marks=[
+            pytest.mark.slow,
+            pytest.mark.skipif(sys.platform == "win32", reason="the STS emulator needs pseudo-terminals"),
+        ],
+    ),
 ]
 
 
@@ -215,8 +230,8 @@ def test_station_ui_end_to_end(
             expect(page.get_by_test_id(f"camera-{name}")).not_to_have_attribute("data-tick", "")
         d.shot("05-teleop", dark=True)
 
-        # ------------------------------------------------------------ 5. stop: thermal (mock) or Space
-        if station.mock:
+        # ------------------------------------------------------------ 5. stop: thermal (mock-en) or Space + relax
+        if station.mock and lang == "en":
             thermal_safe_stop(d)
         else:
             estop_relax_reset(d)
