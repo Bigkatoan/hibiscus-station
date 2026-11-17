@@ -40,10 +40,15 @@ def _calibrate_wide(st: Station, arm: str) -> None:
     """Calibrate through ±1400 steps (±123°), like a real arm, so far poses stay in range (the mock
     servo clamps goals to the calibrated position limits, as a real one does)."""
     world = get_world(f"mock://{arm}")
-    world.hand = fast_hand(amplitude=1400.0)
+    # Home (the middle) at raw 2048 on every joint, not wherever the sweep happened to be: a random
+    # middle put the leader's "far" pose outside the follower's range on some runs, and the align
+    # then chased a pose the clamped follower could never reach (CI python, 0.2.9: 60 s timeout).
+    world.hand = None
+    world.place_all(2048.0)
     st.owner.call("calibration_start", arm=arm)
     time.sleep(0.1)
     st.owner.call("calibration_step", action="set_home")
+    world.hand = fast_hand(amplitude=1400.0)
     time.sleep(0.8)
     st.owner.call("calibration_step", action="finish_ranges")
     world.hand = None if arm == "follower" else gentle_hand
@@ -322,7 +327,14 @@ def test_far_leader_is_refused_then_aligned(wide: Station, client: Any) -> None:
         assert r.status_code == 200, r.text
         assert r.json()["episode"]["phase"] == "align"
         assert st.owner.session is not None and st.owner.session.deadman
-        wait_for(lambda: st.status()["sub"] == "teleop", 60)  # the slow align is ~5 s; headroom for load
+        try:
+            wait_for(lambda: st.status()["sub"] == "teleop", 60)  # the slow align is ~5 s; headroom for load
+        except AssertionError:
+            s_ = st.status()
+            raise AssertionError(
+                f"align: state={s_['state']} sub={s_['sub']} reason={s_['reason']} detail={s_['detail']} "
+                f"obs={st.owner.last_obs} leader={st.owner.last_leader} sent={st.owner.last_sent}"
+            ) from None
         took = time.monotonic() - t0
 
         def tracking_gap() -> float:
