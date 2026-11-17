@@ -9,6 +9,7 @@ import re
 import shutil
 import sys
 import zipfile
+from collections.abc import Callable
 from pathlib import Path
 from types import ModuleType
 
@@ -265,6 +266,28 @@ def test_installer_reads_uv_output_without_colour() -> None:
     for line in ci.splitlines():
         if "$(& $uv" in line:
             assert "--color never" in line, line
+
+
+def test_installer_puts_the_tool_folder_on_path_before_uv_installs_into_it() -> None:
+    """QD-17: uv warns, in English only, "`...\\.local\\bin` is not on your PATH. ... run
+    `$env:PATH = ...` or `uv tool update-shell`" when its tool folder is not on this window's PATH
+    while it installs. The script already does both, so it does them first, and tells the user so in
+    both languages; nothing asks them to fix PATH by hand."""
+    code = [ln.split("#", 1)[0] for ln in (TOOLS / "install.ps1.in").read_text(encoding="utf-8").splitlines()]
+
+    def first(pred: Callable[[str], bool]) -> int:
+        return next(i for i, c in enumerate(code) if pred(c))
+
+    install = first(lambda c: "tool install" in c and "& $uv" in c)
+    assert first(lambda c: "tool dir --bin" in c) < install
+    assert first(lambda c: "tool update-shell" in c) < install
+    assert first(lambda c: '$env:PATH = "$bin$sep$env:PATH"' in c) < install
+    said = first(lambda c: c.strip().startswith("Say ") and "PATH" in c)
+    assert said < install and "PATH" in code[said + 1], code[said : said + 2]
+    text = build_release.render_installer(
+        version="9.9.9", base_url="https://example.invalid/r", uv_sha256="e" * 64
+    )
+    assert "is now on your PATH" in text and "update-shell`" not in text
 
 
 @pytest.mark.parametrize(

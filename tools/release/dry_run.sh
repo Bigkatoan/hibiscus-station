@@ -12,6 +12,8 @@
 # 2. Install with the real install.ps1 in a PowerShell 7 container (mcr.microsoft.com/powershell, no
 #    git in the image; uv and the assets mounted), or with --no-docker the same `uv tool install`
 #    command in bash with git hidden from PATH.
+#    The installer's output must have no uv warning telling the user to fix PATH by hand (QD-17)
+#    and must say, in both languages, that the command folder is on PATH.
 # 3. `hibiscus-station --version` must print this version.
 # 4. The installed libraries must equal `uv sync --locked --no-dev` (the set the tests run on),
 #    name and version, 100 %.
@@ -96,7 +98,9 @@ if [ "$DOCKER" = 1 ] && command -v docker >/dev/null && { docker image inspect "
     -e HIBISCUS_STATION_BASE_URL="$REL" -e HIBISCUS_STATION_UV="$WORK/uvbin/uv" \
     -e PATH=/opt/microsoft/powershell/7 \
     "$PWSH_IMAGE" /opt/microsoft/powershell/7/pwsh -NoProfile -NonInteractive -Command \
-    "if (Get-Command git -ErrorAction SilentlyContinue) { throw 'git is on PATH' }; Get-Content -Raw '$REL/install.ps1' | Invoke-Expression"
+    "if (Get-Command git -ErrorAction SilentlyContinue) { throw 'git is on PATH' }; Get-Content -Raw '$REL/install.ps1' | Invoke-Expression" \
+    2>&1 | tee "$WORK/install.log"
+  INSTALLER=1
 else
   echo "(no docker: running the installer's uv command in bash)"
   NOGIT="$WORK/nogit-bin"
@@ -104,11 +108,25 @@ else
   ln -s "$(command -v uv)" "$NOGIT/uv"
   sed "s#https://github.com/Bigkatoan/hibiscus-station/releases/download/v$VERSION#file://$REL#" \
     "$REL/overrides.txt" > "$WORK/overrides.txt"
-  env -i HOME="$HOME_T" PATH="$NOGIT" UV_CACHE_DIR="$CACHE" \
+  # like install.ps1: the tool folder is on PATH before uv installs into it (QD-17)
+  env -i HOME="$HOME_T" PATH="$BIN:$NOGIT" UV_CACHE_DIR="$CACHE" \
     uv --no-config tool install --force --python 3.12 --managed-python \
     --constraints "$REL/constraints.txt" --overrides "$WORK/overrides.txt" \
-    "$REL/hibiscus_station-$VERSION-py3-none-any.whl"
+    "$REL/hibiscus_station-$VERSION-py3-none-any.whl" 2>&1 | tee "$WORK/install.log"
+  INSTALLER=0
 fi
+step "2b. installer output: no uv PATH warning, the PATH line in both languages (QD-17)"
+PLAIN="$(sed 's/\x1b\[[0-9;]*[A-Za-z]//g' "$WORK/install.log")"
+if grep -qiE "not on your PATH|update-shell" <<<"$PLAIN"; then
+  grep -iE "not on your PATH|update-shell" <<<"$PLAIN"
+  echo "FAIL: the installer shows uv's PATH warning (the user would be told to fix PATH by hand)" >&2
+  exit 1
+fi
+if [ "$INSTALLER" = 1 ]; then
+  grep -q "is now on your PATH" <<<"$PLAIN" || { echo "FAIL: no English PATH line" >&2; exit 1; }
+  grep -q "vào PATH" <<<"$PLAIN" || { echo "FAIL: no Vietnamese PATH line" >&2; exit 1; }
+fi
+echo "OK: no uv PATH warning"
 
 step "3. version"
 GOT="$("$BIN/hibiscus-station" --version)"

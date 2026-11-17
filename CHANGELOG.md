@@ -54,6 +54,10 @@ with its own line (see the README); GitHub never offers a pre-release as its "la
   `cameras: front, wrist`, `ids answering at 1 Mbps: 1-6 (model 777)`, `calibration file vs motors:
   all 6 match`, `motors carry the calibration of: …/desk_follower.json`; the same for camera
   formats, servo status bits, bus errors and Station alerts.
+- **The Windows installer showed an English warning from uv telling you to fix PATH** (`... is not
+  on your PATH. To use installed tools, run ...`) right before "Done", on every first install. The
+  installer puts the command folder on PATH itself before installing, so the warning is gone; it now
+  says so in both languages, and you only open a new PowerShell window and type `hibiscus-station`.
 
 ## [0.2.8] - 2026-11-16
 

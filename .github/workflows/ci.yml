@@ -224,7 +224,19 @@ jobs:
           $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -and -not (Test-Path (Join-Path $_ 'git.exe')) }) -join ';'
           if (Get-Command git -ErrorAction SilentlyContinue) { Write-Error "git is still on PATH"; exit 1 }
           $env:HIBISCUS_STATION_BASE_URL = (Resolve-Path release).Path
-          Get-Content -Raw release\install.ps1 | Invoke-Expression
+          # In a child PowerShell 5.1 so that everything the user would see (uv's stderr too) is
+          # captured: no uv warning telling the user to fix PATH by hand (QD-17).
+          $script = (Resolve-Path release\install.ps1).Path
+          $out = Join-Path $env:RUNNER_TEMP "install.out"
+          $err = Join-Path $env:RUNNER_TEMP "install.err"
+          $p = Start-Process powershell -NoNewWindow -Wait -PassThru `
+            -RedirectStandardOutput $out -RedirectStandardError $err `
+            -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', "Get-Content -Raw '$script' | Invoke-Expression"
+          Get-Content $out, $err
+          if ($p.ExitCode -ne 0) { Write-Error "install.ps1 failed (exit $($p.ExitCode))"; exit 1 }
+          $shown = (Get-Content -Raw $out) + (Get-Content -Raw $err)
+          if ($shown -match 'not on your PATH|update-shell') { Write-Error "QD-17: the installer shows uv's PATH warning"; exit 1 }
+          if ($shown -notmatch 'is now on your PATH') { Write-Error "QD-17: no PATH line from the installer"; exit 1 }
           # where the script's own uv put the tool (read by the next steps)
           $uv = Join-Path $env:LOCALAPPDATA "HibiscusStation\uv-$env:UV_VERSION\uv.exe"
           [IO.File]::AppendAllText($env:GITHUB_ENV, "STATION_TOOL_DIR=$(& $uv --no-config --color never tool dir)`n")

@@ -129,15 +129,10 @@
                             'UV_NO_BUILD', 'UV_SYSTEM_PYTHON', 'UV_PYTHON', 'VIRTUAL_ENV')) {
             Remove-Item -LiteralPath "Env:$name" -ErrorAction SilentlyContinue
         }
-        Say "Đang cài thư viện (đúng bộ đã kiểm thử)." "Installing the libraries (the exact tested set)."
-        & $uv --no-config tool install --force --python $PythonVersion --managed-python `
-            --constraints $files['constraints.txt'] --overrides $files['overrides.txt'] $files[$Wheel]
-        if ($LASTEXITCODE -ne 0) {
-            Fail "uv không cài được Station (mã $LASTEXITCODE). Chụp màn hình này và gửi cho chúng tôi." `
-                 "uv could not install Station (exit code $LASTEXITCODE). Send us a screenshot of this window."
-        }
-
-        # -------------------------------------------------------------- 4. PATH and check
+        # -------------------------------------------------------------- PATH, before the install
+        # The tool folder goes on the user's PATH (uv tool update-shell) and on this window's PATH
+        # *before* uv installs into it: otherwise uv prints its own English warning telling the user
+        # to fix PATH by hand, which this script already does (QD-17).
         # --color never: under FORCE_COLOR / CLICOLOR_FORCE (CI, some terminals) uv colours the path
         # even into a pipe, and Join-Path then sees a drive named "<ESC>[36mC" (QD-2). The -replace
         # drops any escape sequence that another layer might still add.
@@ -148,6 +143,18 @@
         $ErrorActionPreference = 'Stop'
         $sep = [IO.Path]::PathSeparator
         if (-not (($env:PATH -split [regex]::Escape($sep)) -contains $bin)) { $env:PATH = "$bin$sep$env:PATH" }
+        Say "Thư mục lệnh $bin đã được thêm vào PATH (cửa sổ PowerShell mới sẽ thấy lệnh hibiscus-station)." `
+            "The command folder $bin is now on your PATH (a new PowerShell window finds hibiscus-station)."
+
+        Say "Đang cài thư viện (đúng bộ đã kiểm thử)." "Installing the libraries (the exact tested set)."
+        & $uv --no-config tool install --force --python $PythonVersion --managed-python `
+            --constraints $files['constraints.txt'] --overrides $files['overrides.txt'] $files[$Wheel]
+        if ($LASTEXITCODE -ne 0) {
+            Fail "uv không cài được Station (mã $LASTEXITCODE). Chụp màn hình này và gửi cho chúng tôi." `
+                 "uv could not install Station (exit code $LASTEXITCODE). Send us a screenshot of this window."
+        }
+
+        # -------------------------------------------------------------- 4. check
         $exeName = 'hibiscus-station'
         if ($onWindows) { $exeName = 'hibiscus-station.exe' }
         $got = (& (Join-Path $bin $exeName) --version | Out-String).Trim()
