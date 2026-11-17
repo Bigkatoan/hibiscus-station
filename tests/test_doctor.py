@@ -802,12 +802,38 @@ def test_a_calibration_file_that_differs_from_the_motors_is_a_likely_problem(
     text, _t = _run(home, tmp_path / "out")
     problems = text.split("\n\n")[0].splitlines()[1:]
     assert (
-        "  ! arm leader: calibration file 'arm_leader' does not match the motors (elbow_flex "
-        "homing_offset: file 300 motor 396); Connect writes the file to the motors: if it is not "
-        "this arm's file, calibrate the arm again"
+        "  ! arm leader: calibration file 'arm_leader' does not match the motors (1 of 6 motors: "
+        "elbow_flex homing_offset: file 300 motor 396); Connect writes the file to the motors: if it "
+        "is not this arm's file, calibrate the arm again"
     ) in problems, problems
     assert "  ! arm leader: motor id(s) 6 do not answer (power? cable?)" in problems
     assert not any("follower" in p for p in problems), problems
+
+
+def test_a_calibration_file_of_another_arm_names_every_motor_that_differs() -> None:
+    cmp = {m: "homing_offset: file 1 motor 0; range_min: file 2 motor 0" for m in ("a", "b", "c")}
+    report: dict[str, Any] = {
+        "profiles": {"active": "x", "robots": []},
+        "ports": [],
+        "calibrations": [],
+        "running": None,
+        "arms": [
+            {
+                "robot": "desk",
+                "arm": "leader",
+                "port": "COM4",
+                "motors": {},
+                "calibration_vs_eeprom": dict(cmp, d="match"),
+                "calibration_file": "/c/teleoperators/so_leader/desk_leader.json",
+            }
+        ],
+    }
+    w = [x for x in doctor.warnings(report) if "does not match" in x]
+    assert w == [
+        "desk leader: calibration file 'desk_leader' does not match the motors (3 of 4 motors: a, b, c; "
+        "first: a homing_offset: file 1 motor 0); Connect writes the file to the motors: if it is not "
+        "this arm's file, calibrate the arm again"
+    ], w
 
 
 def _status(calibrated: bool, issue: str | None, last: str | None) -> dict[str, Any]:

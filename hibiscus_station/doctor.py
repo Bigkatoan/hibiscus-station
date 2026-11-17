@@ -753,17 +753,17 @@ def warnings(report: dict[str, Any]) -> list[str]:
             out.append(
                 f"{a['robot']} {a['arm']}: motor id(s) {', '.join(missing)} do not answer (power? cable?)"
             )
-        diffs = {
-            m: d for m, d in (a.get("calibration_vs_eeprom") or {}).items() if d not in ("match", NO_ANSWER)
-        }
+        cmp = a.get("calibration_vs_eeprom") or {}
+        diffs = {m: d for m, d in cmp.items() if d not in ("match", NO_ANSWER)}
         if diffs:
-            shown = "; ".join(f"{m} {d}" for m, d in list(diffs.items())[:3])
-            more = f"; {len(diffs) - 3} more" if len(diffs) > 3 else ""
+            names = list(diffs)
+            first = f"{names[0]} {diffs[names[0]].split('; ')[0]}"
+            detail = first if len(names) == 1 else f"{', '.join(names)}; first: {first}"
             name = Path(str(a.get("calibration_file") or "")).stem or "?"
             out.append(
                 f"{a['robot']} {a['arm']}: calibration file '{name}' does not match the motors "
-                f"({shown}{more}); Connect writes the file to the motors: if it is not this arm's "
-                "file, calibrate the arm again"
+                f"({len(names)} of {len(cmp)} motors: {detail}); Connect writes the file to the "
+                "motors: if it is not this arm's file, calibrate the arm again"
             )
         est = a.get("teleop_estimate") or {}
         if est.get("warning"):
