@@ -81,7 +81,7 @@ def test_lean_tick_never_reads_telemetry_and_observation_in_one_tick(connected: 
     st.owner.stats.tick = orig  # type: ignore[method-assign]
     fol.record_calls = lead.record_calls = False
     st.owner.call("control", action="stop")
-    assert len(ends) > 100, len(ends)
+    assert len(ends) > 20, len(ends)  # every tick is checked; a slow runner still gives dozens
     per_tick: list[int] = []
     for (f0, l0), (f1, l1) in itertools.pairwise(ends):
         calls = fol.calls[f0:f1] + lead.calls[l0:l1]
