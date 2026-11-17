@@ -275,7 +275,10 @@ def test_rest_move_is_slow_cancellable_and_needs_the_heartbeat(wide: Station, cl
         lim = r.json()["episode"]["limit_s"]
         speed = st.settings.programs.approach_speed_deg_s
         assert lim >= 1.875 * 55.0 / speed  # min-jerk at the capped peak speed: >= 3.4 s for 60°
-        time.sleep(0.5)
+        # Stop once the move is under way (not after a fixed sleep: on a loaded machine 0.5 s of
+        # sleep can last long enough for the arm to get near Home; QC 0.2.9 r2 saw 7.9°).
+        start = st.owner.last_obs["shoulder_pan.pos"]
+        wait_for(lambda: abs(st.owner.last_obs["shoulder_pan.pos"] - start) > 2.0, 5)
         assert client.post(f"{API}/sessions/current/control", json={"action": "stop"}).status_code == 200
         wait_for(lambda: st.owner.state == "idle", 3)
     assert st.owner.last_session_summary["outcome"] == "stopped"
@@ -319,7 +322,7 @@ def test_far_leader_is_refused_then_aligned(wide: Station, client: Any) -> None:
         assert r.status_code == 200, r.text
         assert r.json()["episode"]["phase"] == "align"
         assert st.owner.session is not None and st.owner.session.deadman
-        wait_for(lambda: st.status()["sub"] == "teleop", 20)
+        wait_for(lambda: st.status()["sub"] == "teleop", 60)  # the slow align is ~5 s; headroom for load
         took = time.monotonic() - t0
         lead = st.owner.last_leader
         fol = st.owner.last_obs
