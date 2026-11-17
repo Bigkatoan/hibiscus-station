@@ -44,3 +44,29 @@ def test_doctor_still_names_the_zip_when_the_report_does_not(
     out, target = _run_with(monkeypatch, tmp_path, "PORTS\n  none")
     assert out.count(str(target.resolve())) == 1
     assert "Report saved to" in out
+
+
+def test_doctor_verbose_prints_station_bus_errors_but_no_library_debug_lines(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """QD-12: --verbose is for bus errors (motor id, register); libraries' DEBUG lines stay out."""
+    import logging
+
+    target = tmp_path / "hibiscus-station-doctor-20261117-120000.zip"
+    target.write_bytes(b"zip")
+
+    def fake_run(*_args: Any, **_kwargs: Any) -> tuple[str, Path]:
+        logging.getLogger().debug("Detected pyserial version: 3.5")  # lerobot's import check, root
+        logging.getLogger("datasets").debug("PyTorch version 2.5 available.")
+        logging.getLogger("hibiscus_station.hw.bus").debug("read Present_Current id 3 failed, retrying")
+        return "report", target
+
+    monkeypatch.setattr(doc, "run", fake_run)
+    r = CliRunner().invoke(
+        app, ["doctor", "--verbose", "--home", str(tmp_path / "home"), "--out", str(tmp_path)]
+    )
+    assert r.exit_code == 0, r.output
+    assert "read Present_Current id 3 failed" in r.output
+    assert "Detected pyserial version" not in r.output and "PyTorch version" not in r.output
+    logging.getLogger("hibiscus_station").setLevel(logging.NOTSET)
+    logging.getLogger().handlers.clear()

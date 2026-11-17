@@ -276,13 +276,10 @@ def doctor(
     """
     from hibiscus_station import doctor as doc
 
-    logging.basicConfig(
-        level=logging.DEBUG if verbose else logging.WARNING,
-        format="%(levelname)s %(name)s: %(message)s",
-        force=True,
-    )
-    if verbose:
-        logging.getLogger("lerobot").setLevel(logging.INFO)
+    # Libraries (lerobot's import checks, datasets, av...) log DEBUG lines on the root logger:
+    # --verbose shows Station's own lines only, every bus error with its motor id and register.
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s", force=True)
+    logging.getLogger("hibiscus_station").setLevel(logging.DEBUG if verbose else logging.NOTSET)
     text, target = doc.run(
         home or station_home(),
         out,
