@@ -540,7 +540,14 @@
     "path_copied": "Copied",
     "upload": "Upload",
     "more": "Record more",
-    "saving_note": "The episode is being saved. The arm holds its position; you can leave this page."
+    "saving_note": "The episode is being saved. The arm holds its position; you can leave this page.",
+    "none_title": "No episode was saved.",
+    "dropped": "Episode {{n}} was stopped ({{reason}}), so it was not kept.",
+    "none_stopped": "You stopped before the first episode was recorded.",
+    "none_ended": "The session ended ({{reason}}) before an episode was recorded.",
+    "none_removed": "Nothing was written: the dataset {{name}} was not created.",
+    "none_kept": "The dataset {{name}} is unchanged.",
+    "again": "Record again"
   },
   "datasets": {
     "title": "Datasets",
@@ -560,7 +567,9 @@
     "temp_chart": "Episode {{n}}: follower temperatures (°C)",
     "no_telemetry": "No telemetry for this episode.",
     "delete": "Delete",
-    "confirm_delete": "Delete for good"
+    "confirm_delete": "Delete for good",
+    "missing": "There is no dataset {{name}} on this computer. It was deleted, or its recording kept no episode.",
+    "to_list": "All datasets"
   },
   "upload": {
     "title": "Upload to Hibiscus",

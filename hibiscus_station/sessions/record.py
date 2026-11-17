@@ -224,6 +224,12 @@ class RecordSession(MotionSession):
         in_flight = rec.saving is not None
         pending = self.pending  # a fully recorded episode is kept, whatever ended the session
         self.pending = False
+        # An e-stop (or a fault) in the middle of an episode drops that episode: it is not saved,
+        # because its last frames were taken while the arm was being stopped. Count it, so the end
+        # card can say so (QC 0.2.9 QD-12). A Stop never gets here with frames: it saves them.
+        dropped = self.episode.phase == "episode" and rec.frames_in_episode > 0
+        if dropped:
+            self.discarded += 1
         if in_flight or pending:
             # e-stop / camera lost / error while an episode waits for the encoder: never in the
             # owner thread (a second e-stop press must relax at once); the next session on this
@@ -244,5 +250,9 @@ class RecordSession(MotionSession):
                 "timeouts": self.timeouts,
                 "root": str(rec.root),
                 "save_s": list(rec.save_s),
+                "dropped_in_progress": dropped,
+                # False when a new dataset ended with no episode: finalize() removed the empty
+                # folder, so there is nothing to open or upload (docs/spec/station.md §6.6).
+                "dataset_kept": rec.root.exists(),
             }
         )

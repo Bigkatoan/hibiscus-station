@@ -863,6 +863,22 @@ then joints. Start runs a 1.5 s smooth approach with the overlay "Follower movin
     the sidecar.
 * At the end: "20 episodes saved in `~/.hibiscus/station/datasets/picknplace_red`" → **Upload**
   (primary) or **Record more**.
+* **A session that kept no episode** (QC 0.2.9 QD-12): an e-stop (or a fault: thermal stop,
+  UI lost, camera lost, USB device lost) in the middle of an episode drops that episode, because
+  its last frames were taken while the arm was being stopped. A Stop in the countdown records
+  nothing. When no episode was saved:
+  * a **new** dataset is **removed** (`finalize()` deletes the empty folder and its sidecar). An
+    empty LeRobot dataset holds no data, would block the same name with `dataset_exists`, and
+    could only be deleted by hand; removing it loses nothing recorded. An **appended** dataset
+    keeps its earlier episodes unchanged;
+  * the session summary says so: `saved: 0`, `discarded` counts the dropped episode,
+    `dropped_in_progress: true|false`, `dataset_kept: true|false`;
+  * the end card says plainly "No episode was saved." and why ("Episode 1 was stopped (e-stop
+    pressed), so it was not kept." / "You stopped before the first episode was recorded."), and
+    whether the dataset was not created or is unchanged. It offers **Record again**, never
+    **Upload**. When earlier episodes were saved, the normal card adds the line about the dropped
+    one;
+  * the page of a dataset that no longer exists says so, with no numbers, Delete or Upload.
 
 ### 6.7 Upload (and Datasets)
 * The Datasets list (local): name, episodes, frames, fps, cameras, size, finalized ✓, uploaded ✓

@@ -4,6 +4,7 @@
  * the saved-episode strip and the end card.
  */
 import { PxIcon } from "@/hibiscus/PixelAnim";
+import type { TFunction } from "i18next";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -26,6 +27,7 @@ import { StationError } from "../components/StationError";
 import { useCritical, useSessionControl } from "../components/controls";
 import { DEFAULT_THRESHOLDS, levelCss, peakTemp, tempLevel } from "../health";
 import { useRuntime, useStatus } from "../ws/StationProvider";
+import type { SessionEndInfo } from "../ws/store";
 
 /** MB per episode: about 2 Mbit/s of encoded video per 640×480@30 camera (scaled by pixels × fps). */
 export function estimateEpisodeMb(
@@ -416,6 +418,71 @@ function DatasetPath({ path }: { path: string }) {
   );
 }
 
+/** What the end of a record session says about the episodes it did not keep (QC 0.2.9 QD-12). */
+interface RecordEnd {
+  /** The episode in progress was dropped (an e-stop or a fault in the middle of it). */
+  dropped: boolean;
+  /** The dataset still exists (false: a new dataset that kept no episode was removed). */
+  kept: boolean;
+  /** Why the session ended: "stopped", "completed", or an e-stop / fault reason. */
+  reason: string;
+}
+
+function recordEnd(end: SessionEndInfo | null, last: Session): RecordEnd {
+  const summary = (end?.id === last.id ? end.summary : null) ?? {};
+  const raw = end?.id === last.id ? (end.reason ?? end.outcome) : last.outcome;
+  return {
+    dropped: summary.dropped_in_progress === true,
+    // an older Station sends no flag: with no episode saved, a new dataset was removed
+    kept: typeof summary.dataset_kept === "boolean" ? summary.dataset_kept : last.episode.saved > 0,
+    // the mock and older Stations prefix e-stop outcomes with "estop_"
+    reason: raw.startsWith("estop_") ? raw.slice("estop_".length) : raw,
+  };
+}
+
+function droppedText(t: TFunction<"station">, ended: Session, info: RecordEnd): string {
+  return t("record.dropped", {
+    n: ended.episode.saved + 1,
+    reason: t(`reasons.${info.reason}`, { defaultValue: t("reasons.internal") }),
+  });
+}
+
+function NothingSaved({
+  ended,
+  info,
+  onAgain,
+}: {
+  ended: Session;
+  info: RecordEnd | null;
+  onAgain: () => void;
+}) {
+  const { t } = useTranslation("station");
+  const end = info ?? { dropped: false, kept: false, reason: ended.outcome };
+  const name = ended.dataset ?? "";
+  let why: string;
+  if (end.dropped) why = droppedText(t, ended, end);
+  else if (end.reason === "stopped" || end.reason === "completed") why = t("record.none_stopped");
+  else
+    why = t("record.none_ended", {
+      reason: t(`reasons.${end.reason}`, { defaultValue: t("reasons.internal") }),
+    });
+  return (
+    <Card data-testid="record-none">
+      <CardContent className="flex flex-wrap items-center gap-4 pt-3 sm:pt-4">
+        <Mascot mood="idle" />
+        <div className="min-w-[min(14rem,100%)] flex-1" role="status">
+          <p className="break-words font-extrabold text-base">{t("record.none_title")}</p>
+          <p className="text-sm">{why}</p>
+          <p className="text-sm text-muted-foreground">
+            {end.kept ? t("record.none_kept", { name }) : t("record.none_removed", { name })}
+          </p>
+        </div>
+        <Button onClick={onAgain}>{t("record.again")}</Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function RecordPage() {
   const { t } = useTranslation("station");
   const status = useStatus();
@@ -424,15 +491,19 @@ export function RecordPage() {
   const session = status?.session?.kind === "record" ? status.session : null;
   const wasRecording = useRef(false);
   const [ended, setEnded] = useState<Session | null>(null);
+  const [endInfo, setEndInfo] = useState<RecordEnd | null>(null);
   useEffect(() => {
     if (session) {
       wasRecording.current = true;
       setEnded(null);
+      setEndInfo(null);
     } else if (wasRecording.current) {
       wasRecording.current = false;
-      // The store keeps the final `session` message (phase "done", saved count).
-      const last = store.getSnapshot().lastSession;
+      // The store keeps the final `session` message (phase "done", saved count, summary).
+      const snap = store.getSnapshot();
+      const last = snap.lastSession;
       setEnded(last?.kind === "record" ? last : null);
+      setEndInfo(last?.kind === "record" ? recordEnd(snap.lastEnd, last) : null);
     }
   }, [session, store]);
 
@@ -443,7 +514,16 @@ export function RecordPage() {
     <div className="flex flex-col gap-4">
       <PageHeader title={t("record.title")} description={t("record.desc")} />
       {session ? <RecordLive session={session} /> : null}
-      {!session && ended ? (
+      {!session && ended?.episode.saved === 0 ? (
+        <NothingSaved
+          ended={ended}
+          info={endInfo}
+          onAgain={() => {
+            setEnded(null);
+          }}
+        />
+      ) : null}
+      {!session && ended && ended.episode.saved > 0 ? (
         <Card data-testid="record-done">
           {/* QC 0.2.9 QD-11: at 390 px the text wraps under the mascot / above the buttons instead of
               squeezing into a one-word column; the local path sits behind a disclosure. */}
@@ -453,6 +533,11 @@ export function RecordPage() {
               <p className="break-words font-extrabold text-base">
                 {t("record.done", { count: ended.episode.saved, name: ended.dataset ?? "" })}
               </p>
+              {endInfo?.dropped ? (
+                <p className="text-sm text-muted-foreground" data-testid="record-dropped">
+                  {droppedText(t, ended, endInfo)}
+                </p>
+              ) : null}
               {endedPath ? <DatasetPath path={endedPath} /> : null}
             </div>
             <div className="flex flex-wrap gap-2">

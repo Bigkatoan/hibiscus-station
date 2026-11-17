@@ -824,6 +824,24 @@ export class MockStation {
     if (!rt) return;
     // CR-1: a user Stop holds the arm where it is; the UI offers Return Home / Relax.
     if (outcome === "stopped") this.interrupted = true;
+    // Like RecordSession.end(): an e-stop (or a fault) mid-episode drops that episode; a new
+    // dataset that kept no episode is removed (QC 0.2.9 QD-12).
+    let summary: Record<string, unknown> = { episodes: rt.s.episode.saved };
+    if (rt.rec) {
+      const ep = rt.s.episode;
+      const dropped = ep.phase === "episode" && ep.elapsed_s > 0;
+      const d = this.datasets.find((x) => x.name === rt.s.dataset);
+      const kept = Boolean(d && d.episodes > 0);
+      if (d && !kept) this.datasets = this.datasets.filter((x) => x !== d);
+      summary = {
+        ...summary,
+        dataset: rt.s.dataset,
+        saved: ep.saved,
+        discarded: dropped ? 1 : 0,
+        dropped_in_progress: dropped,
+        dataset_kept: kept,
+      };
+    }
     // Like the backend teardown (§5.3): state "stopping", then the final `session` message
     // (`ended: true`, phase "done" with the saved count), then the new state.
     rt.s.episode = { ...rt.s.episode, phase: "done" };
@@ -836,7 +854,7 @@ export class MockStation {
     const end: SessionEnd = {
       ...rt.s,
       reason: reason ?? outcome,
-      summary: { episodes: rt.s.episode.saved },
+      summary,
       loop: { ticks: 0, overruns: 0, tick_ms_p95: 0, telemetry_reads: 0, telemetry_forced: 0 },
       max_temp_c: peaks,
     };

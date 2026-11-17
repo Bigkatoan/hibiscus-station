@@ -540,7 +540,14 @@
     "path_copied": "Đã sao chép",
     "upload": "Tải lên",
     "more": "Ghi thêm",
-    "saving_note": "Đang lưu tập. Tay robot giữ nguyên vị trí; bạn có thể rời trang này."
+    "saving_note": "Đang lưu tập. Tay robot giữ nguyên vị trí; bạn có thể rời trang này.",
+    "none_title": "Chưa lưu tập nào.",
+    "dropped": "Tập {{n}} đã bị dừng ({{reason}}) nên không được giữ lại.",
+    "none_stopped": "Bạn đã dừng trước khi ghi tập đầu tiên.",
+    "none_ended": "Phiên ghi đã kết thúc ({{reason}}) trước khi ghi được tập nào.",
+    "none_removed": "Chưa ghi gì: bộ dữ liệu {{name}} chưa được tạo.",
+    "none_kept": "Bộ dữ liệu {{name}} không thay đổi.",
+    "again": "Ghi lại"
   },
   "datasets": {
     "title": "Bộ dữ liệu",
@@ -560,7 +567,9 @@
     "temp_chart": "Tập {{n}}: nhiệt độ tay follower (°C)",
     "no_telemetry": "Tập này không có telemetry.",
     "delete": "Xoá",
-    "confirm_delete": "Xoá vĩnh viễn"
+    "confirm_delete": "Xoá vĩnh viễn",
+    "missing": "Không có bộ dữ liệu {{name}} trên máy này. Bộ dữ liệu đã bị xoá, hoặc lần ghi đó không lưu được tập nào.",
+    "to_list": "Tất cả bộ dữ liệu"
   },
   "upload": {
     "title": "Tải lên Hibiscus",

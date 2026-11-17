@@ -74,7 +74,9 @@ Hãy tắt LeLab và mọi lệnh `lerobot-*` trước: mỗi cổng serial ch�
    episode tiếp (lưu), **←** ghi lại, **Esc** dừng. Episode chạm giới hạn thời gian sẽ được **lưu**
    (khác LeLab, vốn lặng lẽ ghi lại); bạn có thể đổi thành *bỏ*. **Dừng** kết thúc episode ngay: trang
    hiện "Đang lưu tập…" trong lúc ghi file (camera vẫn chạy, tay robot giữ nguyên vị trí), rồi hiện
-   thẻ kết thúc.
+   thẻ kết thúc. **Dừng khẩn** (phím Space) thì khác: tập đang ghi bị bỏ, vì những khung hình cuối
+   được ghi lúc tay robot đang bị dừng. Nếu chưa lưu được tập nào, thẻ kết thúc nói rõ điều đó và lý
+   do, và bộ dữ liệu mới không có tập nào sẽ không được giữ lại (không có gì để tải lên).
 6. **Tải lên.** Ghép Station với server Hibiscus một lần (URL server và personal access token có
    quyền `datasets:write` và `models:read`; thêm `runs:read` để xem các run). Sau đó tải dataset lên
    thành dataset mới hoặc phiên bản mới. Mất mạng giữa chừng thì lần sau tải tiếp từ chỗ dở.

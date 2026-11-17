@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { i18n } from "@/lib/i18n";
 import { server } from "@/test/server";
 import type { DiscoveredCamera } from "./api/types";
-import { renderStation, settle, setupStation } from "./test/utils";
+import { advance, renderStation, settle, setupStation } from "./test/utils";
 
 afterEach(async () => {
   await i18n.changeLanguage("en");
@@ -78,5 +78,70 @@ describe("Sessions page (QD-14)", () => {
     expect(table).not.toHaveTextContent("session.kind_");
     expect(within(table).queryByText("stopped")).toBeNull();
     expect(within(table).getAllByText("đã dừng")).toHaveLength(4);
+  });
+});
+
+describe("Record: a session that kept no episode (QD-12)", () => {
+  const REC = { dataset: "qr_redstop", task: "Pick", reset_time_s: 0, countdown_s: 0.1 };
+
+  it("an e-stop in episode 1 says the episode was not kept and offers no Upload", async () => {
+    const h = setupStation({ paired: true });
+    h.sim.startSession("record", { ...REC, num_episodes: 1, episode_time_s: 30 });
+    renderStation("/record", h);
+    await settle();
+    await advance(h.sim, 3);
+    h.sim.estop("user");
+    const card = await screen.findByTestId("record-none");
+    expect(card).toHaveTextContent("No episode was saved.");
+    expect(card).toHaveTextContent("Episode 1 was stopped (e-stop pressed), so it was not kept.");
+    expect(card).toHaveTextContent("Nothing was written: the dataset qr_redstop was not created.");
+    expect(card).not.toHaveTextContent(/0 episodes/);
+    expect(within(card).queryByRole("link", { name: "Upload" })).toBeNull();
+    expect(screen.queryByTestId("record-done")).toBeNull();
+    expect(h.sim.datasets.some((d) => d.name === "qr_redstop")).toBe(false);
+  });
+
+  it("a Stop in the countdown says nothing was recorded, in vi too", async () => {
+    const h = setupStation({ paired: true });
+    await i18n.changeLanguage("vi");
+    h.sim.startSession("record", { ...REC, num_episodes: 1, episode_time_s: 30, countdown_s: 5 });
+    renderStation("/record", h);
+    await settle();
+    await advance(h.sim, 1);
+    h.sim.controlAction("stop");
+    const card = await screen.findByTestId("record-none");
+    expect(card).toHaveTextContent("Chưa lưu tập nào.");
+    expect(card).toHaveTextContent("Bạn đã dừng trước khi ghi tập đầu tiên.");
+    expect(card).toHaveTextContent("bộ dữ liệu qr_redstop chưa được tạo");
+    expect(within(card).queryByRole("link")).toBeNull();
+    expect(within(card).getByRole("button", { name: "Ghi lại" })).toBeEnabled();
+  });
+
+  it("an e-stop in episode 2 keeps episode 1 and says episode 2 was not kept", async () => {
+    const h = setupStation({ paired: true });
+    h.sim.startSession("record", { ...REC, num_episodes: 2, episode_time_s: 2 });
+    renderStation("/record", h);
+    await settle();
+    await advance(h.sim, 3.2);
+    h.sim.estop("user");
+    const done = await screen.findByTestId("record-done");
+    expect(done).toHaveTextContent("1 episode saved in dataset qr_redstop");
+    expect(screen.getByTestId("record-dropped")).toHaveTextContent(
+      "Episode 2 was stopped (e-stop pressed), so it was not kept.",
+    );
+    expect(within(done).getByRole("link", { name: "Upload" })).toBeInTheDocument();
+  });
+});
+
+describe("Dataset page for a dataset that is gone (QD-12)", () => {
+  it("says so plainly: no stale numbers, no Delete, no Upload, no server text", async () => {
+    const h = setupStation({ paired: true });
+    renderStation("/datasets/qr_redstop5?upload=1", h);
+    const card = await screen.findByTestId("dataset-missing");
+    expect(card).toHaveTextContent("There is no dataset qr_redstop5 on this computer.");
+    expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
+    expect(screen.queryByText("no dataset qr_redstop5")).toBeNull(); // the raw server detail
+    expect(screen.queryByText("Not found.")).toBeNull();
+    expect(screen.queryByText(/0 episodes/)).toBeNull();
   });
 });

@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, NativeSelect } from "@/components/ui/input";
-import { api } from "../api/client";
+import { api, StationApiError } from "../api/client";
 import {
   qk,
   useDataset,
@@ -268,6 +268,26 @@ export function DatasetDetailPage() {
   );
   const del = useStationMutation(() => api.del(`/datasets/${encodeURIComponent(name)}`), [qk.datasets]);
   const d = detail.data;
+  if (detail.error instanceof StationApiError && detail.error.status === 404) {
+    // QC 0.2.9 QD-12: a dataset that is gone (deleted, or a record session that kept no episode)
+    // shows no stale numbers, no Delete / Upload and no raw server text.
+    return (
+      <div className="flex flex-col gap-4">
+        <PageHeader title={name} />
+        <Card data-testid="dataset-missing">
+          <CardContent className="flex flex-wrap items-center gap-4 pt-3 sm:pt-4">
+            <Mascot mood="idle" />
+            <p className="min-w-[min(14rem,100%)] flex-1" role="status">
+              {t("datasets.missing", { name })}
+            </p>
+            <Button asChild>
+              <Link to="/datasets">{t("datasets.to_list")}</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col gap-4">
       <PageHeader

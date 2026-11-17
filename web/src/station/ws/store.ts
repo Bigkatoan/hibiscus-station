@@ -51,6 +51,8 @@ export interface StationSnapshot {
   alertCount: number;
   /** The most recent session seen (kept after it ends, for end cards and run summaries). */
   lastSession: Session | null;
+  /** The end of the last session that ended (its final `session` message): why, and its summary. */
+  lastEnd: SessionEndInfo | null;
   /** The current (or last finished) program run (programs §7: WS `program_state`, `Status.program`). */
   program: ProgramState | null;
   /** Log lines of that run (WS `program_log`), newest last, at most PROGRAM_LOG_MAX. */
@@ -59,6 +61,13 @@ export interface StationSnapshot {
   trajRecord: TrajectoryRecordMsg | null;
   /** Last value of every signal seen on the bus (WS `signal`). */
   signals: Record<string, Signal>;
+}
+
+export interface SessionEndInfo {
+  id: string;
+  outcome: string;
+  reason: string | null;
+  summary: Record<string, unknown> | null;
 }
 
 export const PROGRAM_LOG_MAX = 300;
@@ -94,6 +103,7 @@ export function initialSnapshot(): StationSnapshot {
     peaks: {},
     alertCount: 0,
     lastSession: null,
+    lastEnd: null,
     program: null,
     programLog: [],
     trajRecord: null,
@@ -293,6 +303,16 @@ export class StationStore {
         const st = this.snap.status;
         this.set({
           lastSession: session,
+          ...(ended
+            ? {
+                lastEnd: {
+                  id: msg.id,
+                  outcome: msg.outcome,
+                  reason: msg.reason ?? null,
+                  summary: msg.summary ?? null,
+                },
+              }
+            : {}),
           ...(st && !ended ? { status: { ...st, session, sub: session.episode.phase ?? st.sub } } : {}),
         });
         return;

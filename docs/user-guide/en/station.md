@@ -76,7 +76,10 @@ Close LeLab and any `lerobot-*` command first: only one program can use a serial
    Keys: **→** next (save and continue), **←** re-record, **Esc** stop. An episode that reaches its
    time limit is saved (unlike LeLab, which silently re-records it); you can change that to
    *discard*. **Stop** ends the episode at once: the page shows "Saving episode…" while it is written
-   (cameras stay live, the arm holds its position), then the end card.
+   (cameras stay live, the arm holds its position), then the end card. The **e-stop** (Space)
+   is different: it drops the episode in progress, because its last frames were taken while the
+   arm was being stopped. If no episode was saved at all, the end card says so and why, and a new
+   dataset with no episode is not kept (there is nothing to upload).
 6. **Upload.** Pair Station with your Hibiscus server once (server URL and a personal access token
    with `datasets:write` and `models:read`; add `runs:read` to see runs). Then upload the dataset as
    a new dataset or a new version. Uploads resume after a network loss.
