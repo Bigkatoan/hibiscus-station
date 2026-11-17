@@ -404,21 +404,28 @@ def ping_arm(
                     row[reg] = f"error: {exc}"
             row["decoded"] = decode_registers(row)
             out["motors"][str(m.id)] = row
-        t = time.perf_counter()
         n = 20
         fails = 0
+        ok_ms: list[float] = []
         for _ in range(n):
+            t = time.perf_counter()
             try:
                 bus.sync_read("Present_Position", normalize=False, num_retry=0)
             except Exception:
-                fails += 1
+                fails += 1  # a failed read waits for a timeout: never count it as bus speed (QD-21)
+            else:
+                ok_ms.append((time.perf_counter() - t) * 1000)
         out["sync_read_present_position"] = {
             "reads": n,
             "failed": fails,
-            "ms_per_read": round((time.perf_counter() - t) * 1000 / n, 2),
+            "ms_per_read": round(sum(ok_ms) / len(ok_ms), 2) if ok_ms else None,
         }
-        out["teleop_estimate"] = teleop_estimate(
-            out["sync_read_present_position"]["ms_per_read"], usb_chip(vid_pid)
+        # Bus speed (and the slow-bus advice) only means something when every motor answers;
+        # a silent motor is reported as such, not as a slow USB adapter.
+        out["teleop_estimate"] = (
+            teleop_estimate(out["sync_read_present_position"]["ms_per_read"], usb_chip(vid_pid))
+            if fails == 0
+            else None
         )
         if calibration:
             out["calibration_vs_eeprom"] = _compare(calibration, out["motors"])
@@ -1014,7 +1021,10 @@ def summary(report: dict[str, Any], target: Path | None = None) -> str:
         lines += _raw_lines(a.get("raw_dump"))
         if a.get("sync_read_present_position"):
             s = a["sync_read_present_position"]
-            lines.append(f"    sync read: {s['failed']}/{s['reads']} failed, {s['ms_per_read']} ms each")
+            speed = f"{s['ms_per_read']} ms each" if s.get("ms_per_read") is not None else "no read succeeded"
+            lines.append(f"    sync read: {s['failed']}/{s['reads']} failed, {speed}")
+            if s["failed"]:
+                lines.append("    teleop estimate: not measured (some motors did not answer)")
             est = a.get("teleop_estimate")
             if est:
                 lines.append(

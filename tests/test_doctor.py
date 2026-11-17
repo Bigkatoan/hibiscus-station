@@ -817,6 +817,24 @@ def test_a_calibration_file_that_differs_from_the_motors_is_a_likely_problem(
     assert not any("follower" in p for p in problems), problems
 
 
+def test_a_silent_motor_is_not_reported_as_a_slow_bus(
+    tmp_path: Path, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """QD-21: failed sync reads wait for a timeout; timing them made a loose servo cable look like
+    a slow USB adapter ("slow bus (51 ms per read)", "~14 Hz") and sent the user to the hub."""
+    f, ld = emus
+    home = _calibrated_home(tmp_path, f, ld, monkeypatch)
+    f.servos[6].dead = True
+    text, _t = _run(home, tmp_path / "out")
+    problems = text.split("\n\n")[0]
+    assert "  ! arm follower: motor id(s) 6 do not answer (power? cable?)" in problems.splitlines(), problems
+    assert "slow bus" not in text and "latency timer" not in text, text
+    fol = text[text.index("  arm follower on ") :]
+    fol = fol[: fol.index("\n  arm leader on ")] if "\n  arm leader on " in fol else fol
+    assert "teleop estimate: not measured (some motors did not answer)" in fol, fol
+    assert "Hz, leader -> follower latency" not in fol, fol
+
+
 def test_a_calibration_file_of_another_arm_names_every_motor_that_differs() -> None:
     cmp = {m: "homing_offset: file 1 motor 0; range_min: file 2 motor 0" for m in ("a", "b", "c")}
     report: dict[str, Any] = {

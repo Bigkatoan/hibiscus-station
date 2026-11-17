@@ -27,6 +27,8 @@ with its own line (see the README); GitHub never offers a pre-release as its "la
   writes a motor register and never switches torque on.
 - **The doctor shows calibration file times in your local time**, with the offset (for example
   `2026-11-17 17:35:15 UTC+07:00`), like the rest of the report.
+- **A motor that does not answer is no longer reported as a slow USB adapter**: the doctor times only
+  the reads that succeed, so a loose servo cable shows as "motor does not answer", not "slow bus".
 - **The doctor report ends with what to send**, in English and Vietnamese (*WHAT TO SEND / CẦN GỬI
   GÌ*): the one zip file to send, what it holds, and, when the motor check could not finish, what
   to close and how to run the doctor again.
