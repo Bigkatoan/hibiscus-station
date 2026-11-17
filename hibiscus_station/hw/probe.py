@@ -437,6 +437,10 @@ class Probe:
         for f, r, t in pending:
             self._settle(f, r, t, cur, deadline)
         out.damage = cur.damage
+        if cur.damage is not None and cur.want is not None and cur in self.open:
+            # its missing answers came damaged: nothing more will come for it (the bus answers in
+            # order), so a later identical request's answers are never taken for its late ones
+            self.open.remove(cur)
         if cur.want is None:
             out.frames = dict(cur.got)
             cur.weak = not cur.got
