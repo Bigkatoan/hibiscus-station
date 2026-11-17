@@ -68,7 +68,7 @@ jobs:
           section="$VERSION"
           if [ "$PRERELEASE" = true ]; then section=Unreleased; fi
           awk -v v="$section" '
-            $0 ~ "^## \\[" v "\\]" {found=1; next}
+            index($0, "## [" v "]") == 1 {found=1; next}
             found && /^## \[/ {exit}
             found && /^\[[^]]+\]: / {exit}
             found {print}
