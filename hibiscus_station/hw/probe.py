@@ -19,7 +19,9 @@ Here every request gets only its own validated answers:
 * the register blocks of one servo all have different lengths (and differ from a ping's 0 and a
   sync read's 2 bytes), so only an answer to an identical request can be matched to a read, and it
   carries the same registers: a late answer to a read (or a ping) is that read's answer;
-* a request that got nothing at all in its timeout waits once more as long for a late answer;
+* a request that got nothing at all in its timeout waits once more as long for a late answer (when
+  the servo asked has answered before; the scan, the first request, waits up to twice the longest
+  timeout, as nobody knows yet how slow the adapter is);
   a request without a validated answer is retried (bounded: :data:`TRIES`); a read that never
   validates is *unreadable*, and the caller reports it as such, never as a value;
 * a late answer raises the timeout to its delay and a half (up to :data:`MAX_TIMEOUT_S`), so an
@@ -277,6 +279,10 @@ class Probe:
     def _ev(self, motor_id: int) -> Evidence:
         return self.evidence.setdefault(motor_id, Evidence())
 
+    def _answered(self, motor_id: int) -> bool:
+        ev = self.evidence.get(motor_id)
+        return ev is not None and ev.answered
+
     def _learn(self, seconds: float) -> None:
         """An answer took ``seconds``, longer than the timeout: wait that long (and a half) from
         now on (a slow adapter is slow every time), up to :data:`MAX_TIMEOUT_S`."""
@@ -383,17 +389,20 @@ class Probe:
         t0 = time.perf_counter()  # the round trip includes sending the request
         self.ser.write(request)
         self.ser.flush()
+        # the timeout runs from when the request is out: an adapter that blocks the write as long
+        # as its answer takes has the answer ready by then (QD-31)
+        sent = time.perf_counter()
         cur = Request(self._seq, request, dict(expect) if expect is not None else None, t0)
         self._sent.add(request)
         self.open.append(cur)
         pending: list[tuple[Frame, Request, float]] = []
-        deadline = t0 + self.timeout_s
+        deadline = sent + self.timeout_s
         self._listen(cur, deadline, pending)
         self._prefer_current(cur, pending)
         if not cur.got and cur.damage is None:  # nothing yet: on its way? (a slow adapter, a stall)
             if expect is None:  # the first request: how slow the adapter is, nobody knows yet
                 self._listen(cur, t0 + 2 * MAX_TIMEOUT_S, pending, settle=True)
-            else:
+            elif any(self._answered(m) for m in expect):  # (a servo that never answered: no wait)
                 self._listen(cur, deadline + self.timeout_s, pending)
         out = Exchange(request=cur)
         self._finish(cur, out, pending, deadline)
@@ -497,8 +506,29 @@ class Probe:
             self._failed(f"read {addr}-{addr + length - 1}", str(motor_id), reason)
         return None, why
 
+    def _drain_late(self) -> None:
+        """Before a timed request: wait (up to the timeout) for the answers an earlier request still
+        expects from servos that do answer, so that a late answer to an earlier identical request is
+        matched and gone before this one is timed (QD-31)."""
+        end = time.perf_counter() + self.timeout_s
+
+        def waiting() -> bool:
+            return any(
+                mid not in r.got and self._answered(mid)
+                for r in self.open
+                if not r.weak and r.want is not None
+                for mid in r.want
+            )
+
+        while waiting() and time.perf_counter() < end:
+            for f, t in self._pull(True):
+                self._take(f, t, None, None)
+
     def sync_read(self, ids: list[int], addr: int, length: int) -> Exchange:
-        """One SYNC_READ, no retry (a timed read): only answers in time count as read."""
+        """One SYNC_READ, no retry (a timed read): only answers in time count as read, timed from
+        this request (an earlier one's late answers are matched to it first)."""
+        self._expire()
+        self._drain_late()
         req = packet(BROADCAST, SYNC_READ, bytes([addr, length, *ids]))
         got = self.exchange(req, dict.fromkeys(ids, length))
         if got.failed:

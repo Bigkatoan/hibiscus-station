@@ -79,6 +79,14 @@ with its own line (see the README); GitHub never offers a pre-release as its "la
   request. A stall is named as a bus fault ("N answers came late (up to 300 ms after the request:
   the USB adapter or a hub stalled)", with USB advice), never as one servo's flakiness, and an
   adapter that is slow every time is a slow bus, not loose cables.
+- **The doctor measured a slow adapter faster than it is.** With an adapter answering 50 ms or more
+  after each request, the late answer to the previous (identical) sync read was timed as the answer
+  to this one ("44.66 ms each" for 50 ms, "31.06 ms each, ~24 Hz" for 260 ms) next to "unreliable
+  bus ... check the 3-pin cables". The speed now comes only from answers matched to their own
+  request, timed from when the request was sent out; a late answer to an earlier read is awaited and
+  matched before the next timed read. When every answer comes only after the longest wait (250 ms),
+  the report says "slower than the timeout (> 250 ms per read)" and gives the slow-bus advice
+  instead of a wrong number.
 - **One late answer on the bus made the doctor show wrong values** (`80 C`, `341.3 V`, "overheat,
   overload", wrong position limits) and tell you to calibrate the arm again: an answer that came
   later than the bus timeout was taken as the answer to the next read, and every later register

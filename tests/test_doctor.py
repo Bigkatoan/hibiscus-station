@@ -1187,6 +1187,51 @@ def test_a_slow_adapter_next_to_a_dead_motor_is_not_called_loose_cables(
     assert "now and then" not in fol, fol
 
 
+@pytest.mark.parametrize(
+    ("mode", "delay_s"),
+    [
+        ("pipelined", 0.05),
+        ("blocking", 0.05),
+        ("blocking", 0.2),
+        ("pipelined", 0.26),
+        pytest.param("blocking", 0.3, marks=pytest.mark.slow),
+    ],
+)
+def test_the_bus_speed_is_measured_only_from_answers_to_their_own_request(
+    tmp_path: Path,
+    emus: tuple[STSEmulator, STSEmulator],
+    monkeypatch: pytest.MonkeyPatch,
+    mode: str,
+    delay_s: float,
+) -> None:
+    """QD-31: an adapter answering every request 50 ms late was "44.66 ms each" with "unreliable bus
+    ... check the 3-pin cables", one 260 ms late was "31.06 ms each, ~24 Hz": the late answer to the
+    previous (identical) sync read was timed as this one's. The speed comes only from answers
+    matched to their own request, within 20 % of the truth, or "slower than the timeout (> 250 ms)"
+    when every answer comes after the longest wait ("pipelined": the servos keep answering and the
+    bytes wait in the adapter; "blocking": the adapter takes that long per request)."""
+    f, ld = emus
+    home = _calibrated_home(tmp_path, f, ld, monkeypatch)
+    if mode == "pipelined":
+        f.adapter_delay_s = delay_s
+        truth_ms = (delay_s + f.latency_s) * 1000
+    else:
+        f.latency_s = delay_s
+        truth_ms = delay_s * 1000
+    text, _t = _run(home, tmp_path / "out")
+    problems, fol = text.split("\n\n")[0], _section(text, "follower")
+    assert "unreliable bus" not in text and "3-pin cables" not in text, problems
+    assert "now and then" not in text and "do not answer" not in text, problems
+    assert "  ! arm follower on " in problems and ": slow bus (" in problems, problems
+    ms = _ms_each(fol)
+    if ms is None:
+        assert "teleop estimate: not measured (slower than the timeout (> 250 ms per read))" in fol, fol
+        assert truth_ms > 250, fol
+    else:
+        assert abs(ms - truth_ms) <= 0.2 * truth_ms, (ms, truth_ms, fol)
+    assert "    calibration file vs motors: all 6 match" in fol.splitlines(), fol
+
+
 # ------------------------------------------------------------------ invariants over a fault grid
 GRID_DROP = (0.0, 0.01, 0.05, 0.2, 0.35, 0.4, 1.0)
 GRID_CORRUPT = (0.0, 0.05, 0.4)

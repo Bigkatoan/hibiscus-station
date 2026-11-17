@@ -634,14 +634,18 @@ def bus_verdict(a: dict[str, Any]) -> dict[str, Any] | None:
     the request: the USB adapter or a hub stalled)" (a late answer is matched to its own request,
     QD-30; not named when the adapter is slow every time, :func:`steady_slow`: then the slow-bus
     advice says so), "registers of motor id(s) W could not be read". When the only fault is late
-    answers, the advice is about the USB connection, not the servo cables. A register that could not be read
-    is never compared with the calibration file (:func:`_compare`): it is "could not read", never
-    "does not match".
+    answers, the advice is about the USB connection, not the servo cables. A register that could
+    not be read is never compared with the calibration file (:func:`_compare`): it is "could not
+    read", never "does not match".
+
+    Speed (QD-31): only reads answered in time are timed, from their own request. When every read
+    was answered, each only after the timeout (an adapter slower than the longest wait), the speed
+    is "slower than the timeout (> T ms per read)" with the slow-bus advice, never a number.
 
     Returns ``{"kind": "silent" | "unreliable" | "ok", "silent": [ids], "flaky": [ids], "corrupt":
     [ids], "problems": [str], "problem": str | None (the first), "unreliable": str | None,
-    "estimate": dict | None, "not_measured": str | None, "estimate_of": str | None}``, or None
-    when no motor was checked (port not opened).
+    "estimate": dict | None, "not_measured": str | None, "estimate_of": str | None,
+    "slow_warning": str | None}``, or None when no motor was checked (port not opened).
     """
     motors = a.get("motors") or {}
     if not motors:
@@ -661,16 +665,24 @@ def bus_verdict(a: dict[str, Any]) -> dict[str, Any] | None:
         "estimate": None,
         "not_measured": None,
         "estimate_of": None,
+        "slow_warning": None,
     }
     sr = a.get("sync_read_present_position") or {}
     reads, failed = int(sr.get("reads") or 0), int(sr.get("failed") or 0)
     ok = int(sr["ok"]) if sr.get("ok") is not None else reads - failed
     ms = sr.get("ms_per_read")
+    be = a.get("bus_errors") or {}
+    late = int(be.get("late_answers") or 0)
+    late_ms = [float(x) for x in be.get("late_ms") or []]
+    stalled = bool(late) and not steady_slow(late, late_ms, ms)
+    # every read answered, each only after the timeout, by an adapter slow every time (QD-31)
+    too_slow = not silent and ok == 0 and failed > 0 and int(sr.get("late") or 0) == failed and not stalled
     faults: list[str] = []
     if silent:
         # every sync read asks the silent motors too and fails: count only what failed for the others
+        # (an answer that came late, from an adapter slow every time, is not a failure of the bus)
         others = [{k: v for k, v in r.items() if k not in silent} for r in sr.get("failures_by_read") or []]
-        others = [r for r in others if r]
+        others = [r for r in others if r and (stalled or set(r.values()) != {"late"})]
         if others:
             counts = dict.fromkeys(READ_FAILURES, 0)
             for r in others:
@@ -680,7 +692,7 @@ def bus_verdict(a: dict[str, Any]) -> dict[str, Any] | None:
                 f"{len(others)} of {reads} reads also failed for the motors that answer "
                 f"({failures_text(counts)})"
             )
-    elif failed:
+    elif failed and not too_slow:
         every = not flaky and not corrupt
         faults.append(
             f"{failed} of {reads} reads failed ({failures_text(sr)})"
@@ -693,10 +705,6 @@ def bus_verdict(a: dict[str, Any]) -> dict[str, Any] | None:
         )
     for words, group in _damaged_groups(motors, corrupt).items():
         faults.append(f"motor id(s) {', '.join(group)} answer only with {words}")
-    be = a.get("bus_errors") or {}
-    late = int(be.get("late_answers") or 0)
-    late_ms = [float(x) for x in be.get("late_ms") or []]
-    stalled = bool(late) and not steady_slow(late, late_ms, ms)
     if stalled:
         most = f"up to {round(max(late_ms))} ms after the request: " if late_ms else ""
         faults.append(
@@ -717,6 +725,13 @@ def bus_verdict(a: dict[str, Any]) -> dict[str, Any] | None:
             out["kind"] = "unreliable"
     out["problem"] = out["problems"][0] if out["problems"] else None
     if silent or not sr:
+        return out
+    if too_slow:
+        # every read was answered, each one only after the timeout: never a number we did not
+        # measure (QD-31)
+        limit = int(be.get("timeout_ms") or 0) or round(MAX_TIMEOUT_MS)
+        out["not_measured"] = f"slower than the timeout (> {limit} ms per read)"
+        out["slow_warning"] = slow_bus_advice(f"> {limit}", a.get("usb_chip"), "slower than the timeout")
         return out
     if ok < MIN_OK_READS or ms is None:
         out["not_measured"] = f"too few reads succeeded: {ok} of {reads}"
@@ -786,6 +801,8 @@ def answering_text(a: dict[str, Any]) -> str:
     return out + "".join(f"; {n}" for n in notes)
 
 
+#: The longest the doctor waits for an answer (:data:`hibiscus_station.hw.probe.MAX_TIMEOUT_S`).
+MAX_TIMEOUT_MS = 250.0
 #: A sync read of six STS3215 at 1 Mbaud takes ~1.5-3 ms through an adapter with a 1 ms USB
 #: latency timer. Slower means a 16 ms latency timer (FTDI default on Windows) or a USB hub.
 SLOW_READ_MS = 6.0
@@ -803,9 +820,9 @@ def usb_chip(vid_pid: str | None) -> str | None:
     return USB_CHIPS.get(vid_pid.split(":")[0].lower())
 
 
-def slow_bus_advice(ms_per_read: float, chip: str | None) -> str:
+def slow_bus_advice(ms_per_read: float | str, chip: str | None, how: str = "") -> str:
     """What to do about a slow bus: the latency timer is named only for FTDI chips (D-21)."""
-    head = f"slow bus ({ms_per_read} ms per read)"
+    head = f"slow bus ({how + ': ' if how else ''}{ms_per_read} ms per read)"
     ftdi = (
         "set the FTDI adapter's latency timer to 1 ms (Windows: Device Manager > Ports > the COM port "
         "> Port Settings > Advanced)"
@@ -1150,8 +1167,8 @@ def warnings(report: dict[str, Any]) -> list[str]:
                 "motors: if it is not this arm's file, calibrate the arm again"
             )
         est = verdict.get("estimate") or {}
-        if est.get("warning"):
-            out.append(f"{where}: {est['warning']}")
+        if est.get("warning") or verdict.get("slow_warning"):
+            out.append(f"{where}: {est.get('warning') or verdict['slow_warning']}")
         bad: dict[str, list[str]] = {}
         dump = (a.get("raw_dump") or {}).get("motors") or {}
         for mid, m in a.get("motors", {}).items():
@@ -1384,6 +1401,14 @@ def _sync_read_lines(a: dict[str, Any]) -> list[str]:
     verdict = bus_verdict(a) or {}
     reads, failed = s.get("reads"), s.get("failed") or 0
     ok = s["ok"] if s.get("ok") is not None else (reads or 0) - failed
+    if verdict.get("slow_warning"):
+        lines = [f"    sync read: {reads}/{reads} answered only after the timeout, {verdict['not_measured']}"]
+        if verdict.get("unreliable"):
+            lines.append(f"    ! {str(verdict['unreliable']).split('; ')[0]}")
+        lines.append(
+            f"    teleop estimate: not measured ({verdict['not_measured']})  ! {verdict['slow_warning']}"
+        )
+        return lines
     if s.get("ms_per_read") is None:
         speed = "no read succeeded"
     elif failed:
