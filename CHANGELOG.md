@@ -59,6 +59,12 @@ with its own line (see the README); GitHub never offers a pre-release as its "la
   motor that sent nothing at all. The bus fault is named under "unreliable bus" (lost, corrupted or
   late answers, motors answering now and then), also next to a silent motor when the other motors
   show it.
+- **One damaged packet could make a motor without power look alive.** A bit flipped in the id byte
+  of another servo's answer (servo 2's answer arriving as "servo 6") made the doctor say that the
+  unpowered servo 6 "answers only with corrupted packets" instead of "does not answer (power?
+  cable?)". A packet with a wrong checksum cannot tell which servo sent it: it now counts only for
+  the servo the request went to (a ping or a read of one servo), or for the bus when several servos
+  were asked, never for the id it carries.
 - **One late answer on the bus made the doctor show wrong values** (`80 C`, `341.3 V`, "overheat,
   overload", wrong position limits) and tell you to calibrate the arm again: an answer that came
   later than the bus timeout was taken as the answer to the next read, and every later register

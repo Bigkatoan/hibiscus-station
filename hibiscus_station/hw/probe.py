@@ -171,6 +171,7 @@ class Exchange:
     frames: dict[int, Frame] = field(default_factory=dict)
     failed: dict[int, str] = field(default_factory=dict)
     ms: float | None = None
+    damage: str | None = None  # a damaged packet came that no servo can be named for
 
 
 class Probe:
@@ -187,6 +188,8 @@ class Probe:
         self.errors: Counter[str] = Counter()
         self.retried = 0  # requests that failed at least once and then got a valid answer
         self.late = 0  # late answers discarded
+        #: damaged packets no servo can be named for (a broadcast or sync read was answered)
+        self.damaged: Counter[str] = Counter()
         self.last_error: str | None = None
 
     # ------------------------------------------------------------------ plumbing
@@ -210,16 +213,24 @@ class Probe:
             self.timeout_s = min(MAX_TIMEOUT_S, self.timeout_s * 2)
             log.debug("%s: late answer, waiting up to %.0f ms from now on", self.label, self.timeout_s * 1000)
 
-    def _note(self, frame: Frame) -> None:
-        """A packet nobody asked for (now): evidence about its servo, never a value."""
-        ev = self._ev(frame.id)
-        if frame.cut:
-            ev.garbled += 1
-        elif not frame.ok:
-            ev.corrupt += 1
-        else:
-            ev.late += 1
+    def _note(self, frame: Frame, asked: int | None = None) -> None:
+        """A packet that is not the answer asked for: evidence, never a value. A well-formed packet
+        (right checksum) is evidence that its servo answers. A damaged one (wrong checksum, cut
+        short) cannot say who sent it, its id byte may be the damaged byte (QD-28): it counts for
+        ``asked``, the one servo the request went to, or else for the bus only."""
+        if frame.ok and not frame.cut:
+            self._ev(frame.id).late += 1
             self._slower()
+            return
+        kind = GARBLED if frame.cut else CORRUPT
+        if asked is None:
+            self.damaged[kind] += 1
+            return
+        ev = self._ev(asked)
+        if kind == GARBLED:
+            ev.garbled += 1
+        else:
+            ev.corrupt += 1
 
     def _drain(self) -> None:
         """Empty the receive buffer before a request (what is in it answers an earlier one)."""
@@ -260,7 +271,7 @@ class Probe:
         if expect is not None:
             for mid in expect:
                 if mid not in out.frames and mid not in out.failed:
-                    out.failed[mid] = GARBLED if buf else NO_ANSWER
+                    out.failed[mid] = GARBLED if buf else (out.damage or NO_ANSWER)
             if not out.failed:
                 out.ms = (last - t0) * 1000
         return out
@@ -277,9 +288,14 @@ class Probe:
                 out.failed.pop(f.id, None)
                 self._ev(f.id).valid += 1
                 return True
-        self._note(f)
-        if wanted is not None and f.id not in out.frames and not f.ok:
-            out.failed[f.id] = GARBLED if f.cut else CORRUPT
+        asked = next(iter(expect)) if expect is not None and len(expect) == 1 else None
+        self._note(f, asked)
+        if not f.ok and expect is not None:
+            reason = GARBLED if f.cut else CORRUPT
+            if asked is not None:
+                out.failed.setdefault(asked, reason)
+            else:
+                out.damage = out.damage or reason
         return False
 
     def _failed(self, op: str, ids: str, why: str) -> None:
@@ -337,6 +353,7 @@ class Probe:
             "errors": sum(self.errors.values()),
             "retried_ok": self.retried,
             "late_discarded": self.late,
+            "damaged_unattributed": sum(self.damaged.values()),
             "by_call": dict(self.errors.most_common(10)),
             "last_error": self.last_error,
         }

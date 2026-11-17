@@ -1051,6 +1051,52 @@ def test_a_motor_that_sends_only_corrupted_packets_is_not_called_silent(
     assert "calibrate the arm again" not in text, problems
 
 
+def _mangle(emu: STSEmulator, fn: Callable[[int, int, bytes, bytes], bytes]) -> None:
+    """Every answer packet of ``emu`` goes through ``fn(instr, request id, params, packet)``: what
+    the bus does to it on its way to the host (a flipped bit, a cut-short packet...)."""
+    handle = emu.handle
+
+    def mangled(pkt_id: int, instr: int, params: bytes) -> bytes:
+        out, pkts = handle(pkt_id, instr, params), []
+        while out:
+            pkts.append(out[: 4 + out[3]])
+            out = out[4 + out[3] :]
+        return b"".join(fn(instr, pkt_id, params, p) for p in pkts)
+
+    emu.handle = mangled  # type: ignore[method-assign]
+
+
+@pytest.mark.parametrize("where", ["read", "sync"])
+def test_a_corrupted_id_byte_never_makes_a_silent_motor_answer(
+    tmp_path: Path, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch, where: str
+) -> None:
+    """QD-28: servo 6 has no power; one answer of servo 2 had its id byte flipped to 6 (so a wrong
+    checksum). The report said "6 answer only with corrupted packets" and no longer that 6 does not
+    answer. A packet with a wrong checksum cannot say which servo sent it: it is never evidence for
+    the id it carries."""
+    f, ld = emus
+    home = _calibrated_home(tmp_path, f, ld, monkeypatch)
+    f.servos[6].dead = True
+    done: list[int] = []
+
+    def flip(instr: int, req_id: int, params: bytes, p: bytes) -> bytes:
+        hit = p[2] == 2 and (instr == 0x82 if where == "sync" else instr == 0x02 and params[:1] == b"\x00")
+        if done or not hit:
+            return p
+        done.append(1)
+        return p[:2] + bytes([p[2] ^ 0x04]) + p[3:]  # 2 -> 6, checksum left as it was
+
+    _mangle(f, flip)
+    text, target = _run(home, tmp_path / "out")
+    assert done, "the flip never happened"
+    problems, fol = text.split("\n\n")[0], _section(text, "follower")
+    assert "  ! arm follower: motor id(s) 6 do not answer (power? cable?)" in problems.splitlines(), problems
+    assert "    id 6: no answer" in fol.splitlines(), fol
+    assert "6 answer only with" not in text and "id 6: answers only" not in fol, fol
+    m6 = _arm(_report(target), "follower")["motors"]["6"]
+    assert m6["state"] == "silent" and m6["evidence"]["corrupt"] == 0, m6
+
+
 # ------------------------------------------------------------------ invariants over a fault grid
 GRID_DROP = (0.0, 0.01, 0.05, 0.2, 0.35, 0.4, 1.0)
 GRID_CORRUPT = (0.0, 0.05, 0.4)
