@@ -105,24 +105,29 @@ jobs:
         with: {name: web-dist, path: web/dist, retention-days: 7}
 
   e2e:
-    # D-1 / FL-7 / BR-1: the built UI against a real `hibiscus-station --mock` in Chromium. Linux runs
-    # the whole suite (novice flows in vi and en, the STS3215-emulator flow, the screen matrix with
-    # scroll + axe checks); windows-latest runs the novice flows (the emulator needs pseudo-terminals,
-    # listed in tools/ci/allowed-skips.toml; the matrix baseline is Linux fonts). A missing browser,
-    # UI build or axe-core fails the job instead of skipping (HIBISCUS_E2E_REQUIRED=1).
-    name: e2e (${{ matrix.platform }}, Playwright, hibiscus-station --mock)
+    # D-1 / FL-7 / BR-1 / AT-2: the built UI against a real `hibiscus-station --mock`, in the browsers
+    # AT-2 names: Linux Chromium (the whole suite: novice flows in vi and en, the STS3215-emulator
+    # flow, the screen matrix with scroll + axe checks) and Linux Firefox (the flows), windows-latest
+    # Microsoft Edge (the flows; the emulator needs pseudo-terminals, listed in
+    # tools/ci/allowed-skips.toml). The screen matrix runs in Chromium only: its baseline is one
+    # engine's layout on Linux fonts. HIBISCUS_E2E_BROWSER picks the browser (chromium | firefox |
+    # msedge = the Edge installed on the runner). A missing browser, UI build or axe-core fails the
+    # job instead of skipping (HIBISCUS_E2E_REQUIRED=1).
+    name: e2e (${{ matrix.platform }}, ${{ matrix.browser }}, Playwright, hibiscus-station --mock)
     runs-on: ${{ matrix.os }}
     needs: [web]
     strategy:
       fail-fast: false
       matrix:
         include:
-          - {os: ubuntu-24.04, platform: linux, tests: tests/e2e, browser: "--with-deps chromium"}
-          - {os: windows-latest, platform: windows, tests: tests/e2e/test_station_ui.py, browser: chromium}
+          - {os: ubuntu-24.04, platform: linux, browser: chromium, tests: tests/e2e, install: "--with-deps chromium"}
+          - {os: ubuntu-24.04, platform: linux, browser: firefox, tests: tests/e2e/test_station_ui.py, install: "--with-deps firefox"}
+          - {os: windows-latest, platform: windows, browser: msedge, tests: tests/e2e/test_station_ui.py, install: ""}
     defaults:
       run: {shell: bash}
     env:
       HIBISCUS_E2E_REQUIRED: "1"
+      HIBISCUS_E2E_BROWSER: ${{ matrix.browser }}
     steps:
       - uses: actions/checkout@v7.0.1
       - name: Free disk space (torch / LeRobot wheels)
@@ -147,14 +152,23 @@ jobs:
           version: "${{ env.UV_VERSION }}"
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-      - run: uv sync --locked --python "$PYTHON_VERSION" && uv run playwright install ${{ matrix.browser }}
+      - name: Sync, and the browser for Playwright (Edge is the one installed on windows-latest)
+        run: |
+          uv sync --locked --python "$PYTHON_VERSION"
+          if [ -n "${{ matrix.install }}" ]; then uv run playwright install ${{ matrix.install }}; fi
+      - name: The e2e fixtures launch the browser this job names (AT-2)
+        run: |
+          grep -q HIBISCUS_E2E_BROWSER tests/e2e/conftest.py || {
+            echo "::error::tests/e2e/conftest.py ignores HIBISCUS_E2E_BROWSER: this job would test Chromium, not $HIBISCUS_E2E_BROWSER"
+            exit 1
+          }
       - run: uv run pytest -q -ra "${{ matrix.tests }}" -m e2e --junitxml=e2e-junit.xml
       - name: Skipped e2e tests are in the published list (D-1, NFR-18)
         if: ${{ !cancelled() && hashFiles('e2e-junit.xml') != '' }}
         run: uv run python tools/ci/check_skips.py --platform "${{ matrix.platform }}" e2e-junit.xml
       - uses: actions/upload-artifact@v5
         if: always()
-        with: {name: "e2e-screenshots-${{ matrix.platform }}", path: screenshots/e2e, retention-days: 7, if-no-files-found: ignore}
+        with: {name: "e2e-screenshots-${{ matrix.platform }}-${{ matrix.browser }}", path: screenshots/e2e, retention-days: 7, if-no-files-found: ignore}
 
   release-assets:
     # ADR-13 / FL-12 / SP-3 on Linux: build the release assets (wheel, constraints.txt, overrides.txt,

@@ -91,19 +91,28 @@ def test_the_emulated_e2e_flow_may_skip_on_windows_only(tmp_path: Path) -> None:
     assert len(check_skips.check("linux", [junit], check_skips.load_allowed())) == 1
 
 
-def test_ci_runs_the_e2e_suite_on_linux_and_windows_and_fails_on_a_missing_browser() -> None:
+def test_ci_runs_the_e2e_suite_in_the_at2_browsers_and_fails_on_a_missing_browser() -> None:
+    """AT-2 / QD-9: e2e in Chromium + Firefox on Linux and in Edge on windows-latest."""
     import yaml
 
     ci = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
     job = ci["jobs"]["e2e"]
     assert job["env"]["HIBISCUS_E2E_REQUIRED"] == "1"
-    rows = {r["platform"]: r for r in job["strategy"]["matrix"]["include"]}
-    assert rows["windows"]["os"] == "windows-latest" and rows["linux"]["os"].startswith("ubuntu")
-    assert rows["linux"]["tests"] == "tests/e2e"  # the whole suite, screen matrix included
-    assert rows["windows"]["tests"].startswith("tests/e2e")
+    assert job["env"]["HIBISCUS_E2E_BROWSER"] == "${{ matrix.browser }}"
+    rows = {(r["platform"], r["browser"]): r for r in job["strategy"]["matrix"]["include"]}
+    assert set(rows) == {("linux", "chromium"), ("linux", "firefox"), ("windows", "msedge")}
+    assert rows["windows", "msedge"]["os"] == "windows-latest"
+    assert all(rows[k]["os"].startswith("ubuntu") for k in [("linux", "chromium"), ("linux", "firefox")])
+    assert rows["linux", "chromium"]["tests"] == "tests/e2e"  # the whole suite, screen matrix included
+    assert rows["linux", "firefox"]["install"] == "--with-deps firefox"
+    for r in rows.values():
+        assert r["tests"].startswith("tests/e2e")
     steps = " ".join(str(s.get("run", "")) for s in job["steps"])
     assert "-m e2e" in steps and 'check_skips.py --platform "${{ matrix.platform }}"' in steps
     assert "pnpm install --frozen-lockfile" in steps  # axe-core for the screen matrix
+    assert (
+        "grep -q HIBISCUS_E2E_BROWSER tests/e2e/conftest.py" in steps
+    )  # a browser the fixture ignores fails
 
 
 def test_ci_runs_on_a_push_to_a_release_branch() -> None:
