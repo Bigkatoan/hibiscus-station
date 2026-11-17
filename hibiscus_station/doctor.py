@@ -16,6 +16,7 @@ text goes through :func:`hibiscus_station.logs.redact`.
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import os
 import platform
@@ -670,6 +671,20 @@ def check_arms(
     return arms
 
 
+def _local_time(iso: str) -> str:
+    """An ISO timestamp (UTC from the calibration listing) as local time with its offset, e.g.
+    ``2026-11-17 17:35:15 UTC+07:00``, so it reads like the zip name and ``generated_at``."""
+    try:
+        t = dt.datetime.fromisoformat(iso)
+    except (TypeError, ValueError):
+        return str(iso)[:19]
+    if t.tzinfo is None:
+        t = t.replace(tzinfo=dt.UTC)
+    t = t.astimezone()
+    off = t.strftime("%z")  # e.g. +0700
+    return f"{t:%Y-%m-%d %H:%M:%S} UTC{off[:3]}:{off[3:]}"
+
+
 #: Port open errors that mean "another program has it" (Windows, macOS, Linux).
 BUSY_MARKERS = ("access is denied", "permission denied", "resource busy", "busy", "errno 13", "errno 16")
 
@@ -878,7 +893,8 @@ def summary(report: dict[str, Any], target: Path | None = None) -> str:
     if not report["calibrations"]:
         lines.append("  (none)")
     for c in report["calibrations"]:
-        lines.append(f"  {c['arm']:<8} {c['id']:<24} {c['dir']:<15} {c['modified_at'][:19]}  {c['path']}")
+        when = _local_time(c["modified_at"])
+        lines.append(f"  {c['arm']:<8} {c['id']:<24} {c['dir']:<15} {when}  {c['path']}")
         if c.get("error"):
             lines.append(f"     ! {c['error']}")
     lines += ["", "Robot profiles:"]

@@ -1004,3 +1004,19 @@ def test_report_text_has_no_python_containers_anywhere(
     assert "retried ok (" in bus and "; last error: " in bus, bus
     assert "    alert warning bus.slow: arm leader, ids 1, 2" in lines, text
 
+
+def test_calibration_file_times_are_local_with_their_offset(monkeypatch: pytest.MonkeyPatch) -> None:
+    """QD-19: the listing stores UTC; the report must show local time and say which offset."""
+    import re
+
+    shown = doctor._local_time("2026-11-17T10:35:15.123456+00:00")
+    assert re.fullmatch(r"\d{4}-\d\d-\d\d \d\d:\d\d:\d\d UTC[+-]\d\d:\d\d", shown), shown
+    assert doctor._local_time("not a time") == "not a time"
+    if hasattr(time, "tzset"):  # POSIX: pin the zone and check the exact local time
+        monkeypatch.setenv("TZ", "Asia/Ho_Chi_Minh")
+        time.tzset()
+        try:
+            assert doctor._local_time("2026-11-17T10:35:15+00:00") == "2026-11-17 17:35:15 UTC+07:00"
+        finally:
+            monkeypatch.delenv("TZ")
+            time.tzset()
