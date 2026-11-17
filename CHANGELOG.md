@@ -75,6 +75,9 @@ Field report on 0.2.8 (Windows, real SO-101, 2026-11-17) and the customer's deci
 - **Sizes in MB / GB.** The Record form said "0.00 GiB in total" for a short recording; it now says
   "about 3 MB in total". Dataset, model and upload sizes use decimal kB / MB / GB, and decimals
   follow the language ("1,5" in Vietnamese).
+- **The Docker image's demo mode starts.** `--mock` in the image (HIBISCUS_STATION_HOME=/data) tried
+  to create /data-demo, which the container user cannot, so the container never became healthy. With
+  an explicit home the demo now lives in `<home>/demo`, and `hibiscus-station health` finds it.
 - Counts: "1 step" in a program run, "1 sample" in a trajectory take, "1 frame" (were "1 steps",
   "1 samples", "1 frames"); speed hints read "°/s".
 

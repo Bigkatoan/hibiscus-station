@@ -179,3 +179,41 @@ def test_lan_mode_fixed_token_allowed_hosts_and_health(tmp_path: Path) -> None:
             proc.wait(timeout=20)
         except subprocess.TimeoutExpired:
             proc.kill()
+
+
+def test_mock_in_the_docker_layout_starts_and_is_healthy(tmp_path: Path) -> None:
+    """QD-8: the image sets HIBISCUS_STATION_HOME=/data, and a non-root user cannot create /data-demo.
+
+    ``--mock`` without ``--home`` keeps its demo data inside the explicit home, and ``health``
+    without ``--home`` (the image's HEALTHCHECK) finds the demo Station there.
+    """
+    parent = tmp_path / "root"
+    data = parent / "data"
+    data.mkdir(parents=True)
+    port = _free_port()
+    env = {
+        **{k: v for k, v in os.environ.items() if not k.startswith("HIBISCUS_STATION_")},
+        "HF_LEROBOT_CALIBRATION": str(tmp_path / "cal"),
+        "HIBISCUS_STATION_HOME": str(data),
+    }
+    cmd = [sys.executable, "-m", "hibiscus_station.cli", "--mock", "--no-browser", "--port", str(port)]
+    if os.name == "posix" and os.geteuid() != 0:
+        parent.chmod(0o555)  # like / in the image: the user may write /data, not next to it
+    proc = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)  # noqa: S603
+    try:
+        healthy = _cli("health", env=env)
+        deadline = time.monotonic() + 60
+        while healthy.returncode != 0 and proc.poll() is None and time.monotonic() < deadline:
+            time.sleep(0.5)
+            healthy = _cli("health", env=env)
+        assert proc.poll() is None, proc.communicate(timeout=20)[0]
+        assert healthy.returncode == 0 and "healthy" in healthy.stdout, healthy.stderr
+        assert (data / "demo" / "token").is_file()
+        assert not (data / "token").exists()  # the real Station's home holds no demo state
+    finally:
+        proc.terminate()
+        try:
+            proc.wait(timeout=20)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+        parent.chmod(0o755)
