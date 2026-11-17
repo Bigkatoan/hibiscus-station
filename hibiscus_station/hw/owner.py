@@ -730,7 +730,7 @@ class HardwareOwner:
         if s.uses_leader and self.leader is not None:
             t_leader = time.perf_counter()
             inp.leader = self._read_leader()
-        action = s.step(self, inp)
+        action = None if s.holding else s.step(self, inp)
         if self.estop.is_set:  # pressed during inference: never send this action
             self._enter_estop()
             return
@@ -813,7 +813,7 @@ class HardwareOwner:
         if self.session is None:  # bus lost on the leader
             return
         inp = TickInput(self.tick, now, dict(self.last_obs), {}, [], leader=leader)
-        action = s.step(self, inp)
+        action = None if s.holding else s.step(self, inp)
         if self.estop.is_set:
             self._enter_estop()
             return
@@ -1037,12 +1037,17 @@ class HardwareOwner:
             s.outcome = outcome
         self._teardown_session(reason=outcome)
         p = self.profile
-        cancelled_rest = s.kind == "rest" and s.outcome != "completed"  # stop means stop: no park
-        if (
+        if s.outcome == "stopped" and self.follower is not None:
+            # CR-1: a user Stop (teleop, record, replay, run model, program, trajectory, Return
+            # Home) holds the measured position with torque as it is (never parks, never relaxes);
+            # the UI then offers "Return Home" and "Relax" (support the arm first).
+            self._hold()
+            self.interrupted = True
+        elif (
             p is not None
             and p.follower.on_session_end == "relax"
             and self.follower is not None
-            and not cancelled_rest
+            and not (s.kind == "rest" and s.outcome != "completed")  # a cancelled move: no park
         ):
             if self._park(self.settings.safety.park_s) or not p.follower.rest_pose:
                 self._torque_off()
@@ -1684,6 +1689,12 @@ class HardwareOwner:
             raise StationError("busy", "no session running", params={"state": self.state})
         s.control(self, action)
         s.phase_changed = True
+        if action == "stop" and not s.holding:
+            # CR-1 (2026-11-17): Stop holds the arm exactly where it is, within this command:
+            # Goal := Present, torque unchanged, and no further goal from this session.
+            s.holding = True
+            self._hold()
+            self.last_sent = {}
         view = s.view()
         if s.finished:
             self._stop_session(s.outcome)

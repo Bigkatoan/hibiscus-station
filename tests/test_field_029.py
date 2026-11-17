@@ -16,9 +16,11 @@ import time
 from typing import Any
 
 import pytest
-from conftest import connect_calibrated, mock_profile, wait_for
+from blocks_dsl import play, program
+from conftest import Heartbeat, connect_calibrated, fast_hand, mock_profile, wait_for
 
-from hibiscus_station.station import RecordRequest, Station
+from hibiscus_station.mock import get_world
+from hibiscus_station.station import RecordRequest, Station, TeleopRequest
 
 SAVE_DELAY_S = 2.0  # what encoding an episode costs on a slow Windows laptop (11 s measured here)
 
@@ -202,3 +204,100 @@ def test_record_summary_carries_camera_evidence(connected: Station) -> None:
     assert summary["summary"]["save_s"] and all(s >= 0 for s in summary["summary"]["save_s"])
     meta = (st.paths.sessions / summary["id"] / "session.json").read_text(encoding="utf-8")
     assert '"fps_measured"' in meta
+
+
+# =========================================================================== CR-1: Stop = hold
+def _far_rest_and_relax_on_end(st: Station) -> dict[str, float]:
+    """A profile that parks + relaxes at session end, with a rest pose 20° away: a user Stop must
+    do neither (CR-1)."""
+    p = st.owner.profile
+    assert p is not None
+    p.follower.on_session_end = "relax"
+    p.follower.rest_pose = {k: v + 20.0 for k, v in st.owner.last_obs.items() if k != "gripper.pos"}
+    return dict(p.follower.rest_pose)
+
+
+def _assert_holding(st: Station) -> None:
+    world = get_world("mock://follower")
+    time.sleep(0.4)
+    with world.lock:
+        servos = list(world.servos.values())
+        assert all(s.torque for s in servos), "the arm was relaxed"
+        off = {world.names[s.id]: round(s.goal - s.actual, 1) for s in servos if abs(s.goal - s.actual) > 4}
+    assert not off, f"goal is not the present position: {off}"
+    assert st.owner.follower_torque
+    assert st.owner.interrupted, "Return Home / Relax are not offered"
+    assert st.owner.status()["interrupted"] is True
+
+
+def _moving_leader() -> None:
+    get_world("mock://leader").hand = fast_hand(amplitude=150.0, hz=1.0)
+
+
+def test_teleop_stop_holds_the_follower_where_it_is(connected: Station) -> None:
+    st = connected
+    st.start_teleop(TeleopRequest())
+    _moving_leader()
+    time.sleep(1.2)
+    rest = _far_rest_and_relax_on_end(st)
+    st.owner.call("control", action="stop")
+    assert st.owner.state == "idle"
+    _assert_holding(st)
+    here = st.owner.call("read_positions")
+    assert abs(here["shoulder_pan.pos"] - rest["shoulder_pan.pos"]) > 10  # never parked
+
+
+def test_record_stop_holds_while_saving_and_after(connected: Station) -> None:
+    st = connected
+    st.start_record(
+        RecordRequest(dataset="hold", task="t", fps=30, countdown_s=0.2, episode_time_s=30, num_episodes=1)
+    )
+    wait_for(lambda: _phase(st) == "episode", 4)
+    _slow_saves(st, 1.5)
+    _moving_leader()
+    time.sleep(1.0)
+    _far_rest_and_relax_on_end(st)
+    world = get_world("mock://follower")
+    world.calls.clear()
+    world.record_calls = True
+    t = time.monotonic()
+    st.owner.call("control", action="stop")
+    time.sleep(0.6)
+    assert _phase(st) == "saving"
+    writes = [w for w, _ in world.goal_writes() if w > t]
+    assert len(writes) <= 2, f"{len(writes)} goal writes after Stop (expected only the hold)"
+    wait_for(lambda: st.owner.session is None, 20)
+    _assert_holding(st)
+
+
+def test_program_stop_holds_and_offers_home(connected: Station, client: Any) -> None:
+    from test_programs_safety import _put, _run, _traj
+
+    st = connected
+    st.settings.programs.require_dry_run = False
+    tid = _traj(st, seconds=6.0)
+    _put(client, program(play(tid, id_="pl")))
+    _far_rest_and_relax_on_end(st)
+    with Heartbeat(st):
+        assert _run(client).status_code == 200
+        wait_for(lambda: _phase(st) == "replay", 3)
+        time.sleep(1.5)
+        assert client.post("/api/v1/programs/p/stop").status_code == 200
+        wait_for(lambda: st.owner.state == "idle", 5)
+    _assert_holding(st)
+
+
+def test_danger_stops_keep_their_safe_behaviour(connected: Station) -> None:
+    """Thermal / electrical stops still park and cut torque (unchanged by CR-1)."""
+    st = connected
+    p = st.owner.profile
+    assert p is not None
+    p.follower.rest_pose = dict(st.owner.last_obs)
+    st.start_teleop(TeleopRequest())
+    time.sleep(0.5)
+    world = get_world("mock://follower")
+    world.inject("elbow_flex", temp_c=66.0)
+    wait_for(lambda: st.owner.state == "estopped", 8)  # detection (2 reads) + 1.5 s park
+    assert st.owner.reason == "thermal"
+    assert not world.any_torque()
+    world.inject("elbow_flex", temp_c=40.0)
