@@ -7,6 +7,7 @@ REST API and the real HardwareOwner loop; every owner event is checked against t
 
 from __future__ import annotations
 
+import itertools
 import time
 from typing import Any
 
@@ -160,27 +161,62 @@ def test_estop_during_record_keeps_the_draft(connected: Station, client: Any) ->
 
 
 # =========================================================================== replay
-def test_replay_at_50_and_100_percent(connected: Station, client: Any, events: Events) -> None:
+@pytest.mark.parametrize("slow_loop", [False, True], ids=["normal", "slow-runner"])
+def test_replay_at_50_and_100_percent(
+    connected: Station, client: Any, events: Events, slow_loop: bool
+) -> None:
+    """50 % plays every sample twice as long as 100 %, measured in control-loop ticks.
+
+    The player sends one resampled row per tick, so the replay length in wall-clock seconds is
+    ``ticks / loop rate``. A loaded CI runner (Windows) runs the loop below 30 Hz, which made the old
+    wall-clock assertions flaky. ``slow-runner`` reproduces that: every follower read takes longer
+    than one 30 Hz period.
+    """
     st = connected
     a = _save(client, _record(client, st, name="A", seconds=1.5).id, trim={"start_s": 0, "end_s": 0})
-    spans: dict[int, float] = {}
+    world = get_world("mock://follower")
+    rows: dict[int, int] = {}
+    writes: dict[int, list[float]] = {}
     with Heartbeat(st):
         for speed in (100, 50):
             _to_start(st, a)
+            if slow_loop:
+                world.read_latency_s = 0.045  # > 1/30 s: every tick overruns, the loop runs at ~20 Hz
+            world.calls.clear()
+            world.record_calls = True
             r = _play(client, a.id, speed_pct=speed)
             assert r.status_code == 200, r.text
             sess = r.json()
             assert sess["kind"] == "traj_play" and sess["trajectory"] == a.id
-            assert st.owner.state == "playing" and _phase(st) == "replay"  # already at the start
-            wait_for(lambda: st.owner.state == "idle", 10)
+            session = st.owner.session
+            assert isinstance(session, TrajPlaySession) and session.player is not None
+            assert session.player.approach is None  # already at the start: straight to replay
+            rows[speed] = len(session.player.rows)
+            wait_for(lambda: st.owner.state == "idle", 30)
+            world.record_calls = False
+            world.read_latency_s = 0.0015
             summary = st.owner.last_session_summary
             assert summary is not None and summary["outcome"] == "completed", summary
             assert summary["summary"]["progress"] == 1.0
-            spans[speed] = _session_span(events, sess["id"], "replay")
+            assert any(
+                p["episode"]["phase"] == "replay" for p in events.of("session") if p.get("id") == sess["id"]
+            )
+            writes[speed] = [t for t, _ in world.goal_writes()]
             end = st.owner.call("read_positions")
             assert all(abs(end[k] - v) < 3.0 for k, v in a.end_pose.items() if k != "gripper.pos"), end
-    assert spans[100] == pytest.approx(a.duration_s, abs=0.4)
-    assert spans[50] / spans[100] == pytest.approx(2.0, rel=0.2), spans
+    # samples: the take resampled at the session fps, stretched x2 at 50 % (deterministic)
+    assert abs((rows[100] - 1) - a.duration_s * a.fps) <= 1.0, (rows, a.duration_s)
+    assert (rows[50] - 1) / (rows[100] - 1) == pytest.approx(2.0, abs=0.05), rows
+    for speed, ts in writes.items():
+        # one goal per tick: every resampled row was sent, none skipped, none repeated
+        assert rows[speed] <= len(ts) <= rows[speed] + 2, (speed, len(ts), rows[speed])
+        # never faster than the session fps (a timer bug would play the take too fast) ...
+        span = ts[-1] - ts[0]
+        assert span >= (len(ts) - 1) / a.fps * 0.9, (speed, span, len(ts))
+        # ... and paced by the loop, not stalled: the span is ticks x the measured tick period
+        gaps = sorted(b - t for t, b in itertools.pairwise(ts))
+        median = gaps[len(gaps) // 2]
+        assert span <= (len(ts) - 1) * median * 1.5 + 0.5, (speed, span, median)
 
 
 def test_replay_approaches_the_start_first(connected: Station, client: Any, events: Events) -> None:
