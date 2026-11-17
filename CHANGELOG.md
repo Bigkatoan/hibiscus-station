@@ -80,6 +80,15 @@ Field report on 0.2.8 (Windows, real SO-101, 2026-11-17) and the customer's deci
   an explicit home the demo now lives in `<home>/demo`, and `hibiscus-station health` finds it.
 - Counts: "1 step" in a program run, "1 sample" in a trajectory take, "1 frame" (were "1 steps",
   "1 samples", "1 frames"); speed hints read "°/s".
+- **The red "Motor critical" banner goes away after the reset.** After a temperature stop, once the
+  motor had cooled and you pressed "I'm clear, reset", the banner stayed on the open page (even
+  while the arm moved again) until a reload, and in Vietnamese it said "about 0 s until cool
+  enough". Every alert Station removes (reset, disconnect, unplugged USB) now leaves every open
+  page at once; a page that reconnects starts from Station's current alerts; the countdown is
+  hidden once the motor is cool. A motor warning from before an unplug no longer stays after the
+  reconnect. Deleting the loaded model and pairing or unpairing also update other open pages.
+- Vietnamese: "Hãy đặt lại nút dừng khẩn cấp trước." (was "reset"), "bộ dữ liệu" (was "dataset"),
+  "điều khiển tay" (was "teleop"), "tệp", "mô-men"; the Calibrate step is "Kiểm tra hai tay".
 
 ### Changed
 - **Stop holds the arm where it is (CR-1).** Pressing Stop in teleop, record, replay, run model,
