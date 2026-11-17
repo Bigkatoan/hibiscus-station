@@ -1,7 +1,9 @@
-# Hibiscus Station: SRS v0.1 (2026-11-17) · trạng thái: bản nháp (vòng 1)
+# Hibiscus Station: SRS v0.2 (2026-11-17) · trạng thái: bản nháp (vòng 1, sau rà soát SA + Tech Lead)
 
-Đặc tả yêu cầu phần mềm (Software Requirements Specification). BA soạn; SA và Tech Lead rà soát
-(vòng 1 chưa rà soát); QC kiểm tính kiểm-được.
+Đặc tả yêu cầu phần mềm (Software Requirements Specification). BA soạn; SA và Tech Lead đã rà soát vòng 1
+([REVIEW-SA.md](REVIEW-SA.md), [REVIEW-TECHLEAD.md](REVIEW-TECHLEAD.md)); QC kiểm tính kiểm-được. Chỗ v0.2
+đổi so với v0.1 ghi **(v0.2: …)** kèm mã flag (SA-…, FL-…) hoặc đề xuất P-n / quyết định QĐ-n của BRD §9;
+lỗi đã biết D-n: [FEATURES.md](FEATURES.md#lỗi-đã-biết-d-n).
 
 ## 1. Tổng quan
 
@@ -11,7 +13,8 @@ lượng. Kiến trúc và lựa chọn công nghệ thuộc ARCHITECTURE.md (SA
 số trong [FEATURES.md](FEATURES.md); FR-72 trở đi là yêu cầu chung cho mọi tính năng.
 
 ### 1.2 Tham chiếu
-* [BRD.md](BRD.md) v0.1 (BR-1 … BR-18, RULE-1 … RULE-16, Q-1 … Q-8)
+* [BRD.md](BRD.md) v0.2 (BR-1 … BR-18, RULE-1 … RULE-16, quyết định QĐ-1 – QĐ-4, Q-2 … Q-8)
+* [ARCHITECTURE.md](ARCHITECTURE.md) v0.2 (spike SP-1 … SP-7, ADR-1 … ADR-13)
 * Đặc tả kỹ thuật hiện có: `docs/spec/station.md` (contract v0.1), `docs/spec/station-programs.md`
 * Hướng dẫn người dùng: `docs/user-guide/{vi,en}/station.md`, danh sách UAT phần cứng
   `docs/user-guide/{vi,en}/station-hardware-uat.md`
@@ -57,15 +60,21 @@ Mỗi FR: **Station phải …** · traces · đầu vào · xử lý · đầu 
 
 ### A. Cài đặt và khởi động
 
-**FR-1 (F-1) Cài đặt Windows.** Station phải cài được trên Windows 10/11 x64 bằng `uv tool install
---python 3.12 <wheel 0.x.y>` (sau khi cài uv bằng một lệnh PowerShell, không cần quyền admin), tuỳ
-chọn `--torch-backend cpu`. Traces BR-1. Đầu ra: lệnh `hibiscus-station` có trên PATH. Lỗi: không có
-Python 3.12 → uv tự tải; driver CH340 / CH343 thiếu → hướng dẫn nói cách cài (Station không tự cài).
+**FR-1 (F-1) Cài đặt Windows.** (v0.2: P-1, QĐ-3 phương án A.) Station phải cài được trên Windows 10/11 x64
+bằng **một** lệnh PowerShell chép-dán từ hướng dẫn tiếng Việt (`irm <địa chỉ bản phát hành>/install.ps1 |
+iex`), không cần quyền admin, không cần git, không cần Python có sẵn: lệnh cài uv nếu thiếu, rồi cài wheel
+của đúng phiên bản với **bộ phụ thuộc cố định** xuất từ `uv.lock` (tệp constraints và wheel dựng sẵn của
+`lerobot@fe1c545` và `hibiscus` đính kèm bản phát hành), tuỳ chọn torch CPU. Hai lần cài cùng phiên bản ở
+hai ngày khác nhau phải cho cùng bộ thư viện (so `uv pip freeze`). Traces BR-1, BR-15. Đầu ra: lệnh
+`hibiscus-station` có trên PATH. Lỗi: không có Python 3.12 → uv tự tải; driver CH340 / CH343 thiếu → hướng
+dẫn nói cách cài (Station không tự cài). (Phương án B của QĐ-3: giữ hai lệnh `uv` hiện tại.)
 
-**FR-2 (F-2) Cài đặt Linux.** Như FR-1 trên Linux x86_64 / arm64; kèm unit systemd người dùng tuỳ
-chọn. Traces BR-1.
+**FR-2 (F-2) Cài đặt Linux.** Wheel trên Ubuntu 22.04 / 24.04 x86_64 (lệnh `uv tool install` với cùng tệp
+constraints của FR-1); kèm unit systemd người dùng tuỳ chọn. Wheel arm64: bản xem trước (W-9, QĐ-2).
+Traces BR-1.
 
-**FR-3 (F-3) Docker.** `deploy/install.sh` phải dò máy (PC / GPU NVIDIA / Jetson / Pi 5), hỏi trước khi
+**FR-3 (F-3) Docker.** (v0.2: QĐ-2.) Thuộc nghiệm thu v1.0: Linux x86_64 image `-cpu`. `-cuda`, Pi 5, Jetson:
+bản xem trước (W-9), `install.sh` in cảnh báo "bản xem trước" khi chọn chúng. `deploy/install.sh` phải dò máy (PC / GPU NVIDIA / Jetson / Pi 5), hỏi trước khi
 cài Docker, chọn image `-cpu` / `-cuda` / `-jetson`, cài luật udev (tên `/dev/hibiscus/arm-*`), tự khởi
 động; `hibiscus-station-ctl status | logs | url | ports`. Container không chạy bằng root, có health
 check, dừng an toàn khi `docker stop`. Chỉ Linux. Traces BR-1.
@@ -74,12 +83,18 @@ check, dừng an toàn khi `docker stop`. Chỉ Linux. Traces BR-1.
 `--port`); (2) tạo token mới mỗi lần chạy; (3) mở trình duyệt ở liên kết đăng nhập (trừ
 `--no-browser`), liên kết đặt cookie rồi chuyển về `/` (token không còn trong lịch sử); (4) nếu đã có
 một bản đang chạy thì in liên kết của bản đó và thoát mã 0; (5) `hibiscus-station url` in liên kết
-đăng nhập mới; (6) ghi dòng khởi động (FR-64). Traces BR-1, NFR-5. Lỗi: cổng 18210 bận bởi chương
-trình khác → thông báo rõ và gợi ý `--port`.
+đăng nhập mới; (6) ghi dòng khởi động (FR-64). Traces BR-1, NFR-5. Lỗi (v0.2: D-3, D-4): cổng bận bởi chương trình khác → **không** in / mở liên kết
+đăng nhập, in một câu rõ ("Cổng 18210 đang được chương trình khác dùng. Chạy lại với --port 18211") và
+thoát mã ≠ 0; `hibiscus-station url` khi không có bản nào đang trả lời → "Hibiscus Station is not running"
+và mã ≠ 0 (tệp `token` / `station.pid` cũ không được tính); `url` tìm được cả bản demo (`--mock`). Các dòng
+người mới chắc chắn thấy trong PowerShell (khởi động, liên kết đăng nhập, cổng bận, đã có bản đang chạy)
+theo NFR-10.
 
 **FR-5 (F-5) Chế độ demo.** `--mock` phải dùng tay, camera, policy giả lập; dữ liệu ở
 `~/.hibiscus/station-demo` (trừ khi có `--home`); thanh trên hiện chip **TAY GIẢ LẬP** (tooltip "tay
-robot thật không chuyển động"); Cài đặt ghi "chế độ demo". Traces BR-2, RULE-11.
+robot thật không chuyển động"); Cài đặt ghi "chế độ demo". (v0.2: P-4, FL-10, D-8) Tay leader giả lập
+đứng theo tư thế follower khi bắt đầu teleop / ghi và khi Kiểm tra hai tay (chỉ trong demo), nên mọi bước
+chạy được ngay ở lần bấm đầu. Traces BR-2, RULE-11.
 
 **FR-6 (F-6) Truy cập cục bộ an toàn.** Station phải chỉ nhận Host `127.0.0.1:<port>`,
 `localhost:<port>`, `[::1]:<port>`; mọi yêu cầu cần cookie phiên hoặc Bearer token; yêu cầu không phải
@@ -92,9 +107,11 @@ token. Traces BR-16.
 robot" và "Ghép nối với máy chủ Hibiscus" (bỏ qua được). Thanh bước bên trái liệt kê 8 bước và các
 trang phụ; một bước có ✓ khi điều kiện xong (hồ sơ đã lưu; hai tay đã hiệu chỉnh; ≥ 1 camera phát; ≥ 1
 dataset có ≥ 1 tập; đã tải lên; đã nhập model). Bước bị khoá hiện lý do dưới tên (ví dụ "Hãy hiệu
-chỉnh tay follower trước", "Hãy reset nút dừng khẩn cấp trước"); mở một bước bị khoá (bằng thanh bước
-hoặc gõ địa chỉ) phải hiện trang "Bước này đang bị khoá" với lý do bằng lời, lý do chính xác của
-Station, nút "Tới <bước cần làm>", và **mọi nút trên trang bị tắt**; trang Huấn luyện vẫn hiện form
+chỉnh tay follower trước", "Hãy đặt lại sau khi dừng khẩn cấp" (v0.2: D-12, cùng từ với nút "Đã an toàn,
+đặt lại")); mở một bước bị khoá (bằng thanh bước
+hoặc gõ địa chỉ) phải hiện trang "Bước này đang bị khoá" với lý do bằng lời (câu dịch theo `code`), nút
+"Tới <bước cần làm>", và **mọi nút trên trang bị tắt**; (v0.2: P-5, FL-1) lý do thô của Station (tiếng Anh,
+có thể có đường dẫn) chỉ nằm trong mục "Chi tiết kỹ thuật" thu gọn, đóng mặc định; trang Huấn luyện vẫn hiện form
 ghép nối. Giống nhau ở bề rộng máy tính và điện thoại. Traces BR-1. REG-12.
 
 ### B. Robot và cổng
@@ -106,17 +123,20 @@ nghỉ rồi thả lỏng; giới hạn bước, tư thế nghỉ, camera. Xoá 
 chối khi hồ sơ đó đang chuyển động. Ghi nguyên tử vào `robots.yaml`. Traces BR-2.
 
 **FR-9 (F-9) Danh sách cổng.** Chỉ cổng USB serial, với mô tả, VID:PID, số serial, đường dẫn ổn định
-nếu có, "đang dùng bởi <ai>" (Station hoặc tiến trình khác); Windows: `COM3`, `com3`, `\\.\COM3` là
-một cổng. Traces BR-2.
+nếu có, (v0.2: SA-W1) "đang dùng bởi Station (<tay>)" cho cổng Station đang giữ; với tiến trình khác: Linux nêu
+tên tiến trình (từ `/proc`), Windows chỉ báo "đang bận — có thể LeLab / lerobot đang mở" **khi** Kết nối
+hoặc Dò thất bại với `Access is denied` (Windows không có API thường để biết tiến trình nào giữ cổng COM;
+Station không mở thử cổng chỉ để liệt kê); Windows: `COM3`, `com3`, `\\.\COM3` là một cổng. Traces BR-2.
 
 **FR-10 (F-10) Tìm cổng theo vai trò.** Dưới ô follower và ô leader có "Tìm <tay> (cử động)" và "Tìm
-<tay> (rút cáp)". Cử động: Station mở từng cổng ứng viên chỉ-đọc ở 1 Mbaud, ping id 1–6, trả cổng có
+<tay> (rút cáp)". Cử động: (v0.2: SA-F1) Station mở từng cổng ứng viên ở 1 Mbaud và **chỉ gửi lệnh ping / đọc, không ghi
+thanh ghi nào, không bật mô-men** (cổng đang bận bị bỏ qua và ghi "đang bận"), ping id 1–6, trả cổng có
 vị trí thay đổi > 50 bước trong ≤ 15 s; **không bao giờ** xét cổng đã gán cho tay kia. Rút cáp: chụp
 danh sách cổng, người dùng rút cáp, cổng biến mất trong ≤ 15 s là kết quả. Kết quả chỉ vào ô đã bấm.
 Hết giờ → "Không tìm thấy, thử lại" (không treo). Traces BR-2, RULE-13. REG-6.
 
-**FR-11 (F-11) Dò cổng và gợi ý vai trò.** `POST /ports/probe` chỉ đọc điện áp, model, firmware của mỗi
-cổng rảnh; dưới mỗi cổng: "có vẻ là tay leader (≈ 5 V)" / "có vẻ là tay follower (≥ 6,5 V)" / "chưa
+**FR-11 (F-11) Dò cổng và gợi ý vai trò.** `POST /ports/probe` chỉ gửi lệnh đọc (điện áp, model,
+firmware) tới mỗi cổng rảnh; dưới mỗi cổng: "có vẻ là tay leader (≈ 5 V)" / "có vẻ là tay follower (≥ 6,5 V)" / "chưa
 rõ"; cảnh báo khi ô follower ≈ 5 V hoặc ô leader ≥ 7 V; nút "Đổi chỗ follower ⇄ leader" đổi cổng, mã
 hiệu chỉnh ở lại theo vai trò. Không bao giờ tự đổi. Traces BR-2, RULE-13.
 
@@ -126,7 +146,10 @@ lại). Lỗi phải nói bước và lý do bằng lời, kèm chi tiết: cổ
 (LeLab? lerobot?) đang dùng COMx"), động cơ thiếu / sai model / firmware lẫn (`bus_error`, bước
 `handshake`), không ghi được cấu hình (bước `configure`). Mỗi tay báo mã hiệu chỉnh, tệp, vấn đề (không
 có tệp / có tệp khác / động cơ không giữ trường nào), số lỗi bus, lỗi bus cuối. "Ngắt kết nối" đóng
-cổng (tuỳ chọn thả lỏng). Traces BR-2. REG-14.
+cổng (tuỳ chọn thả lỏng). (v0.2: SA-W2) Trên Windows `Access is denied` **lúc mở cổng** là `port_busy`
+(không bao giờ `device_lost`); lúc đang chạy là `device_lost` (FR-13). (v0.2: P-7, D-22, SA-F2) Trên Linux,
+trước khi mở, Station kiểm tiến trình khác đang giữ tty (`/proc/*/fd`) → `port_busy` nêu tên tiến trình.
+Traces BR-2. REG-14.
 
 **FR-13 (F-13) Mất thiết bị USB.** Khi thiết bị serial biến mất (Windows `ERROR_ACCESS_DENIED`,
 `ClearCommError`, "device not ready", `PermissionError`; Linux `EIO` / `ENODEV` / `ENXIO`), Station
@@ -136,7 +159,10 @@ phải: không thử lại, không gửi tắt mô-men liên tục lên cổng c
 suspend, rút ra cắm lại) và gợi ý "cú nhảy lớn" khi lỗi xảy ra ngay sau bật mô-men / bắt đầu teleop.
 "Kết nối lại" chờ bộ chuyển trở lại (cùng serial, đường dẫn by-id hoặc VID:PID, có thể số COM mới),
 cập nhật cổng trong hồ sơ, kết nối và ghi lại hiệu chỉnh xuống động cơ. Hai bộ chuyển giống hệt không
-có serial → không đoán, yêu cầu người dùng chọn. Gói tin hỏng (không phải mất thiết bị) không phải
+có serial → không đoán, yêu cầu người dùng chọn (v0.2: SA-W2: bộ chuyển CH340 `1a86:7523` không có
+serial, nên hai tay CH340 sau khi cắm lại **luôn** được hỏi tay nào là tay nào; đây là thiết kế, hướng dẫn
+nói rõ; Windows gán số COM theo ổ USB nên cắm sang ổ khác = số COM mới; mục USB selective suspend trong
+hướng dẫn có ảnh minh hoạ). Gói tin hỏng (không phải mất thiết bị) không phải
 `device_lost`. Traces BR-5. REG-8.
 
 **FR-14 (F-14) Mô-men và tư thế nghỉ.** Khi Sẵn sàng / Đã dừng khẩn: "Bật mô-men", "Thả lỏng (tắt
@@ -177,13 +203,16 @@ với nhãn và nút "Dùng tệp này" (sao chép sang mã của tay, tệp cũ
 **FR-19 (F-19) Kiểm tra hai tay.** Cần cả hai tay đã hiệu chỉnh. Follower đứng yên; người dùng đặt
 leader giống follower, bấm "Kiểm tra" (`GET /calibration/compare`) → bảng độ lệch từng khớp; mọi khớp
 ≤ 20° (kẹp ≤ 20 %) → "Hai tay khớp nhau (lệch lớn nhất X). Sẵn sàng teleop" + "Thử teleop"; ngược lại
-nêu khớp lệch và lý do khả dĩ: một vài khớp → đặt lại tư thế / sai tệp ("Hiệu chỉnh lại <tay>"); mọi
-khớp → có thể nhầm cổng leader với follower. Luôn có "Vẫn thử teleop" (teleop vẫn áp RULE-12).
+nêu khớp lệch, mỗi khớp với đơn vị đúng (° cho khớp, % cho kẹp), và **một** lý do khả dĩ theo trường hợp
+(v0.2: D-7): một vài khớp → đặt lại tư thế / sai tệp ("Hiệu chỉnh lại <tay>"); mọi khớp → có thể nhầm
+cổng leader với follower; không liệt kê lý do không khớp với trường hợp. Luôn có "Vẫn thử teleop" (teleop vẫn áp RULE-12).
 Traces BR-3. REG-7. Q-6.
 
-**FR-20 (F-20) Dùng chung với lerobot / LeLab.** Tệp do Station ghi phải dùng được với
-`lerobot-teleoperate --robot.id=<id>` không cần hiệu chỉnh lại; tệp do LeLab / lerobot ghi phải dùng
-được trong Station với vị trí khớp hợp lý. Traces BR-3, C-2.
+**FR-20 (F-20) Dùng chung với lerobot / LeLab.** (v0.2: SA-F3, ma trận phiên bản.) (a) lerobot 0.7.1
+(`fe1c545`): tệp do Station ghi dùng được với `lerobot-teleoperate` không cần hiệu chỉnh lại và ngược lại
+(AT vendor); (b) LeLab **đang cài trên PC của khách** (phiên bản lerobot ghi lại từ `doctor`): hai chiều,
+UAT. Nếu LeLab của khách dùng thư mục cũ (`so101_follower` …): chiều LeLab → Station qua "Dùng tệp này"
+(FR-18); chiều Station → LeLab cũ là CR (ghi thêm bản sao vào thư mục cũ). Traces BR-3, C-2.
 
 ### D. Camera
 
@@ -192,7 +221,9 @@ Traces BR-3. REG-7. Q-6.
 đang dùng hiện "đang dùng bởi <tên>" và không bị mở lại. "Thử" mở camera 2 s → ảnh chụp, fps và độ
 phân giải đo được; fps đo < 90 % yêu cầu → "Camera chậm hơn yêu cầu (băng thông USB). Hãy thử MJPG
 hoặc độ phân giải thấp hơn". Số "0" chọn trên giao diện mở như số camera, không như tên tệp. Không in
-lỗi dò backend của OpenCV ra màn hình. Traces BR-7. REG-20.
+lỗi dò backend của OpenCV ra màn hình. (v0.2: SA-W4) Trên Windows / macOS camera được nhận theo số, hai
+webcam giống nhau có thể đổi số sau khi khởi động lại / cắm lại: hướng dẫn và UAT có bước "sau khi cắm lại,
+bấm Thử từng camera và kiểm hình đúng"; nhận diện theo đường dẫn thiết bị là CR (W-12). Traces BR-7. REG-20.
 
 **FR-22 (F-22) Camera đã cấu hình.** Thêm từ thiết bị tìm thấy (mặc định 640×480 @ 30 MJPG); tên chữ
 thường `[a-z0-9_]` không trùng (là khoá `observation.images.<tên>`, trang nói rõ); độ phân giải, fps,
@@ -208,12 +239,15 @@ Teleop không cần camera nào đang phát; ghi, chạy model, chương trình 
 ### E. Teleop và phát lại
 
 **FR-24 (F-24) Teleop.** Bắt đầu cần: kết nối, Sẵn sàng, hai tay đã hiệu chỉnh, không động cơ follower
-nóng, leader trong 30° (RULE-12). Vòng nhanh: mỗi nhịp kiểm e-stop → đọc leader → lọc an toàn → ghi
+nóng, leader trong 30° (RULE-12); không cần bước Kiểm tra hai tay (v0.2: FL-9). Vòng nhanh: mỗi nhịp kiểm e-stop → đọc leader → lọc an toàn → ghi
 lệnh follower; quan sát follower và camera ở ≤ 30 Hz, telemetry ở các nhịp khác. fps mặc định 250 (≤
 300; ô chọn fps hiện ngay trên trang, mặc định "250 (nhanh nhất)"); bus chậm thì chạy chậm hơn, không lỗi. Giới hạn bước teleop
 `safety.teleop_max_relative_target` 30°; kẹp dải hiệu chỉnh. Màn hình: camera (nếu có), bảng khớp
 (leader, follower, bị cắt), sức khoẻ động cơ hai tay, Robot 3D, đồng hồ, "độ trễ ~X ms, Y Hz" đo trực
-tiếp (p50), Dừng. Tóm tắt phiên lưu `loop.fps`, `latency_ms_p50/p95`. Traces BR-4, NFR-1, NFR-2.
+tiếp (p50; đây là độ trễ **phần mềm** đọc leader → gửi lệnh, NFR-1b), Dừng. (v0.2: D-10, D-11) Mọi số có
+nhãn và đơn vị đúng: bảng khớp ghi đơn vị (bước encoder trước hiệu chỉnh, ° / % sau); FPS hiện số thật
+đạt được / mục tiêu ("nhanh nhất" khi chọn 250); bộ đếm nhịp không dùng chữ "Bước". Tóm tắt phiên lưu
+`loop.fps`, `latency_ms_p50/p95`. Traces BR-4, NFR-1, NFR-2.
 REG-5, REG-7.
 
 **FR-25 (F-25) Leader xa và căn tay.** Leader lệch > `safety.max_approach_deg` (30°) ở bất kỳ khớp nào
@@ -233,9 +267,11 @@ camera và telemetry hiển thị. Traces BR-7.
 
 **FR-28 (F-28) E-stop.** Nút DỪNG (≥ 96 px, 128 px trên Chạy model) cố định góc phải dưới khi trạng
 thái là hiệu chỉnh / teleop / ghi / phát lại / chạy model / quỹ đạo / chương trình / về nghỉ / căn tay.
-Phím Space từ mọi nơi (không cuộn trang; khi đang gõ chữ thì Esc). Cũng qua `POST /estop` và WebSocket.
+Phím Space từ mọi nơi **trong cửa sổ Station đang được chọn** (không cuộn trang; khi đang gõ chữ thì Esc;
+v0.2: SA-S2, hướng dẫn nói rõ Space không có tác dụng khi người dùng đang ở cửa sổ khác; phím dừng toàn
+cục là CR W-11). Cũng qua `POST /estop` và WebSocket.
 Lần 1: trong nhịp hiện tại không gửi lệnh mới, `Goal := Present`, mô-men giữ, trạng thái `estopped`
-(lý do `user`). Lần 2 trong 2 s hoặc "Thả lỏng (tắt mô-men)": tắt mô-men. Khi `estopped` nút thành
+(lý do `user`). Lần 2 trong 2 s hoặc "Thả lỏng (tắt mô-men)": tắt mô-men và hiện banner "Hãy đỡ tay robot" (v0.2: D-6). Khi `estopped` nút thành
 "Đã an toàn, đặt lại" (xanh) kèm lý do; reset về Sẵn sàng (bị từ chối khi còn điều kiện nhiệt, xem
 FR-32). E-stop và reset không ghi EEPROM, không đổi tệp hiệu chỉnh. Traces BR-5, NFR-3, RULE-8. REG-10.
 
@@ -260,7 +296,7 @@ trạng thái 2 Hz, điện áp / dòng / tải 1 Hz, đọc khi vòng điều k
 nhiệt khi mẫu cũ hơn 2 s. Bảng gọn trên Robot, Teleop, Ghi, Chạy model, Chương trình; chip "Động cơ
 nóng nhất <động cơ> <nhiệt> (<mức>)" trên thanh trên mở ngăn chi tiết: bảng động cơ × đại lượng, đường
 120 s, ngưỡng nét đứt, giới hạn đọc từ động cơ ("động cơ tự ngắt ở 70 °C", "tối thiểu X V", "giới hạn
-dòng X A"). Lần đọc không có trả lời → "không phản hồi" (giá trị cũ, có tooltip); ba lần liên tiếp →
+dòng X A" chỉ khi đơn vị dòng đã được SP-1 xác nhận; nếu không, dòng hiện "—" ở mọi nơi, P-8). Lần đọc không có trả lời → "không phản hồi" (giá trị cũ, có tooltip); ba lần liên tiếp →
 cảnh báo "Không đọc được thông số động cơ". Leader có ghi chú "Di chuyển bằng tay: chỉ để tham khảo,
 không bao giờ báo động". Telemetry lưu theo phiên và theo tập (FR-37, FR-40). Traces BR-6. REG-11.
 
@@ -280,7 +316,12 @@ servo này không báo đại lượng này (số đọc vô lý nên bị bỏ 
 giới hạn nhiệt ngoài 40–150 °C (dùng mặc định); dòng > 3,5 A; tải ngoài ±100 %; điện áp ngoài 3–16 V;
 bit 15 (hướng) của dòng bị bỏ trước khi đổi đơn vị. Giá trị "không rõ" không bao giờ tạo cảnh báo,
 không làm lần đọc bị coi là lỗi, không làm dừng robot. Khi không động cơ nào báo nhiệt độ thật: lần
-đọc tính là lỗi (cảnh báo telemetry), không phải quá nhiệt (hành vi khi chạy: Q-5). Tay leader: không
+đọc tính là lỗi (cảnh báo telemetry), không phải quá nhiệt. (v0.2: P-3, QĐ-1 phương án A) Hành vi khi chạy
+lúc đó: (1) mỗi lần kết nối, hộp xác nhận "Không đọc được nhiệt độ động cơ: bảo vệ nhiệt của Station đang
+tắt. Chỉ còn bảo vệ của chính servo (tay có thể rơi). Theo dõi tay robot." với nút "Tôi hiểu, tiếp tục" /
+"Ngắt kết nối"; (2) banner cam cố định trên mọi màn hình chuyển động; (3) chạy model, phát lại, phát quỹ
+đạo, chương trình dừng an toàn sau một giới hạn thời gian (600 s mặc định, kỹ sư đổi được trong Cài đặt; tên cài đặt do SA chốt) chạy
+liên tục, lý do mới (tên đề xuất `thermal_blind`), đặt lại được ngay; teleop / ghi không giới hạn. Tay leader: không
 bao giờ cảnh báo dòng / tải / trạng thái / điện áp, nhiệt tối đa mức "nóng", không bao giờ dừng robot
 hay chặn phiên. Bảo vệ follower giữ nguyên. Traces BR-6, NFR-12, RULE-5, RULE-6. REG-3, REG-11, REG-13.
 
@@ -304,7 +345,9 @@ Traces BR-5.
 
 **FR-37 (F-37) Lịch sử phiên.** Trang Phiên liệt kê phiên (bắt đầu, loại, dataset / model, kết quả,
 nhiệt độ cao nhất) và telemetry của mỗi phiên. Mỗi phiên lưu `session.json` + `telemetry.jsonl.gz`.
-Lúc khởi động xoá phiên cũ hơn 30 ngày hoặc khi tổng vượt 2 GiB (cũ trước). Traces BR-6, BR-12.
+Lúc khởi động xoá phiên cũ hơn 30 ngày hoặc khi tổng vượt 2 GiB (cũ trước); chỉ kiểm lúc khởi động
+(v0.2: SA-F5, chấp nhận như đã xây: Station chạy liên tục nhiều tuần có thể vượt 2 GiB tới lần khởi động
+sau). Traces BR-6, BR-12.
 
 ### G. Ghi bộ dữ liệu
 
@@ -315,6 +358,8 @@ N camera, tổng Y GiB". Chạy: tiêu đề pha ("Tập 4 / 20 · đang ghi · 
 "Đang lưu tập 4…"); Tiếp → / Ghi lại ← / Dừng Esc (nút và phím); khi lưu, vòng điều khiển vẫn giữ tay;
 dải tập đã lưu với nhiệt độ cao nhất. Kết thúc: "Đã lưu N tập trong <đường dẫn>" + Tải lên / Ghi thêm.
 Dataset là LeRobot v3 đúng như lerobot ghi (`finalize` luôn được gọi, kể cả khi dừng sớm hoặc e-stop).
+Trong lúc ghi và lưu tập, trang Ghi và trang chi tiết dataset không bao giờ gây lỗi 5xx (v0.2: D-2): tập
+đang lưu dở hiện "Đang lưu…".
 Traces BR-7, RULE-14.
 
 **FR-39 (F-39) Ghi thêm.** Ghi thêm vào dataset cục bộ có sẵn; kiểm tra tương thích (động cơ, camera,
@@ -362,6 +407,10 @@ camera), chọn camera tương ứng khi tên khác. Kiểm lại khi bắt đ�
 **FR-47 (F-47) Nạp model.** Thiết bị Tự động (CUDA → MPS → CPU) / CPU / CUDA / MPS; nạp + khởi động
 (một lần suy luận trên quan sát 0) trong nền; "Đã nạp trên <thiết bị> trong X giây · khởi động Y ms";
 một model tại một thời điểm; tự gỡ sau 10 phút không dùng. Không phiên nào chạy với model chưa nạp.
+(v0.2: P-2, D-20, SA-N3) Lần suy luận khởi động > 500 ms (½ dead-man) trên máy đó → "Chạy trên robot" bị
+tắt với "Model quá chậm trên máy này cho an toàn dead-man. Dùng CUDA hoặc model nhỏ hơn" (mã lỗi đề xuất `model_too_slow`).
+(v0.2: D-23, SA-F4) Model cần tải thành phần từ HF Hub (SmolVLA, adapter PEFT) khi không có mạng → câu dịch
+"Model này cần tải thành phần từ Internet ở lần nạp đầu", không lỗi thô.
 Traces BR-9.
 
 **FR-48 (F-48) Chạy model trên robot.** Thiết lập: nhiệm vụ (điền từ model), fps (từ huấn luyện), độ dài
@@ -371,7 +420,8 @@ lại → tập tiếp; Tiếp / Dừng; mọi camera "đầu vào policy · 640
 tick trạng thái; mỗi khớp: đo được / lệnh / đã gửi + biểu đồ 10 s, nhịp bị cắt được đánh dấu; Bước,
 FPS thật / mục tiêu, Suy luận p50 / p95, Vòng lặp p95, % bị cắt; sức khoẻ động cơ; Robot 3D. Suy luận
 > 2 nhịp trong 5 s → tạm dừng "Model quá chậm cho fps này trên máy này. Hãy giảm fps hoặc dùng CUDA"
-(không dồn lệnh cũ). Mỗi tập reset trạng thái policy. Traces BR-9.
+(không dồn lệnh cũ). Mỗi tập reset trạng thái policy. E-stop trong lúc suy luận: không lệnh mới nào được gửi; lệnh giữ được ghi
+ngay khi lần suy luận đang chạy kết thúc (NFR-3a). Traces BR-9.
 
 **FR-49 (F-49) Dataset đánh giá.** Bật "Ghi bộ dữ liệu đánh giá": cùng vòng ghi dataset `eval_<model>_<ngày>`
 (sửa được tên) kèm telemetry. Traces BR-9.
@@ -449,16 +499,23 @@ Traces BR-10.
 ### L. Chẩn đoán
 
 **FR-63 (F-63) Doctor.** `hibiscus-station doctor` phải chạy được khi Station đang tắt hoặc đang chạy,
-không bao giờ ghi gì xuống động cơ; thu thập như F-63; mở đầu bằng "LIKELY PROBLEMS" (ví dụ "MOCK PROFILE
-ACTIVE … real serial ports present: COM3", bộ chuyển USB chậm: "đặt latency timer 1 ms"); tạo
+không bao giờ ghi gì xuống động cơ; thu thập như F-63; mở đầu bằng "LIKELY PROBLEMS" khi có vấn đề, khi không có thì dòng "No likely problems found" (v0.2:
+FL-11); ví dụ "MOCK PROFILE ACTIVE … real serial ports present: COM3"; bộ chuyển USB chậm: với bộ chuyển
+WCH CH340 / CH343 nói "slow USB adapter / hub: plug the arm straight into the PC", chỉ nói "latency timer
+1 ms" với chip FTDI (v0.2: D-21); cổng bị chương trình khác giữ vào LIKELY PROBLEMS; `station.pid` còn mà
+Station không trả lời → "Station is not running" (v0.2: D-15); tạo
 `hibiscus-station-doctor-<thời gian>.zip` trong `--out` (mặc định thư mục hiện tại) không chứa token;
-phần kiểm tra từng tay ghi **giá trị thô** của các thanh ghi đọc được (vị trí, homing, giới hạn vị trí, điện áp và giới hạn điện áp, nhiệt độ, `Max_Temperature_Limit`, `Status`, mô-men, khoá, return delay, chế độ) — hiện **chưa** đọc `Present_Current` và `Present_Load` (khoảng trống K-11); `--verbose` in mọi lỗi bus (id động cơ, thanh ghi);
-`--no-ping` không mở cổng; `--no-cameras` không dò camera. Traces BR-12. REG-2, REG-13.
+phần kiểm tra từng tay ghi **giá trị thô** của các thanh ghi đọc được (vị trí, homing, giới hạn vị trí, điện áp và giới hạn điện áp, nhiệt độ, `Max_Temperature_Limit`, `Status`, mô-men, khoá, return delay, chế độ) — (v0.2: K-11, SP-1) thêm `Present_Current`, `Present_Load`, và bản dump thô từng servo bằng lệnh `read`
+**riêng lẻ** (không `sync_read`) của khối thanh ghi 56–70 và 0–3 (firmware, model); `--verbose` in mọi lỗi bus (id động cơ, thanh ghi);
+`--no-ping` không mở cổng; `--no-cameras` không dò camera. Lệnh này là **lệnh hỗ trợ** chép-dán từ hướng
+dẫn tiếng Việt (cùng loại với lệnh cài, FL-5); đầu ra tiếng Anh (cho vendor, NFR-10). Traces BR-12. REG-2,
+REG-13.
 
 **FR-64 (F-64) Nhật ký.** `station.log` UTF-8, xoay vòng 10 MiB × 5; dòng khởi động: chế độ (giả lập /
 phần cứng thật), thư mục dữ liệu, hồ sơ hoạt động và loại thiết bị; mọi lệnh bus lỗi (thao tác, thanh
 ghi, id, lỗi); `-v` in ra màn hình; không in dòng thời gian mỗi nhịp của lerobot. Console Windows không
-lỗi với tiếng Việt (UTF-8 khi chuyển hướng). Traces BR-12. REG-18.
+lỗi với tiếng Việt (UTF-8 khi chuyển hướng). Xoay vòng thất bại trên Windows (tệp đang bị chương trình
+khác mở) → tiếp tục ghi tệp cũ, không mất log (v0.2: SA-W6). Traces BR-12. REG-18.
 
 **FR-65 (F-65) Health.** `hibiscus-station health` thoát 0 khi bản đang chạy trả lời `GET /status` bằng
 token của chính nó trong `--timeout` (5 s), khác 0 nếu không. Traces BR-12.
@@ -483,10 +540,11 @@ kết nối). Traces BR-14, NFR-11.
 
 ### N. Cập nhật và dữ liệu
 
-**FR-69 (F-69) Cập nhật wheel.** Chạy lệnh cài đặt với wheel bản mới (`uv tool install --force …` hoặc
-tương đương ghi trong hướng dẫn) phải thay Station mà giữ nguyên `~/.hibiscus/station` (hồ sơ, cài đặt,
+**FR-69 (F-69) Cập nhật wheel.** (v0.2: P-1, QĐ-3) Chạy lại **đúng lệnh cài một dòng** của FR-1 (bản mới
+nhất), hoặc cùng lệnh kèm số phiên bản để quay lại (ví dụ `-Version 1.0.0`), phải thay Station mà giữ nguyên `~/.hibiscus/station` (hồ sơ, cài đặt,
 dataset, model, phiên, quỹ đạo, tư thế, bộ nhận diện, chương trình) và thư mục hiệu chỉnh lerobot; cài
-lại bản cũ cũng vậy (quay lại). Bản mới đọc được dữ liệu của bản cũ (0.2.x). Traces BR-15. Q-4.
+lại bản cũ cũng vậy (quay lại, ra **đúng** bộ thư viện của bản cũ). Bản mới đọc được dữ liệu của bản cũ
+(0.2.x). Traces BR-15. QĐ-3.
 
 **FR-70 (F-70) Docker backup / update / rollback.** `backup [--full]` (mặc định không gồm dataset và
 model) → tarball; `restore FILE`; `update [TAG]`: sao lưu, kéo, khởi động lại, kiểm sức khoẻ, tự quay lại
@@ -505,8 +563,10 @@ Traces RULE-1.
 
 **FR-73 Lỗi có nghĩa.** Mọi lỗi API là Problem (RFC 9457) có `code` ổn định; giao diện hiện câu dịch theo
 `code` (danh sách `errors.*`) và có đường thoát (thử lại, tới bước cần làm, kết nối lại, đặt lại). Không
-hiện stack trace, `internal_error` thô hay chuỗi debug. Chi tiết kỹ thuật (nếu hiện) nằm dưới câu dịch,
-nhỏ, và không thay cho câu dịch (xem khoảng trống K-4). Traces BR-1, BR-6.
+hiện stack trace, `internal_error` thô hay chuỗi debug. (v0.2: P-5, FL-1, D-5) Chi tiết kỹ thuật
+(lý do thô, tiếng Anh, đường dẫn) chỉ nằm trong mục "Chi tiết kỹ thuật" thu gọn, đóng mặc định, không bao
+giờ là một dòng hiện sẵn dưới câu dịch; câu dịch có đủ đơn vị (°, %, V). Yêu cầu sai định dạng (ví dụ body
+không phải JSON) → 4xx có `code`, không bao giờ 500 (D-16). Traces BR-1, BR-6.
 
 **FR-74 Không ngõ cụt.** Ở mọi trạng thái (`disconnected`, `connecting`, `idle`, `calibrating`,
 `teleop`, `recording`, `replaying`, `inferring`, `recording_traj`, `playing`, `programming`, `rest`,
@@ -514,35 +574,47 @@ nhỏ, và không thay cho câu dịch (xem khoảng trống K-4). Traces BR-1, 
 `idle` hoặc `disconnected` (xem §7). Tải lại trang giữa chừng phải khôi phục đúng trạng thái từ Station.
 Traces BR-5.
 
-**FR-75 Hành vi khi tắt.** Dừng Station (Ctrl+C, đóng cửa sổ, `docker stop`, tắt dịch vụ) khi tay đang
-chuyển động phải: dừng phiên, giữ / về nghỉ, tắt mô-men theo hồ sơ, đóng dataset (finalize), giải phóng
-cổng và camera. Lần khởi động sau không bị "cổng bận" do khoá cũ. Traces BR-5, BR-15.
+**FR-75 Hành vi khi tắt.** Dừng Station (Ctrl+C, `docker stop`, tắt dịch vụ) khi tay đang chuyển động
+phải: dừng phiên, giữ / về nghỉ, tắt mô-men theo hồ sơ, đóng dataset (finalize), giải phóng cổng và camera.
+(v0.2: P-6, D-19, SA-W3) **Đóng cửa sổ console, đăng xuất, tắt máy trên Windows**: Station bắt sự kiện của
+Windows và chạy đường dừng **rút gọn** trong ≤ 4 s: e-stop giữ → tắt mô-men theo hồ sơ (bỏ bước về tư thế
+nghỉ) → `finalize` dataset nếu kịp. Ngoại lệ đã biết: đóng cửa sổ khi đang ghi thì tập **đang ghi dở** có
+thể bị bỏ; các tập đã lưu còn nguyên và dataset mở được. Lần khởi động sau không bị "cổng bận" do khoá cũ.
+Traces BR-5, BR-15.
 
 **FR-76 Phiên bản thống nhất.** Phiên bản Station hiện giống nhau ở `--version`, Cài đặt, `doctor`,
 README, hướng dẫn, ghi chú phát hành, tên wheel và tag image. Traces BR-13.
 
 ## 4. Yêu cầu phi chức năng (đo được)
 
+v0.2: NFR-1, NFR-3 tách thành phần **vendor đo** (giả lập / test tự động) và phần **UAT** (khách quan sát,
+không cần dụng cụ đo); video quay chậm bằng điện thoại là tuỳ chọn, không bắt buộc (SA-N1, SA-N3, FL-2,
+FL-3). "≤ 3 ms mỗi lần đọc bus" = số `doctor` đo trên PC đó.
+
 | ID | Loại | Yêu cầu | Cách đo | Đích | AT |
 |---|---|---|---|---|---|
-| NFR-1 | Hiệu năng (teleop) | Độ trễ leader → follower (thời gian từ khi leader tới một vị trí tới khi lệnh follower tới vị trí đó) | `tests/teleop_bench.py` trên giả lập STS3215 (1 Mbaud, latency timer 1 ms); trên tay thật: số "độ trễ ~X ms" + video 240 fps | p50 ≤ 70 ms và ≤ LeLab + 10 ms trên cùng máy; p95 ≤ 100 ms | AT-31 |
-| NFR-2 | Hiệu năng (nhịp) | Tần số vòng teleop với bộ chuyển 1 ms | Tóm tắt phiên `loop.fps` 10 phút | ≥ 100 Hz; tỉ lệ nhịp trễ < 1 %; với vòng 30 Hz (ghi / chạy model): p95 thời gian nhịp ≤ 36 ms | AT-31, AT-89 |
-| NFR-3 | An toàn (e-stop) | Thời gian từ bấm Space / nút tới khi không còn lệnh mới | Phần mềm: test một nhịp; phần cứng: video 240 fps | Không lệnh vị trí nào sau nhịp hiện tại; tay đứng yên < 100 ms | AT-36, AT-88 |
-| NFR-4 | An toàn (dead-man) | Thời gian từ khi giao diện mất tới e-stop | Đóng tab khi chạy model | 1,0 s (+ ≤ 1 nhịp) | AT-38 |
-| NFR-5 | Khởi động | Từ lệnh `hibiscus-station` tới khi trang tải xong trên trình duyệt (lần chạy thứ hai trở đi, không tính tải torch lần đầu) | Đồng hồ, máy chuẩn của khách | ≤ 15 s trên PC Windows của khách; ≤ 10 s trên Linux x86_64 của vendor; kết nối hồ sơ ≤ 5 s (không camera) | AT-87 |
-| NFR-6 | An toàn nhiệt | Thời gian dừng an toàn nhiệt (từ mẫu nguy hiểm thứ hai tới tắt mô-men) | Test với giả lập; tay thật với ngưỡng hạ | ≤ 2 s | AT-42 |
-| NFR-7 | Phục hồi | Sau mọi lần dừng (e-stop, nhiệt, dead-man, mất camera, mất USB, mất mạng khi tải lên, tải lại trang) có đường về Sẵn sàng hoặc Chưa kết nối không cần khởi động lại Station; lần chạy sau bắt đầu từ đầu | ATs phục hồi | 100 % | AT-37, AT-19, AT-45, AT-54, AT-72 |
-| NFR-8 | Bền | Phiên dài không suy giảm | Teleop 30 phút + ghi 20 tập liên tục | Không tăng bộ nhớ > 20 %, không treo, fps không giảm > 10 % | AT-90 |
-| NFR-9 | Nền tảng | Hệ điều hành hỗ trợ | — | **Windows 10 22H2 / 11 x64** (wheel, Python 3.12) — Must; **Ubuntu 22.04 / 24.04 x86_64** (wheel) — Should; macOS 14+ (wheel), Docker trên Linux x86_64 / Raspberry Pi 5 / Jetson Orin JetPack 6 — Could (Q-1). Trình duyệt: Chrome / Edge 120+, Firefox 120+ | AT-1 – AT-4 |
-| NFR-10 | Ngôn ngữ | Tiếng Việt (mặc định) và English, đầy đủ, không lẫn ngôn ngữ trong một màn hình, không lỗi chính tả, một thuật ngữ cho một khái niệm | Rà chuỗi + chụp mọi màn hình ở hai ngôn ngữ | 0 chuỗi thiếu; 0 câu tiếng Anh trên giao diện tiếng Việt ngoài thuật ngữ đã thống nhất (teleop, follower, leader, e-stop, fps, policy, tên khớp, mã lỗi) | AT-81, AT-91 |
-| NFR-11 | Khả dụng / a11y | Bàn phím đi hết luồng chính; focus thấy rõ; điều khiển có nhãn; tương phản WCAG AA ở hai chủ đề; bề rộng 1280 và 390 px không cuộn ngang | Chụp 1280 / 390 × sáng / tối; axe; bàn phím | 0 lỗi | AT-82, AT-83 |
+| NFR-1a | Hiệu năng teleop (vendor) | Trễ bám: từ khi leader tới một vị trí tới khi follower tới vị trí đó, trên giả lập STS3215 có thời gian thật (1 Mbaud, servo ~300°/s) | `tests/teleop_bench.py`, adapter 1 ms và 8 ms, cử động chậm và nhanh; so với vòng tham chiếu kiểu LeLab chạy trong cùng bench | p50 ≤ 70 ms, p95 ≤ 100 ms, và ≤ tham chiếu LeLab + 10 ms ở **cả** 1 ms và 8 ms (hôm nay 8 ms không đạt: D-9) | AT-31 |
+| NFR-1b | Hiệu năng teleop (mọi máy) | Độ trễ **phần mềm** Station hiển thị ("độ trễ ~X ms": đọc leader → gửi lệnh follower) | Tóm tắt phiên `latency_ms_p50` / `_p95`, teleop 2 phút | p50 ≤ 15 ms, p95 ≤ 30 ms khi bus ≤ 3 ms mỗi lần đọc | AT-31, AT-89 |
+| NFR-1c | Hiệu năng teleop (UAT) | Cảm nhận so với LeLab | Khách teleop lần lượt LeLab và Station trên cùng PC, cùng tay, cùng động tác, 2 phút mỗi bên | Khách đánh giá "không chậm hơn LeLab" | AT-31 |
+| NFR-2 | Hiệu năng (nhịp) | (a) Teleop: báo Hz đạt được (vòng teleop chạy nhanh nhất bus cho phép nên không tính "nhịp trễ"); (b) vòng cố định 30 Hz (ghi, chạy model) | Tóm tắt phiên `loop.fps`, p95 thời gian nhịp, tỉ lệ nhịp trễ, `telemetry_forced` | (a) ≥ 100 Hz khi bus ≤ 3 ms mỗi lần đọc; bus chậm hơn: ≥ vòng tham chiếu LeLab trên cùng bench và không cảnh báo "không theo kịp" khi cử động bình thường; đích cuối cho Windows + CH34x chốt sau số đo UAT-0 (SP-4); (b) p95 ≤ 36 ms, nhịp trễ < 1 %, `telemetry_forced` < 1 % | AT-31, AT-89 |
+| NFR-3a | An toàn e-stop (vendor) | Từ lúc Station nhận e-stop tới khi không còn lệnh vị trí mới | Test tự động đếm lệnh ghi bus (giả lập pty, log lệnh của `sts_emulator`) | ≤ 1 nhịp cho teleop / ghi / phát lại / quỹ đạo / chương trình / về nghỉ / căn tay; ≤ 1 nhịp + 1 lần suy luận khi chạy model | AT-36, AT-88 |
+| NFR-3b | An toàn e-stop (vendor, e2e) | Từ phím Space trong trình duyệt tới khi máy chủ nhận e-stop | Playwright, 100 lần bấm, dấu thời gian trình duyệt và log máy chủ | p99 ≤ 50 ms | AT-88 |
+| NFR-3c | An toàn e-stop (UAT) | Tay dừng khi bấm Space / nút DỪNG | Khách quan sát (video quay chậm điện thoại tuỳ chọn) | Tay dừng "ngay", giữ mô-men, không rơi, 10 / 10 lần | AT-36 |
+| NFR-4 | An toàn (dead-man) | Từ khi giao diện mất tới e-stop | Đóng tab khi chạy model / phát lại / chương trình / về nghỉ | ≤ 1,0 s + 1 nhịp (+ 1 lần suy luận khi chạy model); model có suy luận khởi động > 500 ms bị từ chối chạy (P-2) | AT-38, AT-97 |
+| NFR-5 | Khởi động | Từ lệnh `hibiscus-station` tới khi trang tải xong, **từ lần chạy thứ hai**, không camera (lần đầu sau cài có thể chậm 1–2 phút vì tải torch và Windows Defender quét tệp; hướng dẫn nói rõ, SA-W5) | Đồng hồ / dấu thời gian log | ≤ 15 s trên PC Windows của khách; ≤ 10 s trên Linux x86_64 của vendor; kết nối hồ sơ ≤ 5 s (không camera). Mở camera trên Windows (MSMF): không có đích ở v1.0, ghi số đo trong UAT (SA-W4) | AT-87 |
+| NFR-6 | An toàn nhiệt | Thời gian dừng an toàn nhiệt (từ mẫu nguy hiểm thứ hai tới tắt mô-men), **trên servo báo nhiệt thật** | Giả lập (vendor); tay của khách với ngưỡng hạ nếu servo báo nhiệt | ≤ 2 s. Servo không báo nhiệt: AT-42 "không áp dụng" có chữ ký khách, hành vi theo QĐ-1 (AT-93) | AT-42, AT-93 |
+| NFR-7 | Phục hồi | Sau mọi lần dừng (e-stop, nhiệt, dead-man, mất camera, mất USB, mất nguồn follower, đóng cửa sổ, mất mạng khi tải lên, tải lại trang) có đường về Sẵn sàng hoặc Chưa kết nối không cần khởi động lại Station (đóng cửa sổ: mở lại Station); lần chạy sau bắt đầu từ đầu | ATs phục hồi | 100 % | AT-19, AT-37, AT-45, AT-54, AT-72, AT-94, AT-95 |
+| NFR-8 | Bền | Phiên dài không suy giảm | Teleop 30 phút + ghi 20 tập liên tục (job `slow` hằng đêm) | Bộ nhớ tăng ≤ 20 %, không treo, fps giảm ≤ 10 % | AT-90 |
+| NFR-9 | Nền tảng | (v0.2: QĐ-2 phương án A) Nền tảng thuộc nghiệm thu v1.0 | — | **Windows 10 22H2 / 11 x64** (wheel, Python 3.12) — Must, UAT của khách; **Ubuntu 22.04 / 24.04 x86_64** (wheel) — Should, vendor; **Docker Linux x86_64 `-cpu`** — Could, vendor. Bản xem trước, ngoài nghiệm thu (W-9): macOS, wheel Linux arm64, Docker `-cuda`, Raspberry Pi 5, Jetson Orin. Trình duyệt: Edge 120+ (e2e trên CI Windows), Chrome 120+, Firefox 120+ (e2e trên Linux) (SA-C2) | AT-1 – AT-4 |
+| NFR-10 | Ngôn ngữ | (v0.2: SA-U1) Phạm vi: **giao diện web và hướng dẫn tiếng Việt**, cùng các dòng CLI người mới chắc chắn thấy (khởi động, liên kết đăng nhập, cổng bận, đã có bản đang chạy) bằng tiếng Việt hoặc song ngữ. Ngoài phạm vi (tiếng Anh, cho kỹ sư / vendor): `doctor`, log, đầu ra của uv, mục "Chi tiết kỹ thuật" thu gọn. Tiếng Việt (mặc định) và English đầy đủ, không lẫn ngôn ngữ, không lỗi chính tả, một thuật ngữ cho một khái niệm | Kiểm chuỗi tự động (khoá `vi` = `en`, cấm "Hiệu chuẩn", không chuỗi `detail` tiếng Anh hiện sẵn ở chế độ `vi`) + ma trận ảnh | 0 chuỗi thiếu; 0 câu tiếng Anh trong phạm vi ngoài thuật ngữ đã thống nhất (teleop, follower, leader, e-stop, fps, policy, tên khớp, mã lỗi) | AT-81, AT-91 |
+| NFR-11 | Khả dụng / a11y | (v0.2: SA-U2, FL-7) Bàn phím đi hết **luồng chính** (robot → hiệu chỉnh → camera → teleop → ghi → chạy model → e-stop → đặt lại); trình soạn khối Blockly được miễn yêu cầu bàn phím (chạy / dừng chương trình vẫn dùng được bằng bàn phím); focus thấy rõ; điều khiển có nhãn; tương phản WCAG AA ở hai chủ đề; ở 390 px **trang** không cuộn ngang (bảng rộng và canvas cuộn ngang trong khung riêng); trình soạn khối trên điện thoại: xem và chạy | Ma trận ảnh Playwright tự động (mọi trang × trạng thái × sáng / tối × 1280 / 390) + axe trong CI; QC xem tay mẫu cố định; đi bằng bàn phím | 0 lỗi | AT-82, AT-83 |
 | NFR-12 | Thông tin đúng | Mọi số hiển thị có đơn vị đúng và nằm trong dải hợp lý (RULE-5); không placeholder, không debug | Rà màn hình với tay giả lập + tay thật | 0 vi phạm; 0 cảnh báo giả trong 30 phút teleop trên tay khách | AT-43, AT-92 |
-| NFR-13 | Độ chính xác telemetry | So với dụng cụ đo | Nhiệt kế, đồng hồ vạn năng | Nhiệt ±2 °C (sau 10 phút), điện áp ±0,2 V; dòng: cùng bậc độ lớn (đơn vị chưa xác nhận, REG-13) | AT-40 |
-| NFR-14 | Bảo mật | Chỉ cục bộ, token mỗi lần chạy, không lộ token máy chủ, che token trong log, zip an toàn, không pickle | Test + rà soát bảo mật | 0 phát hiện mở | AT-8, AT-57 |
-| NFR-15 | Dữ liệu | Dataset mở được bằng lerobot 0.7.1; không tệp lạ trong thư mục LeRobot; phiên lưu 30 ngày / 2 GiB | Script kiểm | 100 % | AT-49, AT-86 |
-| NFR-16 | Ngoại tuyến | Mọi chức năng trừ ghép nối / tải lên / huấn luyện / kéo model chạy không cần Internet | Rút mạng | 100 % | AT-86 |
-| NFR-17 | Tải lên | Tiếp tục sau mất mạng không gửi lại phần đã gửi | Rút mạng giữa chừng | Phần đã xác nhận không gửi lại | AT-54 |
-| NFR-18 | Chất lượng mã | Lint, kiểu, toàn bộ test (Linux, Windows, macOS CI) xanh, không test bị bỏ qua che lỗi | CI | Xanh trên commit phát hành | AT-2 |
+| NFR-13 | Độ chính xác telemetry | (v0.2: SA-N4, FL-4) So với **công cụ Feetech FD** chính hãng trên cùng servo, cùng lúc (không cần nhiệt kế / đồng hồ vạn năng) | Ảnh chụp FD và Station cạnh nhau: nguội (để yên 30 phút) và sau 10 phút teleop | Nhiệt ±3 °C, điện áp ±0,2 V; khi có tải nhiệt tăng đều, không nhảy; dòng: ±20 % nếu SP-1 xác nhận đơn vị, nếu không: "—" ở mọi nơi (P-8). Servo không báo nhiệt: ô hiện "—" (RULE-5) | AT-40 |
+| NFR-14 | Bảo mật / pháp lý | Chỉ cục bộ, token mỗi lần chạy, không lộ token máy chủ, che token trong log, zip an toàn, không pickle; (v0.2: SA-L1) mọi gói phân phối cùng Station có giấy phép tương thích AGPL (QĐ-4); mỗi cảnh báo bảo mật bị bỏ qua có lý do ghi lại | Test + rà soát bảo mật + bảng giấy phép từ metadata gói đã cài | 0 phát hiện mở; 0 gói không tương thích; 0 GHSA bỏ qua không lý do | AT-8, AT-57, AT-98 |
+| NFR-15 | Dữ liệu | Dataset mở được bằng lerobot 0.7.1 (`fe1c545`); không tệp lạ trong thư mục LeRobot; phiên lưu 30 ngày / 2 GiB (kiểm lúc khởi động); (v0.2: SA-F3) tệp hiệu chỉnh và dataset dùng được với LeLab đang cài trên PC của khách (phiên bản lerobot ghi lại) | Script kiểm (vendor); UAT với LeLab của khách | 100 % | AT-27, AT-47, AT-49, AT-86 |
+| NFR-16 | Ngoại tuyến | Mọi chức năng trừ ghép nối / tải lên / huấn luyện / kéo model chạy không cần Internet; (v0.2: SA-F4) ngoại lệ: model cần backbone từ HF Hub (SmolVLA, adapter PEFT) cần Internet ở lần nạp đầu và báo bằng câu dịch | Chạy không mạng | 100 % | AT-86 |
+| NFR-17 | Tải lên | Tiếp tục sau mất mạng không gửi lại phần đã gửi | Dừng máy chủ thử giữa chừng | Phần đã xác nhận không gửi lại | AT-54 |
+| NFR-18 | Chất lượng mã / CI | (v0.2: SA-C1, SA-C2, D-1) Lint, kiểu, toàn bộ test xanh trên CI Linux / Windows / macOS cho đúng commit phát hành, gồm e2e (Chromium Linux, Firefox Linux, Edge Windows); test bỏ qua theo nền tảng **chỉ** những test trong danh sách công bố (tên test, nền tảng, lý do, AT / UAT phủ thay), hôm nay: test giả lập pty trên Windows (`test_calib_simple.py`, `test_real_stack.py`, `test_teleop_latency.py`, phần POSIX của `test_device_lost.py`) phủ thay bởi UAT-1 cho tới khi SP-2 chạy được chúng trên cổng COM ảo | CI + danh sách bỏ qua trong repo | Xanh; 0 test bỏ qua ngoài danh sách | AT-2 |
 
 ## 5. Giao diện
 
@@ -596,7 +668,7 @@ Di chuyển dữ liệu: v1.0 phải đọc được mọi dữ liệu của 0.2
 | `recording_traj` / `playing` / `programming` | Quỹ đạo / chương trình | Dừng, Tạm dừng / Tiếp tục (chương trình), e-stop |
 | `rest` (`playing`) / căn tay (`teleop.align`) | Về nghỉ / căn tay | Dừng, e-stop |
 | `stopping` | Kết thúc phiên (≤ 10 s) | Tự sang `idle` |
-| `estopped` | Đã dừng (lý do: user, thermal, electrical, ui_lost, camera_lost) | Đặt lại (khi đủ nguội), Thả lỏng, ngắt kết nối; sau đặt lại: "Về tư thế nghỉ" nếu bị dừng giữa chừng |
+| `estopped` | Đã dừng (lý do: user, thermal, electrical, ui_lost, camera_lost; v0.2 đề xuất thêm thermal_blind, P-3) | Đặt lại (khi đủ nguội), Thả lỏng, ngắt kết nối; sau đặt lại: "Về tư thế nghỉ" nếu bị dừng giữa chừng |
 | `error` | Mất bus / thiết bị (`bus_lost`, `device_lost`) | Kết nối lại (chờ cổng), ngắt kết nối |
 
 Luồng phục hồi bắt buộc (mỗi luồng có AT):
@@ -610,22 +682,27 @@ Luồng phục hồi bắt buộc (mỗi luồng có AT):
 7. Tải lại trang / mất WebSocket → "Đang kết nối lại…" → trạng thái khôi phục (AT-46).
 8. Leader xa → từ chối → Căn tay → teleop (AT-33).
 9. Sai thứ tự bước (mở bước bị khoá) → trang khoá với lý do và liên kết (AT-10).
+10. Mất nguồn follower giữa chuyển động → lỗi bus rõ ràng, không treo → bật nguồn → Kết nối lại (AT-94).
+11. Đóng cửa sổ console trên Windows → dừng rút gọn ≤ 4 s → mở lại Station, không "cổng bận" (AT-95).
+12. Không đọc được nhiệt độ → xác nhận khi kết nối → phiên không người cầm leader dừng sau 10 phút → đặt lại (AT-93).
 
 ## 8. Khoảng trống phát hiện ở vòng 1 (so với chuẩn chất lượng)
 
 Các điểm dưới đây là **lỗi so với chuẩn chất lượng** trong bản 0.2.8 (không phải yêu cầu mới); chúng
-phải được sửa (hoặc khách hàng miễn bằng văn bản theo mã) trước khi phát hành v1.0. QC sẽ mở thành lỗi.
+phải được sửa (hoặc khách hàng miễn bằng văn bản theo mã) trước khi phát hành v1.0. v0.2: K-n đã được Tech
+Lead xác nhận bằng chạy thử mang mã lỗi D-n; danh sách lỗi đầy đủ (D-1 – D-23) ở
+[FEATURES.md](FEATURES.md#lỗi-đã-biết-d-n).
 
-| ID | Chỗ | Vấn đề | Yêu cầu liên quan |
-|---|---|---|---|
-| K-1 | README / README.vi (bảng Docker), `docs/deploy.md` | Tag image và wheel ghi `0.2.1` trong khi sản phẩm là `0.2.8` | FR-76 |
-| K-2 | `docs/user-guide/{vi,en}/station-hardware-uat.md` mục 1.6, 3.8 | Còn ghi `wrist_roll` "xoay tròn đủ vòng" (trái với 0.2.4+) và `error (bus_lost)` (nay là `device_lost`) | FR-17, FR-13 |
-| K-3 | Chuỗi giao diện tiếng Việt | Lẫn "Hiệu chỉnh" và "Hiệu chuẩn" cho cùng khái niệm | NFR-10, Q-8 |
-| K-4 | Thông báo lỗi | Chi tiết lỗi của máy chủ (tiếng Anh, chữ máy) hiện dưới câu tiếng Việt cho mọi lỗi | FR-73, NFR-10 |
-| K-5 | `docs/user-guide/vi/station.md` §An toàn | "Mỗi bước chuyển động bị giới hạn … mặc định 5 độ" (teleop nay 30°) | FR-30 |
-| K-6 | `CHANGELOG.md` sản phẩm | Liên kết so sánh dừng ở 0.2.2 | FR-76 |
-| K-7 | `docs/spec/station.md` §6.3, §4.7 | Còn mô tả `wrist_roll` full-turn và teleop 30 Hz (tài liệu dev, lỗi thời) | — (SA cập nhật) |
-| K-8 | Cập nhật trên Windows | Người mới phải gõ lệnh có số phiên bản (trái BR-1) | Q-4 |
-| K-9 | Telemetry trên tay của khách | Servo báo 0 °C và dòng ~1000 thô: chưa rõ nguyên nhân | REG-13, Q-5 |
-| K-11 | `hibiscus-station doctor` | Không đọc `Present_Current`, `Present_Load` (chỉ nhiệt độ, điện áp, `Status`…), nên báo cáo của khách không đủ để giải thích dòng ~1000 thô (REG-13) | FR-63, REG-13 |
-| K-10 | Docker trên Windows | Không hỗ trợ (đã ghi trong README); hướng dẫn tiếng Việt phải nói rõ người dùng Windows dùng wheel | NFR-9 |
+| ID | Chỗ | Vấn đề | Yêu cầu liên quan | v0.2 |
+|---|---|---|---|---|
+| K-1 | README / README.vi (bảng Docker), `docs/deploy.md` | Tag image và wheel ghi `0.2.1` trong khi sản phẩm là `0.2.8` | FR-76 | = **D-18** (xác nhận) |
+| K-2 | `docs/user-guide/{vi,en}/station-hardware-uat.md` mục 1.6, 3.8 | Còn ghi `wrist_roll` "xoay tròn đủ vòng" (trái với 0.2.4+) và `error (bus_lost)` (nay là `device_lost`) | FR-17, FR-13 | mở, M1 (tài liệu UAT được thay bằng "Kế hoạch UAT" của ACCEPTANCE) |
+| K-3 | Chuỗi giao diện tiếng Việt | Lẫn "Hiệu chỉnh" và "Hiệu chuẩn" cho cùng khái niệm | NFR-10, Q-8 | = **D-12** (6 chuỗi) |
+| K-4 | Thông báo lỗi | Chi tiết lỗi của máy chủ (tiếng Anh, chữ máy) hiện dưới câu tiếng Việt cho mọi lỗi | FR-73, NFR-10 | = **D-5**; sửa theo P-5 |
+| K-5 | `docs/user-guide/vi/station.md` §An toàn | "Mỗi bước chuyển động bị giới hạn … mặc định 5 độ" (teleop nay 30°) | FR-30 | mở, M1 |
+| K-6 | `CHANGELOG.md` sản phẩm | Liên kết so sánh dừng ở 0.2.2 | FR-76 | = **D-18** |
+| K-7 | `docs/spec/station.md` §6.3, §4.7 | Còn mô tả `wrist_roll` full-turn và teleop 30 Hz (tài liệu dev, lỗi thời) | — | mở (SA cập nhật) |
+| K-8 | Cập nhật trên Windows | Người mới phải gõ lệnh có số phiên bản (trái BR-1) | FR-69 | giải quyết bằng P-1 nếu QĐ-3 = A |
+| K-9 | Telemetry trên tay của khách | Servo báo 0 °C và dòng ~1000 thô: chưa rõ nguyên nhân | REG-13, QĐ-1 | mở, SP-1 / UAT-0 |
+| K-10 | Docker trên Windows | Không hỗ trợ (đã ghi trong README); hướng dẫn tiếng Việt phải nói rõ người dùng Windows dùng wheel | NFR-9 | mở, M1 |
+| K-11 | `hibiscus-station doctor` | Không đọc `Present_Current`, `Present_Load`, không dump thô, chỉ `sync_read` | FR-63, REG-13 | xác nhận (trong D-15), M0 |

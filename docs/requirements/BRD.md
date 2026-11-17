@@ -1,10 +1,11 @@
-# Hibiscus Station: BRD v0.1 (2026-11-17) · trạng thái: bản nháp (vòng 1)
+# Hibiscus Station: BRD v0.2 (2026-11-17) · trạng thái: bản nháp (vòng 1, sau rà soát SA + Tech Lead)
 
 Tài liệu yêu cầu nghiệp vụ (Business Requirements Document) cho **Hibiscus Station v1.0**.
-Người soạn: BA. Người duyệt: khách hàng. Tham khảo: SA, Tech Lead (vòng 1 chưa rà soát).
-Tài liệu cùng bộ: [SRS.md](SRS.md) v0.1 · [FEATURES.md](FEATURES.md) v0.1 ·
-[ACCEPTANCE.md](ACCEPTANCE.md) v0.1 · [REGRESSION.md](REGRESSION.md) v0.1 ·
-ARCHITECTURE.md (SA viết) · [CHANGELOG.md](CHANGELOG.md).
+Người soạn: BA. Người duyệt: khách hàng. Tham khảo: SA ([REVIEW-SA.md](REVIEW-SA.md)), Tech Lead
+([REVIEW-TECHLEAD.md](REVIEW-TECHLEAD.md)).
+Tài liệu cùng bộ: [SRS.md](SRS.md) v0.2 · [FEATURES.md](FEATURES.md) v0.2 ·
+[ACCEPTANCE.md](ACCEPTANCE.md) v0.2 · [REGRESSION.md](REGRESSION.md) v0.2 ·
+[ARCHITECTURE.md](ARCHITECTURE.md) v0.2 · [CHANGELOG.md](CHANGELOG.md).
 
 > **Cách đọc.** Đây là **đường cơ sở "như đã xây" (as-built baseline)**: mô tả những gì Station
 > 0.2.8 (nhánh `main`, commit `12f36da`) đang làm, để khách hàng duyệt đúng phạm vi v1.0. v1.0
@@ -44,10 +45,10 @@ một bộ yêu cầu được duyệt để biết chính xác v1.0 phải làm
 
 | # | Mục tiêu | Thước đo (đo được) |
 |---|---|---|
-| G-1 | Người mới (tiếng Việt) tự cài và dùng được Station trên Windows | Một người chưa dùng Station, chỉ có hướng dẫn tiếng Việt, đi từ cài đặt đến teleop tay thật trong ≤ 30 phút, không gõ lệnh nào ngoài lệnh cài đặt (đo trong UAT) |
-| G-2 | Teleop ngang LeLab | Độ trễ leader → follower p50 ≤ 70 ms, không tệ hơn LeLab quá 10 ms trên cùng máy (NFR-1) |
-| G-3 | An toàn | 100 % AT an toàn đạt trên tay thật; e-stop đóng băng tay trong < 100 ms (NFR-3) |
-| G-4 | Không còn lỗi đã biết | 0 lỗi mở ở mọi mức khi phát hành; 20/20 mục REG đạt (REG-13 có kết luận về nguyên nhân) |
+| G-1 | Người mới (tiếng Việt) tự cài và dùng được Station trên Windows | Một người chưa dùng Station, chỉ có hướng dẫn tiếng Việt, đi từ cài đặt đến teleop tay thật trong ≤ 30 phút **không tính thời gian tải** (mạng ≥ 20 Mbps, torch CPU), không gõ lệnh nào ngoài lệnh cài đặt (đo trong UAT-1). Lệnh hỗ trợ `hibiscus-station doctor` (chép-dán từ hướng dẫn) được coi cùng loại với lệnh cài (FL-5) |
+| G-2 | Teleop ngang LeLab | Trên giả lập có thời gian thật: trễ bám p50 ≤ 70 ms và ≤ vòng tham chiếu kiểu LeLab + 10 ms ở adapter 1 ms và 8 ms (NFR-1a); trên PC của khách: khách teleop lần lượt LeLab và Station cùng tay, đánh giá "không chậm hơn LeLab" (NFR-1c) |
+| G-3 | An toàn | 100 % AT an toàn đạt (vendor: test tự động + giả lập; khách: trên tay thật). E-stop: không lệnh vị trí mới sau ≤ 1 nhịp (≤ 1 nhịp + 1 lần suy luận khi chạy model, NFR-3a), Space → máy chủ p99 ≤ 50 ms (NFR-3b), khách thấy tay dừng ngay (NFR-3c). Trên servo không báo nhiệt: AT-42 ghi "không áp dụng" có chữ ký khách, AT-93 phải đạt |
+| G-4 | Không còn lỗi đã biết | 0 lỗi mở ở mọi mức khi phát hành; 20/20 mục REG đạt. REG-13 có kết luận: bản `doctor` mới phát hành ở M0 (tuần 1); nếu sau 1 tuần kể từ ngày hẹn UAT-0 vẫn chưa có báo cáo, REG-13 đóng với kết luận "servo không báo nhiệt (chưa rõ vì sao)" và áp hành vi của QĐ-1 (SA-Q3) |
 | G-5 | Thông tin đúng | 0 số đo vô lý hiển thị như giá trị thật; 0 cảnh báo giả trong 30 phút teleop trên tay của khách |
 | G-6 | Nghiệm thu rõ ràng | Khách hàng ký biên bản nghiệm thu v1.0 sau UAT trên Windows + SO-101 thật |
 
@@ -93,7 +94,7 @@ khỏi v1.0 nếu không đạt) · Won't (không làm trong v1.0). Nguồn: QĐ
 
 | ID | Nhu cầu | Ưu tiên | Nguồn | Tính năng |
 |---|---|---|---|---|
-| BR-1 | Người mới cài và chạy Station trên Windows 10/11 chỉ bằng lệnh cài đặt; mọi việc khác làm trên giao diện, từng bước, bằng tiếng Việt | Must | QĐ "người dùng là người mới (tiếng Việt, từng bước, không lệnh nào ngoài cài đặt)"; FR-0.2.1 | F-1, F-4, F-7, F-67 |
+| BR-1 | Người mới cài và chạy Station trên Windows 10/11 chỉ bằng lệnh cài đặt (v0.2: một lệnh, cũng dùng để cập nhật, QĐ-3); mọi việc khác làm trên giao diện, từng bước, bằng tiếng Việt; lệnh hỗ trợ `doctor` chép-dán khi có sự cố | Must | QĐ "người dùng là người mới (tiếng Việt, từng bước, không lệnh nào ngoài cài đặt)"; FR-0.2.1 | F-1, F-4, F-7, F-67 |
 | BR-2 | Station luôn điều khiển đúng tay thật; không bao giờ lẫn tay giả lập; không nhầm leader với follower | Must | FR-0.2.2, FR-0.2.6 | F-5, F-8 – F-12, F-15 |
 | BR-3 | Hiệu chỉnh theo chuẩn LeLab: ghi biên độ cho **mọi** khớp (kể cả `wrist_roll`); đơn giản; dùng lại được file LeLab; hiệu chỉnh xong thì teleop chạy được | Must | FR-0.2.4/0.2.5 ("khách muốn hiệu chỉnh chuẩn LeLab: ghi biên độ mọi khớp"), FR-0.2.7 | F-16 – F-20 |
 | BR-4 | Teleop mượt, không trễ hơn LeLab | Must | FR-0.2.6 | F-24 – F-26 |
@@ -120,7 +121,7 @@ khỏi v1.0 nếu không đạt) · Won't (không làm trong v1.0). Nguồn: QĐ
 | RULE-2 | Không bắt đầu phiên mới khi có động cơ follower **nóng** (≥ 60 °C mặc định) | Khuỷu 61 °C → nút Bắt đầu bị chặn kèm lý do | Leader nóng không bao giờ chặn (leader được cử động bằng tay) |
 | RULE-3 | Nguy hiểm nhiệt (≥ 65 °C hai lần liên tiếp, hoặc cờ quá nhiệt) trên follower → dừng an toàn: giữ, về tư thế nghỉ (nếu có), tắt mô-men; chỉ reset khi mọi động cơ dưới ngưỡng nóng | | ≥ 70 °C hoặc cờ quá nhiệt: tắt mô-men ngay, bỏ bước về tư thế nghỉ |
 | RULE-4 | Ngưỡng hợp lệ: nguy hiểm ≤ giới hạn tự ngắt của servo − 3; nóng ≤ nguy hiểm − 3; ấm ≤ nóng − 5 | Servo tự ngắt 70 °C → nguy hiểm tối đa 67 °C | Servo báo giới hạn vô lý (ngoài 40–150 °C) → bỏ qua giới hạn đó, dùng mặc định |
-| RULE-5 | Số đo vô lý là "không rõ" (hiện "—"), không bao giờ là cảnh báo, không bao giờ làm dừng robot | Nhiệt độ 0 °C, dòng > 3,5 A, tải ngoài ±100 %, điện áp ngoài 3–16 V | Khi **không** động cơ nào báo nhiệt độ thật: cảnh báo "không đọc được thông số", không phải quá nhiệt (xem Q-5) |
+| RULE-5 | Số đo vô lý là "không rõ" (hiện "—"), không bao giờ là cảnh báo, không bao giờ làm dừng robot | Nhiệt độ 0 °C, dòng > 3,5 A, tải ngoài ±100 %, điện áp ngoài 3–16 V | Khi **không** động cơ nào báo nhiệt độ thật: cảnh báo "không đọc được thông số", không phải quá nhiệt (xem QĐ-1, AT-93) |
 | RULE-6 | Tay leader (cử động bằng tay, không mô-men) không bao giờ gây cảnh báo dòng / tải / trạng thái / điện áp, không bao giờ làm dừng robot hay chặn phiên | | Nhiệt độ leader hiện tối đa mức "nóng" |
 | RULE-7 | Mỗi lần chạy chương trình / quỹ đạo / model luôn bắt đầu lại từ đầu, không bao giờ "đi tiếp" mục tiêu của lần chạy bị dừng | E-stop giữa chương trình → lần chạy sau đi về điểm đầu rồi chạy từ t = 0 | |
 | RULE-8 | E-stop và reset không bao giờ thay đổi hiệu chỉnh (không ghi EEPROM, không đổi file) | | |
@@ -146,7 +147,7 @@ khỏi v1.0 nếu không đạt) · Won't (không làm trong v1.0). Nguồn: QĐ
 * W-3 Huấn luyện trên máy robot.
 * W-4 Robot khác SO-100 / SO-101 (bimanual, LeKiwi, Koch, gamepad...).
 * W-5 Cài ID / baudrate cho động cơ kit mới (dùng `lerobot-setup-motors`).
-* W-6 Cập nhật tự động trong ứng dụng (đề xuất cho bản sau, xem Q-4).
+* W-6 Cập nhật tự động trong ứng dụng (đề xuất cho bản sau; cập nhật bằng lệnh một dòng, QĐ-3).
 * W-7 Đẩy dataset lên HF Hub; sửa / gộp dataset.
 * W-8 Suy luận ONNX / bất đồng bộ / từ xa cho policy.
 
@@ -158,82 +159,105 @@ khỏi v1.0 nếu không đạt) · Won't (không làm trong v1.0). Nguồn: QĐ
   có tay).
 * A-3 Tính năng liên kết Hibiscus cần một máy chủ Hibiscus v0.1.1 và một personal access token.
 * A-4 Bảng thanh ghi Feetech STS3215 (đơn vị dòng 6,5 mA/bước, bố cục bit trạng thái) chưa được xác
-  nhận trên phần cứng thật (xem REG-13).
+  nhận trên phần cứng thật (xem REG-13, SP-1).
+* A-5 Khách có công cụ Feetech FD chính hãng trên PC Windows (dùng để đối chứng nhiệt độ / điện áp / dòng
+  ở UAT-0 và AT-40, thay cho nhiệt kế và đồng hồ vạn năng).
 
 **Ràng buộc:**
 * C-1 Giấy phép AGPL-3.0, repo công khai: tài liệu không chứa email, đường dẫn máy cá nhân hay dữ liệu
-  khách hàng.
+  khách hàng. Mọi gói phân phối cùng Station phải có giấy phép tương thích AGPL; gói `hibiscus` (Hibiscus
+  CLI v0.1.1) hôm nay khai "Proprietary" → quyết định QĐ-4 (SA-L1).
 * C-2 lerobot 0.7.1 (commit `fe1c545`) là nền; tệp hiệu chỉnh phải dùng chung được với LeLab / lerobot.
 * C-3 Python 3.12. Docker chỉ cho Linux (Docker Desktop trên Windows không chuyển được cổng USB serial).
-* C-4 E-stop là phần mềm; luôn phải có cách ngắt nguồn tay robot bằng tay.
+* C-4 E-stop là phần mềm và phím Space chỉ có tác dụng khi cửa sổ Station đang được chọn; luôn phải có
+  cách ngắt nguồn tay robot bằng tay. Khuyến nghị (điều kiện của UAT chuyển động): một **công tắc ngắt
+  nguồn** trên dây nguồn follower (công tắc DC hoặc nút nấm, SA-S2); AT-94 kiểm Station xử lý đúng khi mất
+  nguồn giữa chuyển động.
 
 ## 8. Rủi ro
 
 | ID | Rủi ro | Tác động | Giảm thiểu |
 |---|---|---|---|
-| RK-1 | Servo của khách đọc 0 °C và dòng ~1000 (thô): bảo vệ nhiệt không hoạt động trên tay của khách | Không phát hiện quá nhiệt thật → servo tự ngắt, tay rơi | REG-13: cần báo cáo `hibiscus-station doctor --verbose` của khách; `doctor` hiện chưa đọc dòng và tải (SRS K-11), nhà cung cấp phải bổ sung trước khi xin báo cáo; Q-5 quyết định hành vi khi không đọc được nhiệt |
+| RK-1 | Servo của khách đọc 0 °C và dòng ~1000 (thô): bảo vệ nhiệt không hoạt động trên tay của khách | Không phát hiện quá nhiệt thật → servo tự ngắt, tay rơi | REG-13: cần báo cáo `hibiscus-station doctor --verbose` của khách; `doctor` hiện chưa đọc dòng và tải (SRS K-11), nhà cung cấp phải bổ sung trước khi xin báo cáo; QĐ-1 quyết định hành vi khi không đọc được nhiệt; `doctor` mới ở M0 và UAT-0 (SP-1) |
 | RK-2 | Nhà cung cấp không kiểm được Windows + tay thật | Lỗi chỉ lộ ở UAT | Bộ giả lập STS3215 có thời gian thật, CI Windows, danh sách UAT ngắn, có video |
 | RK-3 | Quy tắc zero-defect: một lỗi nhỏ loại cả tính năng và tính năng phụ thuộc | Tính năng Should/Could có thể bị loại khỏi v1.0 | Q-2, Q-3 để khách chọn trước phần nào có thể bỏ |
 | RK-4 | Phạm vi rộng (71 tính năng) | Thời gian QC dài | Tech Lead đặt mốc; Could được cắt trước |
 | RK-5 | Tài liệu người dùng cũ mâu thuẫn với sản phẩm (xem SRS §8 "Khoảng trống") | Người mới làm sai theo hướng dẫn | Sửa tài liệu là một phần của Done |
+| RK-6 | Môi trường cài trên PC khách khác môi trường QC đã kiểm (phụ thuộc trôi theo ngày, cần git) | Lỗi chỉ có trên máy khách, không tái hiện được | P-1 / QĐ-3 (lệnh một dòng, phụ thuộc cố định) |
+| RK-7 | Gói `hibiscus` khai "Proprietary" trong khi Station là AGPL công khai | Rủi ro pháp lý khi phát hành công khai | QĐ-4 |
+| RK-8 | Nhiều lượt UAT do quy tắc zero-defect (mỗi lỗi khách thấy = sửa → QC → UAT lại) | Trễ lịch, tốn thời gian của khách | UAT chia 3 buổi ngắn (ACCEPTANCE "Kế hoạch UAT"); vendor chạy phần còn lại và gửi video |
 
-## 9. Câu hỏi mở cho khách hàng
+## 9. Quyết định của khách hàng và câu hỏi mở
 
-Chỉ là quyết định của khách hàng (ưu tiên, bỏ gì, hành vi, từ ngữ). Mỗi câu có **đề xuất mặc định**:
-nếu khách hàng không trả lời khác, nhà cung cấp làm theo đề xuất. **Vòng 1 cần quyết định Q-1 đến
-Q-4**; Q-5 đến Q-8 có thể để vòng 2.
+Chỉ là quyết định của khách hàng (ưu tiên, bỏ gì, hành vi, từ ngữ, pháp lý). Mỗi câu có **phương án đề
+xuất** (đứng đầu). Tài liệu v0.2 đã viết theo phương án đề xuất; nếu khách chọn khác, BA sửa ở v0.3. Duyệt
+bộ tài liệu = đồng ý mọi phương án đề xuất chưa được khách đổi.
 
-**Q-1. Nền tảng nào phải đạt trong v1.0?**
-Station hiện chạy trên Windows 10/11, Linux (wheel và Docker), macOS, Raspberry Pi 5 và Jetson Orin.
-Mỗi nền tảng nằm trong v1.0 đều phải đạt mọi AT (chuẩn zero-defect).
-*Đề xuất:* Windows 10/11 x64 (wheel) = **Must**, nghiệm thu bằng UAT của khách hàng;
-Ubuntu 22.04/24.04 x86_64 (wheel) = **Should**, nhà cung cấp tự kiểm; macOS, Docker (Linux PC,
-Raspberry Pi 5, Jetson Orin) = **Could**: vẫn giữ trong sản phẩm nhưng ghi "chưa nghiệm thu" và không
-chặn phát hành v1.0.
+### Vòng 1 cần khách quyết định (QĐ-1 – QĐ-4)
 
-**Q-2. Các tính năng liên kết máy chủ Hibiscus (ghép nối, tải lên, trang Huấn luyện, kéo model)
-có thuộc v1.0 không?** Chúng cần một máy chủ Hibiscus và token để nghiệm thu.
-*Đề xuất:* giữ trong v1.0 ở mức **Should**: nhà cung cấp kiểm với máy chủ thử theo hợp đồng
-v0.1.1; khách hàng UAT nếu có tài khoản. Nếu một tính năng này không đạt, nó bị loại khỏi v1.0
-nhưng không chặn phát hành (nhập model bằng file zip vẫn là Must).
+**QĐ-1 (thay Q-5). Khi Station không đọc được nhiệt độ thật của bất kỳ động cơ follower nào, robot có được
+chạy không?** Tay của khách đang báo 0 °C ở mọi servo: bảo vệ nhiệt của Station không hoạt động, chỉ còn
+bảo vệ 70 °C của chính servo (servo tự ngắt → tay rơi). Trước khi chốt, vendor phát hành `doctor` mới (M0) và
+nhờ khách chạy một lần, kèm ảnh chụp công cụ Feetech FD (UAT-0, SP-1) để biết lỗi ở Station hay ở servo.
+* **A (đề xuất):** cho chạy, nhưng (1) mỗi lần kết nối hiện hộp xác nhận "Không đọc được nhiệt độ động cơ:
+  bảo vệ nhiệt của Station đang tắt"; (2) banner cam cố định trên mọi màn hình chuyển động; (3) phiên không
+  có người cầm leader (chạy model, phát lại, quỹ đạo, chương trình) tự dừng an toàn sau **10 phút** chạy
+  liên tục (kỹ sư đổi được trong Cài đặt); teleop và ghi dữ liệu không giới hạn (người cầm leader nhìn thấy
+  tay). Trên tay đó AT-42 ghi "không áp dụng" có chữ ký khách; AT-93 phải đạt. (P-3, SA-S1.)
+* B: như v0.1: chỉ banner cam, không giới hạn thời gian (rẻ hơn, nhưng dựa vào việc người mới đọc banner
+  khi chương trình chạy lâu không người canh).
+* C: chặn mọi phiên chuyển động cho tới khi đọc được nhiệt (an toàn nhất, nhưng tay của khách hôm nay
+  không dùng được).
 
-**Q-3. Vùng Chương trình (quỹ đạo, tư thế, nhận diện, trình soạn khối) ở mức nào trong v1.0?**
-Đây là vùng lớn nhất (khoảng 1/3 giao diện) và có hai lỗi hiện trường (REG-9, REG-10).
-*Đề xuất:* quỹ đạo, tư thế, Robot 3D, trình soạn khối, chạy thử, chạy trên robot = **Should**;
-tín hiệu ngoài HTTP / MQTT, webhook thông báo và khối "chạy model trong chương trình" = **Could**
-(dành cho kỹ sư, cắt trước nếu không đạt).
+**QĐ-2 (thay Q-1). Nền tảng nào thuộc nghiệm thu v1.0?** Chuẩn chất lượng: nền tảng không kiểm được = không
+đạt. Vendor không có Windows, Pi 5, Jetson, máy Mac; image `-cuda`, `-jetson`, arm64 chưa từng chạy.
+* **A (đề xuất):** Windows 10/11 x64 (wheel) = **Must**, khách nghiệm thu bằng UAT; Ubuntu 22.04 / 24.04
+  x86_64 (wheel) = **Should**, vendor kiểm; Docker trên Linux x86_64 image `-cpu` = **Could**, vendor kiểm
+  (vào v1.0 nếu đạt). macOS, wheel Linux arm64, Docker `-cuda`, Raspberry Pi 5, Jetson Orin = **bản xem
+  trước** (W-9): vẫn cài được, README / ghi chú phát hành / `install.sh` ghi rõ "không thuộc nghiệm thu v1.0"
+  kèm lỗi đã biết; không chặn phát hành. (SA-P2; SA đề xuất Docker `-cpu` là Should, BA giữ Could để không
+  kéo dài mốc M2 vì QC Docker cần máy Linux riêng.)
+* B: giữ mọi nền tảng trong nghiệm thu v1.0: khách cấp (hoặc cho mượn) máy Pi 5, Jetson, Mac; thêm thời gian
+  kiểm cho mỗi máy.
+* C: chỉ Windows; bỏ hẳn Linux / Docker / macOS khỏi README cho tới bản sau.
 
-**Q-4. Cập nhật phiên bản trên Windows cho người mới.** Hiện nay muốn lên bản mới, người dùng phải
-gõ lại lệnh `uv tool install ...` có số phiên bản mới. Điều này trái với "không lệnh nào ngoài cài
-đặt". v1.0 chỉ gồm tính năng hiện có.
-*Đề xuất:* v1.0 giữ cách hiện tại, coi lệnh cập nhật là "lệnh cài đặt" (cùng một lệnh, in sẵn trong
-hướng dẫn tiếng Việt và trong ghi chú phát hành, chép-dán được); thông báo "có bản mới" ngay trong
-ứng dụng ghi vào danh sách đề xuất cho bản sau (CR).
+**QĐ-3 (thay Q-4). Lệnh cài và cập nhật trên Windows.** Hôm nay: hai lệnh (cài uv, rồi `uv tool install …`
+có số phiên bản), cần git trên máy, và thư viện được giải lại theo ngày cài nên PC của khách có thể khác bản
+QC đã kiểm (SA-P1).
+* **A (đề xuất):** **một** lệnh PowerShell chép-dán (`irm <địa chỉ bản phát hành>/install.ps1 | iex`): cài uv
+  nếu thiếu, cài Station với đúng bộ thư viện đã kiểm, không cần git / admin; cùng lệnh để cập nhật, thêm
+  số phiên bản để quay lại bản cũ. Không có nút cập nhật trong ứng dụng (W-6). Effort khoảng M (P-1, ADR-13).
+* B: giữ hai lệnh hiện tại, in sẵn trong hướng dẫn (rẻ hơn, nhưng vẫn cần git và không đảm bảo đúng bộ
+  thư viện đã kiểm).
 
-**Q-5. Khi Station không đọc được nhiệt độ thật của bất kỳ động cơ follower nào (như servo của
-khách đang báo 0 °C), robot có được chạy không?** Lúc đó bảo vệ nhiệt của Station không hoạt động;
-chỉ còn bảo vệ 70 °C của chính servo (tay có thể rơi).
-*Đề xuất:* vẫn cho chạy (như hiện nay, để không chặn khách), nhưng hiện cảnh báo cố định màu cam
-trên mọi màn hình chuyển động: "Không đọc được nhiệt độ động cơ: bảo vệ nhiệt của Station đang tắt.
-Theo dõi tay robot và gửi báo cáo chẩn đoán." Đồng thời khách hàng gửi báo cáo
-`hibiscus-station doctor --verbose` để đóng REG-13.
+**QĐ-4 (mới). Giấy phép của gói Hibiscus CLI.** Station (AGPL-3.0, công khai) kéo theo gói `hibiscus` v0.1.1
+(Hibiscus CLI, cùng chủ sở hữu) mà metadata ghi "Proprietary": người nhận không biết quyền dùng gói đó và
+AGPL đòi mã tương ứng của toàn bộ tác phẩm theo điều khoản tương thích (SA-L1). Chỉ chủ sở hữu làm được.
+* **A (đề xuất):** phát hành Hibiscus CLI **v0.1.2** với giấy phép **Apache-2.0** (hoặc MIT; tương thích AGPL,
+  không đổi mã) kèm tệp LICENSE; Station ghim lại v0.1.2.
+* B: phát hành Hibiscus CLI v0.1.2 với **AGPL-3.0** (cùng giấy phép với Station).
+* C: bỏ gói `hibiscus` khỏi Station: vendor viết lại phần liên kết máy chủ (ghép nối, tải lên, kéo model)
+  trong Station (thêm việc, ước khoảng L, F-41 – F-44 dời sang mốc sau).
 
-**Q-6. Kiểm tra hai tay sau hiệu chỉnh báo lệch (> 20°): chặn teleop hay vẫn cho thử?**
-*Đề xuất:* giữ như hiện nay: hiện lý do (sai tư thế / sai tệp / nhầm cổng) và nút "Hiệu chỉnh lại",
-kèm nút phụ "Vẫn thử teleop" (teleop vẫn từ chối nếu hai tay lệch quá 30°).
+### Câu đã có đề xuất, duyệt cùng bộ tài liệu (khách có thể đổi khi góp ý)
 
-**Q-7. Tuỳ chọn nâng cao cho kỹ sư nên ẩn hay hiện mặc định?**
-Hiện nay: Hiệu chỉnh và Chạy model đã có mục "Nâng cao" đóng sẵn; ô chọn fps của Teleop và trang
-Cài đặt hiện thẳng.
-*Đề xuất:* giữ như hiện nay cho v1.0 (fps Teleop mặc định "nhanh nhất" nên người mới không cần đổi;
-Cài đặt là trang riêng của kỹ sư); không thêm màn hình "chế độ người mới / kỹ sư".
+* **Q-2.** Liên kết máy chủ Hibiscus (F-41 – F-44) = **Should**: vendor kiểm với máy chủ thử theo hợp đồng
+  v0.1.1; khách UAT nếu có tài khoản; không đạt thì ra khỏi v1.0, không chặn (nhập model bằng zip vẫn Must).
+* **Q-3.** Chương trình: quỹ đạo, tư thế, Robot 3D, trình soạn khối, chạy thử, chạy trên robot = **Should**;
+  tín hiệu ngoài HTTP / MQTT, webhook và khối "chạy model trong chương trình" = **Could**.
+* **Q-6.** Kiểm tra hai tay báo lệch: giữ như hiện nay (lý do theo từng trường hợp + "Hiệu chỉnh lại" + nút
+  phụ "Vẫn thử teleop"; teleop vẫn từ chối nếu lệch quá 30°). Teleop không còn phụ thuộc bước Kiểm tra
+  (FL-9).
+* **Q-7.** Tuỳ chọn nâng cao: giữ như hiện nay (Hiệu chỉnh và Chạy model có "Nâng cao" đóng sẵn; ô fps
+  Teleop hiện trên trang, mặc định "nhanh nhất"; Cài đặt là trang của kỹ sư).
+* **Q-8.** Thuật ngữ: **"Hiệu chỉnh"** ở mọi nơi; giữ "teleop", "follower", "leader", "e-stop" kèm giải thích
+  lần đầu; "đặt lại" thay cho "reset" trong câu tiếng Việt (D-12).
+* **Q-1, Q-4, Q-5:** thay bằng QĐ-2, QĐ-3, QĐ-1.
 
-**Q-8. Thuật ngữ tiếng Việt cho "calibrate".** Giao diện đang dùng lẫn "Hiệu chỉnh" và "Hiệu chuẩn".
-*Đề xuất:* dùng **"Hiệu chỉnh"** ở mọi nơi (đã dùng trong thanh bước và hướng dẫn). Tương tự giữ các
-từ "teleop", "follower", "leader", "e-stop" như hiện nay (người dùng lerobot quen), có giải thích
-lần đầu trong hướng dẫn.
+### Cần khách hàng cung cấp (không phải quyết định)
 
-**Cần khách hàng cung cấp (không phải quyết định):** báo cáo `hibiscus-station doctor --verbose`
-chạy trên PC Windows của khách, khi đã cắm cả hai tay và đã tắt Station / LeLab (để đóng REG-13).
-Đề xuất (chờ Tech Lead xác nhận): nhà cung cấp bổ sung cho `doctor` phần đọc dòng và tải (SRS K-11)
-trước khi nhờ khách chạy, để khách chỉ phải chạy một lần.
+* **UAT-0 (khoảng 15 phút, ngay sau M0):** cài bản M0, cắm cả hai tay, tắt Station và LeLab, chạy
+  `hibiscus-station doctor --verbose` và gửi tệp zip; mở công cụ Feetech FD trên cùng PC, chụp màn hình nhiệt
+  độ / điện áp / dòng của một servo follower. Kết quả đóng REG-13, chốt QĐ-1 và đích NFR-1 / NFR-2 cho Windows.
+* Xác nhận lịch ba buổi UAT (ACCEPTANCE "Kế hoạch UAT") và loại bộ chuyển USB của hai tay (VID:PID có trong
+  báo cáo `doctor`).

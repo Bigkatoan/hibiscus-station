@@ -1,10 +1,16 @@
-# Hibiscus Station: Architecture v0.1 (2026-11-17) · trạng thái: bản nháp (vòng 1)
+# Hibiscus Station: Architecture v0.2 (2026-11-17) · trạng thái: bản nháp (vòng 1, sau Reconcile của BA)
 
 Tài liệu kiến trúc cho **Hibiscus Station v1.0**. Người soạn: SA. Tham khảo: BA, Tech Lead. Khách hàng
 duyệt phần ảnh hưởng tới chi phí / nền tảng (lựa chọn công nghệ là việc của nhà cung cấp).
-Tài liệu cùng bộ: [BRD.md](BRD.md) v0.1 · [SRS.md](SRS.md) v0.1 · [FEATURES.md](FEATURES.md) v0.1 ·
-[ACCEPTANCE.md](ACCEPTANCE.md) v0.1 · [REGRESSION.md](REGRESSION.md) v0.1 · rà soát yêu cầu:
-[REVIEW-SA.md](REVIEW-SA.md).
+Tài liệu cùng bộ: [BRD.md](BRD.md) v0.2 · [SRS.md](SRS.md) v0.2 · [FEATURES.md](FEATURES.md) v0.2 ·
+[ACCEPTANCE.md](ACCEPTANCE.md) v0.2 · [REGRESSION.md](REGRESSION.md) v0.2 · rà soát yêu cầu:
+[REVIEW-SA.md](REVIEW-SA.md), [REVIEW-TECHLEAD.md](REVIEW-TECHLEAD.md).
+
+> **v0.2 (BA, Reconcile vòng 1).** Nội dung kiến trúc giữ như v0.1 của SA. Các flag ở REVIEW-SA đã được BA
+> đưa vào SRS v0.2 (NFR-1a – 1c, NFR-2, NFR-3a – 3c, NFR-4, NFR-9 – NFR-11, NFR-13 – NFR-18 viết lại; FR-1,
+> FR-9, FR-12, FR-13, FR-20, FR-33, FR-47, FR-63, FR-69, FR-73, FR-75) và FEATURES v0.2 (đề xuất P-1 – P-8,
+> lỗi D-19 – D-23). Bảng §6 còn ghi theo định nghĩa NFR v0.1; SA cập nhật §6 theo SRS v0.2 ở vòng 2. ADR-13
+> chờ quyết định QĐ-3; nền tảng §3.4 theo QĐ-2; gói `hibiscus` theo QĐ-4 (BRD §9).
 
 > **Cách đọc.** Đây là kiến trúc **như đã xây** của Station **0.2.8** (`main` `12f36da`), đúng với
 > quyết định của khách hàng ngày 2026-11-17: v1.0 = tính năng hiện có đưa lên chuẩn chất lượng, không
@@ -345,7 +351,7 @@ nền tảng đích; **Không đạt** = thiết kế hiện tại không đáp 
 | ADR-10 | Chạy thử (dry run) trên tay giả lập bắt buộc trước khi chạy chương trình trên robot | An toàn cho người mới | Kỹ sư tắt được (`programs.require_dry_run`) |
 | ADR-11 | Chỉ nhận trọng số `safetensors`; giải nén zip an toàn | Pickle chạy mã tuỳ ý | Model `.bin` / `.pt` phải chuyển đổi trước |
 | ADR-12 | Dùng lại gói `hibiscus` (Hibiscus CLI) cho liên kết máy chủ, ghim `v0.1.1` | Không sao chép mã tải lên / kéo | Metadata gói ghi "Proprietary" → phải phát hành lại với giấy phép tương thích AGPL (SA-L1) |
-| ADR-13 *(đề xuất, chưa có)* | Bản phát hành v1.0 cố định toàn bộ phụ thuộc của wheel theo `uv.lock` (tệp constraints / wheelhouse đính kèm release) và không cần git trên máy khách | Chuẩn "kiểm đúng tệp người dùng cài"; quay lại ra đúng môi trường cũ | Cần SP-3; thay đổi lệnh cài trong README |
+| ADR-13 *(đề xuất, chờ QĐ-3 của khách)* | Bản phát hành v1.0 cố định toàn bộ phụ thuộc của wheel theo `uv.lock` (tệp constraints / wheelhouse đính kèm release) và không cần git trên máy khách | Chuẩn "kiểm đúng tệp người dùng cài"; quay lại ra đúng môi trường cũ | Cần SP-3; thay đổi lệnh cài trong README |
 
 ## 8. Rà soát yêu cầu
 

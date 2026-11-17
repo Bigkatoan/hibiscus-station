@@ -40,3 +40,50 @@ của vùng Chương trình, Q-4 cập nhật trên Windows (mỗi câu có đ�
 
 **Bước tiếp theo:** SA (ARCHITECTURE.md + rà soát) ‖ Tech Lead (khả thi, effort, mốc, mục "oái oăm") → BA
 điều chỉnh (v0.2) → tóm tắt vòng gửi khách hàng.
+
+## Vòng 1 · Reconcile · v0.2 · 2026-11-17
+
+**Trạng thái:** bản nháp v0.2, gửi khách hàng cùng [ROUND-1-SUMMARY.md](ROUND-1-SUMMARY.md). Chưa được phê
+duyệt.
+
+**Đầu vào:** rà soát độc lập của SA ([ARCHITECTURE.md](ARCHITECTURE.md) v0.1, [REVIEW-SA.md](REVIEW-SA.md): 28
+flag, 7 mục chặn) và Tech Lead ([REVIEW-TECHLEAD.md](REVIEW-TECHLEAD.md): kiểm sơ bộ trên Linux với đúng wheel
+0.2.8, 18 lỗi D-1 – D-18, 12 flag FL-1 – FL-12, effort và mốc M0 – M3).
+
+**BA đã làm (mọi tài liệu lên v0.2):**
+* [FEATURES.md](FEATURES.md): điền effort và mốc của Tech Lead cho 71 / 71 tính năng; thêm cột "Lỗi / khoảng
+  trống đã biết" và trạng thái vòng 1 (ĐẠT\* 33 · LỖI 22 · KHÔNG KIỂM ĐƯỢC 16; F-66 tính là LỖI vì D-5); bảng
+  23 lỗi D-n (D-19 – D-23 từ SA, chờ QC xác nhận); 8 đề xuất thay đổi P-1 – P-8; bảng mốc; ma trận truy vết
+  BR → FR / NFR → F → AT và NFR → AT; Won't thêm W-9 – W-12; F-24 không còn phụ thuộc F-19 (FL-9).
+* [BRD.md](BRD.md): G-1 – G-4 viết lại cho đo được (SA-Q2, SA-N1, SA-N3, SA-Q3); C-1 (giấy phép gói phụ thuộc),
+  C-4 (Space chỉ khi cửa sổ được chọn, công tắc ngắt nguồn); A-5 (Feetech FD); rủi ro RK-6 – RK-8; §9: bốn quyết
+  định **QĐ-1** (thay Q-5), **QĐ-2** (thay Q-1), **QĐ-3** (thay Q-4), **QĐ-4** (mới, giấy phép Hibiscus CLI); Q-2,
+  Q-3, Q-6 – Q-8 giữ đề xuất, duyệt cùng bộ tài liệu; UAT-0 là việc khách cung cấp.
+* [SRS.md](SRS.md): NFR-1 tách 1a / 1b / 1c, NFR-3 tách 3a / 3b / 3c; NFR-2, NFR-4, NFR-5, NFR-6, NFR-7, NFR-9 –
+  NFR-11, NFR-13 – NFR-18 viết lại theo SA và Tech Lead; FR-1 – FR-5, FR-7, FR-9 – FR-13, FR-19 – FR-21, FR-24,
+  FR-28, FR-31, FR-33, FR-37, FR-38, FR-47, FR-48, FR-63, FR-64, FR-69, FR-73, FR-75 cập nhật (mỗi chỗ ghi
+  "(v0.2: …)" kèm mã flag); §7 thêm 3 luồng phục hồi; §8 nối K-n với D-n.
+* [ACCEPTANCE.md](ACCEPTANCE.md): 49 AT viết lại để chạy được đúng như viết (lệnh, test tự động có tên, lệnh
+  chèn lỗi, máy chủ thử, mạng cô lập); bỏ nhiệt kế / đồng hồ vạn năng / video 240 fps; thêm AT-93 – AT-98 (tổng 98);
+  UAT của khách thành ba buổi: UAT-0 (~15 phút), UAT-1 (15 bước, ~60 – 90 phút), UAT-2 (~45 phút).
+* [REGRESSION.md](REGRESSION.md): REG-3, REG-5, REG-8, REG-13 cập nhật (QĐ-1, NFR mới, port_busy, UAT-0 và hạn).
+* [ARCHITECTURE.md](ARCHITECTURE.md): chỉ đổi phiên bản và ghi chú v0.2 (SA cập nhật §6 ở vòng 2).
+
+**Flag đã áp dụng:** SA-S1 → P-3 / QĐ-1 / AT-93; SA-S2 → C-4, FR-28, W-11, AT-94; SA-N1, FL-2, FL-3 → NFR-1a – 1c,
+AT-31; SA-N2 → NFR-2, D-21; SA-N3 → NFR-3a – 3c, NFR-4, P-2, D-20, AT-88, AT-97; SA-N4, FL-4 → NFR-13, P-8, AT-40;
+SA-W1 → FR-9, AT-12; SA-W2 → FR-12, FR-13, AT-17, AT-18; SA-W3 → FR-75, D-19, P-6, AT-95; SA-W4 → FR-21, NFR-5,
+W-12, AT-28; SA-W5 → NFR-5; SA-W6 → FR-64; SA-P1 → FR-1, FR-69, P-1 / QĐ-3, AT-1, AT-84; SA-P2 → QĐ-2, NFR-9,
+W-9; SA-Q2 → G-1; SA-C1, SA-C2 → NFR-18, NFR-9, AT-2; SA-U1 → NFR-10, AT-91; SA-U2 → NFR-11; SA-F1 → FR-10; SA-F2 →
+FR-12, D-22, P-7, AT-96; SA-F3 → FR-20, NFR-15, AT-27; SA-F4 → NFR-16, FR-47, D-23; SA-F5 → FR-37 (chấp nhận như
+đã xây); SA-F6 → FR-63; SA-L1 → C-1, NFR-14, QĐ-4, AT-98; SA-Q1, FL-6 → Kế hoạch UAT; SA-Q3 → G-4, REG-13; FL-1 →
+P-5, FR-7, FR-73, AT-10; FL-5 → BR-1, FR-63, W-10; FL-7 → NFR-11, AT-82; FL-8 → AT-9; FL-9 → F-24; FL-10 → P-4,
+FR-5, AT-7; FL-11 → FR-63, AT-77; FL-12 → môi trường ACCEPTANCE, M0.
+
+**Khác với đề xuất của SA (BA giữ, ghi lý do):** Docker Linux x86_64 `-cpu` giữ **Could** (SA đề xuất Should) để
+không kéo dài M2 (QC Docker cần máy riêng); SA-F5 chấp nhận "dọn phiên lúc khởi động" thay vì thêm sửa.
+
+**Quyết định khách hàng cần đưa ra ở vòng này:** QĐ-1 – QĐ-4 (BRD §9). **Cần khách cung cấp:** UAT-0 sau M0.
+
+**Bước tiếp theo:** khách đọc tóm tắt vòng 1 và trả lời QĐ-1 – QĐ-4 (hoặc "duyệt" để nhận mọi phương án đề
+xuất); vòng 2: Tech Lead ước các mục mới (P-1 – P-3, P-6, P-7, SP), QC xác nhận D-19 – D-23 và rà ACCEPTANCE v0.2,
+SA cập nhật ARCHITECTURE §6.

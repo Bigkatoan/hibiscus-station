@@ -1,4 +1,4 @@
-# Hibiscus Station: danh sách hồi quy v0.1 (2026-11-17) · trạng thái: bản nháp (vòng 1)
+# Hibiscus Station: danh sách hồi quy v0.2 (2026-11-17) · trạng thái: bản nháp (vòng 1, sau rà soát SA + Tech Lead)
 
 Mỗi mục REG-n là một lỗi hiện trường đã xảy ra (người dùng Windows của khách hàng với tay SO-101
 thật, bản 0.2.1 – 0.2.8) hoặc một lỗi đã sửa ghi trong `CHANGELOG.md` của sản phẩm. Theo chuẩn
@@ -10,6 +10,9 @@ không đạt là một lỗi mở và chặn phát hành của tính năng liê
 * **Nền tảng**: `[Vendor]` nhà cung cấp chứng minh được (Linux, giả lập STS3215, CI Windows không có
   tay); `[UAT-KH]` chỉ UAT của khách hàng trên Windows + SO-101 thật chứng minh được.
 * Một REG chỉ **đóng** khi: test tự động đạt **và** bước tái hiện trên nền tảng gốc (cột cuối) đạt.
+* v0.2: test pty (REG-4, REG-5, REG-7, REG-8, REG-14) hôm nay bị bỏ qua trên CI Windows; chúng nằm trong
+  danh sách bỏ qua được công bố (NFR-18) và được UAT-1 phủ thay cho tới khi SP-2 chạy được trên cổng COM ảo.
+  Lỗi D-9 (adapter chậm) có cùng triệu chứng với REG-5: REG-5 chỉ đóng khi D-9 đóng.
 
 | REG | Báo cáo hiện trường (lời của khách / log) | Bản lỗi → bản sửa | Tính năng | AT |
 |---|---|---|---|---|
@@ -57,7 +60,7 @@ không đạt là một lỗi mở và chặn phát hành của tính năng liê
   kết nối; teleop 5 phút.
 * **Kỳ vọng:** không cảnh báo nhiệt, không dừng; ô nhiệt hiện "—" (không rõ) có giải thích; ngưỡng
   vẫn là 50 / 60 / 65 °C; khi không động cơ nào báo nhiệt thật → cảnh báo "Không đọc được thông số
-  động cơ" (không phải quá nhiệt) — hành vi chạy theo quyết định Q-5.
+  động cơ" (không phải quá nhiệt) — hành vi chạy theo quyết định QĐ-1 (AT-93).
 * **Test tự động:** `tests/test_units.py`, `tests/test_field_028.py`. **Nền tảng:** [Vendor] giả lập;
   [UAT-KH] tay của khách (đang báo 0 °C).
 
@@ -71,8 +74,9 @@ không đạt là một lỗi mở và chặn phát hành của tính năng liê
 
 ### REG-5 — Teleop trễ
 * **Tái hiện:** teleop, cử động leader nhanh (≈ 90 – 340°/s) qua lại 10 lần.
-* **Kỳ vọng:** NFR-1 (p50 ≤ 70 ms, ≤ LeLab + 10 ms), NFR-2 (≥ 100 Hz với latency timer 1 ms); không cảnh
-  báo "không theo kịp" khi bus bình thường; màn hình hiện "độ trễ ~X ms, Y Hz".
+* **Kỳ vọng:** NFR-1a (giả lập: p50 ≤ 70 ms, ≤ tham chiếu LeLab + 10 ms ở adapter 1 ms **và** 8 ms), NFR-1b,
+  NFR-1c (khách: "không chậm hơn LeLab"), NFR-2; không cảnh báo "không theo kịp" khi cử động bình thường;
+  màn hình hiện "độ trễ ~X ms, Y Hz".
 * **Test tự động:** `tests/test_teleop_latency.py`, `tests/test_teleop_lean.py`, `tests/teleop_bench.py`
   (giả lập có thời gian thật). **Nền tảng:** [Vendor] số đo giả lập; [UAT-KH] cảm nhận + số đo trên
   màn hình, so với LeLab trên cùng PC.
@@ -99,6 +103,8 @@ không đạt là một lỗi mở và chặn phát hành của tính năng liê
 * **Kỳ vọng:** trong ≤ 1 s trạng thái `error` lý do `device_lost` (không 6 lần thử lại, không chuỗi
   lỗi tắt mô-men), trang giải thích + danh sách kiểm tra; "Kết nối lại" chờ cổng, nhận số COM mới,
   cập nhật hồ sơ, kết nối lại và ghi hiệu chỉnh; teleop chạy lại được không cần khởi động lại Station.
+  `Access is denied` lúc **mở** cổng (LeLab đang giữ) là `port_busy`, không phải `device_lost` (AT-17). Hai
+  tay CH340 (không serial): Station hỏi tay nào là tay nào sau khi cắm lại (đúng thiết kế).
 * **Test tự động:** `tests/test_device_lost.py` (8 test, gồm pty đóng giữa teleop và trở lại tên mới).
   **Nền tảng:** [Vendor] pty Linux; [UAT-KH] Windows COM thật.
 
@@ -139,12 +145,16 @@ không đạt là một lỗi mở và chặn phát hành của tính năng liê
   [Vendor].
 
 ### REG-13 — 0 °C và dòng ~1000 thô trên tay của khách (CHƯA GIẢI QUYẾT)
-* **Đầu vào cần:** báo cáo `hibiscus-station doctor --verbose` từ PC của khách (hai tay cắm, Station và
-  LeLab đã tắt). Lưu ý: `doctor` 0.2.8 chưa đọc `Present_Current` / `Present_Load` (SRS K-11).
+* **Đầu vào cần (UAT-0):** báo cáo `hibiscus-station doctor --verbose` **của bản M0** (đã đọc
+  `Present_Current` / `Present_Load` và dump thô từng servo bằng `read` riêng lẻ, K-11, SP-1) từ PC của khách
+  (hai tay cắm, Station và LeLab đã tắt), kèm ảnh chụp công cụ Feetech FD trên cùng servo (đối chứng độc lập
+  với lerobot / rustypot).
+* **Hạn:** nếu 1 tuần sau ngày hẹn UAT-0 vẫn chưa có dữ liệu: đóng với kết luận "servo không báo nhiệt (chưa
+  rõ vì sao)" và áp hành vi QĐ-1 (BRD G-4).
 * **Kỳ vọng để đóng:** (1) nguyên nhân được xác định và ghi lại (firmware / thanh ghi / đơn vị / phần
   cứng); (2) nếu là lỗi của Station: sửa, Station hiện đúng nhiệt độ và dòng của tay khách (NFR-13); nếu
-  là đặc tính của servo: Station hiện "không rõ" (đã có) và hành vi chạy theo Q-5, kèm lời giải thích cho
-  người dùng; (3) mục HIL "đơn vị dòng 6,5 mA/bước" và "bố cục bit Status" được xác nhận hoặc sửa.
+  là đặc tính của servo: Station hiện "không rõ" (đã có) và hành vi chạy theo QĐ-1 (AT-93), kèm lời giải thích
+  cho người dùng; (3) mục HIL "đơn vị dòng 6,5 mA/bước" và "bố cục bit Status" được xác nhận hoặc sửa.
 * **Nền tảng:** [UAT-KH] (chỉ tay của khách tái hiện được).
 
 ### REG-14 … REG-20 (từ CHANGELOG)
