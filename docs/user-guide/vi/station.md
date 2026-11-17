@@ -110,8 +110,9 @@ Khi tay robot không chạy đúng, một báo cáo giúp chúng tôi tìm ra ng
 
 Báo cáo bằng tiếng Anh (dành cho kỹ sư), trừ mục cuối. Dòng đầu là **LIKELY PROBLEMS** (các vấn đề
 có thể có, hoặc "No likely problems found"): ví dụ hồ sơ tay giả lập đang hoạt động, thiếu tệp hiệu
-chỉnh, cổng đang bị chương trình khác giữ (có tên chương trình), Station đã tắt mà còn sót tệp
-`station.pid`, bus chậm, hoặc động cơ báo số đo vô lý (0 °C, dòng 6,5 A).
+chỉnh, đã có tệp hiệu chỉnh của LeLab nhưng Station chưa dùng (Hiệu chỉnh > Dùng tệp này), tệp hiệu
+chỉnh không khớp với giá trị trong động cơ, cổng đang bị chương trình khác giữ (có tên chương trình),
+Station đã tắt mà còn sót tệp `station.pid`, bus chậm, hoặc động cơ báo số đo vô lý (0 °C, dòng 6,5 A).
 
 `doctor` **chỉ đọc**: nó không ghi gì xuống động cơ và không bật mô-men. Với mỗi cổng USB serial (kể
 cả cổng chưa có trong hồ sơ robot) nó đọc từng động cơ: model, firmware, vị trí, điện áp, nhiệt độ,
@@ -121,8 +122,9 @@ hiệu chỉnh, tốc độ bus; rồi in **bản dump thô** các thanh ghi 0�
 sức khoẻ động cơ. Tệp zip có báo cáo, 200 dòng nhật ký cuối, hồ sơ robot, cài đặt, tệp hiệu chỉnh và 5
 phiên gần nhất; không có token đăng nhập hay token truy cập Hibiscus.
 
-Tuỳ chọn: `--no-ping` không mở cổng serial, `--no-cameras` không dò camera, `--out <thư mục>` nơi lưu
-tệp zip (mặc định: thư mục hiện tại).
+Tuỳ chọn: `--verbose` in thêm mọi lỗi bus (id động cơ, thanh ghi) trong lúc đọc động cơ, `--no-ping`
+không mở cổng serial (báo cáo khi đó ghi phần kiểm tra động cơ đã bỏ qua), `--no-cameras` không dò
+camera, `--out <thư mục>` nơi lưu tệp zip (mặc định: thư mục hiện tại).
 
 ## An toàn
 
