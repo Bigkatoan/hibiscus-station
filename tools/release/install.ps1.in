@@ -137,7 +137,10 @@
         }
 
         # -------------------------------------------------------------- 4. PATH and check
-        $bin = (& $uv --no-config tool dir --bin | Select-Object -Last 1).Trim()
+        # --color never: under FORCE_COLOR / CLICOLOR_FORCE (CI, some terminals) uv colours the path
+        # even into a pipe, and Join-Path then sees a drive named "<ESC>[36mC" (QD-2). The -replace
+        # drops any escape sequence that another layer might still add.
+        $bin = ((& $uv --no-config --color never tool dir --bin | Select-Object -Last 1) -replace "\x1b\[[0-9;]*[A-Za-z]", '').Trim()
         # Windows PowerShell 5.1 turns redirected native stderr into a terminating error under 'Stop'
         $ErrorActionPreference = 'Continue'
         & $uv --no-config tool update-shell *> $null

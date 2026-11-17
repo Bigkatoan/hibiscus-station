@@ -203,8 +203,8 @@ jobs:
           Get-Content -Raw release\install.ps1 | Invoke-Expression
           # where the script's own uv put the tool (read by the next steps)
           $uv = Join-Path $env:LOCALAPPDATA "HibiscusStation\uv-$env:UV_VERSION\uv.exe"
-          [IO.File]::AppendAllText($env:GITHUB_ENV, "STATION_TOOL_DIR=$(& $uv --no-config tool dir)`n")
-          [IO.File]::AppendAllText($env:GITHUB_ENV, "STATION_TOOL_BIN=$(& $uv --no-config tool dir --bin)`n")
+          [IO.File]::AppendAllText($env:GITHUB_ENV, "STATION_TOOL_DIR=$(& $uv --no-config --color never tool dir)`n")
+          [IO.File]::AppendAllText($env:GITHUB_ENV, "STATION_TOOL_BIN=$(& $uv --no-config --color never tool dir --bin)`n")
       - uses: astral-sh/setup-uv@v10.3.3
         with:
           version: "${{ env.UV_VERSION }}"

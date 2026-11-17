@@ -4,6 +4,7 @@ assets (ADR-13 / P-1). Fast, offline; the full build + install runs in tools/rel
 from __future__ import annotations
 
 import importlib.util
+import re
 import shutil
 import sys
 import zipfile
@@ -247,6 +248,21 @@ def test_installer_never_redirects_native_stderr_under_stop() -> None:
             eap = "Stop"
         if "& $uv" in code and ("2>" in code or "*>" in code):
             assert eap == "Continue", line
+
+
+def test_installer_reads_uv_output_without_colour() -> None:
+    """QD-2: with FORCE_COLOR=1 (the CI runner, some terminals) uv colours a path even into a pipe;
+    Windows PowerShell 5.1 then failed on Join-Path ("drive '<ESC>[36mC' does not exist"). Every uv
+    call whose output the script reads, and the CI step that reads uv's tool dirs, asks for no colour."""
+    code = [ln.split("#", 1)[0] for ln in (TOOLS / "install.ps1.in").read_text(encoding="utf-8").splitlines()]
+    read = [c for c in code if "& $uv" in c and re.search(r"=\s*\(?\(?\s*& \$uv|& \$uv[^|]*\|", c)]
+    assert read, "no uv output is read?"
+    for c in read:
+        assert "--color never" in c, c
+    ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    for line in ci.splitlines():
+        if "$(& $uv" in line:
+            assert "--color never" in line, line
 
 
 @pytest.mark.parametrize(

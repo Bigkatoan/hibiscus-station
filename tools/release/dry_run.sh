@@ -92,7 +92,7 @@ if [ "$DOCKER" = 1 ] && command -v docker >/dev/null && { docker image inspect "
   # Same absolute paths inside and outside, so the tool environment also runs on the host.
   docker run --rm --network host -u "$(id -u):$(id -g)" \
     -v "$WORK:$WORK" -v "$REL:$REL:ro" -v "$CACHE:$CACHE" \
-    -e HOME="$HOME_T" -e UV_CACHE_DIR="$CACHE" \
+    -e HOME="$HOME_T" -e UV_CACHE_DIR="$CACHE" -e FORCE_COLOR=1 \
     -e HIBISCUS_STATION_BASE_URL="$REL" -e HIBISCUS_STATION_UV="$WORK/uvbin/uv" \
     -e PATH=/opt/microsoft/powershell/7 \
     "$PWSH_IMAGE" /opt/microsoft/powershell/7/pwsh -NoProfile -NonInteractive -Command \
