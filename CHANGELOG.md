@@ -46,6 +46,9 @@ with its own line (see the README); GitHub never offers a pre-release as its "la
   (no hub); the latency-timer advice is only given for FTDI adapters.
 - **No login token in the doctor's zip.** The local token is removed from every file in the zip and
   from the printed report, wherever it was pasted (log, profiles, settings, sessions, calibration).
+- **The Docker image did not start with `STATION_ARGS=--mock`.** The demo tried to create `/data-demo`,
+  which the image's user may not write. With `HIBISCUS_STATION_HOME` set (the image sets `/data`)
+  the demo now keeps its data in `<home>/demo`, and `hibiscus-station health` finds it there.
 
 ## [0.2.8] - 2026-11-16
 

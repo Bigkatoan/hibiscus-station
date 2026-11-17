@@ -122,7 +122,10 @@ def serve(
     ),
     no_browser: bool = typer.Option(False, "--no-browser", help="Do not open the browser"),
     mock: bool = typer.Option(
-        False, "--mock", help="Demo mode: simulated arms and cameras, data in ~/.hibiscus/station-demo"
+        False,
+        "--mock",
+        help="Demo mode: simulated arms and cameras, data in ~/.hibiscus/station-demo "
+        "(or $HIBISCUS_STATION_HOME/demo)",
     ),
     home: Path | None = typer.Option(None, "--home", help="Data dir (default ~/.hibiscus/station)"),
     verbose: bool = typer.Option(False, "--verbose", "-v"),
@@ -235,6 +238,10 @@ def health(
 
     paths = StationPaths(home or station_home())
     info = _pid_info(paths)
+    if home is None and not (paths.token.is_file() and info):  # a --mock Station keeps its own home
+        demo = StationPaths(demo_home())
+        if demo.token.is_file() and (demo_info := _pid_info(demo)):
+            paths, info = demo, demo_info
     if not paths.token.is_file() or not info:
         typer.echo("unhealthy: Hibiscus Station is not running", err=True)
         raise typer.Exit(1)
@@ -302,8 +309,14 @@ def openapi(path: Path = typer.Argument(Path("openapi.json"))) -> None:
 
 
 def demo_home() -> Path:
-    """``--mock`` keeps its demo profile, datasets and sessions apart from the real arm's data."""
+    """``--mock`` keeps its demo profile, datasets and sessions apart from the real arm's data.
+
+    Default: ``~/.hibiscus/station-demo``. With an explicit ``HIBISCUS_STATION_HOME`` (the Docker
+    image: ``/data``) the demo lives in ``<home>/demo``: the folder next to it may not be writable.
+    """
     home = station_home()
+    if os.environ.get("HIBISCUS_STATION_HOME"):
+        return home / "demo"
     return home.with_name(f"{home.name}-demo")
 
 

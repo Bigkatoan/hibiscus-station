@@ -75,8 +75,13 @@ def test_mock_runs_keep_their_data_apart(monkeypatch: pytest.MonkeyPatch, tmp_pa
     from hibiscus_station.cli import demo_home
     from hibiscus_station.settings import station_home
 
+    monkeypatch.delenv("HIBISCUS_STATION_HOME", raising=False)
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    assert demo_home() == tmp_path / ".hibiscus" / "station-demo"
+    assert demo_home() != station_home()
+    # QD-8: an explicit home (Docker: /data) keeps the demo inside it, never next to it
     monkeypatch.setenv("HIBISCUS_STATION_HOME", str(tmp_path / "station"))
-    assert demo_home() == tmp_path / "station-demo"
+    assert demo_home() == tmp_path / "station" / "demo"
     assert demo_home() != station_home()
 
 
