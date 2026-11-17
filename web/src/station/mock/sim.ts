@@ -532,7 +532,19 @@ export class MockStation {
       t: Date.now() / 1000,
       detail,
     };
+    // As the Station: the closed bus's motor alerts can never clear later, so they go now.
+    this.dropAlerts((a) => a.arm !== null || a.camera !== null);
+    this.levels = {};
     this.setState("error", { reason: "device_lost", detail });
+  }
+
+  /** Remove alerts like the Station does: each with an `active: false` event (QC 0.2.9 QD-23). */
+  private dropAlerts(which: (a: AlertMsg) => boolean): void {
+    for (const [id, a] of [...this.alerts]) {
+      if (!which(a)) continue;
+      this.alerts.delete(id);
+      this.broadcast({ ...a, active: false });
+    }
   }
 
   reconnect(): ReconnectResult {
@@ -564,7 +576,7 @@ export class MockStation {
     if (this.session) throw new MockProblem(409, "busy", { state: this.state });
     this.activeId = null;
     this.torque = false;
-    this.alerts.clear();
+    this.dropAlerts(() => true);
     this.levels = {};
     this.setState("disconnected");
     return this.status();
