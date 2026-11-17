@@ -359,6 +359,7 @@ def ping_arm(
     candidates: dict[str, dict[str, Any]] | None = None,
     *,
     raw: bool = True,
+    vid_pid: str | None = None,
 ) -> dict[str, Any]:
     """Read-only check of an SO-101 arm on ``port``: which ids answer, their registers, and
     (``raw``) a raw dump of every id once the lerobot bus is closed again."""
@@ -414,7 +415,9 @@ def ping_arm(
             "failed": fails,
             "ms_per_read": round((time.perf_counter() - t) * 1000 / n, 2),
         }
-        out["teleop_estimate"] = teleop_estimate(out["sync_read_present_position"]["ms_per_read"])
+        out["teleop_estimate"] = teleop_estimate(
+            out["sync_read_present_position"]["ms_per_read"], usb_chip(vid_pid)
+        )
         if calibration:
             out["calibration_vs_eeprom"] = _compare(calibration, out["motors"])
         # Which calibration file (any id, e.g. LeLab's) the motors' EEPROM carries now.
@@ -440,9 +443,42 @@ def ping_arm(
 SLOW_READ_MS = 6.0
 
 
-def teleop_estimate(ms_per_read: float | None) -> dict[str, Any] | None:
+#: USB vendor id -> serial chip family. Only FTDI chips have a latency timer the user can set
+#: (WCH CH340 / CH343, the SO-101 boards' chips, have none: D-21).
+USB_CHIPS: dict[str, str] = {"0403": "FTDI", "1a86": "WCH", "10c4": "CP210x", "067b": "Prolific"}
+
+
+def usb_chip(vid_pid: str | None) -> str | None:
+    """``"FTDI"``, ``"WCH"``... from ``"vvvv:pppp"`` (None when unknown)."""
+    if not vid_pid:
+        return None
+    return USB_CHIPS.get(vid_pid.split(":")[0].lower())
+
+
+def slow_bus_advice(ms_per_read: float, chip: str | None) -> str:
+    """What to do about a slow bus: the latency timer is named only for FTDI chips (D-21)."""
+    head = f"slow bus ({ms_per_read} ms per read)"
+    ftdi = (
+        "set the FTDI adapter's latency timer to 1 ms (Windows: Device Manager > Ports > the COM port "
+        "> Port Settings > Advanced)"
+    )
+    if chip == "FTDI":
+        return f"{head}: {ftdi} and plug the arm straight into the PC, without a hub"
+    if chip is not None:
+        return (
+            f"{head}: slow USB adapter / hub: plug the arm straight into the PC, without a hub "
+            f"(a {chip} adapter has no latency timer to change)"
+        )
+    return (
+        f"{head}: slow USB adapter / hub: plug the arm straight into the PC, without a hub; only if the "
+        f"adapter is an FTDI chip (USB VID 0403): {ftdi}"
+    )
+
+
+def teleop_estimate(ms_per_read: float | None, chip: str | None = None) -> dict[str, Any] | None:
     """Teleop rate and leader -> follower latency this bus allows: one leader read plus one goal
-    write (~1/3 of a read) per tick, a leader move waiting half a tick on average."""
+    write (~1/3 of a read) per tick, a leader move waiting half a tick on average. ``chip``
+    (:func:`usb_chip`) picks the advice for a slow bus."""
     if not ms_per_read or ms_per_read <= 0:
         return None
     tick = ms_per_read * 1.35 + 0.3
@@ -454,11 +490,7 @@ def teleop_estimate(ms_per_read: float | None) -> dict[str, Any] | None:
         "latency_ms": round(ms_per_read * 1.35 + tick / 2, 1),
     }
     if ms_per_read > SLOW_READ_MS:
-        out["warning"] = (
-            f"slow bus ({ms_per_read} ms per read): set the USB serial adapter's latency timer to 1 ms "
-            "(Windows: Device Manager > Ports > the COM port > Port Settings > Advanced) or plug the "
-            "arm in without a hub"
-        )
+        out["warning"] = slow_bus_advice(ms_per_read, chip)
     return out
 
 
@@ -581,6 +613,16 @@ def _targets(report: dict[str, Any]) -> list[tuple[str, str, str, str | None]]:
     return out
 
 
+def _vid_pid(report: dict[str, Any], port: str) -> str | None:
+    from hibiscus_station.hw.locks import normalize_device
+
+    for p in report["ports"]:
+        if normalize_device(str(p["device"])) == normalize_device(port) or p.get("stable_path") == port:
+            vp = p.get("vid_pid")
+            return str(vp) if vp else None
+    return None
+
+
 def check_arms(
     paths: StationPaths, report: dict[str, Any], echo: Callable[[str], None] = lambda _s: None
 ) -> list[dict[str, Any]]:
@@ -606,7 +648,14 @@ def check_arms(
                 for c in report["calibrations"]
                 if arm == "no profile" or c["arm"] == arm
             }
-            row.update(ping_arm(port, cal_by_path.get(expects) if expects else None, same_arm))
+            row.update(
+                ping_arm(
+                    port,
+                    cal_by_path.get(expects) if expects else None,
+                    same_arm,
+                    vid_pid=_vid_pid(report, port),
+                )
+            )
         arms.append(row)
     return arms
 
@@ -676,6 +725,9 @@ def warnings(report: dict[str, Any]) -> list[str]:
             out.append(
                 f"{a['robot']} {a['arm']}: motor id(s) {', '.join(missing)} do not answer (power? cable?)"
             )
+        est = a.get("teleop_estimate") or {}
+        if est.get("warning"):
+            out.append(f"{where}: {est['warning']}")
         bad: dict[str, list[str]] = {}
         dump = (a.get("raw_dump") or {}).get("motors") or {}
         for mid, m in a.get("motors", {}).items():
@@ -832,7 +884,7 @@ def summary(report: dict[str, Any]) -> str:
         if a.get("sync_read_present_position"):
             s = a["sync_read_present_position"]
             lines.append(f"    sync read: {s['failed']}/{s['reads']} failed, {s['ms_per_read']} ms each")
-            est = teleop_estimate(s.get("ms_per_read"))
+            est = a.get("teleop_estimate")
             if est:
                 lines.append(
                     f"    teleop estimate: ~{est['hz']} Hz, "

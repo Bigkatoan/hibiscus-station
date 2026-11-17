@@ -268,3 +268,33 @@ def test_a_port_another_program_holds_on_windows_is_a_likely_problem() -> None:
     }
     w = doctor.warnings(report)
     assert any(x.startswith("- no profile on COM3 is busy or not accessible") for x in w), w
+
+
+# ------------------------------------------------------------------------------------- D-21
+def test_slow_bus_advice_names_the_latency_timer_only_for_ftdi() -> None:
+    wch = doctor.teleop_estimate(17.0, "WCH")
+    assert wch is not None and "latency timer to 1 ms" not in wch["warning"]
+    assert "slow USB adapter / hub: plug the arm straight into the PC" in wch["warning"]
+    ftdi = doctor.teleop_estimate(17.0, "FTDI")
+    assert ftdi is not None and "latency timer to 1 ms" in ftdi["warning"]
+    unknown = doctor.teleop_estimate(17.0)
+    assert unknown is not None and "only if the adapter is an FTDI chip" in unknown["warning"]
+    assert doctor.usb_chip("1a86:55d3") == "WCH" and doctor.usb_chip("0403:6001") == "FTDI"
+    assert doctor.usb_chip("1234:5678") is None and doctor.usb_chip(None) is None
+
+
+def test_doctor_on_a_slow_wch_adapter_does_not_mention_the_latency_timer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    emu = STSEmulator(seed=4).realistic(usb_in_s=0.016)  # a slow adapter / hub
+    try:
+        monkeypatch.setenv("HF_LEROBOT_CALIBRATION", str(tmp_path / "calibration"))
+        row = {"device": emu.port, "vid_pid": "1a86:7523", "description": "USB-SERIAL CH340"}
+        monkeypatch.setattr(doctor, "ports", lambda _p: [dict(row, station_lock_pid=None, open_by=[])])
+        text, _target = _run(tmp_path / "home", tmp_path / "out")
+    finally:
+        emu.close()
+    problems = text.split("\n\n")[0]
+    assert f"- no profile on {emu.port}: slow bus (" in problems, problems
+    assert "slow USB adapter / hub: plug the arm straight into the PC" in problems
+    assert "latency timer to 1 ms" not in text
