@@ -480,7 +480,10 @@ def _compare(cal: dict[str, Any], motors: dict[str, Any]) -> dict[str, Any]:
 
 # ------------------------------------------------------------------------------------- the report
 def running_status(paths: StationPaths) -> dict[str, Any] | None:
-    """``GET /api/v1/status`` of the running Station (None when none runs)."""
+    """``GET /api/v1/status`` of the running Station (None when none runs).
+
+    A ``station.pid`` left behind by a Station that was killed (nothing listens on its port) is
+    "not running" with ``stale_pid`` set, never a raw connection error (D-15)."""
     try:
         info = json.loads(paths.pid.read_text(encoding="utf-8"))
         token = paths.token.read_text(encoding="utf-8").strip()
@@ -497,6 +500,10 @@ def running_status(paths: StationPaths) -> dict[str, Any] | None:
         )
         return {"pid": info.get("pid"), "http": r.status_code, "status": r.json()}
     except Exception as exc:
+        import httpx
+
+        if isinstance(exc, httpx.ConnectError):
+            return {"not_running": True, "stale_pid": info.get("pid")}
         return {"pid": info.get("pid"), "error": f"{type(exc).__name__}: {exc}"}
 
 
@@ -604,6 +611,15 @@ def check_arms(
     return arms
 
 
+#: Port open errors that mean "another program has it" (Windows, macOS, Linux).
+BUSY_MARKERS = ("access is denied", "permission denied", "resource busy", "busy", "errno 13", "errno 16")
+
+
+def _looks_busy(error: str) -> bool:
+    e = error.lower()
+    return any(m in e for m in BUSY_MARKERS)
+
+
 def warnings(report: dict[str, Any]) -> list[str]:
     """The likely causes the report shows, in plain words (first lines of the summary)."""
     out: list[str] = []
@@ -629,9 +645,32 @@ def warnings(report: dict[str, Any]) -> list[str]:
                     f"{r['id']} {arm}: no calibration '{a['calibration_id']}'"
                     + (f" (files found: {', '.join(found)} - Calibrate > Use this file)" if found else "")
                 )
+    run = report.get("running") or {}
+    if run.get("error"):
+        out.append(f"Station (pid {run.get('pid')}) does not answer: {run['error']}")
+    checked: set[str] = set()
     for a in report.get("arms", []):
-        if a.get("error"):
-            out.append(f"{a['robot']} {a['arm']} on {a['port']}: {a['error']}")
+        checked.add(str(a["port"]))
+        where = f"{a['robot']} {a['arm']} on {a['port']}"
+        if a.get("held_by") and str(a["held_by"][0]).startswith("Station pid"):
+            out.append(
+                f"{where}: held by {a['held_by'][0]}, motors not checked: stop Station and run "
+                "`hibiscus-station doctor --verbose` again"
+            )
+        elif a.get("held_by"):
+            out.append(
+                f"{where} is busy, held by {'; '.join(a['held_by'])}: close that program (LeLab, "
+                "a lerobot-* command, Feetech FD) and run the doctor again"
+            )
+        elif a.get("skipped"):
+            out.append(f"{where}: {a['skipped']}")
+        if a.get("error") and _looks_busy(str(a["error"])):
+            out.append(
+                f"{where} is busy or not accessible ({a['error']}): another program holds it (LeLab, "
+                "a lerobot-* command, Feetech FD, Arduino IDE); close it and run the doctor again"
+            )
+        elif a.get("error"):
+            out.append(f"{where}: {a['error']}")
         missing = [k for k, m in a.get("motors", {}).items() if m.get("error")]
         if missing:
             out.append(
@@ -655,7 +694,7 @@ def warnings(report: dict[str, Any]) -> list[str]:
                 "(Station shows it as unknown); the raw register bytes are in the motor check below"
             )
     for p in report["ports"]:
-        if p.get("open_by"):
+        if p.get("open_by") and str(p["device"]) not in checked:
             out.append(f"{p['device']} is open by another program: {'; '.join(p['open_by'])}")
     return out
 
@@ -663,17 +702,19 @@ def warnings(report: dict[str, Any]) -> list[str]:
 def summary(report: dict[str, Any]) -> str:
     """Human-readable lines (what the terminal shows)."""
     v = report["versions"]
+    problems = report.get("warnings") or []
     lines = [
+        "LIKELY PROBLEMS:",
+        *([f"  ! {w}" for w in problems] or ["  No likely problems found"]),
+        "",
         f"Hibiscus Station {v['hibiscus_station']} · Python {v['python']} · lerobot {v['lerobot']} · "
         f"rustypot {v['rustypot']}",
         f"OS: {v['os']} ({v['machine']})",
         f"Data: {report['home']}",
         f"Calibration folder: {report['calibration_root']}",
         "",
+        "Serial ports:",
     ]
-    if report.get("warnings"):
-        lines += ["LIKELY PROBLEMS:", *[f"  ! {w}" for w in report["warnings"]], ""]
-    lines += ["Serial ports:"]
     if not report["ports"]:
         lines.append("  (none) - is the arm's USB cable plugged in? Windows: check Device Manager > Ports")
     for p in report["ports"]:
@@ -706,10 +747,17 @@ def summary(report: dict[str, Any]) -> str:
             lines.append(f"    {arm}: {a['type']} on {a['port']}, calibration '{a['calibration_id']}' {ok}")
     run = report.get("running")
     lines += ["", "Running Station:"]
-    if not run:
-        lines.append("  not running")
+    if not run or run.get("not_running"):
+        lines.append(
+            "  Station is not running"
+            + (
+                f" (station.pid of pid {run['stale_pid']} left behind, nothing answers)"
+                if run and run.get("stale_pid")
+                else ""
+            )
+        )
     elif run.get("error"):
-        lines.append(f"  pid {run.get('pid')}: {run['error']}")
+        lines.append(f"  pid {run.get('pid')} does not answer: {run['error']}")
     else:
         st = run["status"]
         robot = st.get("robot") or {}

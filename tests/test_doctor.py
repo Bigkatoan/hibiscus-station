@@ -167,3 +167,104 @@ def test_raw_dump_reports_a_missing_servo(tmp_path: Path) -> None:
     assert out["motors"]["3"]["blocks"]["56-70"]["answer"] is None
     assert out["motors"]["1"]["decoded"]["temp_c"] == 30.0
     assert all(op == "read" for op, _i, _a in emu.log)
+
+
+# ------------------------------------------------------------------------------------- D-15
+def _calibrated_home(
+    tmp_path: Path, f: STSEmulator, ld: STSEmulator, monkeypatch: pytest.MonkeyPatch
+) -> Path:
+    """A real profile whose calibration files exist and match the motors: nothing to warn about."""
+    home = _home(tmp_path, f, ld, monkeypatch)
+    cal = lelab_calibration()
+    cal_root = tmp_path / "calibration"
+    for sub, name in (
+        ("robots/so_follower", "arm_follower"),
+        ("teleoperators/so_leader", "arm_leader"),
+    ):
+        (cal_root / sub).mkdir(parents=True)
+        (cal_root / sub / f"{name}.json").write_text(json.dumps(cal), encoding="utf-8")
+    f.preload_calibration(cal)
+    ld.preload_calibration(cal)
+    return home
+
+
+def test_doctor_always_starts_with_likely_problems(
+    tmp_path: Path, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    f, ld = emus
+    home = _calibrated_home(tmp_path, f, ld, monkeypatch)
+    text, _target = _run(home, tmp_path / "out")
+    assert text.splitlines()[:2] == ["LIKELY PROBLEMS:", "  No likely problems found"], text[:600]
+
+
+def test_doctor_says_not_running_for_a_stale_pid_file(
+    tmp_path: Path, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Station killed with kill -9: station.pid stays, nothing listens on its port (AT-77 step 5)."""
+    f, ld = emus
+    home = _calibrated_home(tmp_path, f, ld, monkeypatch)
+    (home / "station.pid").write_text(json.dumps({"pid": 4242, "port": 18349}), encoding="utf-8")
+    (home / "token").write_text("t" * 43, encoding="utf-8")
+    text, _target = _run(home, tmp_path / "out")
+    assert "ConnectError" not in text and "Connection refused" not in text
+    running = text.split("Running Station:\n")[1].splitlines()[0]
+    assert running.startswith("  Station is not running") and "4242" in running
+    assert text.splitlines()[1] == "  No likely problems found"
+
+
+def test_doctor_lists_a_port_held_by_another_program_in_likely_problems(
+    tmp_path: Path, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """AT-77 step 6: LeLab (here a child process) has the follower's port open."""
+    import subprocess
+
+    f, ld = emus
+    home = _calibrated_home(tmp_path, f, ld, monkeypatch)
+    holder = subprocess.Popen(  # noqa: S603 - our own interpreter
+        [
+            sys.executable,
+            "-c",
+            f"import sys,time; h=open({f.port!r},'rb',buffering=0); print('ok', flush=True); time.sleep(60)",
+        ],
+        stdout=subprocess.PIPE,
+    )
+    try:
+        assert holder.stdout is not None and holder.stdout.readline().strip() == b"ok"
+        text, _target = _run(home, tmp_path / "out")
+    finally:
+        holder.kill()
+        holder.wait()
+    problems = text.split("\n\n")[0]
+    assert f"arm follower on {f.port} is busy, held by pid {holder.pid}" in problems, problems
+    assert "close that program" in problems
+    assert not any(op == "read" for op, _i, _a in f.log)  # a held port is never opened
+
+
+def test_doctor_lists_a_port_held_by_station_in_likely_problems(
+    tmp_path: Path, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    f, ld = emus
+    home = _calibrated_home(tmp_path, f, ld, monkeypatch)
+    monkeypatch.setattr(doctor, "station_lock_holder", lambda _p, dev: 4242 if dev == ld.port else None)
+    text, _target = _run(home, tmp_path / "out")
+    problems = text.split("\n\n")[0]
+    assert f"arm leader on {ld.port}: held by Station pid 4242, motors not checked" in problems
+
+
+def test_a_port_another_program_holds_on_windows_is_a_likely_problem() -> None:
+    report: dict[str, Any] = {
+        "profiles": {"active": "arm", "robots": []},
+        "ports": [{"device": "COM3", "vid_pid": "1a86:55d3", "open_by": []}],
+        "calibrations": [],
+        "running": None,
+        "arms": [
+            {
+                "robot": "-",
+                "arm": "no profile",
+                "port": "COM3",
+                "error": "cannot open: could not open port 'COM3': PermissionError(13, 'Access is denied.')",
+            }
+        ],
+    }
+    w = doctor.warnings(report)
+    assert any(x.startswith("- no profile on COM3 is busy or not accessible") for x in w), w
