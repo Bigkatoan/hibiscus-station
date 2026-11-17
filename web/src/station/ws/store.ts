@@ -256,6 +256,10 @@ export class StationStore {
   handle(msg: ServerMessage): void {
     switch (msg.type) {
       case "hello":
+        // A (re)connected socket starts from the Station's own alerts: one that ended while the
+        // socket was down sent its `active: false` to nobody, and a page opened during a stop
+        // must show it at once (QC 0.2.9 QD-23).
+        this.set({ alerts: msg.status.alerts.map((a) => ({ ...a, type: "alert" as const })) });
         this.setStatus(msg.status);
         return;
       case "state":

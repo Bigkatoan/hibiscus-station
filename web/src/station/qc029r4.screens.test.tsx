@@ -6,10 +6,44 @@
 import { screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { i18n } from "@/lib/i18n";
+import type { AlertMsg } from "./api/types";
+import { StationStore } from "./ws/store";
 import { advance, renderStation, settle, setupStation } from "./test/utils";
 
 afterEach(async () => {
   await i18n.changeLanguage("en");
+});
+
+const critical: AlertMsg = {
+  type: "alert",
+  id: "temperature:motor.critical.stopped",
+  t: 1,
+  level: "critical",
+  kind: "temperature",
+  arm: "follower",
+  motor: "elbow_flex",
+  camera: null,
+  value: 66,
+  message_key: "motor.critical.stopped",
+  params: {},
+  active: true,
+};
+
+describe("the store follows the Station's alerts (QD-23)", () => {
+  it("a hello (reload or reconnect) replaces the alerts with the Station's own", () => {
+    const h = setupStation();
+    const store = new StationStore();
+    store.handle(critical);
+    expect(store.getSnapshot().alerts).toHaveLength(1);
+    // The reset happened while the socket was down: the next hello no longer has the alert.
+    store.handle({ type: "hello", v: 1, status: { ...h.sim.status(), alerts: [] } });
+    expect(store.getSnapshot().alerts).toEqual([]);
+    // A page opened during a thermal stop shows its alert at once.
+    const { type: _type, ...asStatus } = critical;
+    store.handle({ type: "hello", v: 1, status: { ...h.sim.status(), alerts: [asStatus] } });
+    expect(store.getSnapshot().alerts.map((a) => a.id)).toEqual([critical.id]);
+    expect(store.getSnapshot().alerts[0]?.type).toBe("alert");
+  });
 });
 
 describe("the cooling countdown never reads 0 s (QD-23)", () => {
