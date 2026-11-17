@@ -933,7 +933,7 @@
       "confirm_title": "Confirm before running",
       "confirm_desc": "These blocks need an explicit OK.",
       "confirm_run": "Run",
-      "now": "{{t}} s · {{steps}} steps · {{block}}",
+      "now": "{{t}} s · {{steps}} · {{block}}",
       "waiting_wait": "Waiting",
       "waiting_wait_until": "Waiting for a condition",
       "waiting_ask": "Waiting for the operator",
@@ -953,9 +953,10 @@
       "log": "Log",
       "log_empty": "No log lines yet.",
       "history": "Recent runs",
-      "steps": "{{n}} steps",
       "value_true": "yes",
-      "value_false": "no"
+      "value_false": "no",
+      "steps_one": "{{count}} step",
+      "steps_other": "{{count}} steps"
     },
     "log_kind": {
       "start": "start",

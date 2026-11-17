@@ -933,7 +933,7 @@
       "confirm_title": "Xác nhận trước khi chạy",
       "confirm_desc": "Các khối này cần bạn đồng ý rõ ràng.",
       "confirm_run": "Chạy",
-      "now": "{{t}} s · {{steps}} bước · {{block}}",
+      "now": "{{t}} s · {{steps}} · {{block}}",
       "waiting_wait": "Đang chờ",
       "waiting_wait_until": "Đang chờ điều kiện",
       "waiting_ask": "Đang chờ người vận hành",
@@ -953,9 +953,10 @@
       "log": "Nhật ký",
       "log_empty": "Chưa có dòng nhật ký.",
       "history": "Các lần chạy gần đây",
-      "steps": "{{n}} bước",
       "value_true": "đúng",
-      "value_false": "sai"
+      "value_false": "sai",
+      "steps_one": "{{count}} bước",
+      "steps_other": "{{count}} bước"
     },
     "log_kind": {
       "start": "bắt đầu",

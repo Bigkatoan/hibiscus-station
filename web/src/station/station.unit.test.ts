@@ -408,6 +408,21 @@ describe("station i18n", () => {
     expect(line).toBe("00:30 · 1 episode · 2 alerts");
   });
 
+  it("a program run counts its steps in words: 1 step, 2 steps (QC 0.2.9 QD-20)", () => {
+    registerStationI18n();
+    const t = i18n.getFixedT("en", "station");
+    const now = (n: number) =>
+      t("programs.run.now", { t: "1.5", steps: t("programs.run.steps", { count: n }), block: "relax arm" });
+    expect(now(1)).toBe("1.5 s · 1 step · relax arm");
+    expect(now(2)).toBe("1.5 s · 2 steps · relax arm");
+    expect(t("programs.run.steps", { count: 1 })).toBe("1 step");
+    const tv = i18n.getFixedT("vi", "station");
+    expect(tv("programs.run.steps", { count: 1 })).toBe("1 bước");
+    expect(tv("programs.run.now", { t: "1,5", steps: tv("programs.run.steps", { count: 3 }), block: "x" })).toBe(
+      "1,5 s · 3 bước · x",
+    );
+  });
+
   it("the leader tooltip reads naturally in vi (QC 0.2.9 QD-17)", () => {
     const tip = (vi_ as { health: { not_measured_title: string } }).health.not_measured_title;
     expect(tip).not.toMatch(/vẫn đã/);

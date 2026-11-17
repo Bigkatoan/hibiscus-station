@@ -466,7 +466,7 @@ export function RunPanel({
             <p className="tabular-nums">
               {t("programs.run.now", {
                 t: mine.t.toFixed(1),
-                steps: mine.steps,
+                steps: t("programs.run.steps", { count: mine.steps }),
                 block: mine.block_id ? blockLabel(mine.block_id) : "–",
               })}
             </p>
@@ -584,7 +584,7 @@ export function RunPanel({
                   <span className="font-bold">
                     {r.outcome ? t(`programs.status.${r.outcome}`) : t("programs.status.running")}
                   </span>
-                  <span>{t("programs.run.steps", { n: r.steps })}</span>
+                  <span>{t("programs.run.steps", { count: r.steps })}</span>
                 </li>
               ))}
             </ul>
