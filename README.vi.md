@@ -80,10 +80,10 @@ less install.sh && bash install.sh
 
 | Máy của bạn | `install.sh` chọn | Danh sách kiểm tra lần đầu |
 |---|---|---|
-| PC / mini PC x86_64 | `ghcr.io/bigkatoan/hibiscus-station:0.2.1-cpu` | - |
-| x86_64 + GPU NVIDIA | `…:0.2.1-cuda` (cần NVIDIA Container Toolkit) | - |
-| Jetson Orin, JetPack 6 | `…:0.2.1-jetson` (runtime NVIDIA) | [first-boot-jetson.md](docs/first-boot-jetson.md) |
-| Raspberry Pi 5 | `…:0.2.1-cpu` (arm64) | [first-boot-pi5.md](docs/first-boot-pi5.md) |
+| PC / mini PC x86_64 | `ghcr.io/bigkatoan/hibiscus-station:0.2.8-cpu` | - |
+| x86_64 + GPU NVIDIA | `…:0.2.8-cuda` (cần NVIDIA Container Toolkit) | - |
+| Jetson Orin, JetPack 6 | `…:0.2.8-jetson` (runtime NVIDIA) | [first-boot-jetson.md](docs/first-boot-jetson.md) |
+| Raspberry Pi 5 | `…:0.2.8-cpu` (arm64) | [first-boot-pi5.md](docs/first-boot-pi5.md) |
 
 Sau đó mở đường link được in ra trên chính máy đó (`hibiscus-station-ctl url` in lại link). Từ
 laptop: `ssh -N -L 18210:127.0.0.1:18210 ban@may-robot` rồi mở cùng link đó. Station chỉ nghe trên
@@ -131,7 +131,7 @@ Dùng hằng ngày với Docker:
 ```bash
 hibiscus-station-ctl status | logs -f | url | ports
 hibiscus-station-ctl backup                 # hồ sơ, hiệu chỉnh, quỹ đạo, chương trình, bộ nhận diện
-hibiscus-station-ctl update 0.2.1-cpu       # sao lưu, kéo image, khởi động lại, kiểm tra, tự quay lại nếu lỗi
+hibiscus-station-ctl update 0.2.8-cpu       # sao lưu, kéo image, khởi động lại, kiểm tra, tự quay lại nếu lỗi
 hibiscus-station-ctl rollback
 ```
 

@@ -79,10 +79,10 @@ less install.sh && bash install.sh
 
 | Your machine | What `install.sh` picks | First-boot checklist |
 |---|---|---|
-| x86_64 PC / mini PC | `ghcr.io/bigkatoan/hibiscus-station:0.2.1-cpu` | - |
-| x86_64 + NVIDIA GPU | `…:0.2.1-cuda` (needs the NVIDIA Container Toolkit) | - |
-| Jetson Orin, JetPack 6 | `…:0.2.1-jetson` (NVIDIA runtime) | [first-boot-jetson.md](docs/first-boot-jetson.md) |
-| Raspberry Pi 5 | `…:0.2.1-cpu` (arm64) | [first-boot-pi5.md](docs/first-boot-pi5.md) |
+| x86_64 PC / mini PC | `ghcr.io/bigkatoan/hibiscus-station:0.2.8-cpu` | - |
+| x86_64 + NVIDIA GPU | `…:0.2.8-cuda` (needs the NVIDIA Container Toolkit) | - |
+| Jetson Orin, JetPack 6 | `…:0.2.8-jetson` (NVIDIA runtime) | [first-boot-jetson.md](docs/first-boot-jetson.md) |
+| Raspberry Pi 5 | `…:0.2.8-cpu` (arm64) | [first-boot-pi5.md](docs/first-boot-pi5.md) |
 
 Then open the printed link on that machine (`hibiscus-station-ctl url` prints it again). From a
 laptop: `ssh -N -L 18210:127.0.0.1:18210 you@robot-pc` and open the same link. Station listens on
@@ -132,7 +132,7 @@ Day to day with Docker:
 ```bash
 hibiscus-station-ctl status | logs -f | url | ports
 hibiscus-station-ctl backup                 # profiles, calibration, trajectories, programs, detectors
-hibiscus-station-ctl update 0.2.1-cpu       # backup, pull, restart, health check, auto-rollback
+hibiscus-station-ctl update 0.2.8-cpu       # backup, pull, restart, health check, auto-rollback
 hibiscus-station-ctl rollback
 ```
 
