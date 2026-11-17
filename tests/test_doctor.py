@@ -1269,6 +1269,13 @@ GRID_ADAPTER_S = (0.05, 0.1)
 #: One servo losing most of its answers (QD-27): which id and how many.
 GRID_FLAKY_IDS = (1, 4, 6)
 GRID_FLAKY_RATES = (0.3, 0.9)
+#: QC round 9 (QD-28 - QD-31): one answer of servo 2 whose id byte became 6 (wrong checksum) next to
+#: an unpowered servo 6, in a register read or a sync read; every answer cut short by 2 bytes; one
+#: 300 ms stall of the whole bus during the scan; an adapter that is slow every time (pipelined:
+#: the servos keep answering and the bytes wait in the adapter; blocking: the adapter takes that
+#: long per request), also next to an unpowered servo.
+GRID_FLIP = ("read", "sync")
+GRID_STEADY_S = (0.05, 0.2, 0.26, 0.3)
 
 
 @dataclass(frozen=True)
@@ -1278,11 +1285,25 @@ class Case:
     silent: str = "none"
     seed: int = 0
     slow: bool = False  # a 9 ms adapter for the timed reads
-    late: str = ""  # one of GRID_LATE, or "adapter"
+    late: str = (
+        ""  # one of GRID_LATE, "stall" (300 ms, whole bus, at the scan), "adapter" (pipelined), "blocking"
+    )
     late_s: float = 0.0
     flaky_id: int = 0
     flaky_rate: float = 0.0
     wrong_file: bool = False  # the calibration file differs from the motors (elbow_flex offset)
+    flip: str = ""  # one of GRID_FLIP: where servo 2's id byte becomes 6
+    cut: int = 0  # every answer loses its last ``cut`` bytes
+
+    @property
+    def steady(self) -> bool:
+        """An adapter that is slow every time."""
+        return self.late in ("adapter", "blocking")
+
+    @property
+    def truth_ms(self) -> float:
+        """The time one read really takes on the emulated adapter."""
+        return self.late_s * 1000 + (0.5 if self.late == "adapter" else 0.0)
 
     @property
     def id(self) -> str:
@@ -1294,14 +1315,20 @@ class Case:
             parts.append(f"flaky{self.flaky_id}x{self.flaky_rate}")
         if self.wrong_file:
             parts.append("wrongfile")
+        if self.flip:
+            parts.append(f"flip2to6_{self.flip}")
+        if self.cut:
+            parts.append(f"cut{self.cut}")
         return "-".join(parts)
 
 
 def _grid() -> Iterator[Any]:
     """Every combination. The default suite (every OS) keeps a representative part: seed 0 with
     the slow adapter off, the clean and the lossy bus with the slow adapter on, one of each late
-    answer on a clean bus, a slow adapter of 50 ms, a servo losing 90 % of its answers, and a
-    wrong calibration file on a lossy bus; the rest is ``slow``."""
+    answer on a clean bus, a slow adapter of 50 ms, a servo losing 90 % of its answers, a wrong
+    calibration file on a lossy bus, and QC round 9's faults on a clean bus (a flipped id byte, every
+    answer cut short, one 300 ms stall, a 50 ms blocking and a 260 ms pipelined adapter, a 60 ms
+    adapter next to an unpowered servo); the rest is ``slow``."""
     cases: list[tuple[Case, bool]] = []
     for drop in GRID_DROP:
         for corrupt in GRID_CORRUPT:
@@ -1338,6 +1365,20 @@ def _grid() -> Iterator[Any]:
             cases.append(
                 (Case(drop, corrupt, seed=seed, late="random2pct", late_s=0.06, wrong_file=True), False)
             )
+    for flip in GRID_FLIP:
+        for corrupt in (0.0, 0.05):
+            cases.append((Case(corrupt=corrupt, silent="one", flip=flip), corrupt == 0.0))
+    for silent in ("none", "one"):
+        for drop in (0.0, 0.05):
+            cases.append((Case(drop, silent=silent, cut=2), silent == "none" and drop == 0.0))
+    for drop in (0.0, 0.05):
+        cases.append((Case(drop, late="stall", late_s=0.3), drop == 0.0))
+    for steady in GRID_STEADY_S:
+        for mode in ("adapter", "blocking"):
+            quick = (mode, steady) in (("blocking", 0.05), ("adapter", 0.26))
+            cases.append((Case(late=mode, late_s=steady), quick))
+    for mode in ("adapter", "blocking"):
+        cases.append((Case(silent="one", late=mode, late_s=0.06), mode == "adapter"))
     for case, quick in cases:
         yield pytest.param(case, id=case.id, marks=() if quick else (pytest.mark.slow,))
 
@@ -1382,6 +1423,7 @@ def _one_late(case: Case) -> Callable[[int, int, bytes, int], float]:
             "homing1": instr == 0x02 and req_id == 1 and params[:1] == bytes([28]),
             "sync": instr == 0x82 and answer_id == 2 and len(syncs) >= 6,
             "raw": instr == 0x02 and req_id == 4 and params[:2] == bytes([56, 15]),
+            "stall": instr == 0x01 and req_id == 0xFE,  # the first answer: every one behind it waits
         }[case.late]
         if hit:
             done.append(1)
@@ -1408,11 +1450,13 @@ def _truth(emu: STSEmulator) -> dict[int, dict[str, int]]:
 def test_the_report_never_contradicts_itself(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, case: Case
 ) -> None:
-    """QD-21 - QD-27 as invariants over lost / corrupt / late answers, silent and flaky servos, slow
+    """QD-21 - QD-31 as invariants over lost / corrupt / late answers, silent and flaky servos, slow
     adapters and calibration files right or wrong: every value shown is the servo's true value or
     "?" (unreadable), "calibrate again" only when validated values differ from the file, "do not
-    answer" only for servos that sent nothing, and no two sentences of the report disagree
-    (loopback port: the same on every OS)."""
+    answer" only for servos that sent nothing (whatever id byte a damaged packet carries, and a
+    servo whose answers are all cut short did send), a stall is a bus fault and an adapter slow
+    every time a slow bus measured within 20 % of the truth or "slower than the timeout", and no two
+    sentences of the report disagree (loopback port: the same on every OS)."""
     arms = Arms("loop", tmp_path, monkeypatch)
     emu = arms(seed=case.seed)
     cal = lelab_calibration()
@@ -1432,6 +1476,8 @@ def test_the_report_never_contradicts_itself(
             emu.servos[case.flaky_id].drop_rate = case.flaky_rate
         if case.late == "adapter":
             emu.adapter_delay_s = case.late_s
+        elif case.late == "blocking":
+            emu.latency_s = case.late_s
         elif case.late == "random2pct":
             emu.late_rate, emu.late_s = 0.02, case.late_s
         elif case.late:
@@ -1444,6 +1490,19 @@ def test_the_report_never_contradicts_itself(
                 return handle(pkt_id, instr, params)
 
             emu.handle = slow_handle  # type: ignore[method-assign]
+        flipped: list[int] = []
+        if case.flip or case.cut:
+
+            def damage(instr: int, _req: int, params: bytes, p: bytes) -> bytes:
+                if case.cut:
+                    return p[: -case.cut]
+                where = instr == 0x82 if case.flip == "sync" else instr == 0x02 and params[:1] == b"\x00"
+                if flipped or p[2] != 2 or not where:
+                    return p
+                flipped.append(1)
+                return p[:2] + bytes([6]) + p[3:]  # the checksum stays servo 2's: a wrong checksum
+
+            _mangle(emu, damage)
         arm = doctor.ping_arm(emu.port, file_cal, {"/c/arm_follower.json": file_cal}, vid_pid="1a86:55d3")
         arm["calibration_file"] = "/c/arm_follower.json"
         truth = _truth(emu)
@@ -1533,24 +1592,30 @@ def test_the_report_never_contradicts_itself(
         and not (case.wrong_file and k == "3" and m.get("Homing_Offset") == 396)  # a mismatch shown
     ]
     assert ("could not read register(s)" in joined) == bool(unread_cal), ctx
-    if unread_cal:
-        assert "unreliable bus" in joined and "could not be read" in joined, ctx
+    if unread_cal:  # (a motor that sent only damaged packets is named as such instead)
+        assert "unreliable bus" in joined, ctx
+        if any(arm["motors"][k].get("state") != "corrupt" for k in unread_cal):
+            assert "could not be read" in joined, ctx
 
     # failed reads by class: each class named only when it happened
     classes = {k: sr.get(k, 0) for k in ("no_answer", "corrupt", "garbled", "late", "other")}
     assert sum(classes.values()) == failed and ok + failed == sr["reads"], sr
     assert ("got no answer" in fol) == (classes["no_answer"] > 0), ctx
     assert ("got corrupted answers (checksum)" in fol) == (classes["corrupt"] > 0), ctx
-    if case.corrupt == 0:
+    if case.corrupt == 0 and not case.flip:
         assert classes["corrupt"] == 0, sr
-    if case.drop == 0 and not dead and not case.flaky_id and not case.late:
+    if case.drop == 0 and not dead and not case.flaky_id and not case.late and not case.cut:
         assert classes["no_answer"] == classes["garbled"] == classes["other"] == 0, sr
     states = {m.get("state") for m in arm["motors"].values()}
+    # QD-31: every read answered, each only after the longest wait: said so, never a number
+    too_slow = "slower than the timeout (> " in fol
+    if too_slow:
+        assert ok == 0 and classes["late"] == failed == 20 and case.steady and case.truth_ms > 200, ctx
     if not no_answer:
-        assert ("although every motor answers a ping" in joined) == (failed > 0 and states == {"answers"}), (
-            ctx
-        )
-        if failed:
+        assert ("although every motor answers a ping" in joined) == (
+            failed > 0 and states == {"answers"} and not too_slow
+        ), ctx
+        if failed and not too_slow:
             assert "unreliable bus" in joined and "unreliable bus" in fol, ctx
     if "unreliable bus" in joined:  # named only from evidence of a fault
         assert (
@@ -1560,7 +1625,7 @@ def test_the_report_never_contradicts_itself(
             or unread_cal
             or any(m.get("unreadable") for m in arm["motors"].values())
         ), ctx
-    if case.late and case.late != "adapter" and not dead and case.drop == case.corrupt == 0.0:
+    if case.late and not case.steady and not dead and case.drop == case.corrupt == 0.0:
         # a late answer is a bus fault the report names; it never moves a value (checked above)
         assert "unreliable bus" in joined, ctx
 
@@ -1569,15 +1634,41 @@ def test_the_report_never_contradicts_itself(
     assert len(est) == 1, ctx
     measured = " Hz, leader -> follower latency" in est[0]
     assert measured == (not no_answer and ok >= doctor.MIN_OK_READS), ctx
-    if not no_answer and not measured:
+    if not no_answer and not measured and not too_slow:
         assert est[0] == f"    teleop estimate: not measured (too few reads succeeded: {ok} of 20)", ctx
+    if too_slow:
+        assert est[0].startswith(
+            "    teleop estimate: not measured (slower than the timeout (> 250 ms per read))  ! "
+        )
     assert ("reads that worked" in est[0]) == (measured and failed > 0), ctx
     if "slow bus" in every:
-        assert not no_answer and ok >= doctor.MIN_OK_READS and failed < ok, ctx
-    if not no_answer and failed == 0 and case.late != "adapter":
+        assert not no_answer and (too_slow or (ok >= doctor.MIN_OK_READS and failed < ok)), ctx
+    if not no_answer and failed == 0 and not case.steady:
         assert ("slow bus" in every) == case.slow, ctx
-    if case.late == "adapter" and not no_answer and failed == 0:
-        assert "slow bus" in every, ctx
+
+    # QD-30 / QD-31: an adapter slow every time is a slow bus, measured from answers matched to
+    # their own request (within 20 % of the truth) or "slower than the timeout"; never loose
+    # cables, never a servo answering "now and then"
+    if case.steady and case.drop == case.corrupt == 0.0:
+        assert not flaky and "unreliable bus" not in joined and "3-pin cables" not in joined, ctx
+        if not no_answer:
+            assert "slow bus" in every, ctx
+            each = re.search(r"sync read: .*?([\d.]+) ms each", fol)
+            assert too_slow or (each and abs(float(each.group(1)) - case.truth_ms) <= 0.2 * case.truth_ms), (
+                ctx
+            )
+    # QD-30: one stall of the whole bus is a bus fault, never one servo's flakiness
+    if case.late == "stall":
+        assert not flaky and " came late (up to " in joined, ctx
+        if case.drop == 0:
+            assert states == {"answers"} and "motor id(s)" not in joined, ctx
+    # QD-28: a packet with a wrong checksum is never evidence for the id it carries
+    if case.flip:
+        assert 6 in no_answer and "6 answer only with" not in every, ctx
+    # QD-29: a servo whose every answer is cut short answers with malformed packets, never silent
+    if case.cut:
+        assert no_answer == set(dead) and garbage == set(range(1, 7)) - set(dead), ctx
+        assert "answers only with malformed packets" in fol and "corrupted" not in fol, ctx
 
 
 def test_a_calibration_file_of_another_arm_names_every_motor_that_differs() -> None:
