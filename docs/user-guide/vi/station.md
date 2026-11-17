@@ -66,8 +66,9 @@ Hãy tắt LeLab và mọi lệnh `lerobot-*` trước: mỗi cổng serial ch�
 4. **Teleop.** Cử động tay leader, tay follower làm theo. Nếu leader lệch xa tư thế follower,
    Station yêu cầu bạn đưa leader lại gần trước. Teleop chạy nhanh như LeLab (mặc định 250 Hz, mỗi
    nhịp chỉ đọc tay leader và gửi lệnh cho follower); màn hình hiện "độ trễ ~X ms, Y Hz" đo trực
-   tiếp. Nếu số Hz thấp, chạy `hibiscus-station doctor`: nó đo tốc độ bus và nhắc chỉnh latency
-   timer của bộ chuyển USB (Windows) về 1 ms.
+   tiếp. Nếu số Hz thấp, chạy `hibiscus-station doctor` (xem [Báo cáo chẩn đoán](#báo-cáo-chẩn-đoán-doctor)):
+   nó đo tốc độ bus và nói cách sửa theo loại bộ chuyển USB (cắm thẳng vào máy, không qua hub; chỉnh
+   latency timer 1 ms chỉ có ở bộ chuyển FTDI).
 5. **Ghi dữ liệu.** Chọn tên dataset, câu mô tả nhiệm vụ, số episode và độ dài. Phím: **→** sang
    episode tiếp (lưu), **←** ghi lại, **Esc** dừng. Episode chạm giới hạn thời gian sẽ được **lưu**
    (khác LeLab, vốn lặng lẽ ghi lại); bạn có thể đổi thành *bỏ*.
@@ -90,6 +91,38 @@ Hãy tắt LeLab và mọi lệnh `lerobot-*` trước: mỗi cổng serial ch�
 **Robot 3D.** Mọi màn hình làm tay robot chuyển động đều có tay follower dạng 3D, vẽ theo vị trí khớp
 trực tiếp, mỗi động cơ tô màu theo nhiệt độ. Nếu tay 3D không khớp tay thật (ví dụ `wrist_roll` xoay
 ngược chiều), hãy hiệu chỉnh lại trước khi tin vào phát lại.
+
+## Báo cáo chẩn đoán (doctor)
+
+Khi tay robot không chạy đúng, một báo cáo giúp chúng tôi tìm ra nguyên nhân ngay lần đầu:
+
+1. Tắt Station (Ctrl+C trong cửa sổ đang chạy nó) và tắt LeLab, Feetech FD và mọi lệnh `lerobot-*`.
+2. Cắm cả hai tay vào máy và bật nguồn cho chúng.
+3. Mở PowerShell (Windows) hoặc Terminal, chép và dán lệnh:
+
+   ```
+   hibiscus-station doctor --verbose
+   ```
+
+4. Đợi khoảng một phút. Phần cuối báo cáo, mục **WHAT TO SEND / CẦN GỬI GÌ**, ghi đường dẫn đầy đủ
+   của tệp `hibiscus-station-doctor-<thời gian>.zip`: bạn chỉ cần gửi tệp đó. Nếu mục này nói phần
+   kiểm tra động cơ chưa đủ, làm theo hướng dẫn ở đó rồi chạy lại.
+
+Báo cáo bằng tiếng Anh (dành cho kỹ sư), trừ mục cuối. Dòng đầu là **LIKELY PROBLEMS** (các vấn đề
+có thể có, hoặc "No likely problems found"): ví dụ hồ sơ tay giả lập đang hoạt động, thiếu tệp hiệu
+chỉnh, cổng đang bị chương trình khác giữ (có tên chương trình), Station đã tắt mà còn sót tệp
+`station.pid`, bus chậm, hoặc động cơ báo số đo vô lý (0 °C, dòng 6,5 A).
+
+`doctor` **chỉ đọc**: nó không ghi gì xuống động cơ và không bật mô-men. Với mỗi cổng USB serial (kể
+cả cổng chưa có trong hồ sơ robot) nó đọc từng động cơ: model, firmware, vị trí, điện áp, nhiệt độ,
+`Max_Temperature_Limit`, dòng (`Present_Current`), tải (`Present_Load`), trạng thái, EEPROM so với tệp
+hiệu chỉnh, tốc độ bus; rồi in **bản dump thô** các thanh ghi 0–4, 13–15 và 56–70 của từng động cơ
+(byte đúng như động cơ gửi về) kèm giá trị đã giải mã, cùng đơn vị và quy tắc "không rõ" như màn hình
+sức khoẻ động cơ. Tệp zip có báo cáo, 200 dòng nhật ký cuối, hồ sơ robot, cài đặt, tệp hiệu chỉnh và 5
+phiên gần nhất; không có token đăng nhập hay token truy cập Hibiscus.
+
+Tuỳ chọn: `--no-ping` không mở cổng serial, `--no-cameras` không dò camera, `--out <thư mục>` nơi lưu
+tệp zip (mặc định: thư mục hiện tại).
 
 ## An toàn
 
