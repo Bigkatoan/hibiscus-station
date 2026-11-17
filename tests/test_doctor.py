@@ -1,38 +1,350 @@
-"""``hibiscus-station doctor`` against emulated STS3215 chains (``tests/sts_emulator.py``). POSIX only.
+"""``hibiscus-station doctor`` against emulated STS3215 chains (``tests/sts_emulator.py``).
 
 K-11 / SP-1 / REG-13: current, load and a raw register dump of every servo on every port, read
 only. D-15, D-21: the LIKELY PROBLEMS section. The zip carries no token.
+
+Every test that talks to an arm runs on every platform (QD-4, QD-7) through a **loopback port**: the
+Feetech packets the doctor sends (through lerobot's bus and through pyserial for the raw dump) go
+byte for byte to the emulator's ``handle()`` and its answers come back as bytes. On Linux the same
+tests also run through a real pseudo-terminal, with the real rustypot serial port underneath (a pty
+does not work there on macOS, "Not a typewriter", and Windows has none).
 """
 
 from __future__ import annotations
 
 import json
+import os
 import sys
+import time
+import types
 import zipfile
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 import pytest
-
-if sys.platform == "win32":  # pragma: no cover
-    pytest.skip("pseudo-terminals are POSIX only", allow_module_level=True)
-
-from sts_emulator import STSEmulator, lelab_calibration, sm_encode
+from sts_emulator import STSEmulator, checksum, lelab_calibration, sm_decode, sm_encode
 
 from hibiscus_station import doctor
 from hibiscus_station.profiles import FollowerProfile, LeaderProfile, ProfileStore, RobotProfile
 from hibiscus_station.settings import StationPaths
 
 WRITES = {"write", "sync_write"}
+LINUX = sys.platform.startswith("linux")
+#: "loop" everywhere; "pty" (real serial port code on a pseudo-terminal) where it works.
+TRANSPORTS = ["loop", "pty"] if LINUX else ["loop"]
+
+
+# ------------------------------------------------------------------------------- loopback port
+class LoopSTS(STSEmulator):
+    """The emulator without its pseudo-terminal: :class:`LoopbackPort` calls ``handle()`` itself."""
+
+    def __init__(self, port: str, **kwargs: Any) -> None:
+        no_pty = types.SimpleNamespace(openpty=lambda: (-1, -1))
+        no_tty = types.SimpleNamespace(setraw=lambda _fd: None)
+        with (
+            mock.patch.dict(sys.modules, {"pty": no_pty, "tty": no_tty}),
+            mock.patch.object(os, "ttyname", lambda _fd: port, create=True),
+        ):
+            super().__init__(**kwargs)
+
+    def _serve(self) -> None:  # no pty to serve
+        return
+
+    def close(self) -> None:
+        self._stop.set()
+        self._thread.join(1)
+
+
+class LoopbackPort:
+    """One USB serial port, wire level: complete Feetech packets go to the emulator, its answer
+    bytes (with the emulator's timing) wait to be read. One owner at a time, as a real port."""
+
+    def __init__(self, emu: STSEmulator) -> None:
+        self.emu = emu
+        self.rx = bytearray()
+        self._tx = bytearray()
+        self.owner: object | None = None
+        self.refuse: str | None = None  # the OS error text when another program holds the port
+
+    def open(self, who: object) -> None:
+        if self.refuse:
+            raise OSError(self.refuse)
+        if self.owner is not None:
+            raise OSError(16, "Device or resource busy")
+        self.owner = who
+        self.rx.clear()
+        self._tx.clear()
+
+    def close(self, who: object) -> None:
+        if self.owner is who:
+            self.owner = None
+
+    def write(self, data: bytes) -> None:
+        self._tx += data
+        while True:
+            start = self._tx.find(b"\xff\xff")
+            if start < 0:
+                self._tx.clear()
+                return
+            del self._tx[:start]
+            if len(self._tx) < 4 or len(self._tx) < 4 + self._tx[3]:
+                return
+            pkt = bytes(self._tx[: 4 + self._tx[3]])
+            del self._tx[: len(pkt)]
+            if checksum(pkt[2:-1]) == pkt[-1]:
+                self._transact(pkt)
+
+    def _transact(self, pkt: bytes) -> None:
+        """What ``STSEmulator._serve`` does with one packet, timing included."""
+        e = self.emu
+        e.transactions += 1
+        if e.baud:
+            _sleep(e.usb_out_s + len(pkt) * 10 / e.baud)
+        out = e.handle(pkt[2], pkt[4], pkt[5:-1])
+        if not out:
+            return
+        delay = e.latency_s
+        if e.baud:
+            delay += len(out) * 10 / e.baud + e.usb_in_s
+        if e.return_delay:
+            n = len(pkt[7:-1]) if pkt[4] == 0x82 else 1
+            delay += n * max(s.get(7, 1) for s in e.servos.values()) * 2e-6
+        _sleep(delay)
+        self.rx += out
+
+    def status(self, motor_id: int) -> tuple[bytes, int] | None:
+        """The next well-formed status packet of ``motor_id``: (params, error byte)."""
+        while True:
+            start = self.rx.find(b"\xff\xff")
+            if start < 0 or len(self.rx) < start + 4 or len(self.rx) < start + 4 + self.rx[start + 3]:
+                self.rx.clear()
+                return None
+            del self.rx[:start]
+            pkt = bytes(self.rx[: 4 + self.rx[3]])
+            del self.rx[: len(pkt)]
+            if checksum(pkt[2:-1]) == pkt[-1] and pkt[2] == motor_id:
+                return pkt[5:-1], pkt[4]
+
+
+def _sleep(seconds: float) -> None:
+    end = time.perf_counter() + seconds
+    if seconds > 0.0006:
+        time.sleep(seconds - 0.0005)
+    while time.perf_counter() < end:
+        pass
+
+
+def _packet(motor_id: int, instr: int, params: bytes = b"") -> bytes:
+    body = bytes([motor_id, len(params) + 2, instr]) + params
+    return b"\xff\xff" + body + bytes([checksum(body)])
+
+
+class LoopSerial:
+    """The part of ``serial.Serial`` the raw dump uses."""
+
+    def __init__(self, port: LoopbackPort, timeout: float = 0.005) -> None:
+        self.port, self.timeout = port, timeout
+        port.open(self)
+
+    @property
+    def in_waiting(self) -> int:
+        return len(self.port.rx)
+
+    def reset_input_buffer(self) -> None:
+        self.port.rx.clear()
+
+    def write(self, data: bytes) -> int:
+        self.port.write(data)
+        return len(data)
+
+    def flush(self) -> None:
+        return None
+
+    def read(self, n: int = 1) -> bytes:
+        if not self.port.rx:
+            time.sleep(self.timeout)
+        out = bytes(self.port.rx[:n])
+        del self.port.rx[:n]
+        return out
+
+    def close(self) -> None:
+        self.port.close(self)
+
+
+class LoopBus:
+    """The part of ``rustypot.Bus`` lerobot's ``SerialMotorsBus`` calls, as Feetech packets on a
+    :class:`LoopbackPort`; registers laid out and decoded from rustypot's own STS3215 table."""
+
+    def __init__(self, port: LoopbackPort) -> None:
+        import rustypot
+
+        found = rustypot.find_model("sts3215")
+        assert found is not None
+        self.model, self.definition = found
+        self.port = port
+        port.open(self)
+        self._open = True
+
+    def _reg(self, name: str) -> Any:
+        info = self.definition.register(name.lower())
+        if info is None:
+            raise ValueError(f"no register {name}")
+        return info
+
+    @staticmethod
+    def _decode(info: Any, data: bytes) -> int:
+        raw = int.from_bytes(data[: info.size], "little")
+        return sm_decode(raw, info.sign_bit) if info.encoding == "sign_magnitude" else raw
+
+    @staticmethod
+    def _encode(info: Any, value: int) -> bytes:
+        raw = sm_encode(int(value), info.sign_bit) if info.encoding == "sign_magnitude" else int(value)
+        return raw.to_bytes(info.size, "little")
+
+    def _ask(self, motor_id: int, instr: int, params: bytes, retries: int) -> tuple[bytes, int]:
+        for _ in range(retries + 1):
+            self.port.rx.clear()
+            self.port.write(_packet(motor_id, instr, params))
+            got = self.port.status(motor_id)
+            if got is not None:
+                return got
+        raise RuntimeError(f"timeout waiting for motor {motor_id}")
+
+    # -- rustypot.Bus API
+    def close(self) -> None:
+        self._open = False
+        self.port.close(self)
+
+    def is_open(self) -> bool:
+        return self._open
+
+    def set_timeout(self, timeout: float) -> None:
+        return None
+
+    def set_baudrate(self, baudrate: int) -> None:
+        return None
+
+    def read_register_with_error(self, motor_id: int, name: str, retries: int = 0) -> tuple[int, int]:
+        info = self._reg(name)
+        data, err = self._ask(motor_id, 0x02, bytes([info.addr, info.size]), retries)
+        return self._decode(info, data), err
+
+    def write_register_with_error(self, motor_id: int, name: str, value: int, retries: int = 0) -> int:
+        info = self._reg(name)
+        return self._ask(motor_id, 0x03, bytes([info.addr]) + self._encode(info, value), retries)[1]
+
+    def sync_read_register_with_error(
+        self, ids: list[int], name: str, retries: int = 0
+    ) -> list[tuple[int, int]]:
+        info = self._reg(name)
+        for _ in range(retries + 1):
+            self.port.rx.clear()
+            self.port.write(_packet(0xFE, 0x82, bytes([info.addr, info.size, *ids])))
+            got = [self.port.status(i) for i in ids]
+            if all(g is not None for g in got):
+                return [(self._decode(info, g[0]), g[1]) for g in got if g is not None]
+        raise RuntimeError(f"sync read {name}: timeout")
+
+    def sync_write_register(self, ids: list[int], name: str, values: list[int], retries: int = 0) -> None:
+        info = self._reg(name)
+        body = b"".join(bytes([i]) + self._encode(info, v) for i, v in zip(ids, values, strict=True))
+        self.port.write(_packet(0xFE, 0x83, bytes([info.addr, info.size]) + body))
+
+    def set_torque(self, ids: list[int], enabled: bool, retries: int = 0) -> dict[int, str]:
+        for i in ids:
+            self.write_register_with_error(i, "torque_enable", int(enabled), retries)
+        return {}
+
+    def broadcast_scan(self, definition: Any) -> dict[int, int]:
+        self.port.rx.clear()
+        self.port.write(_packet(0xFE, 0x01))
+        ids = []
+        while (got := self._next_any()) is not None:
+            ids.append(got)
+        return {i: self.read_register_with_error(i, "model_number")[0] for i in sorted(ids)}
+
+    def scan(self, definition: Any, ids: list[int] | None = None) -> dict[int, int]:
+        out = {}
+        for i in ids or range(0, 253):
+            try:
+                out[i] = self.read_register_with_error(i, "model_number")[0]
+            except RuntimeError:
+                continue
+        return out
+
+    def _next_any(self) -> int | None:
+        rx = self.port.rx
+        start = rx.find(b"\xff\xff")
+        if start < 0 or len(rx) < start + 4 or len(rx) < start + 4 + rx[start + 3]:
+            return None
+        del rx[:start]
+        pkt = bytes(rx[: 4 + rx[3]])
+        del rx[: len(pkt)]
+        return pkt[2]
+
+
+class Arms:
+    """Makes emulated arms on the chosen transport; ``port`` is what a profile names."""
+
+    def __init__(self, transport: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        self.transport = transport
+        self.tmp_path = tmp_path
+        self.emus: list[STSEmulator] = []
+        self.loops: dict[str, LoopbackPort] = {}
+        if transport == "loop":
+            import serial
+
+            from hibiscus_station.hw.bus import StationMotorsBus
+
+            real_open = StationMotorsBus._open_bus
+            real_serial = serial.Serial
+
+            def open_bus(bus: Any) -> Any:
+                lp = self.loops.get(str(bus.port))
+                return LoopBus(lp) if lp is not None else real_open(bus)
+
+            def open_serial(port: str, *args: Any, **kwargs: Any) -> Any:
+                lp = self.loops.get(str(port))
+                if lp is None:
+                    return real_serial(port, *args, **kwargs)
+                return LoopSerial(lp, kwargs.get("timeout") or 0.005)
+
+            monkeypatch.setattr(StationMotorsBus, "_open_bus", open_bus)
+            monkeypatch.setattr(serial, "Serial", open_serial)
+
+    def __call__(self, **kwargs: Any) -> STSEmulator:
+        emu: STSEmulator
+        if self.transport == "loop":
+            # A real file, so "is the port there?" sees it; its name is never opened as a file.
+            path = self.tmp_path / f"ttyLOOP{len(self.loops)}"
+            path.touch()
+            emu = LoopSTS(str(path), **kwargs)
+            self.loops[str(path)] = LoopbackPort(emu)
+        else:
+            emu = STSEmulator(**kwargs)
+        self.emus.append(emu)
+        return emu
+
+    def loop(self, emu: STSEmulator) -> LoopbackPort:
+        return self.loops[emu.port]
+
+    def close(self) -> None:
+        for e in self.emus:
+            e.close()
+
+
+@pytest.fixture(params=TRANSPORTS)
+def arms(request: pytest.FixtureRequest, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Arms]:
+    a = Arms(request.param, tmp_path, monkeypatch)
+    yield a
+    a.close()
 
 
 @pytest.fixture
-def emus() -> Iterator[tuple[STSEmulator, STSEmulator]]:
-    f, ld = STSEmulator(seed=1, voltage_v=12.0), STSEmulator(seed=2)
-    yield f, ld
-    f.close()
-    ld.close()
+def emus(arms: Arms) -> tuple[STSEmulator, STSEmulator]:
+    return arms(seed=1, voltage_v=12.0), arms(seed=2)
 
 
 def _home(tmp_path: Path, f: STSEmulator, ld: STSEmulator, monkeypatch: pytest.MonkeyPatch) -> Path:
@@ -138,10 +450,10 @@ def test_doctor_never_writes_to_a_motor(
 
 
 def test_doctor_checks_a_detected_port_without_a_profile(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, arms: Arms, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A demo profile active, the real arm on a USB port no profile names: it is still dumped."""
-    emu = STSEmulator(seed=3)
+    emu = arms(seed=3)
     try:
         monkeypatch.setenv("HF_LEROBOT_CALIBRATION", str(tmp_path / "calibration"))
         row = {"device": emu.port, "vid_pid": "1a86:55d3", "description": "USB Single Serial"}
@@ -157,8 +469,8 @@ def test_doctor_checks_a_detected_port_without_a_profile(
         emu.close()
 
 
-def test_raw_dump_reports_a_missing_servo(tmp_path: Path) -> None:
-    emu = STSEmulator(ids=(1, 2))
+def test_raw_dump_reports_a_missing_servo(arms: Arms) -> None:
+    emu = arms(ids=(1, 2))
     try:
         out = doctor.raw_dump(emu.port, (1, 2, 3), timeout_s=0.05)
     finally:
@@ -213,13 +525,26 @@ def test_doctor_says_not_running_for_a_stale_pid_file(
 
 
 def test_doctor_lists_a_port_held_by_another_program_in_likely_problems(
-    tmp_path: Path, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, arms: Arms, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """AT-77 step 6: LeLab (here a child process) has the follower's port open."""
+    """AT-77 step 6: LeLab has the follower's port open. Linux names the holder (``/proc``, here a
+    child process); Windows and macOS only see the port refuse to open, with their own error."""
     import subprocess
 
     f, ld = emus
     home = _calibrated_home(tmp_path, f, ld, monkeypatch)
+    if not LINUX:
+        arms.loop(f).refuse = (
+            "could not open port: PermissionError(13, 'Access is denied.', None, 5)"
+            if sys.platform == "win32"
+            else "[Errno 16] Resource busy"
+        )
+        text, _target = _run(home, tmp_path / "out")
+        problems = text.split("\n\n")[0]
+        assert f"arm follower on {f.port} is busy or not accessible" in problems, problems
+        assert "close it and run the doctor again" in problems
+        assert not any(op == "read" for op, _i, _a in f.log)
+        return
     holder = subprocess.Popen(  # noqa: S603 - our own interpreter
         [
             sys.executable,
@@ -284,9 +609,9 @@ def test_slow_bus_advice_names_the_latency_timer_only_for_ftdi() -> None:
 
 
 def test_doctor_on_a_slow_wch_adapter_does_not_mention_the_latency_timer(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, arms: Arms, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    emu = STSEmulator(seed=4).realistic(usb_in_s=0.016)  # a slow adapter / hub
+    emu = arms(seed=4).realistic(usb_in_s=0.016)  # a slow adapter / hub
     try:
         monkeypatch.setenv("HF_LEROBOT_CALIBRATION", str(tmp_path / "calibration"))
         row = {"device": emu.port, "vid_pid": "1a86:7523", "description": "USB-SERIAL CH340"}
