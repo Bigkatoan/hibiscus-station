@@ -1110,10 +1110,12 @@ export class MockStation {
   sample(arm: Arm, motor: string): MotorSample {
     const temp = Math.round(this.temps[arm][motor] ?? 30);
     const level = this.levels[`${arm}.${motor}`] ?? "ok";
+    // Field report 0.2.8: the leader's 5 V servos answer no temperature and no current.
+    const leader = arm === "leader";
     return {
-      temp_c: temp,
-      voltage_v: arm === "follower" ? 12.1 : 5.0,
-      current_a: this.moving ? 0.42 : 0.05,
+      temp_c: leader ? null : temp,
+      voltage_v: leader ? 5.0 : 12.1,
+      current_a: leader ? null : this.moving ? 0.42 : 0.05,
       load_pct: this.moving ? -31.5 : 2,
       status: [],
       level,

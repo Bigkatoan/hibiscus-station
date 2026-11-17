@@ -207,7 +207,10 @@
     "bit_overload": "quá tải",
     "stale_title": "Lần đọc cảm biến gần nhất của tay này không có phản hồi; giá trị đang hiển thị là cũ.",
     "unknown_title": "Không có giá trị: servo này không báo đại lượng này (số đọc vô lý nên bị bỏ qua).",
-    "leader_note": "Di chuyển bằng tay: chỉ để tham khảo, không bao giờ báo động."
+    "leader_note": "Di chuyển bằng tay: chỉ để tham khảo, không bao giờ báo động.",
+    "not_measured": "không đo",
+    "not_measured_title": "Servo 5 V của tay leader không báo giá trị này. Tay leader vẫn đã kết nối và hoạt động bình thường: vị trí các khớp vẫn được đọc đầy đủ.",
+    "leader_connected": "Đã kết nối · {{n}}/{{total}} động cơ trả lời"
   },
   "camera": {
     "title": "Camera",

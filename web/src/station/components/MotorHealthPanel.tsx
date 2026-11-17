@@ -96,6 +96,22 @@ function LoadBar({ pct }: { pct: number | null }) {
   );
 }
 
+/** A value the leader's servos never report: "not measured" with the reason as a tooltip. */
+function NotMeasured() {
+  const { t } = useTranslation("station");
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-xs text-muted-foreground"
+      title={t("health.not_measured_title")}
+      data-testid="not-measured"
+    >
+      <PxIcon name="info" />
+      {t("health.not_measured")}
+      <span className="sr-only">{t("health.not_measured_title")}</span>
+    </span>
+  );
+}
+
 function MotorRow({
   arm,
   motor,
@@ -115,6 +131,9 @@ function MotorRow({
 }) {
   const { t } = useTranslation("station");
   const level = motorLevel(s, thresholds, arm);
+  // Field report 0.2.8: the leader's 5 V servos report no temperature / current. A bare "–" read
+  // as "leader not recognised"; say what it is instead.
+  const leaderUnmeasured = (v: number | null) => arm === "leader" && v === null && !s.stale;
   return (
     <tr
       data-testid={`motor-${arm}-${motor}`}
@@ -125,27 +144,31 @@ function MotorRow({
         {motor}
       </th>
       <td className="py-1 pr-2">
-        <span
-          className="inline-flex min-w-[4.5rem] items-center gap-1 border-2 px-1 tabular-nums"
-          style={levelCss(level)}
-          title={t(`level.${level}`)}
-        >
-          <PxIcon name="thermo" />
-          {fmt(s.temp_c, 0)}°C
-          <span className="sr-only">{t(`level.${level}`)}</span>
-        </span>
+        {leaderUnmeasured(s.temp_c) ? (
+          <NotMeasured />
+        ) : (
+          <span
+            className="inline-flex min-w-[4.5rem] items-center gap-1 border-2 px-1 tabular-nums"
+            style={levelCss(level)}
+            title={t(`level.${level}`)}
+          >
+            <PxIcon name="thermo" />
+            {fmt(s.temp_c, 0)}°C
+            <span className="sr-only">{t(`level.${level}`)}</span>
+          </span>
+        )}
       </td>
       <td
         className="py-1 pr-2 tabular-nums"
-        title={s.voltage_v === null ? t("health.unknown_title") : undefined}
+        title={s.voltage_v === null && arm !== "leader" ? t("health.unknown_title") : undefined}
       >
-        {fmt(s.voltage_v, 1)}
+        {leaderUnmeasured(s.voltage_v) ? <NotMeasured /> : fmt(s.voltage_v, 1)}
       </td>
       <td
         className="hidden py-1 pr-2 tabular-nums sm:table-cell"
-        title={s.current_a === null ? t("health.unknown_title") : undefined}
+        title={s.current_a === null && arm !== "leader" ? t("health.unknown_title") : undefined}
       >
-        {fmt(s.current_a, 2)}
+        {leaderUnmeasured(s.current_a) ? <NotMeasured /> : fmt(s.current_a, 2)}
       </td>
       <td className="py-1 pr-2">
         <LoadBar pct={s.load_pct} />
@@ -220,7 +243,21 @@ export function MotorHealthPanel({
         const lim = limitsText(t, limits[arm]);
         return (
           <div key={arm} className="min-w-0">
-            <h3 className="mb-1 font-extrabold text-base">{t(`arm.${arm}`)}</h3>
+            <h3 className="mb-1 flex flex-wrap items-center gap-2 font-extrabold text-base">
+              {t(`arm.${arm}`)}
+              {arm === "leader" ? (
+                <span
+                  className="border-2 px-1 text-xs font-bold"
+                  style={levelCss("ok")}
+                  data-testid="leader-connected"
+                >
+                  {t("health.leader_connected", {
+                    n: Object.values(motors).filter((m) => !m.stale).length,
+                    total: Object.keys(motors).length,
+                  })}
+                </span>
+              ) : null}
+            </h3>
             {arm === "leader" ? (
               <p className="mb-1 text-xs text-muted-foreground" data-testid="leader-note">
                 {t("health.leader_note")}

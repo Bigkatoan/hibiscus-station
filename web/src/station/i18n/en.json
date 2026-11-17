@@ -207,7 +207,10 @@
     "bit_overload": "overload",
     "stale_title": "The last read of this arm's sensors got no answer; the values shown are older.",
     "unknown_title": "No value: this servo does not report it (the reading was impossible and is ignored).",
-    "leader_note": "Moved by hand: shown for information, never an alarm."
+    "leader_note": "Moved by hand: shown for information, never an alarm.",
+    "not_measured": "not measured",
+    "not_measured_title": "The leader's 5 V servos do not report this value. The leader is connected and working: its positions are read normally.",
+    "leader_connected": "Connected · {{n}}/{{total}} motors answer"
   },
   "camera": {
     "title": "Cameras",
