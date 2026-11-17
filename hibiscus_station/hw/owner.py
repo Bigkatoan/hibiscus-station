@@ -15,7 +15,7 @@ import threading
 import time
 from collections.abc import Callable
 from concurrent.futures import Future
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -269,6 +269,16 @@ class HardwareOwner:
         self.emit("alert", payload)
         if self.session_log is not None:
             self.session_log.line({"t": payload["t"], "alert": payload})
+
+    def drop_alerts(self, which: Callable[[Alert], bool] = lambda _a: True) -> None:
+        """Remove the alerts ``which`` selects, each with an ``active: false`` alert event.
+
+        Every open page keeps the alerts it was told about and drops one only on such an event
+        (``web/src/station/ws/store.ts``), so an alert must never leave ``self.alerts`` silently
+        (QC 0.2.9 QD-23: the thermal-stop banner stayed on screen after the e-stop reset).
+        """
+        for a in [a for a in self.alerts.values() if which(a)]:
+            self._alert(replace(a, active=False))
 
     def raise_alert(
         self,
@@ -1316,7 +1326,7 @@ class HardwareOwner:
             self._torque_off()
         self._close_devices()
         self.estop.clear()
-        self.alerts.clear()
+        self.drop_alerts()
         self.interrupted = False
         self._set_state("disconnected")
         return self.status()
@@ -1711,12 +1721,7 @@ class HardwareOwner:
             )
         self.estop.clear()
         self.relaxed_in_estop = False
-        for aid in [
-            a
-            for a, al in self.alerts.items()
-            if al.level == "critical" and al.message_key == "motor.critical.stopped"
-        ]:
-            self.alerts.pop(aid, None)
+        self.drop_alerts(lambda a: a.level == "critical" and a.message_key == "motor.critical.stopped")
         self._set_state("idle")
         return self.status()
 
