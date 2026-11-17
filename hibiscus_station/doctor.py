@@ -391,8 +391,12 @@ def ping_arm(
             out["scan_1mbps"] = f"{type(exc).__name__}: {exc}"
         for name, m in motors.items():
             row: dict[str, Any] = {}
-            model = bus.ping(name, num_retry=2)
+            key = f"ping Model_Number [{m.id}]"
+            missed = bus.errors[key]
+            model = bus.ping(name, num_retry=PING_RETRIES)
             row["model_number"] = model
+            # The one source of truth for "this motor answers": a ping, with retries (QD-24).
+            row["ping_tries"] = bus.errors[key] - missed + (model is not None)
             if model is None:
                 row["error"] = "no answer"
                 out["motors"][str(m.id)] = row
@@ -404,31 +408,11 @@ def ping_arm(
                     row[reg] = f"error: {exc}"
             row["decoded"] = decode_registers(row)
             out["motors"][str(m.id)] = row
-        n = 20
-        fails = 0
-        ok_ms: list[float] = []
-        for _ in range(n):
-            t = time.perf_counter()
-            try:
-                bus.sync_read("Present_Position", normalize=False, num_retry=0)
-            except Exception:
-                fails += 1  # a failed read waits for a timeout: never count it as bus speed (QD-21)
-            else:
-                ok_ms.append((time.perf_counter() - t) * 1000)
-        out["sync_read_present_position"] = {
-            "reads": n,
-            "failed": fails,
-            "ms_per_read": round(sum(ok_ms) / len(ok_ms), 2) if ok_ms else None,
-        }
-        # Bus speed (and the slow-bus advice) only means something when every motor answers;
-        # a silent motor is reported as such, not as a slow USB adapter (QD-21). When every motor
-        # answers but some reads are lost, the speed of the reads that worked still holds (QD-22).
-        silent = any(m.get("error") for m in out["motors"].values())
-        out["teleop_estimate"] = (
-            None
-            if silent or not ok_ms
-            else teleop_estimate(out["sync_read_present_position"]["ms_per_read"], usb_chip(vid_pid))
-        )
+        out["sync_read_present_position"] = time_sync_reads(bus)
+        out["usb_chip"] = usb_chip(vid_pid)
+        verdict = bus_verdict(out)
+        out["bus_verdict"] = verdict
+        out["teleop_estimate"] = verdict["estimate"] if verdict else None
         if calibration:
             out["calibration_vs_eeprom"] = _compare(calibration, out["motors"])
             out["calibration_file"] = calibration_file
@@ -448,6 +432,179 @@ def ping_arm(
         out["raw_dump"] = raw_dump(port)
     out["seconds"] = round(time.perf_counter() - t0, 2)
     return out
+
+
+#: Pings per motor (1 + retries) before it counts as silent.
+PING_RETRIES = 2
+#: Sync reads timed per arm, and how many of them must succeed for a speed estimate (QD-23).
+SYNC_READS = 20
+MIN_OK_READS = 5
+#: Classes of a failed read: the servo did not answer (timeout), it answered but the packet was
+#: corrupt (checksum), the answers did not parse (in a sync read, mostly one servo's answer missing
+#: so the next one's came in its place), anything else. Their words in the report.
+READ_FAILURES: dict[str, str] = {
+    "no_answer": "got no answer",
+    "corrupt": "got corrupted answers (checksum)",
+    "garbled": "got malformed answers (parse error: a servo's answer missing or cut short)",
+    "other": "failed with another error",
+}
+
+
+def read_failure(exc: BaseException) -> str:
+    """The class (a key of :data:`READ_FAILURES`) of a failed bus read, from rustypot's words:
+    ``... Operation timed out``, ``... Checksum error`` or ``... Parsing error`` (a sync read whose
+    answer of one servo is missing reads the next servo's answer in its place)."""
+    text = f"{exc} {exc.__cause__ or ''}".lower()
+    if "checksum" in text:
+        return "corrupt"
+    if any(w in text for w in ("timed out", "timeout", "no answer", "no status")):
+        return "no_answer"
+    if "parsing error" in text or "parse error" in text:
+        return "garbled"
+    return "other"
+
+
+def time_sync_reads(bus: Any, n: int = SYNC_READS) -> dict[str, Any]:
+    """``n`` sync reads of Present_Position, no retry: how many worked, how fast (the successful
+    ones only: a failed read waits for a timeout, QD-21) and the failures by class (QD-24)."""
+    by_class = dict.fromkeys(READ_FAILURES, 0)
+    ok_ms: list[float] = []
+    for _ in range(n):
+        t = time.perf_counter()
+        try:
+            bus.sync_read("Present_Position", normalize=False, num_retry=0)
+        except Exception as exc:
+            by_class[read_failure(exc)] += 1
+        else:
+            ok_ms.append((time.perf_counter() - t) * 1000)
+    return {
+        "reads": n,
+        "ok": len(ok_ms),
+        "failed": n - len(ok_ms),
+        **by_class,
+        "ms_per_read": round(sum(ok_ms) / len(ok_ms), 2) if ok_ms else None,
+    }
+
+
+def failures_text(sr: dict[str, Any]) -> str:
+    """``"3 got no answer, 2 got corrupted answers (checksum)"``: the failed reads by class."""
+    parts = [f"{sr[k]} {words}" for k, words in READ_FAILURES.items() if sr.get(k)]
+    return ", ".join(parts) or "failed"
+
+
+BUS_ADVICE = (
+    "check the 3-pin cables between the servos, the power supply (it may drop under load) and plug "
+    "the USB adapter straight into the PC"
+)
+
+
+def bus_verdict(a: dict[str, Any]) -> dict[str, Any] | None:
+    """The one conclusion about an arm's bus that every line of the report repeats (QD-21 - QD-24).
+
+    Inputs: the ping of each motor (with retries: the only source of "a motor answers"), the
+    ``SYNC_READS`` timed sync reads (ok / failed by class / ms of the reads that worked), the USB
+    chip. ``N`` is :data:`MIN_OK_READS`.
+
+    ===========  =================  ===============================  ===================  ==============
+    motors       sync reads         LIKELY PROBLEMS                  teleop estimate      slow-bus advice
+    (ping)                                                                                (D-21)
+    ===========  =================  ===============================  ===================  ==============
+    some silent  any (they fail)    "motor id(s) X do not answer     not measured (motor  never
+                                    (power? cable?)"                 id(s) X do not
+                                                                     answer)
+    all answer   all ok             nothing (slow-bus advice if      ~Hz                  if > 6 ms per
+                                    slow)                                                 read
+    all answer   some fail, >= N    "unreliable bus: F of R reads    ~Hz (speed of the K  if slow and
+                 ok                 failed (A got no answer, C got   reads that worked)   fewer reads
+                                    corrupted answers (checksum), G                       failed than
+                                    got malformed answers (parse                          worked
+                                    error ...), O failed with
+                                    another error) although every
+                                    motor answers a ping; <cables,
+                                    power, USB>"
+    all answer   < N ok             the same "unreliable bus" line   not measured (too    never
+                                                                     few reads
+                                                                     succeeded: K of R)
+    ===========  =================  ===============================  ===================  ==============
+
+    Only the classes that happened are named, so a checksum error is never called "no answer".
+    The scan line of the summary (:func:`answering_text`) is derived from the same pings.
+
+    Returns ``{"kind": "silent" | "unreliable" | "ok", "silent": [ids], "problem": str | None,
+    "estimate": dict | None, "not_measured": str | None, "estimate_of": str | None}``, or None
+    when no motor was pinged (port not opened).
+    """
+    motors = a.get("motors") or {}
+    if not motors:
+        return None
+    silent = [k for k, m in motors.items() if m.get("error")]
+    out: dict[str, Any] = {
+        "kind": "ok",
+        "silent": silent,
+        "problem": None,
+        "estimate": None,
+        "not_measured": None,
+        "estimate_of": None,
+    }
+    if silent:
+        ids = ", ".join(silent)
+        out.update(
+            kind="silent",
+            problem=f"motor id(s) {ids} do not answer (power? cable?)",
+            not_measured=f"motor id(s) {ids} do not answer",
+        )
+        return out
+    sr = a.get("sync_read_present_position")
+    if not sr:
+        return out
+    reads, failed = int(sr.get("reads") or 0), int(sr.get("failed") or 0)
+    ok = int(sr["ok"]) if sr.get("ok") is not None else reads - failed
+    if failed:
+        out.update(
+            kind="unreliable",
+            problem=(
+                f"unreliable bus: {failed} of {reads} reads failed ({failures_text(sr)}) although "
+                f"every motor answers a ping; {BUS_ADVICE}"
+            ),
+        )
+    if ok < MIN_OK_READS or sr.get("ms_per_read") is None:
+        out["not_measured"] = f"too few reads succeeded: {ok} of {reads}"
+        return out
+    est = teleop_estimate(sr["ms_per_read"], a.get("usb_chip"))
+    if est and est.get("warning") and failed >= ok:
+        del est["warning"]  # most reads failed: the bus is the problem, not the adapter's speed
+    out["estimate"] = est
+    if failed:
+        out["estimate_of"] = f"speed of the {ok} reads that worked"
+    return out
+
+
+def answering_text(a: dict[str, Any]) -> str:
+    """The ids that answer, from the pings (:func:`bus_verdict`'s source), never contradicting the
+    per-motor lines; the one-shot broadcast scan only adds notes: ids it missed that answered a
+    later ping, ids it saw that no ping reached, ids outside 1-6."""
+    motors = a.get("motors") or {}
+    scan = a.get("scan_1mbps")
+    seen = scan if isinstance(scan, dict) else {}
+    answering = {k: m["model_number"] for k, m in motors.items() if not m.get("error")}
+    out = _scan_text(answering)
+    retry = [
+        int(k)
+        for k, m in motors.items()
+        if not m.get("error") and (int(m.get("ping_tries") or 1) > 1 or (seen and k not in seen))
+    ]
+    notes: list[str] = []
+    if retry:
+        notes.append(f"{_ranges(retry)} answered only on a retry")
+    lost = [int(k) for k, m in motors.items() if m.get("error") and k in seen]
+    if lost:
+        notes.append(f"{_ranges(lost)} answered the first scan, then no ping")
+    other = {k: v for k, v in seen.items() if k not in motors}
+    if other:
+        notes.append(f"other ids on the bus: {_scan_text(other)}")
+    if scan is not None and not isinstance(scan, dict):
+        notes.append(f"scan failed ({scan})")
+    return out + "".join(f"; {n}" for n in notes)
 
 
 #: A sync read of six STS3215 at 1 Mbaud takes ~1.5-3 ms through an adapter with a 1 ms USB
@@ -772,18 +929,9 @@ def warnings(report: dict[str, Any]) -> list[str]:
             )
         elif a.get("error"):
             out.append(f"{where}: {a['error']}")
-        missing = [k for k, m in a.get("motors", {}).items() if m.get("error")]
-        if missing:
-            out.append(
-                f"{a['robot']} {a['arm']}: motor id(s) {', '.join(missing)} do not answer (power? cable?)"
-            )
-        sr = a.get("sync_read_present_position") or {}
-        if sr.get("failed") and not missing and a.get("motors"):
-            out.append(
-                f"{a['robot']} {a['arm']}: unreliable bus: {sr['failed']} of {sr['reads']} reads got no "
-                "answer although every motor answers; check the 3-pin cables between the servos, the "
-                "power supply (it may drop under load) and plug the USB adapter straight into the PC"
-            )
+        verdict = bus_verdict(a) or {}
+        if verdict.get("problem"):
+            out.append(f"{a['robot']} {a['arm']}: {verdict['problem']}")
         cmp = a.get("calibration_vs_eeprom") or {}
         diffs = {m: d for m, d in cmp.items() if d not in ("match", NO_ANSWER)}
         if diffs:
@@ -796,7 +944,7 @@ def warnings(report: dict[str, Any]) -> list[str]:
                 f"({len(names)} of {len(cmp)} motors: {detail}); Connect writes the file to the "
                 "motors: if it is not this arm's file, calibrate the arm again"
             )
-        est = a.get("teleop_estimate") or {}
+        est = verdict.get("estimate") or {}
         if est.get("warning"):
             out.append(f"{where}: {est['warning']}")
         bad: dict[str, list[str]] = {}
@@ -1004,7 +1152,7 @@ def summary(report: dict[str, Any], target: Path | None = None) -> str:
         if a.get("error"):
             lines.append(f"{head}: {a['error']}")
             continue
-        lines.append(f"{head}: ids answering at 1 Mbps: {_scan_text(a.get('scan_1mbps'))}")
+        lines.append(f"{head}: ids answering at 1 Mbps: {answering_text(a)}")
         for mid, m in a.get("motors", {}).items():
             if m.get("error"):
                 lines.append(f"    id {mid}: {m['error']}")
@@ -1029,20 +1177,7 @@ def summary(report: dict[str, Any], target: Path | None = None) -> str:
             )
         lines += _raw_lines(a.get("raw_dump"))
         if a.get("sync_read_present_position"):
-            s = a["sync_read_present_position"]
-            speed = f"{s['ms_per_read']} ms each" if s.get("ms_per_read") is not None else "no read succeeded"
-            lines.append(f"    sync read: {s['failed']}/{s['reads']} failed, {speed}")
-            if s["failed"] and not a.get("teleop_estimate"):
-                lines.append("    teleop estimate: not measured (some motors did not answer)")
-            elif s["failed"]:
-                lines.append(f"    ! {s['failed']} of {s['reads']} reads lost although every motor answers")
-            est = a.get("teleop_estimate")
-            if est:
-                lines.append(
-                    f"    teleop estimate: ~{est['hz']} Hz, "
-                    f"leader -> follower latency ~{est['latency_ms']} ms"
-                    + (f"  ! {est['warning']}" if est.get("warning") else "")
-                )
+            lines += _sync_read_lines(a)
         if a.get("calibration_vs_eeprom"):
             lines.append(f"    calibration file vs motors: {_compare_text(a['calibration_vs_eeprom'])}")
         if "eeprom_matches" in a:
@@ -1054,6 +1189,34 @@ def summary(report: dict[str, Any], target: Path | None = None) -> str:
     lines += ["", _log_line(len(report["log_tail"])), ""]
     lines += send_instructions(report, target)
     return redact("\n".join(lines))
+
+
+def _sync_read_lines(a: dict[str, Any]) -> list[str]:
+    """The timed sync reads and :func:`bus_verdict`'s conclusion, the same words as LIKELY PROBLEMS."""
+    s = a["sync_read_present_position"]
+    verdict = bus_verdict(a) or {}
+    reads, failed = s.get("reads"), s.get("failed") or 0
+    ok = s["ok"] if s.get("ok") is not None else (reads or 0) - failed
+    if s.get("ms_per_read") is None:
+        speed = "no read succeeded"
+    elif failed:
+        speed = f"{ok} worked, {s['ms_per_read']} ms each"
+    else:
+        speed = f"{s['ms_per_read']} ms each"
+    detail = f" ({failures_text(s)})" if failed else ""
+    lines = [f"    sync read: {failed}/{reads} failed{detail}, {speed}"]
+    if verdict.get("kind") == "unreliable":
+        lines.append(f"    ! {str(verdict['problem']).split('; ')[0]}")
+    est = verdict.get("estimate")
+    if est:
+        lines.append(
+            f"    teleop estimate: ~{est['hz']} Hz, leader -> follower latency ~{est['latency_ms']} ms"
+            + (f" ({verdict['estimate_of']})" if verdict.get("estimate_of") else "")
+            + (f"  ! {est['warning']}" if est.get("warning") else "")
+        )
+    elif verdict.get("not_measured"):
+        lines.append(f"    teleop estimate: not measured ({verdict['not_measured']})")
+    return lines
 
 
 def _text(v: Any) -> str:

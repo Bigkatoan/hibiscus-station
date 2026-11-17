@@ -19,7 +19,7 @@ import sys
 import time
 import types
 import zipfile
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
 from unittest import mock
@@ -73,6 +73,8 @@ class LoopbackPort:
         self.rx = bytearray()
         self._tx = bytearray()
         self.owner: object | None = None
+        self.bad_checksum = False
+        self.last: tuple[bytes, int] = (b"", 0)
         self.refuse: str | None = None  # the OS error text when another program holds the port
 
     def open(self, who: object) -> None:
@@ -122,7 +124,9 @@ class LoopbackPort:
         self.rx += out
 
     def status(self, motor_id: int) -> tuple[bytes, int] | None:
-        """The next well-formed status packet of ``motor_id``: (params, error byte)."""
+        """The next well-formed status packet of ``motor_id``: (params, error byte). ``bad_checksum``
+        tells afterwards whether an answer of ``motor_id`` came with a wrong checksum."""
+        self.bad_checksum = False
         while True:
             start = self.rx.find(b"\xff\xff")
             if start < 0 or len(self.rx) < start + 4 or len(self.rx) < start + 4 + self.rx[start + 3]:
@@ -131,8 +135,33 @@ class LoopbackPort:
             del self.rx[:start]
             pkt = bytes(self.rx[: 4 + self.rx[3]])
             del self.rx[: len(pkt)]
-            if checksum(pkt[2:-1]) == pkt[-1] and pkt[2] == motor_id:
+            if pkt[2] != motor_id:
+                continue
+            if checksum(pkt[2:-1]) == pkt[-1]:
                 return pkt[5:-1], pkt[4]
+            self.bad_checksum = True
+
+    def sync_answer(self, motor_id: int) -> str:
+        """The next packet whatever its id, as rustypot reads a sync read's answers: ``"ok"`` (in
+        ``last``), ``"Operation timed out"``, ``"Checksum error"`` or ``"Parsing error"``."""
+        rx = self.rx
+        start = rx.find(b"\xff\xff")
+        if start < 0 or len(rx) < start + 4 or len(rx) < start + 4 + rx[start + 3]:
+            rx.clear()
+            return "Operation timed out"
+        del rx[:start]
+        pkt = bytes(rx[: 4 + rx[3]])
+        del rx[: len(pkt)]
+        if checksum(pkt[2:-1]) != pkt[-1]:
+            return "Checksum error"
+        if pkt[2] != motor_id:
+            return "Parsing error"
+        self.last = (pkt[5:-1], pkt[4])
+        return "ok"
+
+    def failure(self) -> str:
+        """rustypot's words for the last failed answer: a corrupt packet or none at all."""
+        return "Checksum error" if self.bad_checksum else "Operation timed out"
 
 
 def _sleep(seconds: float) -> None:
@@ -217,7 +246,7 @@ class LoopBus:
             got = self.port.status(motor_id)
             if got is not None:
                 return got
-        raise RuntimeError(f"timeout waiting for motor {motor_id}")
+        raise RuntimeError(self.port.failure())
 
     # -- rustypot.Bus API
     def close(self) -> None:
@@ -249,10 +278,18 @@ class LoopBus:
         for _ in range(retries + 1):
             self.port.rx.clear()
             self.port.write(_packet(0xFE, 0x82, bytes([info.addr, info.size, *ids])))
-            got = [self.port.status(i) for i in ids]
-            if all(g is not None for g in got):
-                return [(self._decode(info, g[0]), g[1]) for g in got if g is not None]
-        raise RuntimeError(f"sync read {name}: timeout")
+            got: list[tuple[bytes, int]] = []
+            # rustypot takes the answers in order and stops at the first one that is missing
+            # (timeout), corrupt (checksum) or another servo's (a missing answer in the middle:
+            # "Parsing error", as on a real bus)
+            for i in ids:
+                why = f"motor {i}: {self.port.sync_answer(i)}"
+                if not why.endswith(": ok"):
+                    break
+                got.append(self.port.last)
+            else:
+                return [(self._decode(info, g[0]), g[1]) for g in got]
+        raise RuntimeError(why)
 
     def sync_write_register(self, ids: list[int], name: str, values: list[int], retries: int = 0) -> None:
         info = self._reg(name)
@@ -270,7 +307,13 @@ class LoopBus:
         ids = []
         while (got := self._next_any()) is not None:
             ids.append(got)
-        return {i: self.read_register_with_error(i, "model_number")[0] for i in sorted(ids)}
+        out = {}
+        for i in sorted(ids):  # one try each, as rustypot: a lost answer drops the id from the scan
+            try:
+                out[i] = self.read_register_with_error(i, "model_number")[0]
+            except RuntimeError:
+                continue
+        return out
 
     def scan(self, definition: Any, ids: list[int] | None = None) -> dict[int, int]:
         out = {}
@@ -832,7 +875,7 @@ def test_a_silent_motor_is_not_reported_as_a_slow_bus(
     assert "slow bus" not in text and "latency timer" not in text, text
     fol = text[text.index("  arm follower on ") :]
     fol = fol[: fol.index("\n  arm leader on ")] if "\n  arm leader on " in fol else fol
-    assert "teleop estimate: not measured (some motors did not answer)" in fol, fol
+    assert "teleop estimate: not measured (motor id(s) 6 do not answer)" in fol, fol
     assert "Hz, leader -> follower latency" not in fol, fol
 
 
@@ -854,8 +897,259 @@ def test_a_bus_that_loses_answers_is_a_likely_problem(
     problems = text.split("\n\n")[0]
     assert "arm follower: unreliable bus: " in problems, problems
     assert "do not answer" not in problems, problems
-    assert "not measured (some motors did not answer)" not in fol, fol
-    assert "reads lost although every motor answers" in fol, fol
+    assert "do not answer" not in fol, fol
+    assert "although every motor answers a ping" in fol, fol
+
+
+def _faulty_sync_reads(emu: STSEmulator, fault: Callable[[int], str]) -> None:
+    """Every sync read answer of ``emu`` goes through ``fault(n)`` (n = 0, 1, ... per sync read):
+    ``"drop"`` (no answer at all), ``"corrupt"`` (bad checksum on the first servo) or ``"ok"``.
+    Pings and plain reads are untouched: every motor still answers."""
+    handle, count = emu.handle, iter(range(10**6))
+
+    def faulty(pkt_id: int, instr: int, params: bytes) -> bytes:
+        out = handle(pkt_id, instr, params)
+        if instr != 0x82 or not out:
+            return out
+        how = fault(next(count))
+        if how == "drop":
+            return b""
+        if how == "corrupt":
+            first = 4 + out[3]
+            return out[: first - 1] + bytes([out[first - 1] ^ 0x5A]) + out[first:]
+        return out
+
+    emu.handle = faulty  # type: ignore[method-assign]
+
+
+def _section(text: str, arm: str) -> str:
+    sec = text[text.index(f"  arm {arm} on ") :].split("\n\n")[0]
+    nxt = re.search(r"\n  \S", sec[3:])
+    return sec[: nxt.start() + 3] if nxt else sec
+
+
+def test_every_read_lost_while_every_motor_answers_is_not_a_silent_motor(
+    tmp_path: Path, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """QD-23: every ping answers, every sync read is lost. The report said "some motors did not
+    answer" under "unreliable bus ... although every motor answers"."""
+    f, ld = emus
+    home = _calibrated_home(tmp_path, f, ld, monkeypatch)
+    _faulty_sync_reads(f, lambda _n: "drop")
+    text, _t = _run(home, tmp_path / "out")
+    problems, fol = text.split("\n\n")[0], _section(text, "follower")
+    assert "do not answer" not in text and "did not answer" not in fol, text
+    assert (
+        "arm follower: unreliable bus: 20 of 20 reads failed (20 got no answer) although every motor "
+        "answers a ping; " in problems
+    ), problems
+    assert "    teleop estimate: not measured (too few reads succeeded: 0 of 20)" in fol.splitlines(), fol
+    assert "slow bus" not in text, text
+
+
+def test_checksum_errors_are_not_called_no_answer(
+    tmp_path: Path, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """QD-24: a corrupt answer is an answer; the report called it "got no answer". Counts by class."""
+    f, ld = emus
+    home = _calibrated_home(tmp_path, f, ld, monkeypatch)
+    _faulty_sync_reads(f, lambda n: {0: "corrupt", 1: "drop"}.get(n % 4, "ok"))
+    text, target = _run(home, tmp_path / "out")
+    problems, fol = text.split("\n\n")[0], _section(text, "follower")
+    sr = _arm(_report(target), "follower")["sync_read_present_position"]
+    assert (sr["failed"], sr["no_answer"], sr["corrupt"], sr["ok"]) == (10, 5, 5, 10), sr
+    assert (
+        "unreliable bus: 10 of 20 reads failed (5 got no answer, 5 got corrupted answers (checksum)) "
+        "although every motor answers a ping" in problems
+    ), problems
+    assert "(speed of the 10 reads that worked)" in fol, fol
+    _faulty_sync_reads(ld, lambda n: "corrupt" if n % 2 else "ok")
+    text, _t = _run(home, tmp_path / "out2")
+    lead = _section(text, "leader")
+    mine = [p for p in text.split("\n\n")[0].splitlines() if p.startswith("  ! arm leader: ")]
+    assert "got no answer" not in lead and "got no answer" not in " ".join(mine), text
+    assert any("(10 got corrupted answers (checksum))" in p for p in mine), mine
+    assert "sync read: 10/20 failed (10 got corrupted answers (checksum)), 10 worked, " in lead, lead
+
+
+def test_the_scan_line_agrees_with_the_pings(
+    tmp_path: Path, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """QD-24: the one-shot scan missed id 4, a ping with retries reached it: the report said
+    "ids answering: 1-3, 5-6" above a full id 4 line and "every motor answers"."""
+    f, ld = emus
+    home = _calibrated_home(tmp_path, f, ld, monkeypatch)
+    handle, missed = f.handle, []
+
+    def miss_first(pkt_id: int, instr: int, params: bytes) -> bytes:
+        out = handle(pkt_id, instr, params)
+        if pkt_id in (4, 0xFE) and instr in (0x01, 0x02) and not missed:
+            missed.append(instr)
+            if pkt_id == 0xFE:  # broadcast ping: id 4's answer is lost
+                pkts, rest = [], out
+                while rest:
+                    pkts.append(rest[: 4 + rest[3]])
+                    rest = rest[4 + rest[3] :]
+                return b"".join(x for x in pkts if x[2] != 4)
+            return b""
+        return out
+
+    f.handle = miss_first  # type: ignore[method-assign]
+    text, _t = _run(home, tmp_path / "out")
+    fol = _section(text, "follower")
+    head = fol.splitlines()[0]
+    assert head.endswith(": ids answering at 1 Mbps: 1-6 (model 777); 4 answered only on a retry"), head
+    assert "    id 4: model 777 fw 3.10 " in fol, fol
+
+
+# ------------------------------------------------------------------ invariants over a fault grid
+GRID_DROP = (0.0, 0.01, 0.05, 0.2, 0.35, 0.4, 1.0)
+GRID_CORRUPT = (0.0, 0.05, 0.4)
+GRID_SILENT = ("none", "one", "all")
+GRID_SEEDS = (0, 1, 2)
+
+
+def _grid() -> Iterator[Any]:
+    """Every combination; the default suite (every OS) keeps seed 0 with the slow adapter off,
+    plus the clean and the lossy bus with the slow adapter on; the rest is ``slow``."""
+    for drop in GRID_DROP:
+        for corrupt in GRID_CORRUPT:
+            for silent in GRID_SILENT:
+                for seed in GRID_SEEDS:
+                    for slow in (False, True):
+                        quick = seed == 0 and (
+                            not slow or (silent != "all" and drop in (0.0, 0.05, 1.0) and corrupt < 0.4)
+                        )
+                        yield pytest.param(
+                            drop,
+                            corrupt,
+                            silent,
+                            seed,
+                            slow,
+                            id=f"drop{drop}-corrupt{corrupt}-silent_{silent}-seed{seed}-{'slow' if slow else 'fast'}",
+                            marks=() if quick else (pytest.mark.slow,),
+                        )
+
+
+def _grid_report(arm: dict[str, Any]) -> tuple[str, list[str]]:
+    report: dict[str, Any] = {
+        "versions": {
+            "hibiscus_station": "x",
+            "python": "x",
+            "lerobot": "x",
+            "rustypot": "x",
+            "os": "x",
+            "machine": "x",
+        },
+        "home": "h",
+        "calibration_root": "c",
+        "ports": [],
+        "calibrations": [],
+        "profiles": {"active": None, "robots": []},
+        "running": None,
+        "arms": [dict(arm, robot="arm", arm="follower")],
+        "log_tail": [],
+    }
+    report["warnings"] = doctor.warnings(report)
+    mine = [w[len("arm follower") :] for w in report["warnings"] if w.startswith("arm follower")]
+    return doctor.summary(report), mine
+
+
+@pytest.mark.parametrize(("drop", "corrupt", "silent", "seed", "slow"), list(_grid()))
+def test_the_report_never_contradicts_itself(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    drop: float,
+    corrupt: float,
+    silent: str,
+    seed: int,
+    slow: bool,
+) -> None:
+    """QD-21 - QD-24 as invariants: lost / corrupt answers, silent motors and a slow adapter, every
+    mix, and no two sentences of the report disagree (loopback port: the same on every OS)."""
+    arms = Arms("loop", tmp_path, monkeypatch)
+    emu = arms(seed=seed)
+    try:
+        emu.rng.seed(seed)
+        emu.drop_rate, emu.corrupt_rate = drop, corrupt
+        dead = {"none": (), "one": (6,), "all": tuple(emu.servos)}[silent]
+        for i in dead:
+            emu.servos[i].dead = True
+        if slow:  # a slow adapter (16 ms latency timer, hub): only the timed reads pay for it here
+            handle = emu.handle
+
+            def slow_handle(pkt_id: int, instr: int, params: bytes) -> bytes:
+                emu.latency_s = 0.009 if instr == 0x82 else 0.0005
+                return handle(pkt_id, instr, params)
+
+            emu.handle = slow_handle  # type: ignore[method-assign]
+        arm = doctor.ping_arm(emu.port, raw=False, vid_pid="1a86:55d3")
+    finally:
+        arms.close()
+    text, problems = _grid_report(arm)
+    fol = _section(text, "follower")
+    lines = fol.splitlines()
+    sr = arm["sync_read_present_position"]
+    failed = sr["failed"]
+    ok = sr.get("ok", sr["reads"] - failed)
+    every = " ".join(problems) + fol
+    ctx = f"{problems}\n{fol}"
+
+    # one source of truth for "this motor answers": the per-motor lines
+    no_answer = {int(m.group(1)) for m in re.finditer(r"^    id (\d+): no answer$", fol, re.M)}
+    full = {int(m.group(1)) for m in re.finditer(r"^    id (\d+): model ", fol, re.M)}
+    assert no_answer | full == set(range(1, 7)) and not no_answer & full, ctx
+    assert set(dead) <= no_answer, ctx
+    scan = re.search(r": ids answering at 1 Mbps: (.*)$", lines[0])
+    assert scan, ctx
+    listed = scan.group(1).split(" (model ")[0]
+    ids: set[int] = set()
+    if listed != "none":
+        for part in listed.split(", "):
+            lo, _, hi = part.partition("-")
+            ids |= set(range(int(lo), int(hi or lo) + 1))
+    assert ids == full, ctx
+
+    # silent motors: named, and nothing about the bus's speed or reliability
+    dna = [p for p in problems if "do not answer" in p]
+    if no_answer:
+        assert dna == [
+            f": motor id(s) {', '.join(map(str, sorted(no_answer)))} do not answer (power? cable?)"
+        ], ctx
+        assert (
+            f"teleop estimate: not measured (motor id(s) {', '.join(map(str, sorted(no_answer)))} do not answer)"
+            in fol
+        ), ctx
+        assert "every motor answers" not in every and "unreliable bus" not in every, ctx
+        assert "slow bus" not in every and " Hz, " not in fol, ctx
+    else:
+        assert not dna and "do not answer" not in fol, ctx
+
+    # failed reads by class: each class named only when it happened
+    classes = {k: sr.get(k, 0) for k in ("no_answer", "corrupt", "garbled", "other")}
+    assert sum(classes.values()) == failed and ok + failed == sr["reads"], sr
+    assert ("got no answer" in every) == (classes["no_answer"] > 0), ctx
+    assert ("got corrupted answers (checksum)" in every) == (classes["corrupt"] > 0), ctx
+    if corrupt == 0:
+        assert classes["corrupt"] == 0, sr
+    if drop == 0 and not dead:  # nothing goes missing: every failure is a checksum error
+        assert classes["no_answer"] == classes["garbled"] == classes["other"] == 0, sr
+    if not no_answer:
+        assert ("unreliable bus" in " ".join(problems)) == (failed > 0), ctx
+        assert ("unreliable bus" in fol) == (failed > 0), ctx
+
+    # one conclusion about speed
+    est = [x for x in lines if x.startswith("    teleop estimate: ")]
+    assert len(est) == 1, ctx
+    measured = " Hz, leader -> follower latency" in est[0]
+    assert measured == (not no_answer and ok >= doctor.MIN_OK_READS), ctx
+    if not no_answer and not measured:
+        assert est[0] == f"    teleop estimate: not measured (too few reads succeeded: {ok} of 20)", ctx
+    assert ("reads that worked" in est[0]) == (measured and failed > 0), ctx
+    if "slow bus" in every:
+        assert not no_answer and ok >= doctor.MIN_OK_READS and failed < ok, ctx
+    if not no_answer and failed == 0:
+        assert ("slow bus" in every) == slow, ctx
 
 
 def test_a_calibration_file_of_another_arm_names_every_motor_that_differs() -> None:
