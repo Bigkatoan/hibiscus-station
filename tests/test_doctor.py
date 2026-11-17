@@ -358,3 +358,13 @@ def test_doctor_zip_has_no_token_or_pat(
         assert token.encode() not in blob, name
         assert pat_secret.encode() not in blob, name
     assert token not in text and pat_secret not in text
+
+
+def test_doctor_with_no_ping_says_to_run_again_without_it(tmp_path: Path) -> None:
+    text, _target = doctor.run(
+        tmp_path / "home", tmp_path / "out", ping=False, probe_cameras=False, echo=lambda _s: None
+    )
+    tail = text.split("WHAT TO SEND / CẦN GỬI GÌ\n")[1]
+    assert "The motors were not checked (--no-ping)" in tail and "without --no-ping" in tail
+    assert "Động cơ chưa được kiểm tra (--no-ping)" in tail and "không có --no-ping" in tail
+    assert "close Station and LeLab" not in tail

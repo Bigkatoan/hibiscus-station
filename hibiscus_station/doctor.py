@@ -764,13 +764,19 @@ def send_instructions(report: dict[str, Any], target: Path | None) -> list[str]:
     """The last lines, English then Vietnamese: the one file to send, and when to run again."""
     name = str(target.resolve()) if target is not None else "hibiscus-station-doctor-<time>.zip"
     again = motor_check_incomplete(report)
+    no_ping = not report.get("ping", True)
     lines = [
         "WHAT TO SEND / CẦN GỬI GÌ",
         f"  EN: Send us this one file: {name}",
         "      It holds this report, the last log lines, the robot profiles and the calibration files;",
         "      no login token and no access token.",
     ]
-    if again:
+    if no_ping:
+        lines += [
+            "      The motors were not checked (--no-ping): to send the full report, run",
+            "      `hibiscus-station doctor --verbose` without --no-ping and send the new file instead.",
+        ]
+    elif again:
         lines += [
             "      The motor check is incomplete (see LIKELY PROBLEMS): close Station and LeLab, keep both",
             "      arms plugged in and powered, run `hibiscus-station doctor --verbose` again and send the",
@@ -783,7 +789,12 @@ def send_instructions(report: dict[str, Any], target: Path | None) -> list[str]:
         "      Tệp này có báo cáo này, các dòng nhật ký cuối, hồ sơ robot và các tệp hiệu chỉnh;",
         "      không có token đăng nhập hay token truy cập.",
     ]
-    if again:
+    if no_ping:
+        lines += [
+            "      Động cơ chưa được kiểm tra (--no-ping): để gửi báo cáo đầy đủ, chạy",
+            "      `hibiscus-station doctor --verbose` không có --no-ping rồi gửi tệp mới thay cho tệp này.",
+        ]
+    elif again:
         lines += [
             "      Phần kiểm tra động cơ chưa đủ (xem LIKELY PROBLEMS): tắt Station và LeLab, giữ cả hai tay",
             "      cắm cáp và có điện, chạy lại `hibiscus-station doctor --verbose` rồi gửi tệp mới thay cho",
