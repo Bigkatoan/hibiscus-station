@@ -201,3 +201,14 @@ def test_wheel_platform_markers() -> None:
     assert m("x-1-py3-none-any.whl") == ""
     with pytest.raises(ValueError):
         m("x-1-cp311-cp311-win_amd64.whl")
+
+
+def test_pre_release_versions_are_matched_whole(tmp_path: Path) -> None:
+    """A pre-release (1.0.0a1, the M0 build) must not pass as its release number (1.0.0)."""
+    root = _tree(tmp_path)
+    v = check_versions.station_version(root)
+    readme = root / "README.md"
+    readme.write_text(
+        readme.read_text(encoding="utf-8").replace(f":{v}-cpu", f":{v}a1-cpu", 1), encoding="utf-8"
+    )
+    assert any("README.md" in e and f"{v}a1" in e for e in check_versions.check(root))

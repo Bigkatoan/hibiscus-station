@@ -20,7 +20,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 REPO = "https://github.com/Bigkatoan/hibiscus-station"
-V = r"(\d+\.\d+\.\d+(?:-[0-9A-Za-z.]+)?)"
+#: a PEP 440 release or pre-release as the package writes it (0.2.8, 1.0.0a1, 1.0.0rc2, 1.0.0.dev3)
+V = r"(\d+\.\d+\.\d+(?:(?:a|b|rc)\d+)?(?:\.(?:post|dev)\d+)?)"
 #: documents for users: every Station version they name must be the current one
 DOCS = [
     "README.md",
@@ -32,7 +33,7 @@ DOCS = [
     "docs/user-guide/vi/station.md",
 ]
 #: where a Station version appears in those documents
-TAG = r"(\d+\.\d+\.\d+(?:-[0-9A-Za-z.]+?)?)-(?:cpu|cuda|jetson)\b"
+TAG = V + r"-(?:cpu|cuda|jetson)\b"
 DOC_PATTERNS = [
     re.compile(r"ghcr\.io/bigkatoan/hibiscus-station:" + TAG),
     re.compile(r"…:" + TAG),
