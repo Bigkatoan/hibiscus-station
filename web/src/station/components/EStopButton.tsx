@@ -87,7 +87,7 @@ export function EStopButton({ size = 96 }: { size?: 96 | 128 }) {
   }, [pressedAt]);
 
   if (!moving && !estopped) return null;
-  const torqueOn = status?.robot?.follower_torque ?? false;
+  const torqueOn = status?.robot?.follower_torque === true;
   const showRelax = torqueOn && (estopped || pressedAt !== null);
 
   return (

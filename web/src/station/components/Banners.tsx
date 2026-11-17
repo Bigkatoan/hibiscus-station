@@ -109,7 +109,7 @@ export function SafetyBanners() {
                   })}
             </p>
             <p className="mt-1 text-sm">
-              {status?.robot?.follower_torque === false ? t("banner.support_arm") : t("banner.stopped_hold")}
+              {status?.robot?.follower_torque === true ? t("banner.stopped_hold") : t("banner.support_arm")}
             </p>
             {eta !== null ? <p className="mt-1 text-sm">{t("banner.cooling_eta", { s: eta })}</p> : null}
           </div>

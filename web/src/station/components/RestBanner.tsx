@@ -42,16 +42,21 @@ export function RestBanner({ status }: { status: Status }) {
       </div>
     );
   }
-  const torqueOn = status.robot?.follower_torque ?? false;
+  // QC 0.2.9 QD-4: say what the arm really does, from the live torque state. Torque unknown reads
+  // as off (the safe assumption: support the arm). The hint names Relax only when it is offered.
+  const torqueOn = status.robot?.follower_torque === true;
   return (
     <div
       role="status"
       data-testid="rest-banner"
       data-phase="offer"
+      data-torque={torqueOn ? "on" : "off"}
       className="flex flex-col gap-2 border-4 border-frame bg-card px-3 py-3"
     >
-      <p className="font-extrabold">{t("banner.interrupted")}</p>
-      <p className="text-sm">{t("banner.interrupted_hint")}</p>
+      <p className="font-extrabold" data-testid="rest-headline">
+        {t(torqueOn ? "banner.interrupted" : "banner.interrupted_relaxed")}
+      </p>
+      <p className="text-sm">{t(torqueOn ? "banner.interrupted_hint" : "banner.interrupted_hint_relaxed")}</p>
       <div className="flex flex-wrap items-start gap-2">
         {home.hasHome ? <GoHomeButton /> : <SetHomeButton />}
         {torqueOn ? <RelaxButton /> : null}

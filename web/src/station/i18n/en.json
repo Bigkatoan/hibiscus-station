@@ -117,6 +117,8 @@
     "estopped": "Robot stopped: {{reason}}.",
     "interrupted": "Stopped. The arm holds its position.",
     "interrupted_hint": "Return Home moves it slowly; Relax turns the torque off (support the arm first). The next program or trajectory run starts from its beginning.",
+    "interrupted_relaxed": "Stopped. Torque is off: the arm is limp and does not hold its position.",
+    "interrupted_hint_relaxed": "Return Home turns the torque back on and moves the arm slowly. The next program or trajectory run starts from its beginning.",
     "rest": "Return Home",
     "rest_hint": "Moves slowly (at most {{speed}} degrees per second) to Home. Keep this page open; Space stops it.",
     "rest_need_pose": "No Home yet. Set Home at the current position to return there later.",

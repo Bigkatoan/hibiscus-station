@@ -117,6 +117,8 @@
     "estopped": "Robot đã dừng: {{reason}}.",
     "interrupted": "Đã dừng. Tay robot giữ nguyên vị trí.",
     "interrupted_hint": "Về Home sẽ đưa tay về chậm; Thả lỏng sẽ tắt mô-men (hãy đỡ tay trước). Lần chạy chương trình hoặc quỹ đạo tiếp theo sẽ bắt đầu lại từ đầu.",
+    "interrupted_relaxed": "Đã dừng. Mô-men đã tắt: tay robot thả lỏng, không tự giữ vị trí.",
+    "interrupted_hint_relaxed": "Về Home sẽ bật lại mô-men và đưa tay về chậm. Lần chạy chương trình hoặc quỹ đạo tiếp theo sẽ bắt đầu lại từ đầu.",
     "rest": "Về Home",
     "rest_hint": "Di chuyển chậm (tối đa {{speed}} độ mỗi giây) về Home. Giữ trang này mở; Space để dừng.",
     "rest_need_pose": "Chưa có Home. Hãy đặt Home tại vị trí hiện tại để sau này về được đó.",

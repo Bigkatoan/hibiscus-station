@@ -113,6 +113,57 @@ describe("CR-1: Stop holds, then Return Home / Relax", () => {
       expect(h.sim.torque).toBe(false);
     });
     expect(await screen.findByTestId("support-arm")).toHaveTextContent("Support the arm");
+    // QC 0.2.9 QD-4: once relaxed the headline never says the arm holds, nor offers a Relax it hides
+    expect(banner).toHaveAttribute("data-torque", "off");
+    expect(screen.getByTestId("rest-headline")).toHaveTextContent(
+      "Stopped. Torque is off: the arm is limp and does not hold its position.",
+    );
+    expect(banner).not.toHaveTextContent("holds its position");
+    expect(banner).not.toHaveTextContent(/Relax/);
+    expect(within(banner).queryByRole("button", { name: "Relax" })).toBeNull();
+  });
+
+  it("a double Space (relax) then reset: the stop card says torque off, in vi too (QD-4)", async () => {
+    const h = setupStation();
+    const p = h.sim.profiles[0];
+    if (p) p.follower.rest_pose = { ...HOME };
+    const user = userEvent.setup();
+    renderStation("/teleop", h);
+    await settle();
+    h.sim.startSession("teleop", {});
+    h.sim.estop("user");
+    h.sim.estop("user"); // second press within 2 s: torque off
+    expect(h.sim.torque).toBe(false);
+    const dock = await screen.findByTestId("estop-dock");
+    await user.click(within(dock).getByRole("button", { name: "I'm clear, reset" }));
+    const banner = await screen.findByTestId("rest-banner");
+    expect(banner).toHaveTextContent("Stopped. Torque is off");
+    expect(banner).toHaveTextContent("Support the arm. Torque is off.");
+    expect(banner).not.toHaveTextContent("holds its position");
+    expect(within(banner).getByRole("button", { name: /Return Home/ })).toBeEnabled();
+    const { i18n } = await import("@/lib/i18n");
+    await i18n.changeLanguage("vi");
+    try {
+      await waitFor(() => {
+        expect(screen.getByTestId("rest-headline")).toHaveTextContent("Mô-men đã tắt");
+      });
+      expect(banner).not.toHaveTextContent("giữ nguyên vị trí");
+    } finally {
+      await i18n.changeLanguage("en");
+    }
+  });
+
+  it("a thermal safe stop never says the arm is held (QD-4)", async () => {
+    const h = setupStation();
+    renderStation("/teleop", h);
+    await settle();
+    h.sim.startSession("teleop", {});
+    h.sim.temps.follower.elbow_flex = 66;
+    await advance(h.sim, 1.1);
+    expect(h.sim.state).toBe("estopped");
+    const banner = await screen.findByTestId("critical-banner");
+    expect(banner).toHaveTextContent("Support the arm. Torque is off.");
+    expect(banner).not.toHaveTextContent("held in place");
   });
 
   it("after a user e-stop the dock offers Return Home, which resets the latch and moves Home", async () => {
