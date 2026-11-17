@@ -116,3 +116,26 @@ def test_disconnect_drops_every_alert_on_open_pages(station: Station, ui: UiMirr
     station.owner.call("disconnect")
     assert station.status()["alerts"] == []
     matches(station, ui, "disconnect")
+
+
+def test_device_lost_then_reconnect_keeps_no_alert_of_the_gone_bus(station: Station, ui: UiMirror) -> None:
+    """Class sweep (QD-23): closing the devices forgets every motor level (``guard.reset_arm``),
+    so a warn alert raised before an unplug could never clear again: after the reconnect the motor
+    reads cool and nothing ever says so. The Station and the page kept "gripper 52 °C" for good."""
+    connect_calibrated(station)
+    world = get_world("mock://follower")
+    world.inject("gripper", temp_c=52.0)
+    wait_for(lambda: any(a["motor"] == "gripper" for a in station.status()["alerts"]), 4)
+    station.start_teleop(TeleopRequest(fps=30))
+    time.sleep(0.3)
+    world.inject(disconnect_after_s=0.1)
+    wait_for(lambda: station.owner.state == "error", 4)
+    matches(station, ui, "device lost")
+    assert not any(a["motor"] == "gripper" for a in station.status()["alerts"])
+    world.faults.disconnect_at = None  # plugged back in
+    world.inject("gripper", temp_c=30.0)
+    station.reconnect(timeout_s=2)
+    wait_for(lambda: station.owner.state == "idle", 5)
+    time.sleep(1.0)  # a few telemetry rounds
+    assert not any(a["motor"] == "gripper" for a in station.status()["alerts"])
+    matches(station, ui, "reconnect")

@@ -1126,6 +1126,11 @@ class HardwareOwner:
             self.telemetry.remove_arm(arm)
             self.guard.reset_arm(arm)
         self.hub.close_all()
+        # The guard forgot every motor level and the cameras are closed: no later reading could
+        # ever clear an alert about them, so they go now (with their events) instead of staying
+        # on every page for good, also after a reconnect.
+        self._camera_alerted.clear()
+        self.drop_alerts(lambda a: a.arm is not None or a.camera is not None)
         for lk in self.locks:
             lk.release()
         self.locks = []
