@@ -71,6 +71,14 @@ with its own line (see the README); GitHub never offers a pre-release as its "la
   stops waiting now counts as a malformed answer of the servo that was asked, and a packet cut short
   by the next one is recognised as such: these motors "answer only with malformed packets (cut
   short or the wrong length)" and the bus is named.
+- **A late answer was counted against the wrong servo.** After one 300 ms USB stall during the
+  scan, servo 1 "answered only now and then" although it answered every read; a slow adapter next
+  to an unpowered servo was "unreliable bus ... check the 3-pin cables". Every answer is now matched,
+  when it arrives, to the request it answers (by servo and length; the bus answers in order), so a
+  late answer to a ping or a read is that request's answer and its delay is measured from its own
+  request. A stall is named as a bus fault ("N answers came late (up to 300 ms after the request:
+  the USB adapter or a hub stalled)", with USB advice), never as one servo's flakiness, and an
+  adapter that is slow every time is a slow bus, not loose cables.
 - **One late answer on the bus made the doctor show wrong values** (`80 C`, `341.3 V`, "overheat,
   overload", wrong position limits) and tell you to calibrate the arm again: an answer that came
   later than the bus timeout was taken as the answer to the next read, and every later register

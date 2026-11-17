@@ -936,7 +936,7 @@ def test_a_late_answer_never_shifts_a_register_value(
     assert (m1["Present_Temperature"], m1["Present_Voltage"], m1["Status"]) == (30, 120, 0), m1
     assert "calibrate the arm again" not in text and "does not match" not in text, problems
     assert "overheat" not in fol and "341.3 V" not in fol and "80C" not in fol, fol
-    assert "arm follower: unreliable bus: " in problems and "came too late and" in problems, problems
+    assert "arm follower: unreliable bus: " in problems and "came late (" in problems, problems
     assert "do not answer" not in text, problems
 
 
@@ -1120,6 +1120,71 @@ def test_a_motor_whose_every_answer_is_cut_short_is_not_silent(
     assert {m["state"] for m in motors.values()} == {"corrupt"}, motors
     assert all(m["evidence"]["garbled"] > 0 for m in motors.values()), motors
     assert "got corrupted answers (checksum)" not in fol, fol
+
+
+def _ms_each(fol: str) -> float | None:
+    """The speed the motor check printed ("... 50.6 ms each"), None when it printed none."""
+    m = re.search(r"sync read: .*?([\d.]+) ms each", fol)
+    return float(m.group(1)) if m else None
+
+
+def test_a_bus_stall_during_the_scan_is_a_bus_fault_not_a_flaky_motor(
+    tmp_path: Path, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """QD-30: one 300 ms USB stall during the scan (every answer waits behind it). The late answers
+    were taken for nothing and servo 1 was "answers only now and then (no valid answer to 3 pings)"
+    although it answered 20 of 20 sync reads and every register. A late answer is matched to the
+    request it answers: every servo answers, and the stall is named as a bus fault."""
+    f, ld = emus
+    home = _calibrated_home(tmp_path, f, ld, monkeypatch)
+    _late_once(f, lambda instr, i, _params: instr == 0x01 and i == 0xFE, 0.3)
+    text, target = _run(home, tmp_path / "out")
+    problems, fol = text.split("\n\n")[0], _section(text, "follower")
+    assert "now and then" not in text and "do not answer" not in text, problems
+    mine = [p for p in problems.splitlines() if p.startswith("  ! arm follower: unreliable bus: ")]
+    assert len(mine) == 1 and " came late (up to " in mine[0] and "motor id(s)" not in mine[0], problems
+    assert "stalled); plug the USB adapter straight into the PC" in mine[0], mine
+    assert fol.splitlines()[0].endswith(": ids answering at 1 Mbps: 1-6 (model 777)"), fol
+    assert "    calibration file vs motors: all 6 match" in fol.splitlines(), fol
+    motors = _arm(_report(target), "follower")["motors"]
+    assert {m["state"] for m in motors.values()} == {"answers"}, motors
+
+
+@pytest.mark.parametrize("delay_s", [0.2])
+def test_a_steadily_slow_adapter_is_a_slow_bus_not_loose_cables(
+    tmp_path: Path, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch, delay_s: float
+) -> None:
+    """QD-30: an adapter that delays every answer by 200 ms (the servos keep answering, the bytes
+    come out in order). Late answers were counted for the next request: servo 2 "answers only now
+    and then", "unreliable bus ... check the 3-pin cables". It is a slow bus, nothing else."""
+    f, ld = emus
+    home = _calibrated_home(tmp_path, f, ld, monkeypatch)
+    f.adapter_delay_s = delay_s
+    text, _t = _run(home, tmp_path / "out")
+    problems, fol = text.split("\n\n")[0], _section(text, "follower")
+    assert "unreliable bus" not in text and "3-pin cables" not in text, problems
+    assert "now and then" not in text and "do not answer" not in text, problems
+    assert "  ! arm follower on " in problems and ": slow bus (" in problems, problems
+    ms = _ms_each(fol)
+    assert ms is not None and abs(ms - (delay_s + f.latency_s) * 1000) <= 0.2 * delay_s * 1000, fol
+    assert "    calibration file vs motors: all 6 match" in fol.splitlines(), fol
+
+
+def test_a_slow_adapter_next_to_a_dead_motor_is_not_called_loose_cables(
+    tmp_path: Path, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """QD-30: a 60 ms adapter and servo 6 without power: "unreliable bus: 5 answers came too late
+    and were discarded; check the 3-pin cables" next to the dead servo. Only servo 6 is a problem."""
+    f, ld = emus
+    home = _calibrated_home(tmp_path, f, ld, monkeypatch)
+    f.adapter_delay_s = 0.06
+    f.servos[6].dead = True
+    text, _t = _run(home, tmp_path / "out")
+    problems, fol = text.split("\n\n")[0], _section(text, "follower")
+    mine = [p for p in problems.splitlines() if p.startswith("  ! arm follower")]
+    assert mine[0] == "  ! arm follower: motor id(s) 6 do not answer (power? cable?)", problems
+    assert "unreliable bus" not in text and "late" not in problems, problems
+    assert "now and then" not in fol, fol
 
 
 # ------------------------------------------------------------------ invariants over a fault grid
@@ -1404,7 +1469,7 @@ def test_the_report_never_contradicts_itself(
         assert "unreliable bus" in joined and "could not be read" in joined, ctx
 
     # failed reads by class: each class named only when it happened
-    classes = {k: sr.get(k, 0) for k in ("no_answer", "corrupt", "garbled", "other")}
+    classes = {k: sr.get(k, 0) for k in ("no_answer", "corrupt", "garbled", "late", "other")}
     assert sum(classes.values()) == failed and ok + failed == sr["reads"], sr
     assert ("got no answer" in fol) == (classes["no_answer"] > 0), ctx
     assert ("got corrupted answers (checksum)" in fol) == (classes["corrupt"] > 0), ctx
@@ -1423,7 +1488,7 @@ def test_the_report_never_contradicts_itself(
         assert (
             failed
             or states - {"answers", "silent"}
-            or arm["bus_errors"].get("late_discarded")
+            or arm["bus_errors"].get("late_answers")
             or unread_cal
             or any(m.get("unreadable") for m in arm["motors"].values())
         ), ctx

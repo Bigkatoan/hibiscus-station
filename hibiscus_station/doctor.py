@@ -132,9 +132,9 @@ def _raw_head() -> dict[str, Any]:
 
 def _why_text(why: list[str]) -> str:
     """The failed attempts of one request in words: a corrupt answer is never called "no answer"."""
-    from hibiscus_station.hw.probe import CORRUPT, GARBLED, NO_ANSWER, OUTCOME_WORDS
+    from hibiscus_station.hw.probe import CORRUPT, GARBLED, LATE, NO_ANSWER, OUTCOME_WORDS
 
-    for kind in (CORRUPT, GARBLED, NO_ANSWER):
+    for kind in (CORRUPT, GARBLED, LATE, NO_ANSWER):
         if kind in why:
             return OUTCOME_WORDS[kind]
     return OUTCOME_WORDS[NO_ANSWER]
@@ -522,6 +522,7 @@ READ_FAILURES: dict[str, str] = {
     "no_answer": "got no answer",
     "corrupt": "got corrupted answers (checksum)",
     "garbled": "got malformed answers (cut short or the wrong length)",
+    "late": "got their answers only after the timeout",
     "other": "failed with another error",
 }
 
@@ -566,6 +567,21 @@ BUS_ADVICE = (
     "check the 3-pin cables between the servos, the power supply (it may drop under load) and plug "
     "the USB adapter straight into the PC"
 )
+
+
+USB_ADVICE = "plug the USB adapter straight into the PC, without a hub, and run the doctor again"
+
+
+def steady_slow(late: int, late_ms: list[float], ms: float | None) -> bool:
+    """The late answers are those of a slow adapter, slow every time (QD-30): each came about as
+    long after its request as the reads in time take, or (none in time) all about equally late.
+    Otherwise they are a stall of the bus (a USB hiccup), named under "unreliable bus"."""
+    if not late or not late_ms:
+        return False
+    if ms is not None:
+        return max(late_ms) <= max(1.5 * ms, ms + 10)
+    mid = sorted(late_ms)[len(late_ms) // 2]
+    return len(late_ms) >= 3 and mid > SLOW_READ_MS and 0.7 * mid <= min(late_ms) <= max(late_ms) <= 1.3 * mid
 
 
 def bus_verdict(a: dict[str, Any]) -> dict[str, Any] | None:
@@ -614,9 +630,11 @@ def bus_verdict(a: dict[str, Any]) -> dict[str, Any] | None:
     Faults: "F of R reads failed (A got no answer, C got corrupted answers (checksum), ...)
     [although every motor answers a ping]" (the last words only when every motor answered one),
     "motor id(s) Y answer only now and then (no valid answer to 3 pings)", "motor id(s) Z answer
-    only with corrupted packets (checksum)", "L answers came too late and were discarded" (not
-    named when every read worked at a slow speed: then the adapter is slow, and the slow-bus advice
-    says so), "registers of motor id(s) W could not be read". A register that could not be read
+    only with corrupted packets (checksum)" (or malformed), "L answers came late (up to T ms after
+    the request: the USB adapter or a hub stalled)" (a late answer is matched to its own request,
+    QD-30; not named when the adapter is slow every time, :func:`steady_slow`: then the slow-bus
+    advice says so), "registers of motor id(s) W could not be read". When the only fault is late
+    answers, the advice is about the USB connection, not the servo cables. A register that could not be read
     is never compared with the calibration file (:func:`_compare`): it is "could not read", never
     "does not match".
 
@@ -675,13 +693,14 @@ def bus_verdict(a: dict[str, Any]) -> dict[str, Any] | None:
         )
     for words, group in _damaged_groups(motors, corrupt).items():
         faults.append(f"motor id(s) {', '.join(group)} answer only with {words}")
-    late = int((a.get("bus_errors") or {}).get("late_discarded") or 0)
-    slow_and_steady = not silent and not failed and ms is not None and ms > SLOW_READ_MS
-    if late and not slow_and_steady:
+    be = a.get("bus_errors") or {}
+    late = int(be.get("late_answers") or 0)
+    late_ms = [float(x) for x in be.get("late_ms") or []]
+    stalled = bool(late) and not steady_slow(late, late_ms, ms)
+    if stalled:
+        most = f"up to {round(max(late_ms))} ms after the request: " if late_ms else ""
         faults.append(
-            f"{late} answer came too late and was discarded"
-            if late == 1
-            else f"{late} answers came too late and were discarded"
+            f"{late} answer{' came' if late == 1 else 's came'} late ({most}the USB adapter or a hub stalled)"
         )
     unread = [k for k, m in motors.items() if states[k] in ("answers", "flaky") and m.get("unreadable")]
     if unread:
@@ -691,7 +710,8 @@ def bus_verdict(a: dict[str, Any]) -> dict[str, Any] | None:
         out.update(kind="silent", not_measured=f"motor id(s) {ids} do not answer")
         out["problems"].append(f"motor id(s) {ids} do not answer (power? cable?)")
     if faults:
-        out["unreliable"] = f"unreliable bus: {', '.join(faults)}; {BUS_ADVICE}"
+        advice = USB_ADVICE if stalled and len(faults) == 1 else BUS_ADVICE
+        out["unreliable"] = f"unreliable bus: {', '.join(faults)}; {advice}"
         out["problems"].append(out["unreliable"])
         if not silent:
             out["kind"] = "unreliable"
@@ -1507,8 +1527,8 @@ def _bus_errors_text(be: dict[str, Any]) -> str:
     """``bus.error_summary()`` as one sentence; the last error is the bus library's own words."""
     calls = ", ".join(f"{k} x{n}" for k, n in (be.get("by_call") or {}).items())
     out = f"{be.get('errors') or 0}, {be.get('retried_ok') or 0} retried ok"
-    if be.get("late_discarded"):
-        out += f", {be['late_discarded']} late answers discarded"
+    if be.get("late_answers"):
+        out += f", {be['late_answers']} late answers"
     out += f" ({calls})" if calls else ""
     return out + (f"; last error: {be['last_error']}" if be.get("last_error") else "")
 
