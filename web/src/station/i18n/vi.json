@@ -69,7 +69,14 @@
     "estop_ui_lost": "dừng khẩn (mất giao diện)",
     "estop_thermal": "dừng vì nhiệt",
     "internal": "lỗi nội bộ",
-    "device_lost": "mất thiết bị USB"
+    "device_lost": "mất thiết bị USB",
+    "stopped": "đã dừng",
+    "running": "đang chạy",
+    "error": "lỗi",
+    "failed": "thất bại",
+    "estopped": "dừng khẩn",
+    "timeout": "hết giờ",
+    "disconnect": "đã ngắt kết nối"
   },
   "arm": {
     "follower": "Tay follower",
@@ -182,7 +189,8 @@
     "kind_camera": "Cảnh báo camera.",
     "kind_loop": "Cảnh báo vòng điều khiển.",
     "kind_telemetry_degraded": "Đọc thông số động cơ bị lỗi.",
-    "kind_policy_clipping": "Policy bị bộ giới hạn chặn."
+    "kind_policy_clipping": "Policy bị bộ giới hạn chặn.",
+    "kind_teleop_clipping": "Tay follower không theo kịp tay leader."
   },
   "health": {
     "title": "Sức khoẻ động cơ",
@@ -204,7 +212,7 @@
     "limit_current": "giới hạn dòng {{v}} A",
     "thresholds": "Ấm ≥ {{warn}} °C · nóng ≥ {{hot}} °C · nguy hiểm ≥ {{critical}} °C (hai lần liên tiếp → dừng an toàn)",
     "bit_voltage": "điện áp",
-    "bit_angle": "cảm biến góc",
+    "bit_angle_sensor": "cảm biến góc",
     "bit_overheat": "quá nhiệt",
     "bit_overcurrent": "quá dòng",
     "bit_overload": "quá tải",
@@ -255,7 +263,11 @@
     "episode_run": "Tập {{n}} / {{of}} · model đang chạy · {{e}} / {{l}} giây",
     "reset": "Đặt lại cảnh · {{e}} / {{l}} giây",
     "saving": "Đang lưu tập {{n}}…",
-    "done": "Xong"
+    "done": "Xong",
+    "kind_traj_record": "Ghi quỹ đạo",
+    "kind_traj_play": "Phát quỹ đạo",
+    "kind_program": "Chương trình",
+    "kind_rest": "Về Home"
   },
   "stats": {
     "step": "Bước",
@@ -286,7 +298,9 @@
     "phase_verifying": "đang kiểm tra",
     "phase_loading": "đang nạp",
     "phase_extracting": "đang giải nén",
-    "phase_downloading": "đang tải về"
+    "phase_downloading": "đang tải về",
+    "phase_queued": "đang chờ",
+    "phase_copying": "đang sao chép"
   },
   "welcome": {
     "title": "Hibiscus Station",

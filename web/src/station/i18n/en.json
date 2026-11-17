@@ -69,7 +69,14 @@
     "estop_ui_lost": "e-stop (UI lost)",
     "estop_thermal": "thermal stop",
     "internal": "internal error",
-    "device_lost": "USB device lost"
+    "device_lost": "USB device lost",
+    "stopped": "stopped",
+    "running": "running",
+    "error": "error",
+    "failed": "failed",
+    "estopped": "e-stop",
+    "timeout": "time limit reached",
+    "disconnect": "disconnected"
   },
   "arm": {
     "follower": "Follower",
@@ -182,7 +189,8 @@
     "kind_camera": "Camera alert.",
     "kind_loop": "Control loop alert.",
     "kind_telemetry_degraded": "Telemetry degraded.",
-    "kind_policy_clipping": "Policy clipped by the limiter."
+    "kind_policy_clipping": "Policy clipped by the limiter.",
+    "kind_teleop_clipping": "The follower cannot keep up with the leader."
   },
   "health": {
     "title": "Motor health",
@@ -204,7 +212,7 @@
     "limit_current": "current limit {{v}} A",
     "thresholds": "Warm ≥ {{warn}} °C · hot ≥ {{hot}} °C · critical ≥ {{critical}} °C (twice in a row → safe stop)",
     "bit_voltage": "voltage",
-    "bit_angle": "angle sensor",
+    "bit_angle_sensor": "angle sensor",
     "bit_overheat": "overheat",
     "bit_overcurrent": "overcurrent",
     "bit_overload": "overload",
@@ -255,7 +263,11 @@
     "replay_approach": "Moving to the start of episode {{n}}…",
     "reset": "Reset the scene · {{e}} / {{l}} s",
     "saving": "Saving episode {{n}}…",
-    "done": "Done"
+    "done": "Done",
+    "kind_traj_record": "Record trajectory",
+    "kind_traj_play": "Play trajectory",
+    "kind_program": "Program",
+    "kind_rest": "Return Home"
   },
   "stats": {
     "step": "Step",
@@ -286,7 +298,9 @@
     "phase_verifying": "verifying",
     "phase_loading": "loading",
     "phase_extracting": "extracting",
-    "phase_downloading": "downloading"
+    "phase_downloading": "downloading",
+    "phase_queued": "queued",
+    "phase_copying": "copying"
   },
   "welcome": {
     "title": "Hibiscus Station",
