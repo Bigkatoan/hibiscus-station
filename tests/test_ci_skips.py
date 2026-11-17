@@ -186,3 +186,22 @@ def test_the_pty_emulator_tests_skip_on_macos_instead_of_failing() -> None:
         src = (ROOT / "tests" / name).read_text(encoding="utf-8")
         assert "pty_unavailable()" in src, name
         assert 'sys.platform == "win32"' not in src, name  # one rule for every platform
+
+
+def test_macos_ci_turns_off_the_runner_vms_timer_coalescing_before_the_tests() -> None:
+    """QD-7: on the macos-latest VM (kern.timer.coalescing_enabled=1) time.sleep(1/30) loops ran at
+    14 Hz and 1/120 at 32 Hz; with coalescing off, 29.5 Hz and 101 Hz (probe run 44051390958).
+    The timing tests stay as strict as on Linux; the runner's timers are made honest instead."""
+    import yaml
+
+    ci = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
+    steps = ci["jobs"]["python"]["steps"]
+    names = [s.get("name", "") for s in steps]
+    tests = next(i for i, n in enumerate(names) if n.startswith("Tests"))
+    honest = [
+        s
+        for s in steps[:tests]
+        if "kern.timer.coalescing_enabled=0" in str(s.get("run", ""))
+        and s.get("if") == "runner.os == 'macOS'"
+    ]
+    assert len(honest) == 1, "the macOS job must turn timer coalescing off before the tests"

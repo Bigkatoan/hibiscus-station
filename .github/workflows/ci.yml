@@ -66,6 +66,12 @@ jobs:
       - name: One version everywhere (FR-76)
         if: runner.os == 'Linux'
         run: uv run python tools/release/check_versions.py
+      - name: Honest timers on the macOS runner VM (QD-7)
+        # The VM coalesces kernel timers: time.sleep(1/30) loops ran at 14 Hz and 1/120 at 32 Hz,
+        # 29.5 Hz and 101 Hz with coalescing off (probe run 44051390958). The control-loop timing
+        # tests keep the Linux thresholds; the runner's timers are made honest instead.
+        if: runner.os == 'macOS'
+        run: sudo sysctl -w kern.timer.coalescing_enabled=0
       - name: Tests (mock hardware, CPU)
         run: uv run pytest -q -ra --junitxml=pytest-junit.xml
       - name: Skipped tests are in the published list (NFR-18)
