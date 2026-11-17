@@ -155,6 +155,19 @@ def test_confirmations_and_a_dry_run_without_a_robot(station: Station, client: A
     assert len(runs) == 1 and runs[0]["dry_run"] and runs[0]["outcome"] == "completed"
 
 
+def test_a_finished_run_keeps_its_duration(station: Station, client: Any) -> None:
+    """QC 0.2.9 QD-16: a run that completed in 3.3 s read "360.7 s" minutes later, because the
+    state's ``t`` kept counting from the start. It must freeze when the run ends."""
+    _put(client, program(wait(0.3)))
+    assert _run(client, dry_run=True).status_code == 200
+    rt = _runtime(station)
+    assert rt.join(20) and rt.outcome == "completed", rt.state()
+    first = client.get(f"{API}/programs/ab/state").json()
+    assert first["status"] == "completed" and 0.3 <= first["t"] < 5, first
+    time.sleep(0.6)
+    assert client.get(f"{API}/programs/ab/state").json()["t"] == first["t"]
+
+
 def wire_session(body: dict[str, Any]) -> dict[str, Any]:
     from hibiscus_station.api.schemas import Session
 
