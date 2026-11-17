@@ -91,6 +91,25 @@ describe("Episode timer", () => {
 
 const HOME = { "shoulder_pan.pos": 0, "shoulder_lift.pos": -90, "elbow_flex.pos": 90 };
 
+/** The only program: start → go Home, saved while the robot had a Home (stored issues: none). */
+function homeProgram(h: ReturnType<typeof setupStation>) {
+  h.sim.programs.programs = [];
+  const prog = h.sim.programs.putProgram("go_home_test", {
+    name: "Go Home test",
+    editor: {
+      blocks: {
+        languageVersion: 0,
+        blocks: [
+          { type: "hb_start", id: "start", x: 40, y: 40, inputs: { DO: { block: { type: "hb_go_home", id: "gh" } } } },
+        ],
+      },
+    },
+    buttons: [],
+  });
+  prog.issues = [];
+  return prog;
+}
+
 describe("CR-1: Stop holds, then Return Home / Relax", () => {
   it("after a Stop the banner says the arm holds and Relax asks to support the arm first", async () => {
     const h = setupStation();
@@ -238,18 +257,7 @@ describe("CR-2: Home", () => {
 
   it("a program block blocked by a missing Home offers Set Home now in place, then re-checks", async () => {
     const h = setupStation();
-    const prog = h.sim.programs.programs[0];
-    if (!prog) throw new Error("no sample program");
-    prog.issues = [
-      {
-        id: "no_rest_pose:x",
-        code: "no_rest_pose",
-        message_key: "programs.issues.no_rest_pose",
-        severity: "error",
-        block_id: null,
-        params: {},
-      },
-    ];
+    homeProgram(h);
     const user = userEvent.setup();
     renderStation("/programs?tab=programs", h);
     await settle();
@@ -260,6 +268,28 @@ describe("CR-2: Home", () => {
       expect(h.sim.profiles[0]?.follower.rest_pose).toBeTruthy();
     });
     expect(await screen.findByTestId("program-ok")).toBeInTheDocument();
+  });
+});
+
+describe("Program problems on open (QC 0.2.9 QD-2)", () => {
+  it("lists what the robot is missing without pressing Check, and never says 'No problems found' first", async () => {
+    const h = setupStation();
+    homeProgram(h); // this robot has no Home
+    const seen: string[] = [];
+    renderStation("/programs?tab=programs", h);
+    const observer = new MutationObserver(() => {
+      if (document.querySelector('[data-testid="program-ok"]')) seen.push("ok");
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    try {
+      await settle();
+      const list = await screen.findByTestId("program-issues");
+      expect(list).toHaveTextContent("Set Home for this robot first.");
+      expect(seen).toEqual([]);
+      expect(screen.queryByTestId("program-ok")).toBeNull();
+    } finally {
+      observer.disconnect();
+    }
   });
 });
 

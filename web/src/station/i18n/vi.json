@@ -861,6 +861,7 @@
       "delete_title": "Xoá chương trình {{name}}?",
       "issues": "Vấn đề",
       "no_issues": "Không thấy vấn đề nào.",
+      "not_checked": "Đang kiểm tra với robot này… (hoặc bấm Kiểm tra)",
       "dry_done": "Phiên bản này đã chạy thử thành công.",
       "workspace": "Trình soạn khối",
       "buttons_title": "Nút cho người vận hành",

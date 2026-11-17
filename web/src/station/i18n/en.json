@@ -861,6 +861,7 @@
       "delete_title": "Delete program {{name}}?",
       "issues": "Problems",
       "no_issues": "No problems found.",
+      "not_checked": "Checking against this robot… (or press Check)",
       "dry_done": "This version passed a dry run.",
       "workspace": "Block editor",
       "buttons_title": "Operator buttons",

@@ -279,6 +279,10 @@ function ProgramWorkspace({ program, onDeleted }: { program: Program; onDeleted:
   const [name, setName] = useState(program.name);
   const [buttons, setButtons] = useState<OperatorButton[]>(program.buttons);
   const [issues, setIssues] = useState<CheckIssue[]>(program.issues);
+  // QC 0.2.9 QD-2: the issues saved with the program miss what depends on the robot (its Home,
+  // its calibration, the trajectories...); until the Station has checked this version against the
+  // robot the page never says "No problems found".
+  const [checked, setChecked] = useState(false);
   const [version, setVersion] = useState(program.version);
   const [dryRunVersion, setDryRunVersion] = useState(program.dry_run_version);
   const refs = useEditorRefs(buttons);
@@ -291,6 +295,26 @@ function ProgramWorkspace({ program, onDeleted }: { program: Program; onDeleted:
   );
   const check = useStationMutation(() => api.post<CheckReport>(`/programs/${enc(program.id)}/check`));
   const del = useStationMutation(() => api.del(`/programs/${enc(program.id)}`));
+  const onChecked = useCallback((r: CheckReport) => {
+    setIssues(r.issues);
+    setChecked(true);
+  }, []);
+
+  // Check on open and after every save (a new version). A failed check (no robot profile, Station
+  // busy) leaves "not checked yet"; the Check button shows its error.
+  useEffect(() => {
+    let current = true;
+    setChecked(false);
+    api
+      .post<CheckReport>(`/programs/${enc(program.id)}/check`)
+      .then((r) => {
+        if (current) onChecked(r);
+      })
+      .catch(() => undefined);
+    return () => {
+      current = false;
+    };
+  }, [program.id, version, onChecked]);
 
   const applySaved = useCallback(
     (p: Program) => {
@@ -402,11 +426,7 @@ function ProgramWorkspace({ program, onDeleted }: { program: Program; onDeleted:
               variant="outline"
               disabled={running || check.isPending || dirty}
               onClick={() => {
-                check.mutate(undefined, {
-                  onSuccess: (r) => {
-                    setIssues(r.issues);
-                  },
-                });
+                check.mutate(undefined, { onSuccess: onChecked });
               }}
             >
               <PxIcon name="search" /> {t("programs.editor.check")}
@@ -453,20 +473,20 @@ function ProgramWorkspace({ program, onDeleted }: { program: Program; onDeleted:
                       label={t("home.set_now")}
                       className="h-7 px-2 text-xs"
                       onDone={() => {
-                        check.mutate(undefined, {
-                          onSuccess: (r) => {
-                            setIssues(r.issues);
-                          },
-                        });
+                        check.mutate(undefined, { onSuccess: onChecked });
                       }}
                     />
                   ) : null}
                 </li>
               ))}
             </ul>
-          ) : (
+          ) : checked ? (
             <p className="flex items-center gap-2 text-sm text-success" data-testid="program-ok">
               <PxIcon name="check" /> {t("programs.editor.no_issues")}
+            </p>
+          ) : (
+            <p className="flex items-center gap-2 text-sm text-muted-foreground" data-testid="program-unchecked">
+              <PxIcon name="search" /> {t("programs.editor.not_checked")}
             </p>
           )}
           {errors.length === 0 && dryRunVersion === version ? (
@@ -500,9 +520,7 @@ function ProgramWorkspace({ program, onDeleted }: { program: Program; onDeleted:
         <RunPanel
           programId={program.id}
           ensureSaved={() => (dirty ? doSave() : Promise.resolve(true))}
-          onReport={(r) => {
-            setIssues(r.issues);
-          }}
+          onReport={onChecked}
           issueText={issueText}
           blockLabel={blockLabel}
           detectors={detectorsUsed}
