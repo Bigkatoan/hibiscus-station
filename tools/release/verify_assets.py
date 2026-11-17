@@ -134,6 +134,35 @@ def compile_set(args: list[str], platform: str, macos: str | None, out: Path) ->
     return {k: v for k, v in pins.items() if k not in SKIP}
 
 
+#: What the source archive may hold below its top folder: the package and the root files the
+#: sdist include list names. Anything else (web/node_modules, tests/**) means an unanchored pattern.
+SDIST_ALLOWED = (
+    "hibiscus_station/",
+    "README.md",
+    "pyproject.toml",
+    "hatch_build.py",
+    "openapi.json",
+    "LICENSE",
+    "ASSETS-LICENSE",
+    "NOTICE",
+    "PKG-INFO",
+    ".gitignore",
+)
+
+
+def sdist_strays(sdist: Path) -> list[str]:
+    """Members of a ``.tar.gz`` sdist outside :data:`SDIST_ALLOWED` (QD-20)."""
+    import tarfile
+
+    strays = []
+    with tarfile.open(sdist) as tar:
+        for name in tar.getnames():
+            rel = name.split("/", 1)[1] if "/" in name else ""
+            if rel and not any(rel == a or (a.endswith("/") and rel.startswith(a)) for a in SDIST_ALLOWED):
+                strays.append(rel)
+    return strays
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("dir", type=Path)
@@ -158,6 +187,10 @@ def main(argv: list[str] | None = None) -> int:
     for need in (wheel.name, "constraints.txt", "overrides.txt", "install.ps1"):
         if need not in files:
             errors.append(f"missing asset {need}")
+    for sd in sorted(rel.glob("hibiscus_station-*.tar.gz")):
+        strays = sdist_strays(sd)
+        if strays:
+            errors.append(f"{sd.name}: {len(strays)} files outside the package, e.g. {strays[:3]}")
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1

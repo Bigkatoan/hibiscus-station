@@ -73,7 +73,7 @@ artifacts = ["hibiscus_station/static/**"]
 path = "hatch_build.py"
 
 [tool.hatch.build.targets.sdist]
-include = ["hibiscus_station", "README.md", "pyproject.toml", "hatch_build.py", "openapi.json", "LICENSE", "ASSETS-LICENSE", "NOTICE"]
+include = ["/hibiscus_station", "/README.md", "/pyproject.toml", "/hatch_build.py", "/openapi.json", "/LICENSE", "/ASSETS-LICENSE", "/NOTICE"]
 artifacts = ["hibiscus_station/static/**"]
 
 [dependency-groups]

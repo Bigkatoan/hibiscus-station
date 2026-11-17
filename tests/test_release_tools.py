@@ -445,3 +445,36 @@ def test_release_notes_of_the_pre_release_and_their_install_lines(tmp_path: Path
     assert "The same command updates" not in notes and "test build (pre-release)" in notes
     stable = _release_notes(tmp_path, "0.2.8", pre=False)
     assert "Return to rest pose" in stable and "test build" not in stable
+
+
+def test_sdist_holds_only_the_package_even_with_web_node_modules(tmp_path: Path) -> None:
+    """QD-20: release.yml runs pnpm install before building, so web/node_modules exists; the
+    unanchored include patterns pulled its README.md / LICENSE files into the sdist."""
+    import shutil
+    import subprocess
+    import tarfile
+
+    verify_assets = _load("verify_assets")
+
+    src = tmp_path / "src"
+    out = subprocess.run(["git", "-C", str(ROOT), "ls-files", "-z"], capture_output=True, check=True)  # noqa: S603, S607
+    for name in out.stdout.decode().split("\0"):
+        if name and (ROOT / name).is_file():
+            (src / name).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(ROOT / name, src / name)
+    planted = src / "web" / "node_modules" / "left-pad"
+    planted.mkdir(parents=True)
+    (planted / "README.md").write_text("third party\n", encoding="utf-8")
+    (planted / "LICENSE").write_text("MIT\n", encoding="utf-8")
+    env = {**os.environ, "HIBISCUS_STATION_ALLOW_NO_WEB": "1"}
+    subprocess.run(  # noqa: S603
+        [shutil.which("uv") or "uv", "build", "--sdist", "-o", str(tmp_path / "dist")],
+        cwd=src,
+        env=env,
+        check=True,
+        capture_output=True,
+    )
+    (sdist,) = (tmp_path / "dist").glob("*.tar.gz")
+    with tarfile.open(sdist) as tar:
+        assert not [n for n in tar.getnames() if "node_modules" in n]
+    assert verify_assets.sdist_strays(sdist) == []
