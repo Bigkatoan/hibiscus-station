@@ -356,6 +356,12 @@ def test_station_ui_end_to_end(browser: Any, station_proc: tuple[str, str, Path]
     api("POST", "/mock/inject", {"port": "mock://follower", "clear_temp": True})
     page.get_by_role("button", name="I'm clear, reset").click()
     wait_state("idle")
+    # QC 0.2.9 QD-23: the same open page drops the critical banner as soon as the reset is
+    # accepted (no reload), and what it shows matches a fresh GET /status.
+    expect(banner).to_have_count(0, timeout=3000)
+    assert not [a for a in status()["alerts"] if a["level"] == "critical"], status()["alerts"]
+    expect(page.get_by_role("alert").filter(has_text="66")).to_have_count(0)
+    no_errors("thermal stop → cool → reset")
     api("POST", "/robots/torque", {"arm": "follower", "enabled": True})
 
     # ---------------------------------------------------------------- 6. record 2 episodes: → ← → Esc
