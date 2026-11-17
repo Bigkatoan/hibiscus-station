@@ -365,10 +365,11 @@ def test_station_ui_end_to_end(browser: Any, station_proc: tuple[str, str, Path]
     # "Upload"), and the local path only shows on request
     page.set_viewport_size({"width": 390, "height": 844})
     page.wait_for_timeout(300)
+    card_box = done.bounding_box()
     text_box = page.get_by_test_id("record-done-text").bounding_box()
     up_box = done.get_by_role("link", name="Upload").bounding_box()
-    assert text_box and up_box
-    assert text_box["width"] >= 200, text_box
+    assert card_box and text_box and up_box
+    assert text_box["width"] >= 0.75 * card_box["width"], (card_box, text_box)  # a line of its own
     assert up_box["y"] >= text_box["y"] + text_box["height"] - 1, (text_box, up_box)
     expect(done.get_by_text(str(home / "datasets" / DATASET))).to_be_hidden()
     shot("08-record-done-390")
