@@ -246,27 +246,17 @@ class Probe:
             if chunk:
                 buf += chunk
             for f in parse(buf):
-                if f.raw == request:
-                    continue  # the adapter echoed our own request
-                wanted = 0 if expect is None else expect.get(f.id)
-                if (
-                    f.ok
-                    and not f.cut
-                    and wanted is not None
-                    and f.id != BROADCAST
-                    and f.id not in out.frames
-                    and len(f.params) == wanted
-                ):
-                    out.frames[f.id] = f
-                    out.failed.pop(f.id, None)
-                    self._ev(f.id).valid += 1
+                if self._take(f, request, expect, out):
                     last = time.perf_counter()
-                    continue
-                self._note(f)
-                if wanted is not None and f.id not in out.frames and not f.ok:
-                    out.failed[f.id] = GARBLED if f.cut else CORRUPT
             if expect is not None and len(out.frames) == len(expect):
                 break
+        if buf:  # a packet arriving right at the deadline: the rest of it that is already here
+            n = self.ser.in_waiting
+            if n:
+                buf += self.ser.read(n)
+            for f in parse(buf):
+                if self._take(f, request, expect, out):
+                    last = time.perf_counter()
         if expect is not None:
             for mid in expect:
                 if mid not in out.frames and mid not in out.failed:
@@ -274,6 +264,23 @@ class Probe:
             if not out.failed:
                 out.ms = (last - t0) * 1000
         return out
+
+    def _take(self, f: Frame, request: bytes, expect: dict[int, int] | None, out: Exchange) -> bool:
+        """Validate one packet against the request: True when it is the answer asked for; anything
+        else is only evidence (and, from a servo asked, the reason it has no answer yet)."""
+        if f.raw == request:
+            return False  # the adapter echoed our own request
+        wanted = 0 if expect is None else expect.get(f.id)
+        if f.ok and not f.cut and wanted is not None and f.id != BROADCAST and f.id not in out.frames:
+            if len(f.params) == wanted:
+                out.frames[f.id] = f
+                out.failed.pop(f.id, None)
+                self._ev(f.id).valid += 1
+                return True
+        self._note(f)
+        if wanted is not None and f.id not in out.frames and not f.ok:
+            out.failed[f.id] = GARBLED if f.cut else CORRUPT
+        return False
 
     def _failed(self, op: str, ids: str, why: str) -> None:
         self.errors[f"{op} [{ids}]"] += 1

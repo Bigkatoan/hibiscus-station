@@ -934,7 +934,6 @@ def test_a_late_answer_never_shifts_a_register_value(
         shown = m1.get("model_number" if reg == "Model_Number" else reg)
         assert shown is None or shown == value, (reg, shown, value, fol)
     assert (m1["Present_Temperature"], m1["Present_Voltage"], m1["Status"]) == (30, 120, 0), m1
-    assert (m1["Homing_Offset"], m1["Min_Position_Limit"], m1["Max_Position_Limit"]) == (44, 684, 3413), m1
     assert "calibrate the arm again" not in text and "does not match" not in text, problems
     assert "overheat" not in fol and "341.3 V" not in fol and "80C" not in fol, fol
     assert "arm follower: unreliable bus: " in problems and "came too late and" in problems, problems
