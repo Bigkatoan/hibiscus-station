@@ -152,6 +152,10 @@ def device_key(p: CameraProfile) -> str:
     return str(p.index_or_path)
 
 
+def _has_device(p: CameraProfile) -> bool:
+    return p.serial_number_or_name is not None if p.type == "realsense" else p.index_or_path is not None
+
+
 def camera_target(index_or_path: int | str | None) -> int | Path:
     """OpenCV target of a profile: an index (``0``, or ``"0"`` as the UI sends it; the only kind on
     Windows and macOS) or a device path (``/dev/v4l/by-id/...``). A digit string opened as a path
@@ -343,7 +347,12 @@ class CameraHub:
         return {n: (c.profile.height, c.profile.width, 3) for n, c in self._cams.items()}
 
     def holders(self) -> dict[str, str]:
-        return {device_key(c.profile): n for n, c in self._cams.items()}
+        """``{device key: camera name}``. A camera with no device (a mock) is keyed by its name, so
+        two of them never share one entry and none reads as the device "None" (QC 0.2.9 QD-15)."""
+        return {
+            (device_key(c.profile) if _has_device(c.profile) else f"{c.profile.type}:{n}"): n
+            for n, c in self._cams.items()
+        }
 
     def has_cameras(self) -> bool:
         return bool(self._cams)

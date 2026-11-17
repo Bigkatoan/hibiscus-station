@@ -479,7 +479,11 @@
     "probe_failed": "Could not open the camera.",
     "measured": "Measured {{fps}} fps at {{w}}×{{h}}.",
     "slow": "The camera is slower than requested (USB bandwidth). Try MJPG or a lower resolution.",
-    "snapshot_alt": "Snapshot from {{name}}"
+    "snapshot_alt": "Snapshot from {{name}}",
+    "type_opencv": "USB camera",
+    "type_realsense": "RealSense",
+    "type_mock": "demo camera",
+    "type_held": "in use"
   },
   "teleop": {
     "title": "Teleop",

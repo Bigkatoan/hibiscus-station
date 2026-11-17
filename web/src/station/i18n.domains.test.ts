@@ -114,6 +114,7 @@ const ERROR_CODES = (() => {
  */
 const DOMAINS: Record<string, string[] | "ui"> = {
   "session.kind_": wire("SessionSummary", "kind"),
+  "cameras.type_": wire("DiscoveredCamera", "type"),
   "reasons.": REASONS,
   "jobs.kind_": wire("Job", "kind"),
   "jobs.status_": wire("Job", "status"),

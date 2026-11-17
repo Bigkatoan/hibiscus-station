@@ -479,7 +479,11 @@
     "probe_failed": "Không mở được camera.",
     "measured": "Đo được {{fps}} fps ở {{w}}×{{h}}.",
     "slow": "Camera chậm hơn yêu cầu (băng thông USB). Hãy thử MJPG hoặc độ phân giải thấp hơn.",
-    "snapshot_alt": "Ảnh chụp từ {{name}}"
+    "snapshot_alt": "Ảnh chụp từ {{name}}",
+    "type_opencv": "camera USB",
+    "type_realsense": "RealSense",
+    "type_mock": "camera mô phỏng",
+    "type_held": "đang dùng"
   },
   "teleop": {
     "title": "Điều khiển tay",
