@@ -112,7 +112,9 @@ Lệnh này cài uv (kiểm tra SHA-256), Python 3.12 và Station với đúng b
 phát hành đó (PyTorch CPU). **Cập nhật**: chạy lại đúng dòng đó. **Quay lại** một phiên bản: cùng dòng
 với liên kết của bản đó, ví dụ
 `irm https://github.com/Bigkatoan/hibiscus-station/releases/download/vX.Y.Z/install.ps1 | iex`.
-Hồ sơ, hiệu chỉnh, dữ liệu và model được giữ nguyên. Sau đó, trong một cửa sổ PowerShell mới:
+Bản thử nghiệm (pre-release, ví dụ 1.0.0a1) chỉ cài được bằng liên kết có số phiên bản:
+`.../releases/download/v1.0.0a1/install.ps1`. Hồ sơ, hiệu chỉnh, dữ liệu và model được giữ nguyên.
+Sau đó, trong một cửa sổ PowerShell mới:
 
 ```powershell
 hibiscus-station --mock          # thử khi chưa có robot

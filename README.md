@@ -112,7 +112,9 @@ It installs uv (checked by SHA-256), Python 3.12 and Station with exactly the li
 that release (CPU PyTorch). **Update**: run the same line again. **Go back** to a version: the same
 line with that release's link, e.g.
 `irm https://github.com/Bigkatoan/hibiscus-station/releases/download/vX.Y.Z/install.ps1 | iex`.
-Profiles, calibration, datasets and models are kept. Then, in a new PowerShell window:
+A test build (pre-release, e.g. 1.0.0a1) is only reachable by its versioned link:
+`.../releases/download/v1.0.0a1/install.ps1`. Profiles, calibration, datasets and models are kept.
+Then, in a new PowerShell window:
 
 ```powershell
 hibiscus-station --mock          # demo without hardware (simulated arms, data in ~/.hibiscus/station-demo)

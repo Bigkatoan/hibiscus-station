@@ -247,3 +247,19 @@ def test_installer_never_redirects_native_stderr_under_stop() -> None:
             eap = "Stop"
         if "& $uv" in code and ("2>" in code or "*>" in code):
             assert eap == "Continue", line
+
+
+@pytest.mark.parametrize(
+    ("doc", "needle"),
+    [
+        ("README.md", "A test build (pre-release, e.g. 1.0.0a1) is only reachable by its versioned link"),
+        (
+            "README.vi.md",
+            "Bản thử nghiệm (pre-release, ví dụ 1.0.0a1) chỉ cài được bằng liên kết có số phiên bản",
+        ),
+        ("docs/deploy.md", "A pre-release is only reachable by its versioned link"),
+    ],
+)
+def test_install_docs_say_a_pre_release_needs_its_versioned_link(doc: str, needle: str) -> None:
+    """GitHub's releases/latest skips pre-releases: the M0 test build is installed by its own link."""
+    assert needle in " ".join((ROOT / doc).read_text(encoding="utf-8").split())
