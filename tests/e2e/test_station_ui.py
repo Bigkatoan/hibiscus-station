@@ -3,7 +3,8 @@
 Drives Chromium (Playwright) through connect → calibrate → cameras → teleop → over-temperature
 safe stop → record 2 episodes with the keyboard → LeRobotDataset loads → import the real ACT
 checkpoint → run it with every camera, joints, temperatures and the Space e-stop. Screenshots go
-to ``screenshots/e2e/`` (git-ignored; ``HIBISCUS_E2E_SHOTS`` overrides).
+to ``screenshots/e2e/`` (git-ignored; ``HIBISCUS_E2E_SHOTS`` overrides). The Station listens on a
+free port, or on ``HIBISCUS_E2E_PORT``.
 
 Needs ``web/dist`` (``pnpm build`` in ``web/``) and a Chromium for Playwright 1.63
 (``uv run playwright install chromium``); skipped otherwise. ``HIBISCUS_E2E_CHECKPOINT`` may point
@@ -119,7 +120,7 @@ def station_proc(tmp_path: Path) -> Iterator[tuple[str, str, Path]]:
         "safety_ack": True,
     }
     (home / "robots.yaml").write_text(yaml.safe_dump({"version": 1, "active": "desk", "robots": [profile]}))
-    port = _free_port()
+    port = int(os.environ.get("HIBISCUS_E2E_PORT") or _free_port())  # a fixed port on shared hosts
     exe = shutil.which("hibiscus-station", path=str(Path(sys.executable).parent)) or shutil.which(
         "hibiscus-station"
     )
