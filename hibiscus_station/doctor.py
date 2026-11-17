@@ -360,6 +360,7 @@ def ping_arm(
     *,
     raw: bool = True,
     vid_pid: str | None = None,
+    calibration_file: str | None = None,
 ) -> dict[str, Any]:
     """Read-only check of an SO-101 arm on ``port``: which ids answer, their registers, and
     (``raw``) a raw dump of every id once the lerobot bus is closed again."""
@@ -420,6 +421,7 @@ def ping_arm(
         )
         if calibration:
             out["calibration_vs_eeprom"] = _compare(calibration, out["motors"])
+            out["calibration_file"] = calibration_file
         # Which calibration file (any id, e.g. LeLab's) the motors' EEPROM carries now.
         out["eeprom_matches"] = [
             path
@@ -494,10 +496,16 @@ def teleop_estimate(ms_per_read: float | None, chip: str | None = None) -> dict[
     return out
 
 
+NO_ANSWER = "motor did not answer"
+
+
 def _compare(cal: dict[str, Any], motors: dict[str, Any]) -> dict[str, Any]:
     out: dict[str, Any] = {}
     for name, v in cal.items():
         row = motors.get(str(v.get("id")), {})
+        if not row or row.get("error"):
+            out[name] = NO_ANSWER  # listed as "do not answer", never as a calibration mismatch
+            continue
         diffs = []
         for key, reg in (
             ("homing_offset", "Homing_Offset"),
@@ -655,6 +663,7 @@ def check_arms(
                     cal_by_path.get(expects) if expects else None,
                     same_arm,
                     vid_pid=_vid_pid(report, port),
+                    calibration_file=expects,
                 )
             )
         arms.append(row)
@@ -743,6 +752,18 @@ def warnings(report: dict[str, Any]) -> list[str]:
         if missing:
             out.append(
                 f"{a['robot']} {a['arm']}: motor id(s) {', '.join(missing)} do not answer (power? cable?)"
+            )
+        diffs = {
+            m: d for m, d in (a.get("calibration_vs_eeprom") or {}).items() if d not in ("match", NO_ANSWER)
+        }
+        if diffs:
+            shown = "; ".join(f"{m} {d}" for m, d in list(diffs.items())[:3])
+            more = f"; {len(diffs) - 3} more" if len(diffs) > 3 else ""
+            name = Path(str(a.get("calibration_file") or "")).stem or "?"
+            out.append(
+                f"{a['robot']} {a['arm']}: calibration file '{name}' does not match the motors "
+                f"({shown}{more}); Connect writes the file to the motors: if it is not this arm's "
+                "file, calibrate the arm again"
             )
         est = a.get("teleop_estimate") or {}
         if est.get("warning"):

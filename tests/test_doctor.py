@@ -786,3 +786,25 @@ def test_a_missing_calibration_lists_the_other_files_of_that_arm(tmp_path: Path)
     assert doctor.warnings(report) == [
         "arm follower: no calibration 'arm_follower' (files found: my_follower - Calibrate > Use this file)"
     ]
+
+
+def test_a_calibration_file_that_differs_from_the_motors_is_a_likely_problem(
+    tmp_path: Path, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """QD-14 (FL-11): ``so_leader/arm_leader.json`` says elbow_flex homing_offset 300, the motor 396."""
+    f, ld = emus
+    home = _calibrated_home(tmp_path, f, ld, monkeypatch)
+    lf = tmp_path / "calibration" / "teleoperators" / "so_leader" / "arm_leader.json"
+    data = json.loads(lf.read_text(encoding="utf-8"))
+    data["elbow_flex"]["homing_offset"] = 300
+    lf.write_text(json.dumps(data), encoding="utf-8")
+    ld.servos[6].dead = True  # a silent motor is "does not answer", never a calibration mismatch
+    text, _t = _run(home, tmp_path / "out")
+    problems = text.split("\n\n")[0].splitlines()[1:]
+    assert (
+        "  ! arm leader: calibration file 'arm_leader' does not match the motors (elbow_flex "
+        "homing_offset: file 300 motor 396); Connect writes the file to the motors: if it is not "
+        "this arm's file, calibrate the arm again"
+    ) in problems, problems
+    assert "  ! arm leader: motor id(s) 6 do not answer (power? cable?)" in problems
+    assert not any("follower" in p for p in problems), problems
