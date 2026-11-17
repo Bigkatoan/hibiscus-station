@@ -316,7 +316,7 @@ class Station:
         if not rest:
             raise StationError(
                 "validation_failed",
-                "this robot has no rest pose: set one on the Robot page first",
+                "this robot has no Home: set Home at the current position first",
                 params={"code": "no_rest_pose"},
             )
         target = {k: float(v) for k, v in rest.items()}

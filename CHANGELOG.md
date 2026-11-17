@@ -11,6 +11,48 @@ repository (`station/`); 0.2.0 is the first release of this standalone repositor
 
 ## [Unreleased]
 
+## [0.2.9] - unreleased
+
+Field report on 0.2.8 (Windows, real SO-101, 2026-11-17) and the customer's decisions CR-1 and CR-2.
+
+### Fixed
+- **"I pressed Stop while recording but it ran to the end, and the cameras stopped."** Stop did end
+  the episode at the press (the dataset in the report holds 22.5 s of the 30 s), but the episode was
+  then encoded inside the control loop: for as long as the encoder ran (11 s for 22 s of two
+  640x480 cameras on a fast PC, more on a laptop) Station sent no news, the cameras froze ("No fresh
+  frames"), every button was greyed out and the timer kept counting to 00:30. Now Stop shows
+  "Saving episode 1…" at once, the timer stops where you pressed, the cameras stay live and the arm
+  holds its position while the episode is written, then the end card appears. An e-stop while an
+  episode waits to be saved never delays the second Space (relax) any more, and a slow save is
+  never cut off half written.
+- **"No fresh frames" on a webcam that gives fewer pictures than asked** (common on Windows in low
+  light or on a shared USB hub). A frame now counts as fresh for three camera periods (at least
+  250 ms) instead of two, so these cameras no longer flicker or lose frames from the dataset. Each
+  session now records, per camera, the measured frame rate, frame age, stale ticks and the camera
+  driver (MSMF / DirectShow); the doctor zip carries it.
+- **"The leader is still not recognised."** The leader's 5 V servos do not report temperature or
+  current, and the bare "–" looked like a missing arm. The Leader heading now says
+  "Connected · 6/6 motors answer" and those values read "not measured", with the reason on hover.
+
+### Changed
+- **Stop holds the arm where it is (CR-1).** Pressing Stop in teleop, record, replay, run model,
+  programs, trajectories or Return Home keeps the arm exactly in place with torque on: no further
+  motion, no parking and no relax (even if the robot profile relaxes at the end of a session). You
+  then choose **Return Home** (slow, Space stops it) or **Relax** (Station asks you to support the
+  arm first). After your own e-stop the e-stop panel offers Return Home directly. Temperature or
+  electrical safe stops and an unplugged USB keep their safe behaviour. A second Space within 2 s
+  still relaxes at once and the screen says "Support the arm".
+- **"Rest pose" is now "Home" (CR-2)** in English and Vietnamese. **Set Home at current position**
+  and **Return Home** are in the top bar and under every Robot 3D panel (and on the Robot page);
+  the Calibrate page asks you to set Home when you finish; a program block that needs Home
+  (relax arm, go Home) shows **Set Home now** right in the list of problems. The calibration step
+  that used to be called "Set home" (the middle of each joint) is now **Set middle**, so the two
+  never mix. Saved profiles keep working (the stored field is still `rest_pose`).
+- Programs: **relax arm** and **go Home** still need a Home. Relax first parks at Home so the arm
+  never drops from a raised pose with nobody holding it; with no Home the program cannot start
+  until you press "Set Home now" (one click). The Relax buttons outside programs always ask you to
+  support the arm.
+
 ## [0.2.8] - 2026-11-16
 
 ### Fixed

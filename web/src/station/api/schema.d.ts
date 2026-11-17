@@ -879,9 +879,10 @@ export interface paths {
     put?: never;
     /**
      * Go Rest
-     * @description idle → playing (session kind ``rest``): move the follower to its rest pose, minimum jerk at
-     *     a capped peak speed, dead-man heartbeat on; ``POST /sessions/current/control {"action": "stop"}``
-     *     cancels it. Offered after an interrupted motion (``Status.interrupted``).
+     * @description "Return Home". idle → playing (session kind ``rest``): move the follower to its Home (the
+     *     profile's ``follower.rest_pose``), minimum jerk at a capped peak speed, dead-man heartbeat on;
+     *     ``POST /sessions/current/control {"action": "stop"}`` cancels it (the arm holds where it is).
+     *     Offered after a Stop or an interrupted motion (``Status.interrupted``).
      */
     post: operations["go_rest_api_v1_robots_rest_post"];
     delete?: never;
@@ -899,7 +900,11 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Rest Pose */
+    /**
+     * Rest Pose
+     * @description "Set Home at current position": the follower's present pose becomes the profile's Home
+     *     (stored as ``follower.rest_pose``). idle only, follower calibrated.
+     */
     post: operations["rest_pose_api_v1_robots_rest_pose_post"];
     delete?: never;
     options?: never;

@@ -1333,7 +1333,7 @@ class HardwareOwner:
             if not confirm and not (self.profile and self.profile.follower.rest_pose):
                 raise StationError(
                     "validation_failed",
-                    "torque off without a rest pose drops the arm: confirm=true is required",
+                    "torque off without a Home drops the arm: confirm=true is required",
                     params={"confirm_required": True},
                 )
             self._torque_off()

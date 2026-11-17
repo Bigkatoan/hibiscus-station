@@ -410,7 +410,7 @@ class MotionFactory:
         if not self.rest_pose:
             raise StationError(
                 "validation_failed",
-                "this robot has no rest pose: set one first",
+                "this robot has no Home: set Home at the current position first",
                 params={"code": "no_rest_pose"},
             )
         return dict(self.rest_pose)

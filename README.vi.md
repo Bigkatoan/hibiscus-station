@@ -31,7 +31,7 @@ bằng wheel.
 * **Sức khỏe động cơ trên mọi màn hình làm tay robot chuyển động.** Nhiệt độ, điện áp, dòng, tải và
   cờ báo lỗi của từng servo, cả follower lẫn leader, đọc ngay trong vòng điều khiển mà không làm nó
   chậm đi. Ấm ở 50 °C, nóng ở 60 °C (không cho bắt đầu phiên mới), nguy hiểm ở 65 °C hai lần liên
-  tiếp: Station giữ tay, đưa về tư thế nghỉ rồi tắt torque, trước khi bảo vệ 70 °C của chính servo
+  tiếp: Station giữ tay, đưa về Home rồi tắt torque, trước khi bảo vệ 70 °C của chính servo
   làm tay rơi.
 * **Camera khi model đang chạy.** Mỗi camera chỉ có một chủ, cấp hình cho cả vòng điều khiển lẫn giao
   diện, nên bạn thấy đúng khung hình policy nhận được (kèm số tick), cạnh vị trí khớp so với lệnh,

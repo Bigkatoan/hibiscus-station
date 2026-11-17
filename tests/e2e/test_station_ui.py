@@ -246,7 +246,7 @@ def test_station_ui_end_to_end(browser: Any, station_proc: tuple[str, str, Path]
         panel = page.get_by_role("tabpanel")
         panel.get_by_role("button", name=re.compile("^(Start calibration|Recalibrate)$")).click()
         expect(page.get_by_test_id("cal-home")).to_be_visible()
-        page.get_by_role("button", name="Set home").click()
+        page.get_by_role("button", name="Set middle").click()
         expect(page.get_by_test_id("cal-ranges")).to_be_visible()
         # the mock "hand" sweeps every joint; rows turn green once the range is big enough
         expect(page.get_by_test_id("range-shoulder_pan")).to_have_attribute("data-ok", "true", timeout=20000)
