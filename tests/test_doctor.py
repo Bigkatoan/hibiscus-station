@@ -327,7 +327,7 @@ def test_doctor_zip_has_no_token_or_pat(
 ) -> None:
     f, ld = emus
     home = _calibrated_home(tmp_path, f, ld, monkeypatch)
-    token = "Zk3v9QmT2xLp8RwYc4NbJ7HdFs6GaE1u0Io5KqWzXyV"  # 43 chars, as Station makes them
+    token = "Zk3v9QmT2xLp8RwYc4NbJ7HdFs6GaE1u0Io5KqWzXyV"  # fake, 43 chars as Station makes them  # gitleaks:allow
     pat = "hbp_AbCd1234_" + "x7Yq2Lm9Pz4Rt6Wv8Ks1Hn3Bf5Dj0Gc2Qe4Ua6Io8Ty"
     pat_secret = pat[len("hbp_AbCd") :]
     (home / "token").write_text(token, encoding="utf-8")

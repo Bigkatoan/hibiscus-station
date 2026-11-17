@@ -1,0 +1,3 @@
+# Fake test fixtures that look like secrets (gitleaks fingerprints of past commits).
+# tests/test_doctor.py: the planted token of test_doctor_zip_has_no_token_or_pat.
+7b7924670f4efee0239f4a9a50964774737f12c0:tests/test_doctor.py:generic-api-key:330
