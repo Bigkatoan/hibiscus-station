@@ -145,3 +145,97 @@ describe("Dataset page for a dataset that is gone (QD-12)", () => {
     expect(screen.queryByText(/0 episodes/)).toBeNull();
   });
 });
+
+/** Text nodes and title tooltips joined with spaces, so word boundaries hold between elements. */
+function visibleText(root: HTMLElement): string {
+  const parts: string[] = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+  for (let n: Node | null = walker.currentNode; n; n = walker.nextNode()) {
+    if (n.nodeType === Node.TEXT_NODE) parts.push(n.textContent ?? "");
+    else if (n instanceof HTMLElement && n.title) parts.push(n.title);
+  }
+  return parts.join(" ");
+}
+
+describe("Every page, en and vi: no raw values (QC 0.2.9 round 2 sweep)", () => {
+  const ROUTES = [
+    "/",
+    "/robot",
+    "/calibrate",
+    "/cameras",
+    "/teleop",
+    "/record",
+    "/replay",
+    "/upload",
+    "/datasets",
+    "/datasets/picknplace_red",
+    "/train",
+    "/run",
+    "/programs",
+    "/models",
+    "/sessions",
+    "/settings",
+  ];
+  const RAW = [
+    /\bNone\b/,
+    /\bnull\b/,
+    /\bundefined\b/,
+    /\bNaN\b/,
+    /\[object Object\]/,
+    // an i18n key shown as text: "session.kind_program", "programs.status.completed"
+    /\b(?:session|reasons|jobs|programs|run|record|robot|cameras|alerts|health|compat|errors)\.[a-z_.]+\b/,
+  ];
+  for (const lng of ["en", "vi"]) {
+    it(`${lng}: no None / null / undefined / NaN / raw keys on any page`, async () => {
+      await i18n.changeLanguage(lng);
+      const found: string[] = [];
+      for (const route of ROUTES) {
+        const h = setupStation({ paired: true });
+        // every session kind and the outcomes a real Station sends, and a held camera
+        const base = h.sim.sessionsHist[0]!;
+        const kinds = [
+          "teleop",
+          "record",
+          "replay",
+          "run",
+          "traj_record",
+          "traj_play",
+          "program",
+          "rest",
+        ] as const;
+        const outcomes = [
+          "completed",
+          "stopped",
+          "user",
+          "thermal",
+          "ui_lost",
+          "camera_lost",
+          "disconnect",
+          "failed",
+        ];
+        h.sim.sessionsHist = kinds.map((kind, i) => ({
+          ...base,
+          id: `s_${i}`,
+          kind,
+          outcome: outcomes[i] ?? "stopped",
+        }));
+        server.use(
+          http.get(`${window.location.origin}/api/v1/cameras/discover`, () =>
+            HttpResponse.json({ cameras: [HELD_MOCK] }),
+          ),
+        );
+        const view = renderStation(route, h);
+        await settle();
+        await advance(h.sim, 1.0);
+        const text = visibleText(document.body);
+        expect(text.length, route).toBeGreaterThan(80);
+        for (const re of RAW) {
+          const m = re.exec(text);
+          if (m) found.push(`${route}: ${m[0]} … ${text.slice(Math.max(0, m.index - 40), m.index + 40)}`);
+        }
+        view.unmount();
+      }
+      expect(found).toEqual([]);
+    });
+  }
+});
