@@ -9,7 +9,11 @@ Feetech wire protocol, so the *real* rustypot and lerobot stack (``SOFollower`` 
   ``Homing_Offset`` (bit 11) / ``Present_Position`` (bit 15) / ``Present_Load`` (bit 10);
 * ``present = actual - homing_offset`` (rustypot ``homing_offset_sign = -1``), goals clamped to
   the position limits, torque-off joints follow a "hand" function;
-* fault injection: dropped answers, corrupted checksums, response latency, status/alarm bits;
+* fault injection: dropped answers (the whole bus or one servo: ``Servo.drop_rate``), corrupted
+  checksums, response latency, status/alarm bits, and *late answers* (QD-25): ``late(instr, id,
+  params, answer_id)`` or ``late_rate`` / ``late_s`` delay single answers, ``adapter_delay_s``
+  delays every answer as a slow USB adapter does; a delayed answer keeps its place in the byte
+  stream (first in, first out) and the servos keep answering meanwhile;
 * optional wire timing (:meth:`STSEmulator.realistic`): bytes at 1 Mbaud, each servo's
   ``Return_Delay_Time`` (register 7, 2 us units) and the USB adapter's latency in both directions,
   plus a first-order servo response (``tau_s``, ``vmax_steps_s``) for latency measurements;
@@ -109,6 +113,7 @@ class Servo:
     current_raw: int = 12
     load_raw: int = 0
     dead: bool = False  # never answers
+    drop_rate: float = 0.0  # this servo's answers lost (a loose cable on one servo)
 
     def __post_init__(self) -> None:
         for addr, (size, val) in FACTORY.items():
@@ -150,6 +155,12 @@ class STSEmulator:
         self.drop_rate = 0.0  # answer missing (timeout on the host)
         self.corrupt_rate = 0.0  # bad checksum
         self.latency_s = 0.0005
+        # late answers (QD-25): extra seconds for one answer packet, FIFO with the others
+        self.late: Callable[[int, int, bytes, int], float] | None = None  # (instr, id, params, answer id)
+        self.late_rate = 0.0  # share of answers that come late_s later
+        self.late_s = 0.0
+        self.adapter_delay_s = 0.0  # every answer, pipelined (a slow adapter / hub)
+        self.late_rng = random.Random(seed + 1000)
         # wire timing (0 = off): see realistic()
         self.baud = 0.0
         self.usb_out_s = 0.0  # host -> adapter (USB frame)
@@ -291,6 +302,8 @@ class STSEmulator:
             return b""
         if self.drop_rate and self.rng.random() < self.drop_rate:
             return b""
+        if s.drop_rate and self.rng.random() < s.drop_rate:
+            return b""
         return self._answer(s, params)
 
     def handle(self, pkt_id: int, instr: int, params: bytes) -> bytes:
@@ -327,10 +340,42 @@ class STSEmulator:
                 return b""
             return b""
 
+    def answers(self, pkt_id: int, instr: int, params: bytes) -> tuple[bytes, list[tuple[bytes, float]]]:
+        """``handle()``'s answer and, when some of it comes late, its packets with their extra
+        delay (empty list: nothing is late, send it as one)."""
+        out = self.handle(pkt_id, instr, params)
+        if not out or not (self.late or self.late_rate or self.adapter_delay_s):
+            return out, []
+        pkts: list[bytes] = []
+        rest = out
+        while rest:
+            n = 4 + rest[3] if len(rest) >= 4 else len(rest)
+            pkts.append(rest[:n])
+            rest = rest[n:]
+        timed: list[tuple[bytes, float]] = []
+        for p in pkts:
+            extra = self.adapter_delay_s
+            if self.late is not None:
+                extra += self.late(instr, pkt_id, params, p[2] if len(p) > 2 else -1)
+            if self.late_rate and self.late_rng.random() < self.late_rate:
+                extra += self.late_s
+            timed.append((p, extra))
+        if not any(extra for _p, extra in timed):
+            return out, []
+        return out, timed
+
     def _serve(self) -> None:
         buf = bytearray()
+        outbox: list[tuple[float, bytes]] = []  # late answers, in the order they leave the adapter
         while not self._stop.is_set():
-            r, _, _ = select.select([self.master], [], [], 0.05)
+            now = time.monotonic()
+            while outbox and outbox[0][0] <= now:
+                try:
+                    os.write(self.master, outbox.pop(0)[1])
+                except OSError:
+                    return
+            wait = 0.05 if not outbox else max(0.0, min(0.05, outbox[0][0] - now))
+            r, _, _ = select.select([self.master], [], [], wait)
             if not r:
                 continue
             try:
@@ -356,7 +401,7 @@ class STSEmulator:
                 self.transactions += 1
                 if self.baud:
                     _wait(self.usb_out_s + len(pkt) * 10 / self.baud)
-                out = self.handle(pkt[2], pkt[4], pkt[5:-1])
+                out, timed = self.answers(pkt[2], pkt[4], pkt[5:-1])
                 if out:
                     delay = self.latency_s
                     if self.baud:
@@ -364,6 +409,12 @@ class STSEmulator:
                     if self.return_delay:
                         n = len(pkt[7:-1]) if pkt[4] == 0x82 else 1  # sync read: one answer per id
                         delay += n * max(s.get(7, 1) for s in self.servos.values()) * 2e-6
+                    if timed or outbox:
+                        t = time.monotonic() + delay
+                        for p, extra in timed or [(out, 0.0)]:
+                            t_out = max(t + extra, outbox[-1][0] if outbox else 0.0)
+                            outbox.append((t_out, p))
+                        continue
                     if delay:
                         _wait(delay)
                     os.write(self.master, out)

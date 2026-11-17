@@ -7,7 +7,9 @@ every other USB serial port: model, firmware, voltage, temperature, current, loa
 calibration compared with the file, plus a raw dump of registers 0-4, 13-15 and 56-70 of each
 servo, read with one plain READ instruction per block (no sync read, no rustypot decoding) so a
 field report shows the exact bytes the servo sent (REG-13). Nothing is written to a motor and no
-torque is switched on: only PING, READ and SYNC_READ instructions are sent.
+torque is switched on: only PING, READ and SYNC_READ instructions are sent. Every answer is
+validated (servo id, length asked, checksum) by :mod:`hibiscus_station.hw.probe`; a value is shown
+only from a validated answer, a register without one is "?" (unreadable), never a guess (QD-25).
 
 The report is printed and saved with copies of the files into ``hibiscus-station-doctor-<ts>.zip``.
 Login tokens and Hibiscus PATs never go in: the token file and ``server.json`` are skipped and every
@@ -61,44 +63,11 @@ PING_REGISTERS = (
 #: load, voltage, temperature, status, moving, current).
 RAW_BLOCKS: tuple[tuple[int, int], ...] = ((0, 5), (13, 3), (56, 15))
 RAW_BAUD = 1_000_000
-RAW_TIMEOUT_S = 0.1
-FEETECH_READ = 0x02  # the only instruction the raw dump sends
-
-
-def _checksum(body: bytes) -> int:
-    return (~sum(body)) & 0xFF
-
-
-def read_packet(motor_id: int, addr: int, length: int) -> bytes:
-    """A Feetech READ instruction (never a write): ``FF FF id 4 0x02 addr length checksum``."""
-    body = bytes([motor_id, 4, FEETECH_READ, addr, length])
-    return b"\xff\xff" + body + bytes([_checksum(body)])
-
-
-def _read_answer(ser: Any, motor_id: int, timeout_s: float) -> bytes | None:
-    """The first well-formed status packet from ``motor_id`` (None on timeout)."""
-    buf = bytearray()
-    deadline = time.monotonic() + timeout_s
-    while time.monotonic() < deadline:
-        chunk = ser.read(ser.in_waiting or 1)
-        if chunk:
-            buf += chunk
-        while True:
-            start = buf.find(b"\xff\xff")
-            if start < 0:
-                del buf[:-1]
-                break
-            del buf[:start]
-            if len(buf) < 4:
-                break
-            total = 4 + buf[3]
-            if len(buf) < total:
-                break
-            pkt = bytes(buf[:total])
-            del buf[:total]
-            if pkt[2] == motor_id and _checksum(pkt[2:-1]) == pkt[-1]:
-                return pkt
-    return None
+RAW_TIMEOUT_S = 0.05
+#: Blocks the registers of :data:`PING_REGISTERS` are read in (address, length). Their lengths
+#: differ from each other, from a ping (0), a sync read of a position (2) and the raw blocks, so a
+#: late answer to another request can never pass validation as one of them (QD-25).
+REGISTER_BLOCKS: tuple[tuple[int, int], ...] = ((0, 17), (28, 6), (40, 1), (55, 16))
 
 
 def _u16(b: dict[int, int], addr: int) -> int | None:
@@ -145,50 +114,66 @@ def decode_raw(b: dict[int, int]) -> dict[str, Any]:
 def raw_dump(port: str, ids: Any = MOTOR_IDS, *, timeout_s: float = RAW_TIMEOUT_S) -> dict[str, Any]:
     """Each servo's :data:`RAW_BLOCKS`, read with plain READ instructions through pyserial (not
     rustypot, so a decoding error there cannot hide here). Read only: nothing else is sent."""
-    import serial
+    from hibiscus_station.hw.probe import Probe
 
-    out: dict[str, Any] = {"baud": RAW_BAUD, "blocks": [list(b) for b in RAW_BLOCKS], "motors": {}}
     try:
-        ser = serial.Serial(port, RAW_BAUD, timeout=0.005, write_timeout=1)
+        probe = Probe(port, timeout_s=timeout_s, label="raw dump")
     except Exception as exc:
-        out["error"] = f"cannot open: {type(exc).__name__}: {exc}"
-        return out
+        return {**_raw_head(), "error": f"cannot open: {type(exc).__name__}: {exc}"}
     try:
-        ser.reset_input_buffer()
+        return _raw_dump(probe, ids)
+    finally:
+        probe.close()
+
+
+def _raw_head() -> dict[str, Any]:
+    return {"baud": RAW_BAUD, "blocks": [list(b) for b in RAW_BLOCKS], "motors": {}}
+
+
+def _why_text(why: list[str]) -> str:
+    """The failed attempts of one request in words: a corrupt answer is never called "no answer"."""
+    from hibiscus_station.hw.probe import CORRUPT, GARBLED, NO_ANSWER, OUTCOME_WORDS
+
+    for kind in (CORRUPT, GARBLED, NO_ANSWER):
+        if kind in why:
+            return OUTCOME_WORDS[kind]
+    return OUTCOME_WORDS[NO_ANSWER]
+
+
+def _raw_dump(probe: Any, ids: Any) -> dict[str, Any]:
+    """:func:`raw_dump` on an open :class:`~hibiscus_station.hw.probe.Probe`: every block's answer
+    is validated (id, length asked, checksum); a block without a valid answer has no data."""
+    from hibiscus_station.hw.probe import TRIES, read_packet
+
+    out = _raw_head()
+    try:
         for mid in ids:
             row: dict[str, Any] = {"blocks": {}}
             regs: dict[int, int] = {}
+            errors: list[str] = []
+            ev = probe.evidence.get(mid)
+            tries = TRIES if ev is not None and ev.heard else 1  # nothing ever came: ask once
             for addr, length in RAW_BLOCKS:
-                req = read_packet(mid, addr, length)
-                ser.write(req)
-                ser.flush()
-                ans = _read_answer(ser, mid, timeout_s)
-                blk: dict[str, Any] = {"request": req.hex(" ")}
-                if ans is None:
+                frame, why = probe.read(mid, addr, length, tries)
+                blk: dict[str, Any] = {"request": read_packet(mid, addr, length).hex(" ")}
+                if frame is None:
                     blk["answer"] = None
-                    blk["error"] = "no answer"
+                    blk["error"] = _why_text(why)
+                    errors.append(blk["error"])
                 else:
-                    params = ans[5:-1]
-                    blk["answer"] = ans.hex(" ")
-                    blk["error_byte"] = ans[4]
-                    blk["data"] = params.hex(" ")
-                    if len(params) != length:
-                        blk["error"] = f"answered {len(params)} bytes, asked {length}"
-                    for i, v in enumerate(params[:length]):
+                    blk["answer"] = frame.raw.hex(" ")
+                    blk["error_byte"] = frame.status
+                    blk["data"] = frame.params.hex(" ")
+                    for i, v in enumerate(frame.params):
                         regs[addr + i] = v
                 row["blocks"][f"{addr}-{addr + length - 1}"] = blk
             if regs:
                 row["decoded"] = decode_raw(regs)
             else:
-                row["error"] = "no answer"
+                row["error"] = errors[0] if len(set(errors)) == 1 else "no valid answer"
             out["motors"][str(mid)] = row
     except Exception as exc:
         out["error"] = f"{type(exc).__name__}: {exc}"
-    finally:
-        try:
-            ser.close()
-        except Exception:  # noqa: S110 - best effort close
-            pass
     return out
 
 
@@ -354,6 +339,35 @@ def profiles(paths: StationPaths, cal_root: Path) -> dict[str, Any]:
 
 
 # ----------------------------------------------------------------------------------------- motors
+def _register_table() -> dict[str, tuple[int, int, int | None]]:
+    """``name -> (address, size, sign bit or None)`` of the registers the doctor reads, from
+    rustypot's STS3215 table (the one Station's bus uses)."""
+    from rustypot import find_model
+
+    found = find_model("sts3215")
+    if found is None:
+        raise ValueError("rustypot has no sts3215 definition")
+    _, definition = found
+    out: dict[str, tuple[int, int, int | None]] = {}
+    for name in ("Model_Number", "Present_Position", *PING_REGISTERS):
+        info = definition.register(name.lower())
+        if info is None:
+            raise ValueError(f"rustypot's sts3215 table has no {name}")
+        sign = info.sign_bit if info.encoding == "sign_magnitude" else None
+        out[name] = (int(info.addr), int(info.size), sign)
+    return out
+
+
+def _register_value(regs: dict[int, int], addr: int, size: int, sign: int | None) -> int | None:
+    """A register from validated bytes (None when one of its bytes was not read)."""
+    if any(addr + i not in regs for i in range(size)):
+        return None
+    raw = sum(regs[addr + i] << (8 * i) for i in range(size))
+    if sign is not None and raw & (1 << sign):
+        return -(raw & ((1 << sign) - 1))
+    return raw
+
+
 def ping_arm(
     port: str,
     calibration: dict[str, Any] | None = None,
@@ -363,126 +377,174 @@ def ping_arm(
     vid_pid: str | None = None,
     calibration_file: str | None = None,
 ) -> dict[str, Any]:
-    """Read-only check of an SO-101 arm on ``port``: which ids answer, their registers, and
-    (``raw``) a raw dump of every id once the lerobot bus is closed again."""
-    from lerobot.motors import Motor, MotorNormMode
+    """Read-only check of an SO-101 arm on ``port``: which ids answer, their registers, timed sync
+    reads and (``raw``) a raw dump of every id. Every value comes from a validated answer
+    (:mod:`hibiscus_station.hw.probe`, QD-25); a register without one is unreadable (None)."""
+    from hibiscus_station.hw.probe import Probe
 
-    from hibiscus_station.hw.bus import StationMotorsBus
-
-    motors = {f"id{i}": Motor(i, "sts3215", MotorNormMode.RANGE_M100_100) for i in MOTOR_IDS}
-    bus = StationMotorsBus(port, motors, arm="doctor")
     out: dict[str, Any] = {"port": port, "motors": {}}
     t0 = time.perf_counter()
     try:
-        bus.connect(handshake=False)
+        probe = Probe(port, label="doctor")
     except Exception as exc:
         out["error"] = f"cannot open: {exc.__cause__ or exc}"
         return out
     try:
-        try:
-            from rustypot import find_model
-
-            found = find_model("sts3215")
-            if found is None:
-                raise ValueError("rustypot has no sts3215 definition")
-            _, definition = found
-            out["scan_1mbps"] = {str(k): v for k, v in sorted(bus._scan(definition).items())}
-        except Exception as exc:
-            out["scan_1mbps"] = f"{type(exc).__name__}: {exc}"
-        for name, m in motors.items():
-            row: dict[str, Any] = {}
-            key = f"ping Model_Number [{m.id}]"
-            missed = bus.errors[key]
-            model = bus.ping(name, num_retry=PING_RETRIES)
-            row["model_number"] = model
-            # The one source of truth for "this motor answers": a ping, with retries (QD-24).
-            row["ping_tries"] = bus.errors[key] - missed + (model is not None)
-            if model is None:
-                row["error"] = "no answer"
-                out["motors"][str(m.id)] = row
-                continue
-            for reg in PING_REGISTERS:
-                try:
-                    row[reg] = bus.read(reg, name, normalize=False, num_retry=1)
-                except Exception as exc:
-                    row[reg] = f"error: {exc}"
-            row["decoded"] = decode_registers(row)
-            out["motors"][str(m.id)] = row
-        out["sync_read_present_position"] = time_sync_reads(bus)
-        out["usb_chip"] = usb_chip(vid_pid)
-        verdict = bus_verdict(out)
-        out["bus_verdict"] = verdict
-        out["teleop_estimate"] = verdict["estimate"] if verdict else None
-        if calibration:
-            out["calibration_vs_eeprom"] = _compare(calibration, out["motors"])
-            out["calibration_file"] = calibration_file
-        # Which calibration file (any id, e.g. LeLab's) the motors' EEPROM carries now.
-        out["eeprom_matches"] = [
-            path
-            for path, cal in (candidates or {}).items()
-            if cal and all(v == "match" for v in _compare(cal, out["motors"]).values())
-        ]
+        _check_motors(probe, out)
+        if raw:
+            out["raw_dump"] = _raw_dump(probe, MOTOR_IDS)
+    except Exception as exc:
+        out["error"] = f"the serial port failed during the check: {type(exc).__name__}: {exc}"
     finally:
-        out["bus_errors"] = bus.error_summary()
-        try:
-            bus.disconnect(disable_torque=False)
-        except Exception:  # noqa: S110 - best effort close
-            pass
-    if raw:
-        out["raw_dump"] = raw_dump(port)
+        probe.close()
+        out["bus_errors"] = probe.error_summary()
+    _conclude(out, probe.evidence)
+    out["usb_chip"] = usb_chip(vid_pid)
+    verdict = bus_verdict(out)
+    out["bus_verdict"] = verdict
+    out["teleop_estimate"] = verdict["estimate"] if verdict else None
+    if calibration:
+        out["calibration_vs_eeprom"] = _compare(calibration, out["motors"])
+        out["calibration_file"] = calibration_file
+    # Which calibration file (any id, e.g. LeLab's) the motors' EEPROM carries now.
+    out["eeprom_matches"] = [
+        path
+        for path, cal in (candidates or {}).items()
+        if cal and all(v == "match" for v in _compare(cal, out["motors"]).values())
+    ]
+    out["eeprom_unreadable"] = any(
+        m.get(reg) is None
+        for m in out["motors"].values()
+        if not m.get("error")
+        for reg in ("Homing_Offset", "Min_Position_Limit", "Max_Position_Limit")
+    )
     out["seconds"] = round(time.perf_counter() - t0, 2)
     return out
 
 
-#: Pings per motor (1 + retries) before it counts as silent.
+def _check_motors(probe: Any, out: dict[str, Any]) -> None:
+    """Scan, pings, timed sync reads, then the registers of every motor heard so far."""
+    table = _register_table()
+    ids = list(MOTOR_IDS)
+    scan = probe.scan()
+    out["scan_1mbps"] = {str(i): None for i in scan}
+    for other in (i for i in scan if i not in ids):
+        frame, _why = probe.read(other, table["Model_Number"][0], table["Model_Number"][1], tries=1)
+        if frame is not None:
+            out["scan_1mbps"][str(other)] = int.from_bytes(frame.params, "little")
+    for mid in ids:
+        ok, tries = probe.ping(mid, PING_RETRIES + 1)
+        out["motors"][str(mid)] = {"ping_ok": ok, "ping_tries": tries}
+    pos_addr, pos_size, _ = table["Present_Position"]
+    out["sync_read_present_position"] = time_sync_reads(probe, ids, pos_addr, pos_size)
+    for mid in ids:
+        row = out["motors"][str(mid)]
+        if not row["ping_ok"]:
+            continue  # no ping answered: its registers are not asked
+        regs: dict[int, int] = {}
+        failed: dict[str, str] = {}
+        for addr, length in REGISTER_BLOCKS:
+            frame, why = probe.read(mid, addr, length)
+            if frame is None:
+                failed[f"{addr}-{addr + length - 1}"] = _why_text(why)
+                continue
+            for i, v in enumerate(frame.params):
+                regs[addr + i] = v
+        row["registers_read"] = True
+        row["unreadable_blocks"] = failed
+        for reg in ("Model_Number", *PING_REGISTERS):
+            row[reg] = _register_value(regs, *table[reg])
+        row["model_number"] = row.pop("Model_Number")
+    for k, v in list(out["scan_1mbps"].items()):
+        if v is None and k in out["motors"]:
+            out["scan_1mbps"][k] = out["motors"][k].get("model_number")
+
+
+#: A motor's state from every packet it sent (QD-27): ``answers`` (a ping answered), ``flaky``
+#: (no ping answered, other requests did: scan, sync read, register read, a late answer),
+#: ``corrupt`` (only corrupted or cut-short packets), ``silent`` (nothing at all).
+MOTOR_STATES = ("answers", "flaky", "corrupt", "silent")
+
+
+def _conclude(out: dict[str, Any], evidence: dict[int, Any]) -> None:
+    """Each motor's state and unreadable registers, from the whole check's evidence."""
+    scan = out.get("scan_1mbps") if isinstance(out.get("scan_1mbps"), dict) else {}
+    sr = out.get("sync_read_present_position") or {}
+    for mid, row in out["motors"].items():
+        ev = evidence.get(int(mid))
+        row["evidence"] = {
+            "scan": mid in (scan or {}),
+            "ping": bool(row.get("ping_ok")),
+            "sync_reads": int((sr.get("answers_by_motor") or {}).get(mid) or 0),
+            "valid": ev.valid if ev else 0,
+            "late": ev.late if ev else 0,
+            "corrupt": ev.corrupt if ev else 0,
+            "garbled": ev.garbled if ev else 0,
+        }
+        state = "answers" if row.get("ping_ok") else "silent"
+        row["state"] = state
+        if state == "silent":
+            row["error"] = "no answer"
+            continue
+        if not row.get("registers_read"):
+            row["unreadable_blocks"] = {"all": "not read (no answer before the register reads)"}
+            for reg in ("model_number", *PING_REGISTERS):
+                row.setdefault(reg, None)
+        row["unreadable"] = [reg for reg in PING_REGISTERS if row.get(reg) is None]
+        row["decoded"] = decode_registers(row)
+
+
+def motor_state(m: dict[str, Any]) -> str:
+    """A motor row's state (:data:`MOTOR_STATES`); rows without one (older reports): by its error."""
+    state = m.get("state")
+    if state in MOTOR_STATES:
+        return str(state)
+    return "silent" if m.get("error") else "answers"
+
+
+#: Pings per motor (1 + retries) before it counts as not answering a ping.
 PING_RETRIES = 2
 #: Sync reads timed per arm, and how many of them must succeed for a speed estimate (QD-23).
 SYNC_READS = 20
 MIN_OK_READS = 5
 #: Classes of a failed read: the servo did not answer (timeout), it answered but the packet was
-#: corrupt (checksum), the answers did not parse (in a sync read, mostly one servo's answer missing
-#: so the next one's came in its place), anything else. Their words in the report.
+#: corrupt (checksum), the answer was cut short or had the wrong length, anything else. Their
+#: words in the report.
 READ_FAILURES: dict[str, str] = {
     "no_answer": "got no answer",
     "corrupt": "got corrupted answers (checksum)",
-    "garbled": "got malformed answers (parse error: a servo's answer missing or cut short)",
+    "garbled": "got malformed answers (cut short or the wrong length)",
     "other": "failed with another error",
 }
 
 
-def read_failure(exc: BaseException) -> str:
-    """The class (a key of :data:`READ_FAILURES`) of a failed bus read, from rustypot's words:
-    ``... Operation timed out``, ``... Checksum error`` or ``... Parsing error`` (a sync read whose
-    answer of one servo is missing reads the next servo's answer in its place)."""
-    text = f"{exc} {exc.__cause__ or ''}".lower()
-    if "checksum" in text:
-        return "corrupt"
-    if any(w in text for w in ("timed out", "timeout", "no answer", "no status")):
-        return "no_answer"
-    if "parsing error" in text or "parse error" in text:
-        return "garbled"
-    return "other"
-
-
-def time_sync_reads(bus: Any, n: int = SYNC_READS) -> dict[str, Any]:
+def time_sync_reads(probe: Any, ids: list[int], addr: int, size: int, n: int = SYNC_READS) -> dict[str, Any]:
     """``n`` sync reads of Present_Position, no retry: how many worked, how fast (the successful
-    ones only: a failed read waits for a timeout, QD-21) and the failures by class (QD-24)."""
+    ones only: a failed read waits for a timeout, QD-21), the failures by class (the first servo
+    whose answer failed: QD-24), which servos failed in each failed read, and how many valid
+    answers each servo gave (QD-27)."""
     by_class = dict.fromkeys(READ_FAILURES, 0)
     ok_ms: list[float] = []
+    answers = {str(i): 0 for i in ids}
+    failures: list[dict[str, str]] = []
     for _ in range(n):
-        t = time.perf_counter()
-        try:
-            bus.sync_read("Present_Position", normalize=False, num_retry=0)
-        except Exception as exc:
-            by_class[read_failure(exc)] += 1
-        else:
-            ok_ms.append((time.perf_counter() - t) * 1000)
+        got = probe.sync_read(ids, addr, size)
+        for mid in got.frames:
+            answers[str(mid)] = answers.get(str(mid), 0) + 1
+        if got.failed:
+            first = min(got.failed)
+            by_class[got.failed[first] if got.failed[first] in by_class else "other"] += 1
+            failures.append({str(k): v for k, v in sorted(got.failed.items())})
+        elif got.ms is not None:
+            ok_ms.append(got.ms)
     return {
         "reads": n,
         "ok": len(ok_ms),
         "failed": n - len(ok_ms),
         **by_class,
         "ms_per_read": round(sum(ok_ms) / len(ok_ms), 2) if ok_ms else None,
+        "answers_by_motor": answers,
+        "failures_by_read": failures,
     }
 
 
@@ -499,78 +561,127 @@ BUS_ADVICE = (
 
 
 def bus_verdict(a: dict[str, Any]) -> dict[str, Any] | None:
-    """The one conclusion about an arm's bus that every line of the report repeats (QD-21 - QD-24).
+    """The one conclusion about an arm's bus that every line of the report repeats (QD-21 - QD-27).
 
-    Inputs: the ping of each motor (with retries: the only source of "a motor answers"), the
-    ``SYNC_READS`` timed sync reads (ok / failed by class / ms of the reads that worked), the USB
-    chip. ``N`` is :data:`MIN_OK_READS`.
+    Inputs: every packet each motor sent during the check (the scan, 3 pings, the
+    ``SYNC_READS`` timed sync reads, the register reads, late answers: :data:`MOTOR_STATES`), the
+    sync reads (ok / failed by class / ms of the reads that worked), the late answers the probe
+    discarded, the registers that never got a valid answer, the USB chip. ``N`` is
+    :data:`MIN_OK_READS`. Each motor's state:
 
-    ===========  =================  ===============================  ===================  ==============
-    motors       sync reads         LIKELY PROBLEMS                  teleop estimate      slow-bus advice
-    (ping)                                                                                (D-21)
-    ===========  =================  ===============================  ===================  ==============
-    some silent  any (they fail)    "motor id(s) X do not answer     not measured (motor  never
-                                    (power? cable?)"                 id(s) X do not
-                                                                     answer)
-    all answer   all ok             nothing (slow-bus advice if      ~Hz                  if > 6 ms per
-                                    slow)                                                 read
-    all answer   some fail, >= N    "unreliable bus: F of R reads    ~Hz (speed of the K  if slow and
-                 ok                 failed (A got no answer, C got   reads that worked)   fewer reads
-                                    corrupted answers (checksum), G                       failed than
-                                    got malformed answers (parse                          worked
-                                    error ...), O failed with
-                                    another error) although every
-                                    motor answers a ping; <cables,
-                                    power, USB>"
-    all answer   < N ok             the same "unreliable bus" line   not measured (too    never
-                                                                     few reads
-                                                                     succeeded: K of R)
-    ===========  =================  ===============================  ===================  ==============
+    =======================================  ==========  =============================================
+    evidence of the motor                    state       its line in the motor check
+    =======================================  ==========  =============================================
+    a ping answered (1 + 2 retries)          answers     its registers (``?`` for an unreadable one)
+    no ping answered, another valid answer   flaky       "answers only now and then" + its registers
+    (scan, sync read, register, late)
+    only corrupted / cut-short packets       corrupt     "answers only with corrupted packets"
+    no packet at all                         silent      "no answer"
+    =======================================  ==========  =============================================
 
-    Only the classes that happened are named, so a checksum error is never called "no answer".
-    The scan line of the summary (:func:`answering_text`) is derived from the same pings.
+    The arm's conclusion (bus faults are each named only when they happened):
 
-    Returns ``{"kind": "silent" | "unreliable" | "ok", "silent": [ids], "problem": str | None,
+    ===========  ===========================  ==============================  ======================
+    motors       bus faults                   LIKELY PROBLEMS                 teleop estimate /
+                                                                              slow-bus advice
+    ===========  ===========================  ==============================  ======================
+    some silent  -                            "motor id(s) X do not answer    not measured (motor
+                                              (power? cable?)"                id(s) X do not answer)
+                                                                              / never
+    some silent  reads that failed for the    + "unreliable bus: <faults>;    same
+                 motors that answer, flaky    <cables, power, USB>"
+                 or corrupt motors, late
+                 answers, unreadable
+                 registers
+    none silent  none                         nothing (slow-bus advice if     ~Hz / if > 6 ms per
+                                              slow)                           read
+    none silent  F failed sync reads (by      "unreliable bus: <faults>;      ~Hz of the K reads that
+                 class), flaky or corrupt     <cables, power, USB>"           worked if K >= N, else
+                 motors, late answers,                                        not measured (too few
+                 unreadable registers                                         reads succeeded: K of
+                                                                              R) / if slow and F < K
+    ===========  ===========================  ==============================  ======================
+
+    Faults: "F of R reads failed (A got no answer, C got corrupted answers (checksum), ...)
+    [although every motor answers a ping]" (the last words only when every motor answered one),
+    "motor id(s) Y answer only now and then (no valid answer to 3 pings)", "motor id(s) Z answer
+    only with corrupted packets (checksum)", "L answers came too late and were discarded" (not
+    named when every read worked at a slow speed: then the adapter is slow, and the slow-bus advice
+    says so), "registers of motor id(s) W could not be read". A register that could not be read
+    is never compared with the calibration file (:func:`_compare`): it is "could not read", never
+    "does not match".
+
+    Returns ``{"kind": "silent" | "unreliable" | "ok", "silent": [ids], "flaky": [ids], "corrupt":
+    [ids], "problems": [str], "problem": str | None (the first), "unreliable": str | None,
     "estimate": dict | None, "not_measured": str | None, "estimate_of": str | None}``, or None
-    when no motor was pinged (port not opened).
+    when no motor was checked (port not opened).
     """
     motors = a.get("motors") or {}
     if not motors:
         return None
-    silent = [k for k, m in motors.items() if m.get("error")]
+    states = {k: motor_state(m) for k, m in motors.items()}
+    silent = [k for k, s in states.items() if s == "silent"]
+    flaky = [k for k, s in states.items() if s == "flaky"]
+    corrupt = [k for k, s in states.items() if s == "corrupt"]
     out: dict[str, Any] = {
         "kind": "ok",
         "silent": silent,
+        "flaky": flaky,
+        "corrupt": corrupt,
+        "problems": [],
         "problem": None,
+        "unreliable": None,
         "estimate": None,
         "not_measured": None,
         "estimate_of": None,
     }
-    if silent:
-        ids = ", ".join(silent)
-        out.update(
-            kind="silent",
-            problem=f"motor id(s) {ids} do not answer (power? cable?)",
-            not_measured=f"motor id(s) {ids} do not answer",
-        )
-        return out
-    sr = a.get("sync_read_present_position")
-    if not sr:
-        return out
+    sr = a.get("sync_read_present_position") or {}
     reads, failed = int(sr.get("reads") or 0), int(sr.get("failed") or 0)
     ok = int(sr["ok"]) if sr.get("ok") is not None else reads - failed
-    if failed:
-        out.update(
-            kind="unreliable",
-            problem=(
-                f"unreliable bus: {failed} of {reads} reads failed ({failures_text(sr)}) although "
-                f"every motor answers a ping; {BUS_ADVICE}"
-            ),
+    ms = sr.get("ms_per_read")
+    faults: list[str] = []
+    if silent:
+        pass  # every sync read asks the silent motors too and fails (QD-21)
+    elif failed:
+        every = not flaky and not corrupt
+        faults.append(
+            f"{failed} of {reads} reads failed ({failures_text(sr)})"
+            + (" although every motor answers a ping" if every else "")
         )
-    if ok < MIN_OK_READS or sr.get("ms_per_read") is None:
+    if flaky:
+        faults.append(
+            f"motor id(s) {', '.join(flaky)} answer only now and then (no valid answer to "
+            f"{PING_RETRIES + 1} pings)"
+        )
+    if corrupt:
+        faults.append(f"motor id(s) {', '.join(corrupt)} answer only with corrupted packets (checksum)")
+    late = int((a.get("bus_errors") or {}).get("late_discarded") or 0)
+    slow_and_steady = not silent and not failed and ms is not None and ms > SLOW_READ_MS
+    if late and not slow_and_steady:
+        faults.append(
+            f"{late} answer came too late and was discarded"
+            if late == 1
+            else f"{late} answers came too late and were discarded"
+        )
+    unread = [k for k, m in motors.items() if states[k] in ("answers", "flaky") and m.get("unreadable")]
+    if unread:
+        faults.append(f"registers of motor id(s) {', '.join(unread)} could not be read")
+    if silent:
+        ids = ", ".join(silent)
+        out.update(kind="silent", not_measured=f"motor id(s) {ids} do not answer")
+        out["problems"].append(f"motor id(s) {ids} do not answer (power? cable?)")
+    if faults:
+        out["unreliable"] = f"unreliable bus: {', '.join(faults)}; {BUS_ADVICE}"
+        out["problems"].append(out["unreliable"])
+        if not silent:
+            out["kind"] = "unreliable"
+    out["problem"] = out["problems"][0] if out["problems"] else None
+    if silent or not sr:
+        return out
+    if ok < MIN_OK_READS or ms is None:
         out["not_measured"] = f"too few reads succeeded: {ok} of {reads}"
         return out
-    est = teleop_estimate(sr["ms_per_read"], a.get("usb_chip"))
+    est = teleop_estimate(ms, a.get("usb_chip"))
     if est and est.get("warning") and failed >= ok:
         del est["warning"]  # most reads failed: the bus is the problem, not the adapter's speed
     out["estimate"] = est
@@ -580,26 +691,35 @@ def bus_verdict(a: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def answering_text(a: dict[str, Any]) -> str:
-    """The ids that answer, from the pings (:func:`bus_verdict`'s source), never contradicting the
-    per-motor lines; the one-shot broadcast scan only adds notes: ids it missed that answered a
-    later ping, ids it saw that no ping reached, ids outside 1-6."""
+    """The ids that answer (every motor that is not silent: :func:`bus_verdict`'s states), never
+    contradicting the per-motor lines; notes: ids that answered a ping only on a retry or that the
+    one-shot scan missed, ids that answer only now and then or only with corrupted packets, ids
+    outside 1-6."""
     motors = a.get("motors") or {}
     scan = a.get("scan_1mbps")
     seen = scan if isinstance(scan, dict) else {}
-    answering = {k: m["model_number"] for k, m in motors.items() if not m.get("error")}
+    states = {k: motor_state(m) for k, m in motors.items()}
+    answering = {
+        k: (m.get("model_number") if m.get("model_number") is not None else "?")
+        for k, m in motors.items()
+        if states[k] != "silent"
+    }
     out = _scan_text(answering)
     retry = [
         int(k)
         for k, m in motors.items()
-        if not m.get("error") and (int(m.get("ping_tries") or 1) > 1 or (seen and k not in seen))
+        if states[k] == "answers" and (int(m.get("ping_tries") or 1) > 1 or (seen and k not in seen))
     ]
     notes: list[str] = []
     if retry:
         notes.append(f"{_ranges(retry)} answered only on a retry")
-    lost = [int(k) for k, m in motors.items() if m.get("error") and k in seen]
-    if lost:
-        notes.append(f"{_ranges(lost)} answered the first scan, then no ping")
-    other = {k: v for k, v in seen.items() if k not in motors}
+    flaky = [int(k) for k, s in states.items() if s == "flaky"]
+    if flaky:
+        notes.append(f"{_ranges(flaky)} answer only now and then (no ping answered)")
+    corrupt = [int(k) for k, s in states.items() if s == "corrupt"]
+    if corrupt:
+        notes.append(f"{_ranges(corrupt)} answer only with corrupted packets")
+    other = {k: (v if v is not None else "?") for k, v in seen.items() if k not in motors}
     if other:
         notes.append(f"other ids on the bus: {_scan_text(other)}")
     if scan is not None and not isinstance(scan, dict):
@@ -675,8 +795,8 @@ CALIBRATION_REGISTERS = (
 
 def _compare(cal: dict[str, Any], motors: dict[str, Any]) -> dict[str, Any]:
     """Each motor of a calibration file against the motor's EEPROM: ``"match"``, the values that
-    differ, :data:`NO_ANSWER`, or ``"could not read <registers>"`` when a register needed for the
-    comparison could not be read (QD-26): that is a bus problem, never a calibration mismatch."""
+    differ (only validated values: QD-25), :data:`NO_ANSWER`, or ``"could not read <registers>"``
+    when a register needed for the comparison never got a valid answer (QD-26)."""
     out: dict[str, Any] = {}
     for name, v in cal.items():
         row = motors.get(str(v.get("id")), {})
@@ -685,11 +805,10 @@ def _compare(cal: dict[str, Any], motors: dict[str, Any]) -> dict[str, Any]:
             continue
         diffs, unread = [], []
         for key, reg in CALIBRATION_REGISTERS:
-            value = row.get(reg)
-            if not isinstance(value, int) or isinstance(value, bool):
+            if row.get(reg) is None:
                 unread.append(reg)
-            elif value != v.get(key):
-                diffs.append(f"{key}: file {v.get(key)} motor {value}")
+            elif row.get(reg) != v.get(key):
+                diffs.append(f"{key}: file {v.get(key)} motor {row.get(reg)}")
         if diffs:
             out[name] = "; ".join(diffs + ([f"{COULD_NOT_READ} {', '.join(unread)}"] if unread else []))
         elif unread:
@@ -948,8 +1067,8 @@ def warnings(report: dict[str, Any]) -> list[str]:
         elif a.get("error"):
             out.append(f"{where}: {a['error']}")
         verdict = bus_verdict(a) or {}
-        if verdict.get("problem"):
-            out.append(f"{a['robot']} {a['arm']}: {verdict['problem']}")
+        for problem in verdict.get("problems") or ([verdict["problem"]] if verdict.get("problem") else []):
+            out.append(f"{a['robot']} {a['arm']}: {problem}")
         cmp = a.get("calibration_vs_eeprom") or {}
         diffs = {m: d for m, d in cmp.items() if d not in ("match", NO_ANSWER) and not _unread(d)}
         unread = {m: str(d)[len(COULD_NOT_READ) + 1 :] for m, d in cmp.items() if _unread(d)}
@@ -1181,27 +1300,7 @@ def summary(report: dict[str, Any], target: Path | None = None) -> str:
             continue
         lines.append(f"{head}: ids answering at 1 Mbps: {answering_text(a)}")
         for mid, m in a.get("motors", {}).items():
-            if m.get("error"):
-                lines.append(f"    id {mid}: {m['error']}")
-                continue
-            g = {k: _text(m.get(k)) for k in ("model_number", *PING_REGISTERS)}
-            lines.append(
-                f"    id {mid}: model {g['model_number']} fw {g['Firmware_Major_Version']}."
-                f"{g['Firmware_Minor_Version']} pos {g['Present_Position']} "
-                f"{g['Present_Voltage']}x0.1V "
-                f"(min {g['Min_Voltage_Limit']} max {g['Max_Voltage_Limit']}) "
-                f"{g['Present_Temperature']}C (max {g['Max_Temperature_Limit']}) "
-                f"status {g['Status']} "
-                f"torque {g['Torque_Enable']} lock {g['Lock']} offset {g['Homing_Offset']} "
-                f"limits {g['Min_Position_Limit']}-{g['Max_Position_Limit']}"
-            )
-            d = m.get("decoded") or {}
-            lines.append(
-                f"           current raw {g['Present_Current']} = {_fmt(d, 'current_a', 'A')} "
-                f"load raw {g['Present_Load']} = {_fmt(d, 'load_pct', '%')} "
-                f"temperature {_fmt(d, 'temp_c', 'C')} voltage {_fmt(d, 'voltage_v', 'V')} "
-                f"status {_status_text(d.get('status'))} protection current raw {g['Protection_Current']}"
-            )
+            lines += _motor_lines(mid, m)
         lines += _raw_lines(a.get("raw_dump"))
         if a.get("sync_read_present_position"):
             lines += _sync_read_lines(a)
@@ -1209,6 +1308,8 @@ def summary(report: dict[str, Any], target: Path | None = None) -> str:
             lines.append(f"    calibration file vs motors: {_compare_text(a['calibration_vs_eeprom'])}")
         if "eeprom_matches" in a:
             carry = _text(a["eeprom_matches"]) if a["eeprom_matches"] else "no file found"
+            if not a["eeprom_matches"] and a.get("eeprom_unreadable"):
+                carry = "not known (some calibration registers could not be read)"
             lines.append(f"    motors carry the calibration of: {carry}")
         be = a.get("bus_errors") or {}
         if be.get("errors"):
@@ -1232,8 +1333,8 @@ def _sync_read_lines(a: dict[str, Any]) -> list[str]:
         speed = f"{s['ms_per_read']} ms each"
     detail = f" ({failures_text(s)})" if failed else ""
     lines = [f"    sync read: {failed}/{reads} failed{detail}, {speed}"]
-    if verdict.get("kind") == "unreliable":
-        lines.append(f"    ! {str(verdict['problem']).split('; ')[0]}")
+    if verdict.get("unreliable"):
+        lines.append(f"    ! {str(verdict['unreliable']).split('; ')[0]}")
     est = verdict.get("estimate")
     if est:
         lines.append(
@@ -1243,6 +1344,58 @@ def _sync_read_lines(a: dict[str, Any]) -> list[str]:
         )
     elif verdict.get("not_measured"):
         lines.append(f"    teleop estimate: not measured ({verdict['not_measured']})")
+    return lines
+
+
+def _motor_lines(mid: str, m: dict[str, Any]) -> list[str]:
+    """One motor of the motor check: its registers (``?``: no valid answer, never a guess), how it
+    answers, and which registers could not be read (QD-25 - QD-27)."""
+    state = motor_state(m)
+    if state == "silent":
+        return [f"    id {mid}: {m.get('error') or 'no answer'}"]
+    if state == "corrupt":
+        return [f"    id {mid}: answers only with corrupted packets (checksum), no register could be read"]
+    unread = set(m.get("unreadable") or [])
+    g = {
+        k: "?" if k in unread or m.get(k) is None else _text(m.get(k))
+        for k in ("model_number", *PING_REGISTERS)
+    }
+    d = m.get("decoded") or {}
+    lines = [
+        f"    id {mid}: model {g['model_number']} fw {g['Firmware_Major_Version']}."
+        f"{g['Firmware_Minor_Version']} pos {g['Present_Position']} "
+        f"{g['Present_Voltage']}x0.1V "
+        f"(min {g['Min_Voltage_Limit']} max {g['Max_Voltage_Limit']}) "
+        f"{g['Present_Temperature']}C (max {g['Max_Temperature_Limit']}) "
+        f"status {g['Status']} "
+        f"torque {g['Torque_Enable']} lock {g['Lock']} offset {g['Homing_Offset']} "
+        f"limits {g['Min_Position_Limit']}-{g['Max_Position_Limit']}",
+        f"           current raw {g['Present_Current']} = {_fmt(d, 'current_a', 'A', '?')} "
+        f"load raw {g['Present_Load']} = {_fmt(d, 'load_pct', '%', '?')} "
+        f"temperature {_fmt(d, 'temp_c', 'C', '?')} voltage {_fmt(d, 'voltage_v', 'V', '?')} "
+        f"status {_status_text(d.get('status'), '?')} protection current raw {g['Protection_Current']}",
+    ]
+    if state == "flaky":
+        ev = m.get("evidence") or {}
+        seen = [
+            w
+            for w, n in (
+                ("the scan", ev.get("scan")),
+                (f"{ev.get('sync_reads')} of {SYNC_READS} sync reads", ev.get("sync_reads")),
+                (f"{ev.get('late')} late answers", ev.get("late")),
+            )
+            if n
+        ]
+        lines.append(
+            f"           answers only now and then: no valid answer to {PING_RETRIES + 1} pings"
+            + (f", but answered {', '.join(seen)}" if seen else ", but answered other requests")
+        )
+    if unread:
+        why = "; ".join(f"{blk} {w}" for blk, w in (m.get("unreadable_blocks") or {}).items())
+        lines.append(
+            f"           could not read (no valid answer in 3 tries): {', '.join(sorted(unread))}"
+            + (f" (registers {why})" if why else "")
+        )
     return lines
 
 
@@ -1292,10 +1445,10 @@ def _compare_text(cmp: dict[str, Any]) -> str:
     return f"{len(cmp) - len(other)} of {len(cmp)} match; " + "; ".join(other)
 
 
-def _status_text(status: Any) -> str:
+def _status_text(status: Any, missing: str = "-") -> str:
     """Decoded status bits: ``[]`` is "ok", else the names of the bits that are set."""
     if status is None:
-        return "-"
+        return missing
     if isinstance(status, (list, tuple)):
         return ", ".join(str(x) for x in status) or "ok"
     return _text(status)
@@ -1315,6 +1468,8 @@ def _bus_errors_text(be: dict[str, Any]) -> str:
     """``bus.error_summary()`` as one sentence; the last error is the bus library's own words."""
     calls = ", ".join(f"{k} x{n}" for k, n in (be.get("by_call") or {}).items())
     out = f"{be.get('errors') or 0}, {be.get('retried_ok') or 0} retried ok"
+    if be.get("late_discarded"):
+        out += f", {be['late_discarded']} late answers discarded"
     out += f" ({calls})" if calls else ""
     return out + (f"; last error: {be['last_error']}" if be.get("last_error") else "")
 
@@ -1327,9 +1482,9 @@ def _log_line(n: int) -> str:
     return f"The last {n} log lines are in the zip."
 
 
-def _fmt(d: dict[str, Any], key: str, unit: str) -> str:
+def _fmt(d: dict[str, Any], key: str, unit: str, missing: str = "-") -> str:
     if d.get(key) is None:
-        return "-"
+        return missing
     return f"{d[key]} {unit}" + (
         "" if d.get(f"{key}_plausible", True) else " (IMPLAUSIBLE: shown as unknown)"
     )
@@ -1344,7 +1499,7 @@ def _raw_lines(dump: dict[str, Any] | None) -> list[str]:
         out.append(f"      ! {dump['error']}")
     for mid, row in (dump.get("motors") or {}).items():
         blocks = "  ".join(
-            f"[{rng}] {b.get('data') if b.get('answer') else 'no answer'}"
+            f"[{rng}] {b.get('data') if b.get('answer') else (b.get('error') or 'no answer')}"
             + (f" err 0x{b['error_byte']:02x}" if b.get("error_byte") else "")
             for rng, b in row.get("blocks", {}).items()
         )

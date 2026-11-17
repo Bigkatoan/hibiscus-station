@@ -51,6 +51,16 @@ with its own line (see the README); GitHub never offers a pre-release as its "la
 - **The doctor report always starts with LIKELY PROBLEMS**, or "No likely problems found".
 
 ### Fixed
+- **One late answer on the bus made the doctor show wrong values** (`80 C`, `341.3 V`, "overheat,
+  overload", wrong position limits) and tell you to calibrate the arm again: an answer that came
+  later than the bus timeout was taken as the answer to the next read, and every later register
+  of that servo was shifted by one. The doctor now empties the receive buffer before every request
+  and accepts an answer only from the servo it asked, with exactly the bytes it asked for and a
+  right checksum; it retries a few times and otherwise shows the register as `?` ("could not
+  read"), never a guessed value. Late answers are named under "unreliable bus"; an adapter that is
+  slow every time (50 ms or more per answer) is measured and reported as a slow bus. The raw
+  register dump follows the same rules and says "corrupted answer (checksum)" instead of "no
+  answer" for a damaged packet.
 - **The doctor told you to calibrate a correctly calibrated arm again when a read failed.** A
   register it could not read (a lost or damaged answer on the bus) was counted as a calibration
   mismatch ("does not match the motors ... calibrate the arm again"). It now says "could not read

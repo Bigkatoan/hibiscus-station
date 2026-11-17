@@ -4,9 +4,9 @@ K-11 / SP-1 / REG-13: current, load and a raw register dump of every servo on ev
 only. D-15, D-21: the LIKELY PROBLEMS section. The zip carries no token.
 
 Every test that talks to an arm runs on every platform (QD-4, QD-7) through a **loopback port**: the
-Feetech packets the doctor sends (through lerobot's bus and through pyserial for the raw dump) go
-byte for byte to the emulator's ``handle()`` and its answers come back as bytes. On Linux the same
-tests also run through a real pseudo-terminal, with the real rustypot serial port underneath (a pty
+Feetech packets the doctor sends (through pyserial: :mod:`hibiscus_station.hw.probe`) go byte for
+byte to the emulator's ``handle()`` and its answers come back as bytes, late answers included. On
+Linux the same tests also run through a real pseudo-terminal with pyserial's real serial port (a pty
 does not work there on macOS, "Not a typewriter", and Windows has none).
 """
 
@@ -76,6 +76,9 @@ class LoopbackPort:
         self.bad_checksum = False
         self.last: tuple[bytes, int] = (b"", 0)
         self.refuse: str | None = None  # the OS error text when another program holds the port
+        self.pending: list[tuple[float, bytes]] = []  # late answers on their way (first in, first out)
+        #: well-formed answers that reached the host while the port was open, by servo id
+        self.delivered: dict[int, int] = {}
 
     def open(self, who: object) -> None:
         if self.refuse:
@@ -85,10 +88,26 @@ class LoopbackPort:
         self.owner = who
         self.rx.clear()
         self._tx.clear()
+        self.pending.clear()
 
     def close(self, who: object) -> None:
         if self.owner is who:
             self.owner = None
+            self.pending.clear()  # what had not arrived yet never reaches the host
+
+    def _arrive(self, data: bytes) -> None:
+        self.rx += data
+        rest = data
+        while len(rest) >= 6 and len(rest) >= 4 + rest[3]:
+            pkt, rest = rest[: 4 + rest[3]], rest[4 + rest[3] :]
+            if checksum(pkt[2:-1]) == pkt[-1]:
+                self.delivered[pkt[2]] = self.delivered.get(pkt[2], 0) + 1
+
+    def release(self) -> None:
+        """Late answers whose time has come reach the host."""
+        now = time.perf_counter()
+        while self.pending and self.pending[0][0] <= now:
+            self._arrive(self.pending.pop(0)[1])
 
     def write(self, data: bytes) -> None:
         self._tx += data
@@ -111,7 +130,7 @@ class LoopbackPort:
         e.transactions += 1
         if e.baud:
             _sleep(e.usb_out_s + len(pkt) * 10 / e.baud)
-        out = e.handle(pkt[2], pkt[4], pkt[5:-1])
+        out, timed = e.answers(pkt[2], pkt[4], pkt[5:-1])
         if not out:
             return
         delay = e.latency_s
@@ -120,8 +139,14 @@ class LoopbackPort:
         if e.return_delay:
             n = len(pkt[7:-1]) if pkt[4] == 0x82 else 1
             delay += n * max(s.get(7, 1) for s in e.servos.values()) * 2e-6
+        self.release()
+        if timed or self.pending:  # behind a late answer: everything waits its turn
+            t = time.perf_counter() + delay
+            for p, extra in timed or [(out, 0.0)]:
+                self.pending.append((max(t + extra, self.pending[-1][0] if self.pending else 0.0), p))
+            return
         _sleep(delay)
-        self.rx += out
+        self._arrive(out)
 
     def status(self, motor_id: int) -> tuple[bytes, int] | None:
         """The next well-formed status packet of ``motor_id``: (params, error byte). ``bad_checksum``
@@ -186,9 +211,11 @@ class LoopSerial:
 
     @property
     def in_waiting(self) -> int:
+        self.port.release()
         return len(self.port.rx)
 
     def reset_input_buffer(self) -> None:
+        self.port.release()
         self.port.rx.clear()
 
     def write(self, data: bytes) -> int:
@@ -199,140 +226,16 @@ class LoopSerial:
         return None
 
     def read(self, n: int = 1) -> bytes:
+        self.port.release()
         if not self.port.rx:
             time.sleep(self.timeout)
+            self.port.release()
         out = bytes(self.port.rx[:n])
         del self.port.rx[:n]
         return out
 
     def close(self) -> None:
         self.port.close(self)
-
-
-class LoopBus:
-    """The part of ``rustypot.Bus`` lerobot's ``SerialMotorsBus`` calls, as Feetech packets on a
-    :class:`LoopbackPort`; registers laid out and decoded from rustypot's own STS3215 table."""
-
-    def __init__(self, port: LoopbackPort) -> None:
-        import rustypot
-
-        found = rustypot.find_model("sts3215")
-        assert found is not None
-        self.model, self.definition = found
-        self.port = port
-        port.open(self)
-        self._open = True
-
-    def _reg(self, name: str) -> Any:
-        info = self.definition.register(name.lower())
-        if info is None:
-            raise ValueError(f"no register {name}")
-        return info
-
-    @staticmethod
-    def _decode(info: Any, data: bytes) -> int:
-        raw = int.from_bytes(data[: info.size], "little")
-        return sm_decode(raw, info.sign_bit) if info.encoding == "sign_magnitude" else raw
-
-    @staticmethod
-    def _encode(info: Any, value: int) -> bytes:
-        raw = sm_encode(int(value), info.sign_bit) if info.encoding == "sign_magnitude" else int(value)
-        return raw.to_bytes(info.size, "little")
-
-    def _ask(self, motor_id: int, instr: int, params: bytes, retries: int) -> tuple[bytes, int]:
-        for _ in range(retries + 1):
-            self.port.rx.clear()
-            self.port.write(_packet(motor_id, instr, params))
-            got = self.port.status(motor_id)
-            if got is not None:
-                return got
-        raise RuntimeError(self.port.failure())
-
-    # -- rustypot.Bus API
-    def close(self) -> None:
-        self._open = False
-        self.port.close(self)
-
-    def is_open(self) -> bool:
-        return self._open
-
-    def set_timeout(self, timeout: float) -> None:
-        return None
-
-    def set_baudrate(self, baudrate: int) -> None:
-        return None
-
-    def read_register_with_error(self, motor_id: int, name: str, retries: int = 0) -> tuple[int, int]:
-        info = self._reg(name)
-        data, err = self._ask(motor_id, 0x02, bytes([info.addr, info.size]), retries)
-        return self._decode(info, data), err
-
-    def write_register_with_error(self, motor_id: int, name: str, value: int, retries: int = 0) -> int:
-        info = self._reg(name)
-        return self._ask(motor_id, 0x03, bytes([info.addr]) + self._encode(info, value), retries)[1]
-
-    def sync_read_register_with_error(
-        self, ids: list[int], name: str, retries: int = 0
-    ) -> list[tuple[int, int]]:
-        info = self._reg(name)
-        for _ in range(retries + 1):
-            self.port.rx.clear()
-            self.port.write(_packet(0xFE, 0x82, bytes([info.addr, info.size, *ids])))
-            got: list[tuple[bytes, int]] = []
-            # rustypot takes the answers in order and stops at the first one that is missing
-            # (timeout), corrupt (checksum) or another servo's (a missing answer in the middle:
-            # "Parsing error", as on a real bus)
-            for i in ids:
-                why = f"motor {i}: {self.port.sync_answer(i)}"
-                if not why.endswith(": ok"):
-                    break
-                got.append(self.port.last)
-            else:
-                return [(self._decode(info, g[0]), g[1]) for g in got]
-        raise RuntimeError(why)
-
-    def sync_write_register(self, ids: list[int], name: str, values: list[int], retries: int = 0) -> None:
-        info = self._reg(name)
-        body = b"".join(bytes([i]) + self._encode(info, v) for i, v in zip(ids, values, strict=True))
-        self.port.write(_packet(0xFE, 0x83, bytes([info.addr, info.size]) + body))
-
-    def set_torque(self, ids: list[int], enabled: bool, retries: int = 0) -> dict[int, str]:
-        for i in ids:
-            self.write_register_with_error(i, "torque_enable", int(enabled), retries)
-        return {}
-
-    def broadcast_scan(self, definition: Any) -> dict[int, int]:
-        self.port.rx.clear()
-        self.port.write(_packet(0xFE, 0x01))
-        ids = []
-        while (got := self._next_any()) is not None:
-            ids.append(got)
-        out = {}
-        for i in sorted(ids):  # one try each, as rustypot: a lost answer drops the id from the scan
-            try:
-                out[i] = self.read_register_with_error(i, "model_number")[0]
-            except RuntimeError:
-                continue
-        return out
-
-    def scan(self, definition: Any, ids: list[int] | None = None) -> dict[int, int]:
-        out = {}
-        for i in ids or range(0, 253):
-            try:
-                out[i] = self.read_register_with_error(i, "model_number")[0]
-            except RuntimeError:
-                continue
-        return out
-
-    def _next_any(self) -> int | None:
-        rx = self.port.rx
-        start = rx.find(b"\xff\xff")
-        if start < 0 or len(rx) < start + 4 or len(rx) < start + 4 + rx[start + 3]:
-            return None
-        del rx[:start]
-        pkt = bytes(rx[: 4 + rx[3]])
-        del rx[: len(pkt)]
-        return pkt[2]
 
 
 class Arms:
@@ -346,14 +249,7 @@ class Arms:
         if transport == "loop":
             import serial
 
-            from hibiscus_station.hw.bus import StationMotorsBus
-
-            real_open = StationMotorsBus._open_bus
             real_serial = serial.Serial
-
-            def open_bus(bus: Any) -> Any:
-                lp = self.loops.get(str(bus.port))
-                return LoopBus(lp) if lp is not None else real_open(bus)
 
             def open_serial(port: str, *args: Any, **kwargs: Any) -> Any:
                 lp = self.loops.get(str(port))
@@ -361,7 +257,6 @@ class Arms:
                     return real_serial(port, *args, **kwargs)
                 return LoopSerial(lp, kwargs.get("timeout") or 0.005)
 
-            monkeypatch.setattr(StationMotorsBus, "_open_bus", open_bus)
             monkeypatch.setattr(serial, "Serial", open_serial)
 
     def __call__(self, **kwargs: Any) -> STSEmulator:
@@ -1002,6 +897,74 @@ def test_the_scan_line_agrees_with_the_pings(
     assert "    id 4: model 777 fw 3.10 " in fol, fol
 
 
+def _true_registers(emu: STSEmulator, motor_id: int) -> dict[str, int]:
+    """The registers the doctor shows for one servo, as the emulated servo holds them."""
+    return _truth(emu)[motor_id]
+
+
+def _late_once(emu: STSEmulator, hit: Callable[[int, int, bytes], bool], seconds: float) -> None:
+    """The answer to the first request ``hit(instr, id, params)`` picks comes ``seconds`` late."""
+    done: list[bool] = []
+
+    def late(instr: int, req_id: int, params: bytes, _answer_id: int) -> float:
+        if not done and hit(instr, req_id, params):
+            done.append(True)
+            return seconds
+        return 0.0
+
+    emu.late = late
+
+
+@pytest.mark.parametrize("late_s", [0.06, 0.15])
+def test_a_late_answer_never_shifts_a_register_value(
+    tmp_path: Path, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch, late_s: float
+) -> None:
+    """QD-25: the answer to the read of id 1's homing offset came 60 ms late; every later read of
+    id 1 took the answer of the read before it: "80C", "341.3 V", "overheat, overload", limits
+    "44-684", and "calibrate the arm again" for a file that matches. A late answer is now a bus
+    fault the report names, never a value."""
+    f, ld = emus
+    home = _calibrated_home(tmp_path, f, ld, monkeypatch)
+    _late_once(f, lambda instr, i, params: instr == 0x02 and i == 1 and params[0] in (28, 31), late_s)
+    text, target = _run(home, tmp_path / "out")
+    problems, fol = text.split("\n\n")[0], _section(text, "follower")
+    m1 = _arm(_report(target), "follower")["motors"]["1"]
+    for reg, value in _true_registers(f, 1).items():
+        shown = m1.get("model_number" if reg == "Model_Number" else reg)
+        assert shown is None or shown == value, (reg, shown, value, fol)
+    assert (m1["Present_Temperature"], m1["Present_Voltage"], m1["Status"]) == (30, 120, 0), m1
+    assert (m1["Homing_Offset"], m1["Min_Position_Limit"], m1["Max_Position_Limit"]) == (44, 684, 3413), m1
+    assert "calibrate the arm again" not in text and "does not match" not in text, problems
+    assert "overheat" not in fol and "341.3 V" not in fol and "80C" not in fol, fol
+    assert "arm follower: unreliable bus: " in problems and "came too late and" in problems, problems
+    assert "do not answer" not in text, problems
+
+
+def test_a_slow_adapter_is_a_slow_bus_not_shifted_values(
+    tmp_path: Path, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """QD-25 variant: an adapter that delays every answer by 60 ms (longer than the bus timeout):
+    "0 of 6 match", "fw 777.3", "voltage 341.3 V" on every servo. Now every value is true and the
+    report says "slow bus"."""
+    f, ld = emus
+    home = _calibrated_home(tmp_path, f, ld, monkeypatch)
+    f.adapter_delay_s = 0.06
+    text, target = _run(home, tmp_path / "out")
+    problems, fol = text.split("\n\n")[0], _section(text, "follower")
+    fol_json = _arm(_report(target), "follower")
+    for mid, m in fol_json["motors"].items():
+        for reg, value in _true_registers(f, int(mid)).items():
+            shown = m.get("model_number" if reg == "Model_Number" else reg)
+            assert shown is None or shown == value, (mid, reg, shown, value, fol)
+    assert "calibrate the arm again" not in text and "do not answer" not in text, problems
+    assert "arm follower on " in problems and "slow bus (" in problems, problems
+    assert "    calibration file vs motors: all 6 match" in fol.splitlines(), fol
+    for mid, row in fol_json["raw_dump"]["motors"].items():
+        for rng, blk in row["blocks"].items():
+            lo, hi = (int(x) for x in rng.split("-"))
+            assert bytes.fromhex(blk["data"]) == f._read(f.servos[int(mid)], lo, hi - lo + 1), (mid, rng)
+
+
 def test_a_register_that_could_not_be_read_is_not_a_calibration_mismatch(
     tmp_path: Path, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1020,14 +983,29 @@ def test_a_register_that_could_not_be_read_is_not_a_calibration_mismatch(
 
     f.handle = no_limits  # type: ignore[method-assign]
     text, target = _run(home, tmp_path / "out")
-    problems = text.split("\n\n")[0]
+    problems, fol = text.split("\n\n")[0], _section(text, "follower")
     assert "calibrate the arm again" not in text and "does not match" not in text, problems
     mine = [p for p in problems.splitlines() if p.startswith("  ! arm follower: could not read register(s) ")]
     assert len(mine) == 1 and "Max_Position_Limit of shoulder_pan" in mine[0], problems
     assert "(a bus problem, not the calibration)" in mine[0], mine
+    assert "arm follower: unreliable bus: " in problems, problems
     cmp = _arm(_report(target), "follower")["calibration_vs_eeprom"]
     assert cmp["shoulder_pan"].startswith("could not read ") and "Max_Position_Limit" in cmp["shoulder_pan"]
     assert all(v == "match" for k, v in cmp.items() if k != "shoulder_pan"), cmp
+    assert "    motors carry the calibration of: not known (" in fol, fol
+
+
+def _truth(emu: STSEmulator) -> dict[int, dict[str, int]]:
+    """Every register the doctor reports, as the emulated servos hold it."""
+    table = doctor._register_table()
+    out: dict[int, dict[str, int]] = {}
+    for i, s in emu.servos.items():
+        row: dict[str, int] = {}
+        for reg, (addr, size, sign) in table.items():
+            raw = int.from_bytes(emu._read(s, addr, size), "little")
+            row[reg] = sm_decode(raw, sign) if sign is not None else raw
+        out[i] = row
+    return out
 
 
 # ------------------------------------------------------------------ invariants over a fault grid
@@ -1130,10 +1108,11 @@ def test_the_report_never_contradicts_itself(
     assert set(dead) <= no_answer, ctx
     scan = re.search(r": ids answering at 1 Mbps: (.*)$", lines[0])
     assert scan, ctx
-    listed = scan.group(1).split(" (model ")[0]
     ids: set[int] = set()
-    if listed != "none":
-        for part in listed.split(", "):
+    for group in scan.group(1).split("; "):  # "1-4 (model 777); 5 (model ?)": one group per model
+        if " (model " not in group:
+            continue
+        for part in group.split(" (model ")[0].split(", "):
             lo, _, hi = part.partition("-")
             ids |= set(range(int(lo), int(hi or lo) + 1))
     assert ids == full, ctx
@@ -1148,7 +1127,9 @@ def test_the_report_never_contradicts_itself(
             f"teleop estimate: not measured (motor id(s) {', '.join(map(str, sorted(no_answer)))} do not answer)"
             in fol
         ), ctx
-        assert "every motor answers" not in every and "unreliable bus" not in every, ctx
+        assert "every motor answers" not in every, ctx
+        if "unreliable bus" in every:  # only from what the answering motors showed, not the silent one
+            assert any(m.get("unreadable") for m in arm["motors"].values()), ctx
         assert "slow bus" not in every and " Hz, " not in fol, ctx
     else:
         assert not dna and "do not answer" not in fol, ctx
@@ -1156,15 +1137,15 @@ def test_the_report_never_contradicts_itself(
     # failed reads by class: each class named only when it happened
     classes = {k: sr.get(k, 0) for k in ("no_answer", "corrupt", "garbled", "other")}
     assert sum(classes.values()) == failed and ok + failed == sr["reads"], sr
-    assert ("got no answer" in every) == (classes["no_answer"] > 0), ctx
-    assert ("got corrupted answers (checksum)" in every) == (classes["corrupt"] > 0), ctx
+    assert ("got no answer" in fol) == (classes["no_answer"] > 0), ctx
+    assert ("got corrupted answers (checksum)" in fol) == (classes["corrupt"] > 0), ctx
     if corrupt == 0:
         assert classes["corrupt"] == 0, sr
     if drop == 0 and not dead:  # nothing goes missing: every failure is a checksum error
         assert classes["no_answer"] == classes["garbled"] == classes["other"] == 0, sr
     if not no_answer:
-        assert ("unreliable bus" in " ".join(problems)) == (failed > 0), ctx
-        assert ("unreliable bus" in fol) == (failed > 0), ctx
+        if failed:  # a lost read is always named; late answers, unreadable registers may be too
+            assert "unreliable bus" in " ".join(problems) and "unreliable bus" in fol, ctx
 
     # one conclusion about speed
     est = [x for x in lines if x.startswith("    teleop estimate: ")]
@@ -1363,7 +1344,7 @@ def test_report_text_has_no_python_containers_anywhere(
         str(Path("so_follower", "arm_follower.json")) + ", " + str(lelab / "arm_follower.json")
     ), carry
     assert "  /dev/video0  V4L2  640x480 30 fps MJPG" in lines, text
-    bus = next(x for x in lines if x.startswith("    bus errors: ") and "ping Model_Number [6] x" in x)
+    bus = next(x for x in lines if x.startswith("    bus errors: ") and "ping [6] x" in x)
     assert "retried ok (" in bus and "; last error: " in bus, bus
     assert "    alert warning bus.slow: arm leader, ids 1, 2" in lines, text
 
