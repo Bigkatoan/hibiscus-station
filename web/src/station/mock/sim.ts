@@ -819,7 +819,12 @@ export class MockStation {
     this.phase(rt, "episode", rt.rec?.episode_time_s ?? rt.run?.episode_time_s ?? 30);
   }
 
-  endSession(outcome: string, to: StationState = "idle", reason: string | null = null): void {
+  endSession(
+    outcome: string,
+    to: StationState = "idle",
+    reason: string | null = null,
+    detail: string | null = null,
+  ): void {
     const rt = this.session;
     if (!rt) return;
     // CR-1: a user Stop holds the arm where it is; the UI offers Return Home / Relax.
@@ -874,10 +879,11 @@ export class MockStation {
       episodes: rt.s.episode.saved,
       max_temp_c: Math.round(Math.max(...Object.values(this.temps.follower))),
     });
-    this.setState(to, { reason });
+    this.setState(to, { reason, detail });
   }
 
-  estop(reason: string): Status {
+  /** `detail` is the Station's own English line (the dead-man stop has one, like hw/owner.py). */
+  estop(reason: string, detail: string | null = null): Status {
     if (this.state === "estopped") {
       // Second press within 2 s: torque off (§4.7).
       if (this.t - this.lastEstopAt <= 2) this.torque = false;
@@ -891,8 +897,8 @@ export class MockStation {
     this.lastEstopAt = this.t;
     if (this.session) {
       this.interrupted = true;
-      this.endSession(`estop_${reason}`, "estopped", reason);
-    } else this.setState("estopped", { reason });
+      this.endSession(`estop_${reason}`, "estopped", reason, detail);
+    } else this.setState("estopped", { reason, detail });
     return this.status();
   }
 
@@ -1027,7 +1033,7 @@ export class MockStation {
       ["inferring", "replaying", "playing", "programming"].includes(this.state) &&
       this.t - this.lastHeartbeat > 1.0
     ) {
-      this.estop("ui_lost");
+      this.estop("ui_lost", "no heartbeat from the UI for 1.0 s");
     }
     this.advanceSession(dt);
     this.programs.step(dt);

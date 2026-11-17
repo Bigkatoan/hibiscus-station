@@ -1212,5 +1212,15 @@
     "confirm_title": "Support the arm",
     "confirm_text": "Torque turns off and the arm goes limp where it is. Hold it with your hand first.",
     "confirm_ok": "I am holding it, relax"
+  },
+  "server_text": {
+    "technical": "Technical details",
+    "ui_lost": "This page sent no sign of life for {{s}} s (closed, asleep or offline), so the robot stopped to stay safe.",
+    "motor_temp": "{{arm}} {{motor}}: {{temp}} °C.",
+    "motor_status": "{{arm}} {{motor}} reports: {{bits}}.",
+    "motor_voltage": "{{arm}} {{motor}}: {{v}} V.",
+    "no_cal_file": "This arm has no calibration file yet.",
+    "cal_files_found": "Calibration files found for this arm: {{files}}.",
+    "cal_not_kept": "The motors did not keep the calibration written to them."
   }
 }

@@ -12,6 +12,7 @@ import { DEFAULT_THRESHOLDS, coolingEtaS, levelCss } from "../health";
 import { useStation } from "../ws/StationProvider";
 import { DeviceLostBanner } from "./DeviceLost";
 import { RestBanner } from "./RestBanner";
+import { ServerDetail } from "./ServerText";
 import type { StationSnapshot } from "../ws/store";
 
 const THERMAL_REASONS = ["thermal", "electrical"];
@@ -135,7 +136,7 @@ export function SafetyBanners() {
                 reason: t(`reasons.${status.reason ?? "internal"}`, { defaultValue: status.reason ?? "" }),
               })}
             </p>
-            {status.detail ? <p className="mt-1 break-words font-mono text-xs">{status.detail}</p> : null}
+            <ServerDetail line={status.detail} className="mt-1" />
           </div>
         </div>
       ) : null}

@@ -11,6 +11,7 @@ import { PxIcon } from "@/hibiscus/PixelAnim";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useWizardSteps } from "../StationShell";
+import { ServerDetail } from "./ServerText";
 
 /** Where each lock is lifted (null: on the page itself, or by the e-stop dock). */
 export const LOCK_TARGET: Record<string, { to: string; step: string } | null> = {
@@ -46,7 +47,7 @@ export function LockGate({ step, children }: { step: string; children: ReactNode
           <div className="flex min-w-0 flex-col gap-1">
             <p className="font-extrabold">{t("lock.title")}</p>
             <p className="text-sm">{t(`lock.${lock}`)}</p>
-            {s?.why ? <p className="break-words font-mono text-xs text-muted-foreground">{s.why}</p> : null}
+            <ServerDetail line={s?.why} textClassName="text-muted-foreground" />
             {disabled ? <p className="text-xs text-muted-foreground">{t("lock.disabled")}</p> : null}
             {target ? (
               <Button asChild size="sm" className="mt-1 self-start">

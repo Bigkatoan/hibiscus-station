@@ -1212,5 +1212,15 @@
     "confirm_title": "Hãy đỡ tay robot",
     "confirm_text": "Mô-men sẽ tắt và tay robot rũ xuống tại chỗ. Hãy dùng tay đỡ tay robot trước.",
     "confirm_ok": "Đã đỡ tay, thả lỏng"
+  },
+  "server_text": {
+    "technical": "Chi tiết kỹ thuật",
+    "ui_lost": "Trang không gửi tín hiệu nào trong {{s}} giây (đã đóng, máy ngủ hoặc mất mạng), nên robot đã dừng để an toàn.",
+    "motor_temp": "{{arm}} {{motor}}: {{temp}} °C.",
+    "motor_status": "{{arm}} {{motor}} báo: {{bits}}.",
+    "motor_voltage": "{{arm}} {{motor}}: {{v}} V.",
+    "no_cal_file": "Tay này chưa có tệp hiệu chỉnh.",
+    "cal_files_found": "Tệp hiệu chỉnh tìm thấy cho tay này: {{files}}.",
+    "cal_not_kept": "Các động cơ không giữ hiệu chỉnh vừa được ghi vào."
   }
 }

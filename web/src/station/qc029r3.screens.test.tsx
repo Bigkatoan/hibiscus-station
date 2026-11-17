@@ -3,7 +3,7 @@
  * no episode never asks for the dataset it removed (QD-18), and the stop banners never show the
  * Station's English detail (QD-19).
  */
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { i18n } from "@/lib/i18n";
 import { server } from "@/test/server";
@@ -68,5 +68,65 @@ describe("Record: a session that kept no episode asks nothing of its removed dat
     h.sim.estop("user");
     await screen.findByTestId("record-done");
     server.events.removeAllListeners();
+  });
+});
+
+/** Put the mock Station in a state with the Station's own English detail line. */
+function setState(h: ReturnType<typeof setupStation>, state: string, reason: string, detail: string): void {
+  (h.sim as unknown as { setState: (s: string, x: { reason: string; detail: string }) => void }).setState(
+    state,
+    { reason, detail },
+  );
+}
+
+const HEARTBEAT = "no heartbeat from the UI for 1.0 s";
+
+describe("Stop banners and locked steps never show the Station's English detail (QD-19)", () => {
+  it("vi: the dead-man stop is explained in Vietnamese only, on the banner and the locked step", async () => {
+    const h = setupStation({ paired: true });
+    await i18n.changeLanguage("vi");
+    h.sim.estop("ui_lost", HEARTBEAT);
+    renderStation("/teleop", h);
+    const banner = await screen.findByTestId("state-banner");
+    expect(banner).toHaveTextContent("Robot đã dừng: mất kết nối giao diện.");
+    expect(banner).toHaveTextContent("Trang không gửi tín hiệu nào trong 1 giây");
+    const gate = await screen.findByTestId("lock-gate");
+    expect(gate).toHaveTextContent("Trang không gửi tín hiệu nào trong 1 giây");
+    expect(screen.getByTestId("lock-why-teleop")).toHaveTextContent("Trang không gửi tín hiệu nào");
+    expect(document.body).not.toHaveTextContent(/heartbeat/i);
+  });
+
+  it("en: the dead-man stop reads in words, not as the server line", async () => {
+    const h = setupStation({ paired: true });
+    h.sim.estop("ui_lost", HEARTBEAT);
+    renderStation("/teleop", h);
+    const banner = await screen.findByTestId("state-banner");
+    expect(banner).toHaveTextContent("This page sent no sign of life for 1 s");
+    expect(document.body).not.toHaveTextContent(/heartbeat/i);
+  });
+
+  it("vi: a motor stop names the arm and the motor in words", async () => {
+    const h = setupStation({ paired: true });
+    await i18n.changeLanguage("vi");
+    setState(h, "estopped", "electrical", "follower elbow_flex status voltage,overload");
+    renderStation("/teleop", h);
+    const gate = await screen.findByTestId("lock-gate");
+    expect(gate).toHaveTextContent("Tay follower elbow_flex báo: điện áp, quá tải.");
+    expect(gate).not.toHaveTextContent("status voltage");
+  });
+
+  it("an unknown detail stays behind a closed 'Chi tiết kỹ thuật'", async () => {
+    const h = setupStation({ paired: true });
+    await i18n.changeLanguage("vi");
+    setState(h, "error", "bus_lost", "follower: motor ID 3 timed out");
+    renderStation("/teleop", h);
+    const banner = await screen.findByTestId("state-banner");
+    const tech = within(banner).getByTestId("tech-details");
+    expect(tech.tagName).toBe("DETAILS");
+    expect(tech).not.toHaveAttribute("open");
+    expect(within(tech).getByText("Chi tiết kỹ thuật")).toBeInTheDocument();
+    expect(within(tech).getByText("follower: motor ID 3 timed out")).not.toBeVisible();
+    // the wizard rail never shows the server line
+    expect(screen.getByRole("navigation", { name: "Các bước Station" })).not.toHaveTextContent("timed out");
   });
 });

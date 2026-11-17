@@ -18,6 +18,7 @@ import { SafetyBanners } from "./components/Banners";
 import { EStopButton } from "./components/EStopButton";
 import { HomeControls } from "./components/HomeControls";
 import { MotorHealthPanel, useThresholds } from "./components/MotorHealthPanel";
+import { serverText } from "./components/ServerText";
 import { levelCss, motorLevel, worstLevel } from "./health";
 import { TwinDock, TwinSection } from "./twin/TwinDock";
 import { useStation } from "./ws/StationProvider";
@@ -150,7 +151,10 @@ const EXTRA: { to: string; key: string }[] = [
 ];
 
 function WizardRail({ steps, onNavigate }: { steps: Step[]; onNavigate?: () => void }) {
-  const { t } = useTranslation("station");
+  const { t, i18n } = useTranslation("station");
+  // The rail says the Station's reason only in words; an unknown line is on the step's page,
+  // behind "Technical details" (QC 0.2.9 QD-19).
+  const why = (s: Step): string | null => serverText(t, s.why, i18n.language).text;
   return (
     <nav aria-label={t("nav.wizard")} className="flex gap-1 overflow-x-auto md:flex-col md:overflow-visible">
       <ol className="flex gap-1 md:flex-col">
@@ -166,7 +170,7 @@ function WizardRail({ steps, onNavigate }: { steps: Step[]; onNavigate?: () => v
                   s.lock && "opacity-70",
                 )
               }
-              title={s.lock ? [t(`lock.${s.lock}`), s.why].filter(Boolean).join(" — ") : undefined}
+              title={s.lock ? [t(`lock.${s.lock}`), why(s)].filter(Boolean).join(" — ") : undefined}
             >
               <span className="w-4 text-right tabular-nums text-xs text-muted-foreground">{i + 1}</span>
               <PixelAnim name={s.icon} />
@@ -177,13 +181,12 @@ function WizardRail({ steps, onNavigate }: { steps: Step[]; onNavigate?: () => v
             {s.lock ? (
               <p className="hidden pl-8 text-xs text-muted-foreground md:block">{t(`lock.${s.lock}`)}</p>
             ) : null}
-            {s.lock && s.why ? (
+            {s.lock && why(s) ? (
               <p
-                className="hidden max-w-[16rem] break-words pl-8 font-mono text-[11px] leading-tight text-muted-foreground md:line-clamp-4"
-                title={s.why}
+                className="hidden max-w-[16rem] break-words pl-8 text-[11px] leading-tight text-muted-foreground md:line-clamp-4"
                 data-testid={`lock-why-${s.key}`}
               >
-                {s.why}
+                {why(s)}
               </p>
             ) : null}
           </li>
