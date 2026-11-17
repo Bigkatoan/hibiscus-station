@@ -251,6 +251,8 @@
     "warmup": "Warming up…",
     "episode_rec": "Episode {{n}} / {{of}} · recording · {{e}} / {{l}} s",
     "episode_run": "Episode {{n}} / {{of}} · model running · {{e}} / {{l}} s",
+    "episode_replay": "Replaying episode {{n}} · {{e}} / {{l}} s",
+    "replay_approach": "Moving to the start of episode {{n}}…",
     "reset": "Reset the scene · {{e}} / {{l}} s",
     "saving": "Saving episode {{n}}…",
     "done": "Done"
@@ -471,6 +473,7 @@
     "start": "Start teleop",
     "not_idle": "The robot must be connected and idle.",
     "approach": "Follower moving to the leader pose…",
+    "approach_replay": "Follower moving slowly to the first pose of the episode…",
     "latency_readout": "latency ~{{ms}} ms, {{hz}} Hz",
     "fps_max": "{{fps}} (fastest)",
     "align_title": "The arms are far apart",

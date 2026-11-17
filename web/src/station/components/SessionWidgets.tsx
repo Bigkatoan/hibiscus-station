@@ -8,7 +8,7 @@ import { fmt } from "../health";
 import { useStation } from "../ws/StationProvider";
 import type { StationSnapshot } from "../ws/store";
 
-const RUNNING_PHASES = ["countdown", "warmup", "episode", "reset"];
+const RUNNING_PHASES = ["countdown", "warmup", "episode", "reset", "approach", "replay"];
 
 /** The Station sends the session at least once a second. Field report 0.2.8: while it said
  * nothing (its loop was busy saving) the timer ran on to the limit and looked like the episode
@@ -78,6 +78,12 @@ export function SessionTimer({
   else if (ep.phase === "saving") headline = t("session.saving", { n: ep.index + 1 });
   else if (ep.phase === "warmup") headline = t("session.warmup");
   else if (ep.phase === "done") headline = t("session.done");
+  else if (session.kind === "replay")
+    // QC 0.2.9 QD-5: a replay records nothing and uses no leader
+    headline =
+      ep.phase === "approach"
+        ? t("session.replay_approach", { n: ep.index + 1 })
+        : t("session.episode_replay", { n: ep.index + 1, e: fmt(elapsed, 1), l: limit ?? "∞" });
   else
     headline = t(session.kind === "run" ? "session.episode_run" : "session.episode_rec", {
       n: ep.index + 1,

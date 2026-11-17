@@ -262,3 +262,21 @@ describe("CR-2: Home", () => {
     expect(await screen.findByTestId("program-ok")).toBeInTheDocument();
   });
 });
+
+describe("Replay page (QC 0.2.9 QD-5)", () => {
+  it("says it replays an episode, never 'recording', and drops the approach note after the approach", async () => {
+    const h = setupStation();
+    renderStation("/replay", h);
+    await settle();
+    h.sim.startSession("replay", { dataset: "cube_demo", episode: 2 });
+    expect(await screen.findByText("Moving to the start of episode 3…")).toBeInTheDocument();
+    expect(screen.getByTestId("approach-note")).toHaveTextContent(
+      "Follower moving slowly to the first pose of the episode…",
+    );
+    await advance(h.sim, 2.0);
+    expect(await screen.findByText(/^Replaying episode 3 · /)).toBeInTheDocument();
+    expect(screen.queryByTestId("approach-note")).toBeNull();
+    expect(document.body).not.toHaveTextContent("recording");
+    expect(document.body).not.toHaveTextContent("leader pose");
+  });
+});

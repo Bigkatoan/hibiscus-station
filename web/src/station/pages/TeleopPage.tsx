@@ -28,7 +28,7 @@ function LiveHeader({ session, extra }: { session: Session | null; extra?: React
         <div className="min-w-0">
           {session ? <SessionTimer session={session} /> : extra}
           {session?.kind === "teleop" ? <LatencyReadout /> : null}
-          {session && status?.sub === "align" ? (
+          {session && (session.episode.phase ?? status?.sub) === "align" ? (
             <p
               role="status"
               data-testid="teleop-aligning"
@@ -37,12 +37,13 @@ function LiveHeader({ session, extra }: { session: Session | null; extra?: React
               {t("teleop.aligning")}
             </p>
           ) : null}
-          {session && status?.sub === "approach" ? (
+          {session && (session.episode.phase ?? status?.sub) === "approach" ? (
             <p
               role="status"
+              data-testid="approach-note"
               className="mt-2 border-2 border-frame bg-warning px-2 py-1 text-sm text-warning-foreground"
             >
-              {t("teleop.approach")}
+              {t(session.kind === "replay" ? "teleop.approach_replay" : "teleop.approach")}
             </p>
           ) : null}
         </div>

@@ -286,10 +286,16 @@ export class StationStore {
         const ended = msg.ended === true;
         const session = omit(strip(msg), "ended", "reason", "summary", "loop", "max_temp_c");
         // The final message of a session (`ended: true`) only updates the end card; the `state`
-        // message that follows clears `status.session`.
+        // message that follows clears `status.session`. The Station announces a phase change
+        // (approach → replay, ...) with a session message only; `status.sub` is the session's
+        // phase (as in GET /status), so it follows here (QC 0.2.9 QD-5: "Follower moving to the
+        // leader pose…" stayed up for a whole replay).
+        const st = this.snap.status;
         this.set({
           lastSession: session,
-          ...(this.snap.status && !ended ? { status: { ...this.snap.status, session } } : {}),
+          ...(st && !ended
+            ? { status: { ...st, session, sub: session.episode?.phase ?? st.sub } }
+            : {}),
         });
         return;
       }

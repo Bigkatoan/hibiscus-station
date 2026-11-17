@@ -60,6 +60,10 @@ import { encodeFrame } from "../ws/video";
 import * as fx from "./fixtures";
 import { MockPrograms } from "./programs";
 
+/** Replay: the approach to the first recorded pose, then the episode (the Station's phases). */
+const REPLAY_APPROACH_S = 1.5;
+const REPLAY_S = 30;
+
 export class MockProblem extends Error {
   constructor(
     readonly status: number,
@@ -707,9 +711,9 @@ export class MockStation {
         index: Number(body.episode),
         of: 1,
         saved: 0,
-        phase: "episode",
+        phase: "approach", // as the Station: approach (1.5 s), then replay
         elapsed_s: 0,
-        limit_s: 30,
+        limit_s: REPLAY_APPROACH_S,
       };
       state = "replaying";
     }
@@ -717,7 +721,6 @@ export class MockStation {
     this.torque = true;
     this.lastHeartbeat = this.t;
     if (kind !== "rest") this.interrupted = false;
-    if (kind === "replay") s.episode.phase = "episode";
     this.setState(state, { sub: s.episode.phase });
     if (kind === "teleop") rt.phaseT = 0;
     this.broadcast({ type: "session", ...s });
@@ -1084,13 +1087,18 @@ export class MockStation {
       this.endSession("completed");
       return;
     }
+    if (rt.s.kind === "replay") {
+      // The Station announces this phase change with a session message only (no state message).
+      if (ep.phase === "approach") {
+        rt.s.episode = { ...ep, phase: "replay", elapsed_s: 0, limit_s: REPLAY_S };
+        rt.phaseT = 0;
+        this.broadcast({ type: "session", ...rt.s });
+      } else this.endSession("completed");
+      return;
+    }
     if (ep.phase === "countdown")
       this.phase(rt, "episode", rt.rec?.episode_time_s ?? rt.run?.episode_time_s ?? 30);
     else if (ep.phase === "episode") {
-      if (rt.s.kind === "replay") {
-        this.endSession("completed");
-        return;
-      }
       if (rt.rec?.on_timeout !== "discard" && rt.rec) this.saveEpisode(rt);
       this.afterEpisode(rt);
     } else if (ep.phase === "reset") this.nextEpisode(rt);
