@@ -64,7 +64,7 @@ export function DatasetsPage() {
                 <p>
                   {t("datasets.summary", {
                     count: d.episodes,
-                    frames: d.frames,
+                    frames: t("datasets.frames", { count: d.frames }),
                     fps: d.fps,
                     size: formatBytes(d.size_bytes),
                   })}
@@ -296,7 +296,7 @@ export function DatasetDetailPage() {
           d
             ? t("datasets.summary", {
                 count: d.episodes,
-                frames: d.frames,
+                frames: t("datasets.frames", { count: d.frames }),
                 fps: d.fps,
                 size: formatBytes(d.size_bytes),
               })

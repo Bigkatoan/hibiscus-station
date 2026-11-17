@@ -20,6 +20,7 @@ import { registerStationI18n } from "./i18n";
 import { StationApiError } from "./api/client";
 import { errorDetail, errorText } from "./components/StationError";
 import { MockStation } from "./mock/sim";
+import { countsWithoutPlural } from "@/test/plurals";
 import { wizardSteps } from "./StationShell";
 import { realArmDraft, roleWarnings } from "./pages/RobotPage";
 import { ControlSocket, HEARTBEAT_MS, backoffMs } from "./ws/control";
@@ -384,7 +385,7 @@ describe("station i18n", () => {
   it("counts read as words: 1 episode, 2 episodes (QC 0.2.9 QD-8)", () => {
     registerStationI18n();
     const t = i18n.getFixedT("en", "station");
-    const summary = { frames: 302, fps: 30, size: "1 MB" };
+    const summary = { frames: t("datasets.frames", { count: 302 }), fps: 30, size: "1 MB" };
     expect(t("record.done", { count: 1, name: "d" })).toBe("1 episode saved in dataset d");
     expect(t("record.done", { count: 2, name: "d" })).toBe("2 episodes saved in dataset d");
     expect(t("datasets.summary", { count: 1, ...summary })).toMatch(/^1 episode · 302 frames/);
@@ -421,6 +422,16 @@ describe("station i18n", () => {
     expect(tv("programs.run.now", { t: "1,5", steps: tv("programs.run.steps", { count: 3 }), block: "x" })).toBe(
       "1,5 s · 3 bước · x",
     );
+  });
+
+  it("every English count has _one and _other forms (plural class sweep, QC 0.2.9 QD-20)", () => {
+    expect(countsWithoutPlural(flatEntries(en))).toEqual([]);
+    registerStationI18n();
+    const t = i18n.getFixedT("en", "station");
+    expect(t("programs.traj.capturing", { s: "0.1", limit: 60, samples: t("programs.traj.samples", { count: 1 }) })).toBe(
+      "Recording · 0.1 / 60 s · 1 sample",
+    );
+    expect(t("datasets.frames", { count: 1 })).toBe("1 frame");
   });
 
   it("the leader tooltip reads naturally in vi (QC 0.2.9 QD-17)", () => {

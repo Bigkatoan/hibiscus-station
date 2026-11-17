@@ -169,7 +169,7 @@ function RecordCard({ onDraft }: { onDraft: (id: string) => void }) {
                   {t("programs.traj.capturing", {
                     s: (rec?.elapsed_s ?? 0).toFixed(1),
                     limit: rec?.limit_s ?? limit,
-                    n: rec?.samples ?? 0,
+                    samples: t("programs.traj.samples", { count: rec?.samples ?? 0 }),
                   })}
                 </p>
                 <Progress

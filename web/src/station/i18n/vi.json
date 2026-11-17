@@ -553,8 +553,8 @@
     "title": "Bộ dữ liệu",
     "desc": "Các bộ dữ liệu LeRobot trên máy này.",
     "empty": "Chưa có bộ dữ liệu nào.",
-    "summary_one": "{{count}} tập · {{frames}} khung hình · {{fps}} fps · {{size}}",
-    "summary_other": "{{count}} tập · {{frames}} khung hình · {{fps}} fps · {{size}}",
+    "summary_one": "{{count}} tập · {{frames}} · {{fps}} fps · {{size}}",
+    "summary_other": "{{count}} tập · {{frames}} · {{fps}} fps · {{size}}",
     "finalized": "đã hoàn tất",
     "not_finalized": "chưa hoàn tất",
     "uploaded": "đã tải lên v{{v}}",
@@ -569,7 +569,9 @@
     "delete": "Xoá",
     "confirm_delete": "Xoá vĩnh viễn",
     "missing": "Không có bộ dữ liệu {{name}} trên máy này. Bộ dữ liệu đã bị xoá, hoặc lần ghi đó không lưu được tập nào.",
-    "to_list": "Tất cả bộ dữ liệu"
+    "to_list": "Tất cả bộ dữ liệu",
+    "frames_one": "{{count}} khung hình",
+    "frames_other": "{{count}} khung hình"
   },
   "upload": {
     "title": "Tải lên Hibiscus",
@@ -784,7 +786,7 @@
       "record": "Ghi",
       "needs_leader": "Robot này không có tay leader: hãy kết nối để ghi.",
       "countdown": "Bắt đầu sau {{n}}…",
-      "capturing": "Đang ghi · {{s}} / {{limit}} s · {{n}} mẫu",
+      "capturing": "Đang ghi · {{s}} / {{limit}} s · {{samples}}",
       "progress": "Tiến độ ghi",
       "stop": "Dừng ghi",
       "moving_to_start": "Đang về tư thế bắt đầu…",
@@ -813,7 +815,9 @@
       "check_play": "Kiểm tra ở 25 %",
       "confirm": "Đã đúng",
       "edit": "Sửa",
-      "delete_title": "Xoá {{name}}?"
+      "delete_title": "Xoá {{name}}?",
+      "samples_one": "{{count}} mẫu",
+      "samples_other": "{{count}} mẫu"
     },
     "poses": {
       "title": "Tư thế",

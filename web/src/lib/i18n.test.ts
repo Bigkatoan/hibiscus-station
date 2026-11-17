@@ -10,6 +10,7 @@ import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import en from "@/i18n/en/translation.json";
 import vi from "@/i18n/vi/translation.json";
+import { countsWithoutPlural } from "@/test/plurals";
 
 type Tree = { [k: string]: string | Tree };
 
@@ -129,6 +130,10 @@ describe("i18n resources", () => {
     expect([...want].filter((k) => !viKeys.has(k))).toEqual([]);
     expect([...viKeys].filter((k) => !want.has(k))).toEqual([]);
     expect([...expectedKeys("en")].filter((k) => !enKeys.has(k))).toEqual([]);
+  });
+
+  it("every English count has _one and _other forms (plural class sweep, QC 0.2.9 QD-20)", () => {
+    expect(countsWithoutPlural(enMap)).toEqual([]);
   });
 
   it("no empty strings", () => {

@@ -127,7 +127,7 @@
     "interrupted_relaxed": "Stopped. Torque is off: the arm is limp and does not hold its position.",
     "interrupted_hint_relaxed": "Return Home turns the torque back on and moves the arm slowly. The next program or trajectory run starts from its beginning.",
     "rest": "Return Home",
-    "rest_hint": "Moves slowly (at most {{speed}} degrees per second) to Home. Keep this page open; Space stops it.",
+    "rest_hint": "Moves slowly (at most {{speed}}°/s) to Home. Keep this page open; Space stops it.",
     "rest_need_pose": "No Home yet. Set Home at the current position to return there later.",
     "resting": "Returning Home… Space or Stop halts it.",
     "rest_stop": "Stop"
@@ -495,7 +495,7 @@
     "latency_readout": "latency ~{{ms}} ms, {{hz}} Hz",
     "fps_max": "{{fps}} (fastest)",
     "align_title": "The arms are far apart",
-    "align_hint": "Hold the leader still where you want it. The follower can move there by itself, slowly (at most {{speed}} degrees per second); teleop starts when it arrives. Space or the e-stop stops it.",
+    "align_hint": "Hold the leader still where you want it. The follower can move there by itself, slowly (at most {{speed}}°/s); teleop starts when it arrives. Space or the e-stop stops it.",
     "align": "Align follower to leader",
     "aligning": "Follower moving slowly to the leader pose… keep the leader still. Space stops it."
   },
@@ -553,8 +553,8 @@
     "title": "Datasets",
     "desc": "LeRobot datasets on this machine.",
     "empty": "No dataset yet.",
-    "summary_one": "{{count}} episode · {{frames}} frames · {{fps}} fps · {{size}}",
-    "summary_other": "{{count}} episodes · {{frames}} frames · {{fps}} fps · {{size}}",
+    "summary_one": "{{count}} episode · {{frames}} · {{fps}} fps · {{size}}",
+    "summary_other": "{{count}} episodes · {{frames}} · {{fps}} fps · {{size}}",
     "finalized": "finalized",
     "not_finalized": "not finalized",
     "uploaded": "uploaded v{{v}}",
@@ -569,7 +569,9 @@
     "delete": "Delete",
     "confirm_delete": "Delete for good",
     "missing": "There is no dataset {{name}} on this computer. It was deleted, or its recording kept no episode.",
-    "to_list": "All datasets"
+    "to_list": "All datasets",
+    "frames_one": "{{count}} frame",
+    "frames_other": "{{count}} frames"
   },
   "upload": {
     "title": "Upload to Hibiscus",
@@ -784,7 +786,7 @@
       "record": "Record",
       "needs_leader": "This robot has no leader arm: connect one to record.",
       "countdown": "Starting in {{n}}…",
-      "capturing": "Recording · {{s}} / {{limit}} s · {{n}} samples",
+      "capturing": "Recording · {{s}} / {{limit}} s · {{samples}}",
       "progress": "Recording progress",
       "stop": "Stop recording",
       "moving_to_start": "Moving to the start pose…",
@@ -813,7 +815,9 @@
       "check_play": "Check at 25 %",
       "confirm": "Looks right",
       "edit": "Edit",
-      "delete_title": "Delete {{name}}?"
+      "delete_title": "Delete {{name}}?",
+      "samples_one": "{{count}} sample",
+      "samples_other": "{{count}} samples"
     },
     "poses": {
       "title": "Poses",
@@ -1194,7 +1198,7 @@
     "set_short": "Set Home",
     "set_title": "Saves where the follower is now as this robot's Home.",
     "go": "Return Home",
-    "go_title": "Moves slowly (at most {{speed}} degrees per second) to Home. Space or Stop halts it.",
+    "go_title": "Moves slowly (at most {{speed}}°/s) to Home. Space or Stop halts it.",
     "replace_title": "Replace Home?",
     "replace_text": "The follower's current position becomes the new Home.",
     "replace_ok": "Replace Home",
