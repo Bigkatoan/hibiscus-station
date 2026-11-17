@@ -1,8 +1,8 @@
 # Hibiscus Station @VERSION@ installer for Windows 10/11 x64 (ADR-13, P-1).
 #
 # Install, update and roll back with one line in PowerShell (no admin rights, no git, no Python):
-#   irm @REPO_URL@/releases/latest/download/install.ps1 | iex
 #   irm @REPO_URL@/releases/download/v@VERSION@/install.ps1 | iex     # exactly this version
+@LATEST_LINE@
 #
 # What it does:
 #   1. uses uv @UV_VERSION@ (downloaded once into %LOCALAPPDATA%\HibiscusStation, checked by SHA-256);
@@ -29,6 +29,7 @@
     $UvAsset = '@UV_ASSET@'
     $UvSha256 = '@UV_SHA256@'
     $PythonVersion = '@PYTHON_VERSION@'
+    $PreRelease = $@PRE_RELEASE@
     $Wheel = "hibiscus_station-$Version-py3-none-any.whl"
 
     function Say([string]$vi, [string]$en) {
@@ -137,7 +138,10 @@
         }
 
         # -------------------------------------------------------------- 4. PATH and check
-        $bin = (& $uv --no-config tool dir --bin | Select-Object -Last 1).Trim()
+        # --color never: under FORCE_COLOR / CLICOLOR_FORCE (CI, some terminals) uv colours the path
+        # even into a pipe, and Join-Path then sees a drive named "<ESC>[36mC" (QD-2). The -replace
+        # drops any escape sequence that another layer might still add.
+        $bin = ((& $uv --no-config --color never tool dir --bin | Select-Object -Last 1) -replace "\x1b\[[0-9;]*[A-Za-z]", '').Trim()
         # Windows PowerShell 5.1 turns redirected native stderr into a terminating error under 'Stop'
         $ErrorActionPreference = 'Continue'
         & $uv --no-config tool update-shell *> $null
@@ -156,8 +160,16 @@
             "Done: $got. Open a new PowerShell window and type: hibiscus-station"
         Say "Thử không cần tay robot: hibiscus-station --mock   ·   Có lỗi: hibiscus-station doctor" `
             "Try it without the arms: hibiscus-station --mock   ·   Something wrong: hibiscus-station doctor"
-        Say "Cập nhật: chạy lại đúng lệnh cài. Quay lại bản này: irm @REPO_URL@/releases/download/v$Version/install.ps1 | iex" `
-            "Update: run the same install command again. Back to this version: irm @REPO_URL@/releases/download/v$Version/install.ps1 | iex"
+        # A pre-release is never GitHub's "latest" release (QD-1): it is updated by a newer release's line.
+        $thisLine = "irm @REPO_URL@/releases/download/v$Version/install.ps1 | iex"
+        if ($PreRelease) {
+            Say "Đây là bản thử nghiệm (pre-release). Cập nhật: dán dòng cài của bản mới hơn (@REPO_URL@/releases)." `
+                "This is a test build (pre-release). Update: paste the install line of a newer release (@REPO_URL@/releases)."
+        } else {
+            Say "Cập nhật lên bản mới nhất: irm @REPO_URL@/releases/latest/download/install.ps1 | iex" `
+                "Update to the latest release: irm @REPO_URL@/releases/latest/download/install.ps1 | iex"
+        }
+        Say "Quay lại bản này sau khi cập nhật: $thisLine" "Back to this version after an update: $thisLine"
     } finally {
         Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
     }

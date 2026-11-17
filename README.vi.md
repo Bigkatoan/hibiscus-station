@@ -80,10 +80,10 @@ less install.sh && bash install.sh
 
 | Máy của bạn | `install.sh` chọn | Danh sách kiểm tra lần đầu |
 |---|---|---|
-| PC / mini PC x86_64 | `ghcr.io/bigkatoan/hibiscus-station:0.2.8-cpu` | - |
-| x86_64 + GPU NVIDIA | `…:0.2.8-cuda` (cần NVIDIA Container Toolkit) | - |
-| Jetson Orin, JetPack 6 | `…:0.2.8-jetson` (runtime NVIDIA) | [first-boot-jetson.md](docs/first-boot-jetson.md) |
-| Raspberry Pi 5 | `…:0.2.8-cpu` (arm64) | [first-boot-pi5.md](docs/first-boot-pi5.md) |
+| PC / mini PC x86_64 | `ghcr.io/bigkatoan/hibiscus-station:1.0.0a1-cpu` | - |
+| x86_64 + GPU NVIDIA | `…:1.0.0a1-cuda` (cần NVIDIA Container Toolkit) | - |
+| Jetson Orin, JetPack 6 | `…:1.0.0a1-jetson` (runtime NVIDIA) | [first-boot-jetson.md](docs/first-boot-jetson.md) |
+| Raspberry Pi 5 | `…:1.0.0a1-cpu` (arm64) | [first-boot-pi5.md](docs/first-boot-pi5.md) |
 
 Sau đó mở đường link được in ra trên chính máy đó (`hibiscus-station-ctl url` in lại link). Từ
 laptop: `ssh -N -L 18210:127.0.0.1:18210 ban@may-robot` rồi mở cùng link đó. Station chỉ nghe trên
@@ -92,7 +92,7 @@ laptop: `ssh -N -L 18210:127.0.0.1:18210 ban@may-robot` rồi mở cùng link đ
 Không dùng Docker (Python 3.12 qua [uv](https://docs.astral.sh/uv/)):
 
 ```bash
-uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.8/hibiscus_station-0.2.8-py3-none-any.whl
+uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v1.0.0a1/hibiscus_station-1.0.0a1-py3-none-any.whl
 # không có GPU NVIDIA (Pi 5, đa số mini PC): thêm --torch-backend cpu
 hibiscus-station --mock          # thử khi chưa có robot
 hibiscus-station                 # khi đã cắm tay robot
@@ -105,15 +105,15 @@ File dịch vụ systemd cho cách cài này nằm ở [deploy/systemd/](deploy/
 Mở PowerShell (x64, không cần quyền admin, không cần cài git hay Python) và dán **một** dòng:
 
 ```powershell
-irm https://github.com/Bigkatoan/hibiscus-station/releases/latest/download/install.ps1 | iex
+irm https://github.com/Bigkatoan/hibiscus-station/releases/download/v1.0.0a1/install.ps1 | iex
 ```
 
 Lệnh này cài uv (kiểm tra SHA-256), Python 3.12 và Station với đúng bộ thư viện đã kiểm thử cho bản
-phát hành đó (PyTorch CPU). **Cập nhật**: chạy lại đúng dòng đó. **Quay lại** một phiên bản: cùng dòng
-với liên kết của bản đó, ví dụ
-`irm https://github.com/Bigkatoan/hibiscus-station/releases/download/vX.Y.Z/install.ps1 | iex`.
-Bản thử nghiệm (pre-release, ví dụ 1.0.0a1) chỉ cài được bằng liên kết có số phiên bản:
-`.../releases/download/v1.0.0a1/install.ps1`. Hồ sơ, hiệu chỉnh, dữ liệu và model được giữ nguyên.
+phát hành đó (PyTorch CPU). Phiên bản này là bản thử nghiệm (pre-release): GitHub không bao giờ coi bản
+thử nghiệm là bản "mới nhất", nên chỉ cài được bằng liên kết có số phiên bản, tức là dòng ở trên.
+**Cập nhật**: dán dòng cài của bản mới hơn (trong README của bản đó, hoặc trên
+[trang phát hành](https://github.com/Bigkatoan/hibiscus-station/releases)). **Quay lại** một phiên bản: dán dòng cài của bản đó, ví dụ dòng ở
+trên; mọi bản từ 1.0.0a1 trở đi đều có dòng này. Hồ sơ, hiệu chỉnh, dữ liệu và model được giữ nguyên.
 Sau đó, trong một cửa sổ PowerShell mới:
 
 ```powershell
@@ -141,7 +141,7 @@ Dùng hằng ngày với Docker:
 ```bash
 hibiscus-station-ctl status | logs -f | url | ports
 hibiscus-station-ctl backup                 # hồ sơ, hiệu chỉnh, quỹ đạo, chương trình, bộ nhận diện
-hibiscus-station-ctl update 0.2.8-cpu       # sao lưu, kéo image, khởi động lại, kiểm tra, tự quay lại nếu lỗi
+hibiscus-station-ctl update 1.0.0a1-cpu       # sao lưu, kéo image, khởi động lại, kiểm tra, tự quay lại nếu lỗi
 hibiscus-station-ctl rollback
 ```
 

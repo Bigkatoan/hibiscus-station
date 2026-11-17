@@ -79,10 +79,10 @@ less install.sh && bash install.sh
 
 | Your machine | What `install.sh` picks | First-boot checklist |
 |---|---|---|
-| x86_64 PC / mini PC | `ghcr.io/bigkatoan/hibiscus-station:0.2.8-cpu` | - |
-| x86_64 + NVIDIA GPU | `…:0.2.8-cuda` (needs the NVIDIA Container Toolkit) | - |
-| Jetson Orin, JetPack 6 | `…:0.2.8-jetson` (NVIDIA runtime) | [first-boot-jetson.md](docs/first-boot-jetson.md) |
-| Raspberry Pi 5 | `…:0.2.8-cpu` (arm64) | [first-boot-pi5.md](docs/first-boot-pi5.md) |
+| x86_64 PC / mini PC | `ghcr.io/bigkatoan/hibiscus-station:1.0.0a1-cpu` | - |
+| x86_64 + NVIDIA GPU | `…:1.0.0a1-cuda` (needs the NVIDIA Container Toolkit) | - |
+| Jetson Orin, JetPack 6 | `…:1.0.0a1-jetson` (NVIDIA runtime) | [first-boot-jetson.md](docs/first-boot-jetson.md) |
+| Raspberry Pi 5 | `…:1.0.0a1-cpu` (arm64) | [first-boot-pi5.md](docs/first-boot-pi5.md) |
 
 Then open the printed link on that machine (`hibiscus-station-ctl url` prints it again). From a
 laptop: `ssh -N -L 18210:127.0.0.1:18210 you@robot-pc` and open the same link. Station listens on
@@ -91,7 +91,7 @@ laptop: `ssh -N -L 18210:127.0.0.1:18210 you@robot-pc` and open the same link. S
 Without Docker (Python 3.12 via [uv](https://docs.astral.sh/uv/)):
 
 ```bash
-uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.8/hibiscus_station-0.2.8-py3-none-any.whl
+uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v1.0.0a1/hibiscus_station-1.0.0a1-py3-none-any.whl
 # no NVIDIA GPU (Pi 5, most mini PCs): add --torch-backend cpu
 hibiscus-station --mock          # demo without hardware (simulated arms, data in ~/.hibiscus/station-demo)
 hibiscus-station                 # with the arms plugged in
@@ -105,15 +105,15 @@ A systemd user unit for this install is in [deploy/systemd/](deploy/systemd/hibi
 Open PowerShell (x64, no admin rights, no git or Python needed) and paste **one** line:
 
 ```powershell
-irm https://github.com/Bigkatoan/hibiscus-station/releases/latest/download/install.ps1 | iex
+irm https://github.com/Bigkatoan/hibiscus-station/releases/download/v1.0.0a1/install.ps1 | iex
 ```
 
 It installs uv (checked by SHA-256), Python 3.12 and Station with exactly the libraries tested for
-that release (CPU PyTorch). **Update**: run the same line again. **Go back** to a version: the same
-line with that release's link, e.g.
-`irm https://github.com/Bigkatoan/hibiscus-station/releases/download/vX.Y.Z/install.ps1 | iex`.
-A test build (pre-release, e.g. 1.0.0a1) is only reachable by its versioned link:
-`.../releases/download/v1.0.0a1/install.ps1`. Profiles, calibration, datasets and models are kept.
+that release (CPU PyTorch). This version is a test build (pre-release): GitHub never offers a
+pre-release as its "latest" release, so it is only reachable by its versioned link, the line above.
+**Update**: paste the line of the newer release (the README of that release, or the
+[releases page](https://github.com/Bigkatoan/hibiscus-station/releases)). **Go back** to a version: paste that version's line, e.g. the line
+above; every release from 1.0.0a1 on has one. Profiles, calibration, datasets and models are kept.
 Then, in a new PowerShell window:
 
 ```powershell
@@ -141,7 +141,7 @@ Day to day with Docker:
 ```bash
 hibiscus-station-ctl status | logs -f | url | ports
 hibiscus-station-ctl backup                 # profiles, calibration, trajectories, programs, detectors
-hibiscus-station-ctl update 0.2.8-cpu       # backup, pull, restart, health check, auto-rollback
+hibiscus-station-ctl update 1.0.0a1-cpu       # backup, pull, restart, health check, auto-rollback
 hibiscus-station-ctl rollback
 ```
 

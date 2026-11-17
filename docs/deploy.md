@@ -9,8 +9,8 @@ Station runs on the computer the arms and cameras are plugged into. Supported ha
 | NVIDIA Jetson Orin Nano / NX / AGX | `jetson` | JetPack 6.x (L4T R36). See [first-boot-jetson.md](first-boot-jetson.md) |
 | Raspberry Pi 5 (4 or 8 GB) | `cpu` (arm64) | 64-bit Raspberry Pi OS (Bookworm). See [first-boot-pi5.md](first-boot-pi5.md) |
 
-Images: `ghcr.io/bigkatoan/hibiscus-station:<version>-<variant>`, e.g. `0.2.8-cpu` (multi-arch:
-linux/amd64 and linux/arm64), `0.2.8-cuda` (amd64), `0.2.8-jetson` (arm64). Each also has the
+Images: `ghcr.io/bigkatoan/hibiscus-station:<version>-<variant>`, e.g. `1.0.0a1-cpu` (multi-arch:
+linux/amd64 and linux/arm64), `1.0.0a1-cuda` (amd64), `1.0.0a1-jetson` (arm64). Each also has the
 floating tags `<major>.<minor>-<variant>` and `<variant>` (latest release).
 
 There are two ways to install on Linux: **Docker** (recommended, below) and the **Python wheel with a
@@ -170,9 +170,9 @@ groups (install the udev rule above as well).
 
 ```bash
 # x86_64 with an NVIDIA GPU (CUDA wheels from PyPI):
-uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.8/hibiscus_station-0.2.8-py3-none-any.whl
+uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v1.0.0a1/hibiscus_station-1.0.0a1-py3-none-any.whl
 # CPU only (Raspberry Pi 5, PCs without NVIDIA, Jetson without the GPU): CPU PyTorch, much smaller
-uv tool install --torch-backend cpu https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.8/hibiscus_station-0.2.8-py3-none-any.whl
+uv tool install --torch-backend cpu https://github.com/Bigkatoan/hibiscus-station/releases/download/v1.0.0a1/hibiscus_station-1.0.0a1-py3-none-any.whl
 
 hibiscus-station --mock          # try it; Ctrl+C to stop
 ```
@@ -185,16 +185,17 @@ JetPack 6 outside NVIDIA's containers): use the Docker image for the GPU.
 **Windows 10/11 x64**: one line in PowerShell, no admin rights, no git, no Python (ADR-13):
 
 ```powershell
-irm https://github.com/Bigkatoan/hibiscus-station/releases/latest/download/install.ps1 | iex
+irm https://github.com/Bigkatoan/hibiscus-station/releases/download/v1.0.0a1/install.ps1 | iex
 ```
 
 The release's `install.ps1` downloads uv (pinned, checked by SHA-256) into
 `%LOCALAPPDATA%\HibiscusStation`, then runs `uv tool install --force` of that release's wheel with
 its `constraints.txt` (every library of `uv.lock`, exact versions) and `overrides.txt` (lerobot and
 the Hibiscus CLI as prebuilt wheels of the release, so no git), all checked against `SHA256SUMS`.
-Every install of a release gets the same libraries QC tested (CPU PyTorch). Run the same line again
-to update; `irm https://github.com/Bigkatoan/hibiscus-station/releases/download/vX.Y.Z/install.ps1 | iex`
-installs exactly version X.Y.Z (roll back). A pre-release is only reachable by its versioned link.
+Every install of a release gets the same libraries QC tested (CPU PyTorch). Each release's line
+installs exactly that version: paste a newer release's line to update and an older one's to roll
+back (every release from 1.0.0a1 on carries an `install.ps1`). 1.0.0a1 is a pre-release, and GitHub
+never makes a pre-release its "latest" release, so it is only reachable by its versioned link.
 QC / offline: `$env:HIBISCUS_STATION_BASE_URL = "C:\path\to\downloaded\assets"` before the line
 installs from a folder (e.g. `gh release download` of a draft).
 

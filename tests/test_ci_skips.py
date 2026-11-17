@@ -58,6 +58,31 @@ def test_windows_pty_skips_are_allowed_and_nothing_else(tmp_path: Path) -> None:
     assert len(errors) == 2 and all("not in tools/ci/allowed-skips.toml" in e for e in errors)
 
 
+def test_macos_pty_emulator_skips_are_allowed_with_the_real_reason(tmp_path: Path) -> None:
+    """QD-7: on macOS a pty refuses pyserial's 1 Mbps ioctl (ENOTTY), so the STS-emulator tests may
+    skip there, with that reason; the doctor tests are not on the list (they must run, QD-4 / QD-7)."""
+    junit = _junit(
+        tmp_path,
+        [
+            ("", "tests.test_real_stack", "collection skipped"),
+            ("tests.test_teleop_latency", "test_station_teleop_latency_matches_lelab", "pty at 1 Mbps"),
+            (
+                "tests.test_device_lost",
+                "test_pty_closed_mid_teleop_then_back_under_a_new_name",
+                "pty at 1 Mbps",
+            ),
+        ],
+    )
+    allowed = check_skips.load_allowed()
+    assert check_skips.check("macos", [junit], allowed) == []
+    assert len(check_skips.check("linux", [junit], allowed)) == 3
+    for a in allowed:
+        if "macos" in a.platforms and "windows" in a.platforms:
+            assert "ENOTTY" in a.reason and not a.covered_by.startswith("Linux and macOS"), a.test
+    doctor = _junit(tmp_path, [("", "tests.test_doctor", "collection skipped")])
+    assert check_skips.check("macos", [doctor], allowed) and check_skips.check("windows", [doctor], allowed)
+
+
 @pytest.mark.parametrize(
     ("cls", "name"),
     [
@@ -91,19 +116,28 @@ def test_the_emulated_e2e_flow_may_skip_on_windows_only(tmp_path: Path) -> None:
     assert len(check_skips.check("linux", [junit], check_skips.load_allowed())) == 1
 
 
-def test_ci_runs_the_e2e_suite_on_linux_and_windows_and_fails_on_a_missing_browser() -> None:
+def test_ci_runs_the_e2e_suite_in_the_at2_browsers_and_fails_on_a_missing_browser() -> None:
+    """AT-2 / QD-9: e2e in Chromium + Firefox on Linux and in Edge on windows-latest."""
     import yaml
 
     ci = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
     job = ci["jobs"]["e2e"]
     assert job["env"]["HIBISCUS_E2E_REQUIRED"] == "1"
-    rows = {r["platform"]: r for r in job["strategy"]["matrix"]["include"]}
-    assert rows["windows"]["os"] == "windows-latest" and rows["linux"]["os"].startswith("ubuntu")
-    assert rows["linux"]["tests"] == "tests/e2e"  # the whole suite, screen matrix included
-    assert rows["windows"]["tests"].startswith("tests/e2e")
+    assert job["env"]["HIBISCUS_E2E_BROWSER"] == "${{ matrix.browser }}"
+    rows = {(r["platform"], r["browser"]): r for r in job["strategy"]["matrix"]["include"]}
+    assert set(rows) == {("linux", "chromium"), ("linux", "firefox"), ("windows", "msedge")}
+    assert rows["windows", "msedge"]["os"] == "windows-latest"
+    assert all(rows[k]["os"].startswith("ubuntu") for k in [("linux", "chromium"), ("linux", "firefox")])
+    assert rows["linux", "chromium"]["tests"] == "tests/e2e"  # the whole suite, screen matrix included
+    assert rows["linux", "firefox"]["install"] == "--with-deps firefox"
+    for r in rows.values():
+        assert r["tests"].startswith("tests/e2e")
     steps = " ".join(str(s.get("run", "")) for s in job["steps"])
     assert "-m e2e" in steps and 'check_skips.py --platform "${{ matrix.platform }}"' in steps
     assert "pnpm install --frozen-lockfile" in steps  # axe-core for the screen matrix
+    assert (
+        "grep -q HIBISCUS_E2E_BROWSER tests/e2e/conftest.py" in steps
+    )  # a browser the fixture ignores fails
 
 
 def test_ci_runs_on_a_push_to_a_release_branch() -> None:

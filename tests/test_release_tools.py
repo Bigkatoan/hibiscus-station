@@ -4,6 +4,8 @@ assets (ADR-13 / P-1). Fast, offline; the full build + install runs in tools/rel
 from __future__ import annotations
 
 import importlib.util
+import os
+import re
 import shutil
 import sys
 import zipfile
@@ -69,7 +71,7 @@ def _tree(tmp_path: Path) -> Path:
         ("deploy/.env.example", "STATION_TAG={v}-cpu", "STATION_TAG=0.2.1-cpu", ".env.example"),
         ("web/package.json", '"version": "{v}"', '"version": "0.2.1"', "web/package.json"),
         ("CITATION.cff", 'version: "{v}"', 'version: "0.2.1"', "CITATION.cff"),
-        ("CHANGELOG.md", "compare/v{v}...HEAD", "compare/v0.2.2...HEAD", "[Unreleased]"),
+        ("CHANGELOG.md", "...HEAD\n", "...main\n", "[Unreleased]"),
     ],
 )
 def test_a_stale_version_anywhere_fails(tmp_path: Path, rel: str, old: str, new: str, needle: str) -> None:
@@ -204,14 +206,15 @@ def test_wheel_platform_markers() -> None:
 
 
 def test_pre_release_versions_are_matched_whole(tmp_path: Path) -> None:
-    """A pre-release (1.0.0a1, the M0 build) must not pass as its release number (1.0.0)."""
+    """A pre-release (1.0.0a1, the M0 build) and its release number (1.0.0) are different versions."""
     root = _tree(tmp_path)
     v = check_versions.station_version(root)
+    other = v.split("a")[0] if check_versions.is_pre_release(v) else f"{v}a1"
     readme = root / "README.md"
     readme.write_text(
-        readme.read_text(encoding="utf-8").replace(f":{v}-cpu", f":{v}a1-cpu", 1), encoding="utf-8"
+        readme.read_text(encoding="utf-8").replace(f":{v}-cpu", f":{other}-cpu", 1), encoding="utf-8"
     )
-    assert any("README.md" in e and f"{v}a1" in e for e in check_versions.check(root))
+    assert any("README.md" in e and f"{other} != {v}" in e for e in check_versions.check(root))
 
 
 def test_compare_envs_requires_the_exact_tested_set() -> None:
@@ -249,17 +252,173 @@ def test_installer_never_redirects_native_stderr_under_stop() -> None:
             assert eap == "Continue", line
 
 
+def test_installer_reads_uv_output_without_colour() -> None:
+    """QD-2: with FORCE_COLOR=1 (the CI runner, some terminals) uv colours a path even into a pipe;
+    Windows PowerShell 5.1 then failed on Join-Path ("drive '<ESC>[36mC' does not exist"). Every uv
+    call whose output the script reads, and the CI step that reads uv's tool dirs, asks for no colour."""
+    code = [ln.split("#", 1)[0] for ln in (TOOLS / "install.ps1.in").read_text(encoding="utf-8").splitlines()]
+    read = [c for c in code if "& $uv" in c and re.search(r"=\s*\(?\(?\s*& \$uv|& \$uv[^|]*\|", c)]
+    assert read, "no uv output is read?"
+    for c in read:
+        assert "--color never" in c, c
+    ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    for line in ci.splitlines():
+        if "$(& $uv" in line:
+            assert "--color never" in line, line
+
+
 @pytest.mark.parametrize(
     ("doc", "needle"),
     [
-        ("README.md", "A test build (pre-release, e.g. 1.0.0a1) is only reachable by its versioned link"),
-        (
-            "README.vi.md",
-            "Bản thử nghiệm (pre-release, ví dụ 1.0.0a1) chỉ cài được bằng liên kết có số phiên bản",
-        ),
-        ("docs/deploy.md", "A pre-release is only reachable by its versioned link"),
+        ("README.md", "it is only reachable by its versioned link, the line above"),
+        ("README.vi.md", "nên chỉ cài được bằng liên kết có số phiên bản, tức là dòng ở trên"),
+        ("docs/deploy.md", "so it is only reachable by its versioned link"),
     ],
 )
 def test_install_docs_say_a_pre_release_needs_its_versioned_link(doc: str, needle: str) -> None:
     """GitHub's releases/latest skips pre-releases: the M0 test build is installed by its own link."""
     assert needle in " ".join((ROOT / doc).read_text(encoding="utf-8").split())
+
+
+# =========================================================================== QD-1
+def test_the_m0_build_is_the_pre_release_1_0_0a1() -> None:
+    """QD-1: the M0 candidate must not carry 0.2.8, which is already released (and has no installer)."""
+    assert check_versions.station_version() == "1.0.0a1"
+    assert check_versions.is_pre_release("1.0.0a1") and not check_versions.is_pre_release("1.0.0")
+
+
+@pytest.mark.parametrize("doc", ["README.md", "README.vi.md", "docs/deploy.md"])
+def test_a_pre_release_doc_never_points_at_releases_latest(tmp_path: Path, doc: str) -> None:
+    """QD-1: releases/latest/download/install.ps1 was a 404 (latest = 0.2.8, which has no installer)
+    and can never serve a pre-release."""
+    root = _tree(tmp_path)
+    v = check_versions.station_version(root)
+    path = root / doc
+    text = path.read_text(encoding="utf-8")
+    line = f"releases/download/v{v}/install.ps1"
+    assert line in text, doc
+    path.write_text(text.replace(line, "releases/latest/download/install.ps1", 1), encoding="utf-8")
+    assert any(doc in e and "releases/latest" in e for e in check_versions.check(root))
+
+
+def test_a_pre_release_is_listed_under_unreleased() -> None:
+    """QD-15 / QD-1: the pre-release's changes are in [Unreleased] (its compare link resolves before
+    the tag exists) and name the version; an empty [Unreleased] fails."""
+    repo = check_versions.REPO
+    links = f"[Unreleased]: {repo}/compare/v0.2.8...HEAD\n[0.2.8]: {repo}/releases/tag/v0.2.8\n"
+    good = (
+        "## [Unreleased]\n\nIn the test build 1.0.0a1.\n\n### Added\n- a thing\n\n## [0.2.8] - x\n\n" + links
+    )
+    assert check_versions.check_changelog(good, "1.0.0a1") == []
+    empty = "## [Unreleased]\n\n## [0.2.8] - x\n\n" + links
+    assert any("lists no change" in e for e in check_versions.check_changelog(empty, "1.0.0a1"))
+    unnamed = good.replace("In the test build 1.0.0a1.\n\n", "")
+    assert any("does not name" in e for e in check_versions.check_changelog(unnamed, "1.0.0a1"))
+    own = good.replace("## [0.2.8] - x", "## [1.0.0a1] - x\n\n## [0.2.8] - x")
+    assert any("own section" in e for e in check_versions.check_changelog(own, "1.0.0a1"))
+
+
+@pytest.mark.parametrize("version", ["1.0.0a1", "1.0.0"])
+def test_installer_links_resolve_for_its_kind_of_release(version: str) -> None:
+    """QD-1: the installer's update / roll-back lines: a pre-release never names releases/latest;
+    roll back is always this version's own installer."""
+    text = build_release.render_installer(
+        version=version, base_url="https://example.invalid/r", uv_sha256="e" * 64
+    )
+    assert "releases/download/v$Version/install.ps1" in text
+    assert f"releases/download/v{version}/install.ps1" in text  # the header names the versioned line
+    pre = version != "1.0.0"
+    assert f"$PreRelease = ${str(pre).lower()}" in text
+    header = text.split("& {", 1)[0]
+    assert ("releases/latest" in header) is (not pre)
+    assert "run the same install command again" not in text  # a versioned line reinstalls the same build
+
+
+def _docker_tags(ref: str, tmp_path: Path) -> dict[str, str]:
+    """Run the ``version`` step of docker.yml as GitHub would for ``ref``; return its outputs."""
+    import subprocess
+
+    import yaml
+
+    wf = yaml.safe_load((ROOT / ".github" / "workflows" / "docker.yml").read_text(encoding="utf-8"))
+    step = next(s for s in wf["jobs"]["image"]["steps"] if s.get("id") == "version")
+    out = tmp_path / "out"
+    out.write_text("", encoding="utf-8")
+    env = {
+        **os.environ,
+        "GITHUB_REF": ref,
+        "GITHUB_REF_NAME": ref.rsplit("/", 1)[-1],
+        "GITHUB_SHA": "0123456789abcdef",
+        "GITHUB_OUTPUT": str(out),
+    }
+    bash = shutil.which("bash")
+    assert bash, "bash runs the workflow step (Git Bash on Windows)"
+    subprocess.run([bash, "-euo", "pipefail", "-c", step["run"]], env=env, check=True)  # noqa: S603 - the repo's own workflow
+    return dict(line.split("=", 1) for line in out.read_text(encoding="utf-8").splitlines())
+
+
+def test_docker_image_tags_follow_the_pep440_version(tmp_path: Path) -> None:
+    """QD-1: the image of v1.0.0a1 is :1.0.0a1-cpu (what README / install.sh pull), and a
+    pre-release never moves the floating :cpu or :1.0-cpu tags."""
+    pre = _docker_tags("refs/tags/v1.0.0a1", tmp_path)
+    assert pre == {"version": "1.0.0a1", "tagged": "true", "stable": "false", "minor": "1.0"}
+    stable = _docker_tags("refs/tags/v1.0.2", tmp_path)
+    assert stable == {"version": "1.0.2", "tagged": "true", "stable": "true", "minor": "1.0"}
+    dev = _docker_tags("refs/heads/main", tmp_path)
+    assert dev["tagged"] == "false" and dev["stable"] == "false"
+    text = (ROOT / ".github" / "workflows" / "docker.yml").read_text(encoding="utf-8")
+    assert "type=semver" not in text  # semver would tag 1.0.0-a1
+    assert "value=${{ matrix.variant }},enable=${{ steps.version.outputs.stable }}" in text
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        "one line in PowerShell",  # P-1
+        "current (A) and load (%)",  # K-11 / SP-1
+        "raw register",  # K-11
+        "WHAT TO SEND / CẦN GỬI",  # F-63
+        "Station is not running",  # D-15
+        "port held by another program",  # D-15
+        "CH340 / CH343",  # D-21
+        "Version 1.0.0a1",  # QD-1
+    ],
+)
+def test_changelog_lists_the_m0_changes_for_users(change: str) -> None:
+    """QD-15: [Unreleased] was empty; it lists what the 1.0.0a1 build changes for its users."""
+    notes = check_versions.unreleased_notes((ROOT / "CHANGELOG.md").read_text(encoding="utf-8"))
+    assert change in " ".join(notes.split())
+
+
+def _release_notes(tmp_path: Path, version: str, pre: bool) -> str:
+    """Run release.yml's "Release notes" step on this repository's CHANGELOG.md."""
+    import subprocess
+
+    import yaml
+
+    wf = yaml.safe_load((ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8"))
+    step = next(
+        s
+        for j in wf["jobs"].values()
+        for s in j["steps"]
+        if s.get("name") == "Release notes from CHANGELOG.md"
+    )
+    shutil.copy2(ROOT / "CHANGELOG.md", tmp_path / "CHANGELOG.md")
+    env = {**os.environ, "VERSION": version, "PRERELEASE": "true" if pre else "false"}
+    bash = shutil.which("bash")
+    assert bash, "bash runs the workflow step (Git Bash on Windows)"
+    cmd = [bash, "-euo", "pipefail", "-c", step["run"]]
+    r = subprocess.run(cmd, env=env, cwd=tmp_path, capture_output=True, text=True)  # noqa: S603 - the repo's own workflow
+    assert r.returncode == 0, f"release notes step failed ({r.returncode}): {r.stderr[-2000:]}"
+    return (tmp_path / "RELEASE_NOTES.md").read_text(encoding="utf-8")
+
+
+def test_release_notes_of_the_pre_release_and_their_install_lines(tmp_path: Path) -> None:
+    """QD-1 / QD-15: the draft of 1.0.0a1 takes its notes from [Unreleased] (it has no section of its
+    own), and its install text never says the same line updates (a versioned line reinstalls it)."""
+    notes = _release_notes(tmp_path, "1.0.0a1", pre=True)
+    assert "Version 1.0.0a1" in notes and "## [0.2.8]" not in notes
+    assert "releases/download/v1.0.0a1/install.ps1 | iex" in notes
+    assert "The same command updates" not in notes and "test build (pre-release)" in notes
+    stable = _release_notes(tmp_path, "0.2.8", pre=False)
+    assert "Return to rest pose" in stable and "test build" not in stable

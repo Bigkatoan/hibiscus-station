@@ -11,6 +11,42 @@ repository (`station/`); 0.2.0 is the first release of this standalone repositor
 
 ## [Unreleased]
 
+These changes are in the test build **1.0.0a1** (a pre-release, the M0 milestone of 1.0). Install it
+with its own line (see the README); GitHub never offers a pre-release as its "latest" release.
+
+### Added
+- **Windows: install, update and go back with one line in PowerShell.** No admin rights, no git and
+  no Python needed: paste the line from the README into PowerShell and it installs uv (checked by
+  SHA-256), Python 3.12 and Station with exactly the libraries we tested for this release, checked
+  against the release's `SHA256SUMS`. Your profiles, calibration, datasets and models are kept.
+  To update, paste a newer release's line; to go back, paste the line of the version you want.
+- **`hibiscus-station doctor` reads more from every servo**: its current (A) and load (%) next to
+  position, voltage and temperature, plus the exact bytes each servo answered (a raw register
+  dump), so a wrong reading such as 0 °C or ~1000 current can be traced to the motor or to Station.
+  Every USB serial port is checked, also one that no profile names. The doctor only reads: it never
+  writes a motor register and never switches torque on.
+- **The doctor report ends with what to send**, in English and Vietnamese (*WHAT TO SEND / CẦN GỬI
+  GÌ*): the one zip file to send, what it holds, and, when the motor check could not finish, what
+  to close and how to run the doctor again.
+
+### Changed
+- **Version 1.0.0a1.** The test build has its own version number everywhere (`hibiscus-station
+  --version`, the web page, the doctor report, the Docker image tags `1.0.0a1-cpu` / `-cuda` /
+  `-jetson`), so it can never be mistaken for 0.2.8. The Windows install line and the installer's
+  "go back to this version" line point at this build's own release.
+- **The doctor report always starts with LIKELY PROBLEMS**, or "No likely problems found".
+
+### Fixed
+- **The doctor said "ConnectError" when Station was not running.** After Station was closed (or
+  killed and left its `station.pid` behind) the report now says "Station is not running".
+- **A port held by another program is now a likely problem**, with that program's name and what to
+  close (LeLab, a `lerobot-*` command, Feetech FD), or "held by Station" when Station has it.
+- **The doctor told CH340 / CH343 users to set a "latency timer"**, which those chips (the SO-101
+  boards' USB chip) do not have. A slow bus on them now says to plug the arm straight into the PC
+  (no hub); the latency-timer advice is only given for FTDI adapters.
+- **No login token in the doctor's zip.** The local token is removed from every file in the zip and
+  from the printed report, wherever it was pasted (log, profiles, settings, sessions, calibration).
+
 ## [0.2.8] - 2026-11-16
 
 ### Fixed
