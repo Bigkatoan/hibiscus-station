@@ -324,9 +324,15 @@ def test_far_leader_is_refused_then_aligned(wide: Station, client: Any) -> None:
         assert st.owner.session is not None and st.owner.session.deadman
         wait_for(lambda: st.status()["sub"] == "teleop", 60)  # the slow align is ~5 s; headroom for load
         took = time.monotonic() - t0
-        lead = st.owner.last_leader
-        fol = st.owner.last_obs
-        assert abs(lead["shoulder_lift.pos"] - fol["shoulder_lift.pos"]) < 10.0
+
+        def tracking_gap() -> float:
+            lead, fol = st.owner.last_leader, st.owner.last_obs
+            return abs(lead["shoulder_lift.pos"] - fol["shoulder_lift.pos"])
+
+        # Right after the hand-over the follower may still be catching up for a few ticks (the blend
+        # is timed by the clock, the follower by its per-tick limit): wait for it to track, with
+        # headroom for a loaded machine (QC 0.2.9 round 3: 29.36 on the first tick under load 3-4).
+        wait_for(lambda: tracking_gap() < 10.0, 10)
         assert st.owner.session is not None and not st.owner.session.deadman  # plain teleop again
         client.post(f"{API}/sessions/current/control", json={"action": "stop"})
         wait_for(lambda: st.owner.state == "idle", 3)
