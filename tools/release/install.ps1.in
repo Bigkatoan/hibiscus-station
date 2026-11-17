@@ -138,7 +138,10 @@
 
         # -------------------------------------------------------------- 4. PATH and check
         $bin = (& $uv --no-config tool dir --bin | Select-Object -Last 1).Trim()
-        & $uv --no-config tool update-shell 2>&1 | Out-Null
+        # Windows PowerShell 5.1 turns redirected native stderr into a terminating error under 'Stop'
+        $ErrorActionPreference = 'Continue'
+        & $uv --no-config tool update-shell *> $null
+        $ErrorActionPreference = 'Stop'
         $sep = [IO.Path]::PathSeparator
         if (-not (($env:PATH -split [regex]::Escape($sep)) -contains $bin)) { $env:PATH = "$bin$sep$env:PATH" }
         $exeName = 'hibiscus-station'

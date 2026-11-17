@@ -232,3 +232,18 @@ def test_installer_uses_the_ci_uv_version() -> None:
     for wf in ("ci.yml", "release.yml"):
         text = (ROOT / ".github" / "workflows" / wf).read_text(encoding="utf-8")
         assert f'UV_VERSION: "{build_release.UV_VERSION}"' in text, wf
+
+
+def test_installer_never_redirects_native_stderr_under_stop() -> None:
+    """Windows PowerShell 5.1 raises NativeCommandError on redirected stderr of a native command when
+    $ErrorActionPreference is 'Stop': every redirected uv call runs under 'Continue'."""
+    lines = (TOOLS / "install.ps1.in").read_text(encoding="utf-8").splitlines()
+    eap = "Stop"
+    for line in lines:
+        code = line.split("#", 1)[0]
+        if "$ErrorActionPreference = 'Continue'" in code:
+            eap = "Continue"
+        elif "$ErrorActionPreference = 'Stop'" in code:
+            eap = "Stop"
+        if "& $uv" in code and ("2>" in code or "*>" in code):
+            assert eap == "Continue", line
