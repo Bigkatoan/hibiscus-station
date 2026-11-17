@@ -659,7 +659,9 @@
     "policy_extra": "Đã cài hỗ trợ policy",
     "code_shape_mismatch": "cần {{expected}}, camera cho {{actual}}",
     "code_camera_missing": "không có camera nào tên này",
-    "code_missing_extra": "cần cài gói bổ sung cho policy",
+    "code_extra_missing": "cần cài gói bổ sung cho policy",
+    "code_missing": "model không khai báo (robot có {{expected}})",
+    "code_dim_mismatch": "robot có {{expected}}, model có {{actual}}",
     "fix_camera": "Đặt {{cam}} thành {{w}}×{{h}}",
     "map": "Camera cho {{key}}",
     "missing": "thiếu"

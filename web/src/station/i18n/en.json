@@ -659,7 +659,9 @@
     "policy_extra": "Policy support installed",
     "code_shape_mismatch": "expected {{expected}}, camera gives {{actual}}",
     "code_camera_missing": "no configured camera with this name",
-    "code_missing_extra": "install the policy extra",
+    "code_extra_missing": "install the policy extra",
+    "code_missing": "the model does not declare it (the robot has {{expected}})",
+    "code_dim_mismatch": "the robot has {{expected}}, the model has {{actual}}",
     "fix_camera": "Set {{cam}} to {{w}}×{{h}}",
     "map": "Camera for {{key}}",
     "missing": "missing"

@@ -108,6 +108,11 @@ const ERROR_CODES = (() => {
   return [...block.matchAll(/"([a-z_]+)":/g)].map((m) => m[1] ?? "");
 })();
 
+/** Model compatibility checks (models/compat.py): check ids ("camera:<key>" reads as "camera") and codes. */
+const COMPAT = py("hibiscus_station/models/compat.py");
+const COMPAT_IDS = [...new Set([...COMPAT.matchAll(/"id": "([a-z_]+)"/g)].map((m) => m[1] ?? "")), "camera"];
+const COMPAT_CODES = [...new Set([...COMPAT.matchAll(/"code": "([a-z_]+)"/g)].map((m) => m[1] ?? ""))];
+
 /**
  * Template-key prefix → the values that can fill it. `ui` marks a value set defined by the UI
  * itself (a typed TS union in the same file), which tsc already keeps in step.
@@ -137,8 +142,8 @@ const DOMAINS: Record<string, string[] | "ui"> = {
   "health.bit_": STATUS_BITS,
   "errors.": ERROR_CODES,
   "calibrate.step_": "ui",
-  "compat.": "ui",
-  "compat.code_": "ui",
+  "compat.": COMPAT_IDS,
+  "compat.code_": COMPAT_CODES,
   "lock.": "ui",
   "nav.": "ui",
   "theme.": "ui",
