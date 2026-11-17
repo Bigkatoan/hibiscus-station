@@ -15,6 +15,8 @@ import {
 } from "./health";
 import en from "./i18n/en.json";
 import vi_ from "./i18n/vi.json";
+import { i18n } from "@/lib/i18n";
+import { registerStationI18n } from "./i18n";
 import { MockStation } from "./mock/sim";
 import { wizardSteps } from "./StationShell";
 import { realArmDraft, roleWarnings } from "./pages/RobotPage";
@@ -377,6 +379,18 @@ describe("station i18n", () => {
     expect(wrong).toEqual([]);
   });
 
+  it("counts read as words: 1 episode, 2 episodes (QC 0.2.9 QD-8)", () => {
+    registerStationI18n();
+    const t = i18n.getFixedT("en", "station");
+    const summary = { frames: 302, fps: 30, size: "1 MB" };
+    expect(t("record.done", { count: 1, path: "d" })).toBe("1 episode saved in d");
+    expect(t("record.done", { count: 2, path: "d" })).toBe("2 episodes saved in d");
+    expect(t("datasets.summary", { count: 1, ...summary })).toMatch(/^1 episode · 302 frames/);
+    expect(t("datasets.summary", { count: 3, ...summary })).toMatch(/^3 episodes · /);
+    const tv = i18n.getFixedT("vi", "station");
+    expect(tv("record.done", { count: 1, path: "d" })).toBe("Đã lưu 1 tập trong d");
+  });
+
   it("every literal key used in the station UI exists", () => {
     const root = join(process.cwd(), "src/station/");
     const tops = new Set(Object.keys(en));
@@ -389,7 +403,9 @@ describe("station i18n", () => {
         const [, top, rest] = m;
         if (!top || !rest || !tops.has(top)) continue;
         const key = `${top}.${rest}`;
-        if (!enKeys.includes(key)) missing.push(`${file.slice(root.length)}: ${key}`);
+        // a plural (i18next `count`) lives under key_one / key_other
+        if (!enKeys.includes(key) && !enKeys.includes(`${key}_other`))
+          missing.push(`${file.slice(root.length)}: ${key}`);
       }
     }
     expect(missing).toEqual([]);

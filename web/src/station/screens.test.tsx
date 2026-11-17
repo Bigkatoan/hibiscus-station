@@ -142,7 +142,7 @@ describe("Record (§6.6)", () => {
       expect(h.sim.state).toBe("idle");
     });
     const done = await screen.findByTestId("record-done");
-    expect(done).toHaveTextContent("1 episodes saved in ~/.hibiscus/station/datasets/cube_demo");
+    expect(done).toHaveTextContent("1 episode saved in ~/.hibiscus/station/datasets/cube_demo");
     expect(within(done).getByRole("link", { name: "Upload" })).toHaveAttribute(
       "href",
       "/datasets/cube_demo?upload=1",

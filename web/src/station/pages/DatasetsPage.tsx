@@ -63,7 +63,7 @@ export function DatasetsPage() {
                 </Link>
                 <p>
                   {t("datasets.summary", {
-                    episodes: d.episodes,
+                    count: d.episodes,
                     frames: d.frames,
                     fps: d.fps,
                     size: formatBytes(d.size_bytes),
@@ -275,7 +275,7 @@ export function DatasetDetailPage() {
         description={
           d
             ? t("datasets.summary", {
-                episodes: d.episodes,
+                count: d.episodes,
                 frames: d.frames,
                 fps: d.fps,
                 size: formatBytes(d.size_bytes),

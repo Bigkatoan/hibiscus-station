@@ -417,7 +417,7 @@ export function RecordPage() {
             <Mascot mood="happy" />
             <div className="min-w-0 flex-1">
               <p className="font-extrabold text-base">
-                {t("record.done", { n: ended.episode.saved, path: endedPath ?? ended.dataset ?? "" })}
+                {t("record.done", { count: ended.episode.saved, path: endedPath ?? ended.dataset ?? "" })}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">

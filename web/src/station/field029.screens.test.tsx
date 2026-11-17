@@ -76,7 +76,7 @@ describe("Record Stop (field report 1)", () => {
     expect(screen.getByTestId("session-timer")).toHaveTextContent(/00:05\s*\/\s*00:30/);
     await advance(h.sim, 0.7);
     const done = await screen.findByTestId("record-done");
-    expect(done).toHaveTextContent("1 episodes saved");
+    expect(done).toHaveTextContent("1 episode saved");
   });
 });
 
