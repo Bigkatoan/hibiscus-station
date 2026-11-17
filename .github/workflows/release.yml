@@ -1,26 +1,50 @@
-# On a version tag (v0.2.0, v0.3.0-rc.1, ...): build the wheel and sdist (UI included) and create the
-# GitHub release with the matching CHANGELOG.md section as notes. Images: docker.yml, same tag.
+# Release assets on a version tag (v0.2.8, v1.0.0a1, ...) or by hand (workflow_dispatch, FL-12 dry
+# run): build the wheel and sdist (UI included), constraints.txt / overrides.txt / the lerobot and
+# hibiscus wheels / install.ps1 / SHA256SUMS (tools/release/build_release.py, ADR-13), verify them,
+# and attach them to a DRAFT GitHub release with the CHANGELOG section as notes.
+#
+# Nothing is published here: a person checks the draft (QC installs it, AT-1) and publishes it,
+# as a pre-release for a PEP 440 pre-release version. Images: docker.yml, same tag.
 name: release
 
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  UV_VERSION: "0.13.8"
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "22.12.0"
+  PNPM_VERSION: "9.15.0"
+
 jobs:
   release:
     runs-on: ubuntu-24.04
-    env:
-      NODE_VERSION: "22.12.0"
-      PNPM_VERSION: "9.15.0"
     steps:
       - uses: actions/checkout@v7.0.1
-      - name: Tag matches the package version
+      - uses: astral-sh/setup-uv@v10.3.3
+        with: {version: "${{ env.UV_VERSION }}"}
+      - name: Version
+        id: version
         run: |
-          v="${GITHUB_REF_NAME#v}"
-          grep -q "^__version__ = \"$v\"$" hibiscus_station/__init__.py || { echo "::error::tag $GITHUB_REF_NAME != hibiscus_station.__version__"; exit 1; }
+          v="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' hibiscus_station/__init__.py)"
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$v" ]; then
+            echo "::error::tag $GITHUB_REF_NAME != v$v (hibiscus_station.__version__)"; exit 1
+          fi
+          pre="$(uv run --no-project --with packaging python -c "import sys; from packaging.version import Version; print(str(Version(sys.argv[1]).is_prerelease).lower())" "$v")"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$pre" >> "$GITHUB_OUTPUT"
+          echo "Hibiscus Station $v (pre-release: $pre)"
+      - name: One version everywhere (FR-76)
+        run: uv run --no-project --python "$PYTHON_VERSION" python tools/release/check_versions.py
       - uses: pnpm/action-setup@v6.1.1
         with: {version: "${{ env.PNPM_VERSION }}"}
       - uses: actions/setup-node@v7.1.0
@@ -28,43 +52,61 @@ jobs:
           node-version: "${{ env.NODE_VERSION }}"
           cache: pnpm
           cache-dependency-path: web/pnpm-lock.yaml
-      - uses: astral-sh/setup-uv@v10.3.3
-      - name: Build the UI, the sdist and the wheel
+      - name: Build the UI
+        run: cd web && pnpm install --frozen-lockfile && pnpm build
+      - name: Build the release assets (ADR-13)
+        run: uv run --no-project --python "$PYTHON_VERSION" python tools/release/build_release.py --out dist/release
+      - name: Verify them (checksums; resolved set == uv.lock on Windows x64, Linux x86_64, macOS arm64)
+        run: uv run --no-project --python "$PYTHON_VERSION" --with packaging python tools/release/verify_assets.py dist/release
+      - name: Release notes from CHANGELOG.md
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          (cd web && pnpm install --frozen-lockfile && pnpm build)
-          uv build --out-dir dist
-          ls -l dist
-      - name: Extract release notes from CHANGELOG.md
-        id: notes
-        run: |
-          version="${GITHUB_REF_NAME#v}"
-          awk -v v="$version" '
+          awk -v v="$VERSION" '
             $0 ~ "^## \\[" v "\\]" {found=1; next}
             found && /^## \[/ {exit}
             found && /^\[[^]]+\]: / {exit}
             found {print}
           ' CHANGELOG.md > RELEASE_NOTES.md
           if ! grep -q '[^[:space:]]' RELEASE_NOTES.md; then
-            echo "::error file=CHANGELOG.md::no '## [$version]' section in CHANGELOG.md"
+            echo "::error file=CHANGELOG.md::no '## [$VERSION]' section in CHANGELOG.md"
             exit 1
           fi
+          base="https://github.com/Bigkatoan/hibiscus-station/releases/download/v$VERSION"
           {
             echo
-            echo "### Install"
+            echo "### Install / Cài đặt"
             echo
-            echo "- Docker: \`bash install.sh --version $version\` ([deploy guide](https://github.com/Bigkatoan/hibiscus-station/blob/$GITHUB_REF_NAME/docs/deploy.md))"
+            echo "**Windows 10/11 x64**: PowerShell, no admin rights, no git (không cần quyền admin, không cần git):"
+            echo
+            echo '```powershell'
+            echo "irm $base/install.ps1 | iex"
+            echo '```'
+            echo
+            echo "The same command updates; the link of an older version goes back to it. Cùng lệnh để cập nhật; liên kết của bản cũ để quay lại bản đó."
+            echo "It installs exactly the libraries tested for this release (\`constraints.txt\`, \`overrides.txt\`, checked against \`SHA256SUMS\`)."
+            echo
+            echo "- Docker (Linux): \`bash install.sh --version $VERSION\` ([deploy guide](https://github.com/Bigkatoan/hibiscus-station/blob/v$VERSION/docs/deploy.md))"
             for i in cpu cuda jetson; do
-              echo "- \`ghcr.io/bigkatoan/hibiscus-station:$version-$i\`"
+              echo "- \`ghcr.io/bigkatoan/hibiscus-station:$VERSION-$i\`"
             done
-            echo "- Wheel: \`uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/$GITHUB_REF_NAME/hibiscus_station-$version-py3-none-any.whl\`"
+            echo "- Linux / macOS wheel: \`uv tool install --python 3.12 -c $base/constraints.txt --overrides $base/overrides.txt $base/hibiscus_station-$VERSION-py3-none-any.whl\`"
           } >> RELEASE_NOTES.md
-          if [[ "$version" == *-* ]]; then echo "prerelease=true" >> "$GITHUB_OUTPUT"; else echo "prerelease=false" >> "$GITHUB_OUTPUT"; fi
           cat RELEASE_NOTES.md
-      - name: Create the GitHub release
+      - name: Attach to a DRAFT release
         env:
           GH_TOKEN: ${{ github.token }}
-          PRERELEASE: ${{ steps.notes.outputs.prerelease }}
+          VERSION: ${{ steps.version.outputs.version }}
+          PRERELEASE: ${{ steps.version.outputs.prerelease }}
         run: |
-          flags=(--title "Hibiscus Station ${GITHUB_REF_NAME}" --notes-file RELEASE_NOTES.md --verify-tag)
-          if [ "$PRERELEASE" = "true" ]; then flags+=(--prerelease); fi
-          gh release create "$GITHUB_REF_NAME" "${flags[@]}" dist/*.whl dist/*.tar.gz deploy/install.sh
+          tag="v$VERSION"
+          if draft="$(gh release view "$tag" --json isDraft --jq .isDraft 2>/dev/null)"; then
+            if [ "$draft" != true ]; then
+              echo "::error::release $tag is already published; bump the version"; exit 1
+            fi
+            gh release delete "$tag" --yes   # an earlier draft of this version: replace it
+          fi
+          flags=(--draft --title "Hibiscus Station $tag" --notes-file RELEASE_NOTES.md --target "$GITHUB_SHA")
+          if [ "$PRERELEASE" = true ]; then flags+=(--prerelease); fi
+          gh release create "$tag" "${flags[@]}" dist/release/* deploy/install.sh
+          gh release view "$tag" --json url,isDraft,isPrerelease,assets --jq '{url, isDraft, isPrerelease, assets: [.assets[].name]}'

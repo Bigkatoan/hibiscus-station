@@ -212,3 +212,23 @@ def test_pre_release_versions_are_matched_whole(tmp_path: Path) -> None:
         readme.read_text(encoding="utf-8").replace(f":{v}-cpu", f":{v}a1-cpu", 1), encoding="utf-8"
     )
     assert any("README.md" in e and f"{v}a1" in e for e in check_versions.check(root))
+
+
+def test_compare_envs_requires_the_exact_tested_set() -> None:
+    compare_envs = _load("compare_envs")
+    ref = {"torch": "2.15.0", "lerobot": "0.7.1", "hibiscus-station": "0.2.8"}
+    assert compare_envs.compare({**ref}, ref, "0.2.8") == []
+    assert compare_envs.compare({**ref, "torch": "2.16.0"}, ref, "0.2.8") == [
+        "torch: installed 2.16.0, tested 2.15.0"
+    ]
+    assert compare_envs.compare({**ref, "six": "1"}, ref, "0.2.8") == ["six: installed 1, tested None"]
+    assert compare_envs.compare({"torch": "2.15.0", "lerobot": "0.7.1"}, ref, "0.2.8")[0].startswith(
+        "hibiscus-station None"
+    )
+
+
+def test_installer_uses_the_ci_uv_version() -> None:
+    """The uv that install.ps1 downloads is the uv CI tests with."""
+    for wf in ("ci.yml", "release.yml"):
+        text = (ROOT / ".github" / "workflows" / wf).read_text(encoding="utf-8")
+        assert f'UV_VERSION: "{build_release.UV_VERSION}"' in text, wf
