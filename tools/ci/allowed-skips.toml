@@ -8,37 +8,40 @@
 #
 # Change this list only with the Tech Lead and QC: a new entry is a coverage gap on that platform.
 
-# -- pseudo-terminal STS3215 emulator (tests/sts_emulator.py): POSIX pty, no Windows equivalent until
-#    SP-2 (virtual COM port pair on windows-latest) lands.
+# -- pseudo-terminal STS3215 emulator (tests/sts_emulator.py) at the arm's 1 Mbps. Windows has no
+#    pseudo-terminals (until SP-2, a virtual COM port pair on windows-latest). macOS has them, but
+#    1 000 000 baud is not a termios speed there: pyserial sets it with the IOKit ioctl IOSSIOSPEED,
+#    which a pty refuses with ENOTTY ("cannot open /dev/ttys000: Not a typewriter", QD-7). A real
+#    USB serial adapter on macOS accepts it (preview platform, no AT).
 [[skip]]
 test = "tests/test_calib_simple.py"
-platforms = ["windows"]
-reason = "pseudo-terminals are POSIX only (STS3215 emulator)"
-covered_by = "Linux and macOS CI; UAT-1 step 5 (AT-22, AT-23, AT-26); SP-2"
+platforms = ["windows", "macos"]
+reason = "STS3215 emulator on a pseudo-terminal at 1 Mbps: none on Windows; a macOS pty refuses the 1 Mbps ioctl (ENOTTY)"
+covered_by = "Linux CI; UAT-1 step 5 (AT-22, AT-23, AT-26); SP-2"
 
 [[skip]]
 test = "tests/test_real_stack.py"
-platforms = ["windows"]
-reason = "pseudo-terminals are POSIX only (STS3215 emulator)"
-covered_by = "Linux and macOS CI; UAT-1 steps 3 - 5 and 8 (AT-11 - AT-26, AT-31); SP-2"
+platforms = ["windows", "macos"]
+reason = "STS3215 emulator on a pseudo-terminal at 1 Mbps: none on Windows; a macOS pty refuses the 1 Mbps ioctl (ENOTTY)"
+covered_by = "Linux CI; UAT-1 steps 3 - 5 and 8 (AT-11 - AT-26, AT-31); SP-2"
 
 [[skip]]
 test = "tests/test_teleop_latency.py"
-platforms = ["windows"]
-reason = "pseudo-terminals are POSIX only (STS3215 emulator)"
-covered_by = "Linux and macOS CI; UAT-1 step 8 (AT-31, NFR-1); SP-2"
+platforms = ["windows", "macos"]
+reason = "STS3215 emulator on a pseudo-terminal at 1 Mbps: none on Windows; a macOS pty refuses the 1 Mbps ioctl (ENOTTY)"
+covered_by = "Linux CI; UAT-1 step 8 (AT-31, NFR-1); SP-2"
 
 [[skip]]
 test = "tests/test_device_lost.py::test_bus_stops_retrying_a_lost_device"
-platforms = ["windows"]
-reason = "pseudo-terminals are POSIX only (STS3215 emulator)"
-covered_by = "Linux and macOS CI; UAT-1 step 10 (AT-18); SP-2"
+platforms = ["windows", "macos"]
+reason = "STS3215 emulator on a pseudo-terminal at 1 Mbps: none on Windows; a macOS pty refuses the 1 Mbps ioctl (ENOTTY)"
+covered_by = "Linux CI; UAT-1 step 10 (AT-18); SP-2"
 
 [[skip]]
 test = "tests/test_device_lost.py::test_pty_closed_mid_teleop_then_back_under_a_new_name"
-platforms = ["windows"]
-reason = "pseudo-terminals are POSIX only (STS3215 emulator)"
-covered_by = "Linux and macOS CI; UAT-1 step 10 (AT-18); SP-2"
+platforms = ["windows", "macos"]
+reason = "STS3215 emulator on a pseudo-terminal at 1 Mbps: none on Windows; a macOS pty refuses the 1 Mbps ioctl (ENOTTY)"
+covered_by = "Linux CI; UAT-1 step 10 (AT-18); SP-2"
 
 [[skip]]
 test = "tests/e2e/test_station_ui.py::test_station_ui_end_to_end[sts-vi]"

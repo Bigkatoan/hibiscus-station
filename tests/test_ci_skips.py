@@ -58,6 +58,31 @@ def test_windows_pty_skips_are_allowed_and_nothing_else(tmp_path: Path) -> None:
     assert len(errors) == 2 and all("not in tools/ci/allowed-skips.toml" in e for e in errors)
 
 
+def test_macos_pty_emulator_skips_are_allowed_with_the_real_reason(tmp_path: Path) -> None:
+    """QD-7: on macOS a pty refuses pyserial's 1 Mbps ioctl (ENOTTY), so the STS-emulator tests may
+    skip there, with that reason; the doctor tests are not on the list (they must run, QD-4 / QD-7)."""
+    junit = _junit(
+        tmp_path,
+        [
+            ("", "tests.test_real_stack", "collection skipped"),
+            ("tests.test_teleop_latency", "test_station_teleop_latency_matches_lelab", "pty at 1 Mbps"),
+            (
+                "tests.test_device_lost",
+                "test_pty_closed_mid_teleop_then_back_under_a_new_name",
+                "pty at 1 Mbps",
+            ),
+        ],
+    )
+    allowed = check_skips.load_allowed()
+    assert check_skips.check("macos", [junit], allowed) == []
+    assert len(check_skips.check("linux", [junit], allowed)) == 3
+    for a in allowed:
+        if "macos" in a.platforms and "windows" in a.platforms:
+            assert "ENOTTY" in a.reason and not a.covered_by.startswith("Linux and macOS"), a.test
+    doctor = _junit(tmp_path, [("", "tests.test_doctor", "collection skipped")])
+    assert check_skips.check("macos", [doctor], allowed) and check_skips.check("windows", [doctor], allowed)
+
+
 @pytest.mark.parametrize(
     ("cls", "name"),
     [
