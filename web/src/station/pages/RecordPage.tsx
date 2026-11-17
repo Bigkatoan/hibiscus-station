@@ -175,6 +175,11 @@ function RecordLive({ session }: { session: Session }) {
                   <kbd className="text-xs opacity-80">Esc</kbd>
                 </Button>
               </div>
+              {session.episode.phase === "saving" || status?.state === "stopping" ? (
+                <p className="text-sm font-bold" role="status" data-testid="record-saving">
+                  {t("record.saving_note")}
+                </p>
+              ) : null}
               {session.dataset ? (
                 <EpisodeStrip dataset={session.dataset} saved={session.episode.saved} />
               ) : null}

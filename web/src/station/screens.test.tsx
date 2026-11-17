@@ -137,6 +137,7 @@ describe("Record (§6.6)", () => {
     expect(h.sim.session?.s.episode.phase).toBe("episode");
     await advance(h.sim, 1);
     fireEvent.keyDown(document.body, { key: "Escape" });
+    await advance(h.sim, 1.2); // the stopped episode is saved inside the session (0.2.9)
     await waitFor(() => {
       expect(h.sim.state).toBe("idle");
     });

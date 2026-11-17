@@ -510,7 +510,8 @@
     "saved_episodes": "Saved episodes",
     "done": "{{n}} episodes saved in {{path}}",
     "upload": "Upload",
-    "more": "Record more"
+    "more": "Record more",
+    "saving_note": "The episode is being saved. The arm holds its position; you can leave this page."
   },
   "datasets": {
     "title": "Datasets",

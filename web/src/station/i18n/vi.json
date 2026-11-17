@@ -510,7 +510,8 @@
     "saved_episodes": "Các tập đã lưu",
     "done": "Đã lưu {{n}} tập trong {{path}}",
     "upload": "Tải lên",
-    "more": "Ghi thêm"
+    "more": "Ghi thêm",
+    "saving_note": "Đang lưu tập. Tay robot giữ nguyên vị trí; bạn có thể rời trang này."
   },
   "datasets": {
     "title": "Bộ dữ liệu",

@@ -155,7 +155,12 @@ interface SessionRt {
   rec?: RecordRequest;
   run?: RunRequest;
   countdown: number;
+  /** The operator pressed Stop: the session ends once the episode is saved. */
+  stopping?: boolean;
 }
+
+/** Simulated seconds to encode one episode after Stop. */
+const SAVE_S = 1;
 
 const tinyJpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
 
@@ -706,8 +711,20 @@ export class MockStation {
     if (!rt) throw new MockProblem(409, "busy", { state: this.state });
     const ep = rt.s.episode;
     if (action === "stop") {
-      if (rt.rec && ep.phase === "episode") this.saveEpisode(rt);
-      this.endSession("completed");
+      // Like the Station (field report 0.2.9): a recorded episode is saved inside the session
+      // (phase "saving", the loop keeps running), then the session ends "stopped".
+      if (rt.rec && ep.phase === "episode" && ep.elapsed_s > 0) {
+        this.saveEpisode(rt);
+        rt.stopping = true;
+        rt.s.episode = { ...ep, phase: "saving" }; // the timer stays where Stop was pressed
+        rt.phaseT = 0;
+        rt.s.controls = { next: false, rerecord: false, stop: true };
+        this.sub = "saving";
+        this.broadcast({ type: "state", ...this.status() });
+        this.broadcast({ type: "session", ...rt.s });
+        return rt.s;
+      }
+      if (ep.phase !== "saving") this.endSession("stopped");
       return rt.s;
     }
     if (action === "rerecord") {
@@ -1034,6 +1051,10 @@ export class MockStation {
         rt.s.episode.phase = "teleop";
         this.broadcast({ type: "state", ...this.status() });
       }
+      return;
+    }
+    if (ep.phase === "saving") {
+      if (rt.phaseT >= SAVE_S) this.endSession(rt.stopping ? "stopped" : "completed");
       return;
     }
     ep.elapsed_s = rt.phaseT;

@@ -10,6 +10,24 @@ import type { StationSnapshot } from "../ws/store";
 
 const RUNNING_PHASES = ["countdown", "warmup", "episode", "reset"];
 
+/** The Station sends the session at least once a second. Field report 0.2.8: while it said
+ * nothing (its loop was busy saving) the timer ran on to the limit and looked like the episode
+ * ignored Stop; it never runs further than this past the last message. */
+export const MAX_EXTRAPOLATE_S = 2;
+
+/** Elapsed seconds now: the last reported value plus the local time since it, capped. */
+export function extrapolate(
+  elapsed: number,
+  at: number,
+  now: number,
+  running: boolean,
+  limit: number | null,
+): number {
+  const extra = running ? Math.min(MAX_EXTRAPOLATE_S, Math.max(0, (now - at) / 1000)) : 0;
+  const v = elapsed + extra;
+  return limit !== null ? Math.min(v, limit) : v;
+}
+
 /** Elapsed seconds of the current phase, interpolated locally between 1 Hz session messages. */
 export function useElapsed(session: Session | null | undefined): number {
   const ep = session?.episode;
@@ -30,9 +48,7 @@ export function useElapsed(session: Session | null | undefined): number {
   }, [running]);
   if (!session) return 0;
   if (!ep) return Math.max(0, (now - Date.parse(session.started_at)) / 1000);
-  const extra = running ? Math.max(0, (now - base.at) / 1000) : 0;
-  const v = base.elapsed + extra;
-  return ep.limit_s !== null ? Math.min(v, ep.limit_s) : v;
+  return extrapolate(base.elapsed, base.at, now, running, ep.limit_s);
 }
 
 export function formatClock(s: number): string {
