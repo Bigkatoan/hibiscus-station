@@ -11,7 +11,7 @@ repository (`station/`); 0.2.0 is the first release of this standalone repositor
 
 ## [Unreleased]
 
-## [0.2.9] - unreleased
+## [0.2.9] - 2026-11-17
 
 Field report on 0.2.8 (Windows, real SO-101, 2026-11-17) and the customer's decisions CR-1 and CR-2.
 
@@ -33,6 +33,24 @@ Field report on 0.2.8 (Windows, real SO-101, 2026-11-17) and the customer's deci
 - **"The leader is still not recognised."** The leader's 5 V servos do not report temperature or
   current, and the bare "–" looked like a missing arm. The Leader heading now says
   "Connected · 6/6 motors answer" and those values read "not measured", with the reason on hover.
+- **The stop card says whether the arm really holds.** After a double Space (relax) or a temperature
+  safe stop the card said "Stopped. The arm holds its position." while the torque was off, and its
+  hint mentioned a Relax button that was not there. It now follows the live torque state: held →
+  "holds its position" with Return Home and Relax; off → "Torque is off: the arm is limp and does
+  not hold its position" with Return Home only.
+- **Programs: no false "No problems found".** A program is checked against the robot (its Home,
+  calibration, trajectories) when it opens and after every save; until then the page says it is
+  checking, never the all-clear.
+- **Readable thermal messages.** "I'm clear, reset" while a motor is still hot says "Motors too hot:
+  follower elbow_flex 66 °C. Let them cool down first." (was "[object Object]"), and the stop
+  reason reads "66 °C" (was "66 C").
+- **Replay page** says "Replaying episode N" (was "recording") and its "moving to the start" note
+  ends with the approach (it said "Follower moving to the leader pose…" for the whole replay).
+- **Record end card** says "N episodes saved in dataset <name>"; the folder on this computer is
+  behind "Where is it on this computer?" with Copy path, and the card wraps properly at 390 px.
+- Motor health tables fit beside Robot 3D on the Robot page at 1280 px; "1 episode" (was
+  "1 episodes"); a draft trajectory says why Play is disabled (save the take first); Vietnamese
+  says "Hiệu chỉnh" everywhere (was "Hiệu chuẩn" in a few places).
 
 ### Changed
 - **Stop holds the arm where it is (CR-1).** Pressing Stop in teleop, record, replay, run model,
@@ -48,6 +66,9 @@ Field report on 0.2.8 (Windows, real SO-101, 2026-11-17) and the customer's deci
   (relax arm, go Home) shows **Set Home now** right in the list of problems. The calibration step
   that used to be called "Set home" (the middle of each joint) is now **Set middle**, so the two
   never mix. Saved profiles keep working (the stored field is still `rest_pose`).
+- `GET /programs/{id}/state` answers `null` (200) for a program that has not run since the Station
+  started (was 404, which browsers log as an error on every Programs tab load); 404 now means no
+  such program.
 - Programs: **relax arm** and **go Home** still need a Home. Relax first parks at Home so the arm
   never drops from a raised pose with nobody holding it; with no Home the program cannot start
   until you press "Set Home now" (one click). The Relax buttons outside programs always ask you to

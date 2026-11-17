@@ -1,6 +1,6 @@
 [project]
 name = "hibiscus-station"
-version = "0.2.8"
+version = "0.2.9"
 description = "Hibiscus Station: the robot-side app for SO-100/SO-101 arms (calibrate, cameras, teleop, record, upload, run models, trajectories and block programs) with motor health telemetry"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
