@@ -54,10 +54,16 @@ def _to_start(st: Station, tr: Trajectory) -> None:
     world = get_world("mock://follower")
     world.hand = None
     deadline = time.monotonic() + 5
+    settled = 0
     while time.monotonic() < deadline:
         pos = st.owner.call("read_positions")
         if all(abs(pos[k] - v) < 1.0 for k, v in tr.start_pose.items()):
-            return
+            settled += 1
+            if settled >= 2:  # two reads 0.1 s apart: there, not passing through
+                return
+            time.sleep(0.1)
+            continue
+        settled = 0
         # nudge the goal through the owner (idle: no session), like an operator would with teleop
         st.owner.call("run", fn=lambda o: o.follower.send_action(dict(tr.start_pose)))
         time.sleep(0.1)
@@ -180,8 +186,6 @@ def test_replay_at_50_and_100_percent(
     with Heartbeat(st):
         for speed in (100, 50):
             _to_start(st, a)
-            if slow_loop:
-                world.read_latency_s = 0.045  # > 1/30 s: every tick overruns, the loop runs at ~20 Hz
             world.calls.clear()
             world.record_calls = True
             r = _play(client, a.id, speed_pct=speed)
@@ -192,6 +196,8 @@ def test_replay_at_50_and_100_percent(
             assert isinstance(session, TrajPlaySession) and session.player is not None
             assert session.player.approach is None  # already at the start: straight to replay
             rows[speed] = len(session.player.rows)
+            if slow_loop:  # from the first replay tick on: > 1/30 s per read, every tick overruns (~20 Hz)
+                world.read_latency_s = 0.045
             wait_for(lambda: st.owner.state == "idle", 30)
             world.record_calls = False
             world.read_latency_s = 0.0015
