@@ -887,7 +887,8 @@ def summary(report: dict[str, Any], target: Path | None = None) -> str:
         lines.append(f"  ! {prof['error']}")
     for r in prof.get("robots", []):
         lines.append(
-            f"  {r['id']}{' (active)' if r['id'] == prof.get('active') else ''}: cameras {r['cameras']}"
+            f"  {r['id']}{' (active)' if r['id'] == prof.get('active') else ''}: "
+            f"cameras {_text(r['cameras'])}"
         )
         for arm, a in r["arms"].items():
             lelab = [] if a["file_exists"] else lelab_copies(report, arm, a)
@@ -922,7 +923,7 @@ def summary(report: dict[str, Any], target: Path | None = None) -> str:
         )
         if robot:
             lines.append(
-                f"  connected profile {robot.get('id')}"
+                f"  connected profile {_text(robot.get('id'))}"
                 + (" [DEMO: simulated arms]" if robot.get("mock") else " (real arms)")
             )
         for arm, a in (robot.get("arms") or {}).items():
@@ -937,12 +938,16 @@ def summary(report: dict[str, Any], target: Path | None = None) -> str:
         lp = last.get("loop") or {}
         if lp.get("latency_ms_p50") is not None:
             lines.append(
-                f"  last {last.get('kind')} session: {lp.get('fps')} Hz (asked {last.get('fps')}), "
-                f"leader -> follower latency ~{lp.get('latency_ms_p50')} ms "
-                f"(p95 {lp.get('latency_ms_p95')} ms), overruns {lp.get('overruns')}"
+                f"  last {_text(last.get('kind'))} session: {_text(lp.get('fps'))} Hz "
+                f"(asked {_text(last.get('fps'))}), "
+                f"leader -> follower latency ~{_text(lp.get('latency_ms_p50'))} ms "
+                f"(p95 {_text(lp.get('latency_ms_p95'))} ms), overruns {_text(lp.get('overruns'))}"
             )
         for al in st.get("alerts", []):
-            lines.append(f"    alert {al.get('level')} {al.get('message_key')} {al.get('params')}")
+            lines.append(
+                f"    alert {_text(al.get('level'))} {_text(al.get('message_key'))}"
+                + (f": {_text(al['params'])}" if al.get("params") else "")
+            )
     cams = report.get("cameras")
     if cams is not None:
         lines += ["", "Cameras:"]
@@ -950,7 +955,9 @@ def summary(report: dict[str, Any], target: Path | None = None) -> str:
             lines.append(f"  ! {cams}")
         else:
             lines += [
-                f"  {c.get('id')}  {c.get('backend_api')}  {c.get('default_stream_profile')}" for c in cams
+                f"  {_text(c.get('id'))}  {_text(c.get('backend_api'))}  "
+                f"{_stream_text(c.get('default_stream_profile'))}"
+                for c in cams
             ] or ["  (none)"]
     lines += ["", "Motor check (read only):"]
     if not report.get("ping", True):
@@ -965,27 +972,28 @@ def summary(report: dict[str, Any], target: Path | None = None) -> str:
         if a.get("error"):
             lines.append(f"{head}: {a['error']}")
             continue
-        lines.append(f"{head}: ids answering at 1 Mbps {a.get('scan_1mbps')}")
+        lines.append(f"{head}: ids answering at 1 Mbps: {_scan_text(a.get('scan_1mbps'))}")
         for mid, m in a.get("motors", {}).items():
             if m.get("error"):
                 lines.append(f"    id {mid}: {m['error']}")
                 continue
+            g = {k: _text(m.get(k)) for k in ("model_number", *PING_REGISTERS)}
             lines.append(
-                f"    id {mid}: model {m.get('model_number')} fw {m.get('Firmware_Major_Version')}."
-                f"{m.get('Firmware_Minor_Version')} pos {m.get('Present_Position')} "
-                f"{m.get('Present_Voltage')}x0.1V "
-                f"(min {m.get('Min_Voltage_Limit')} max {m.get('Max_Voltage_Limit')}) "
-                f"{m.get('Present_Temperature')}C (max {m.get('Max_Temperature_Limit')}) "
-                f"status {m.get('Status')} "
-                f"torque {m.get('Torque_Enable')} lock {m.get('Lock')} offset {m.get('Homing_Offset')} "
-                f"limits {m.get('Min_Position_Limit')}-{m.get('Max_Position_Limit')}"
+                f"    id {mid}: model {g['model_number']} fw {g['Firmware_Major_Version']}."
+                f"{g['Firmware_Minor_Version']} pos {g['Present_Position']} "
+                f"{g['Present_Voltage']}x0.1V "
+                f"(min {g['Min_Voltage_Limit']} max {g['Max_Voltage_Limit']}) "
+                f"{g['Present_Temperature']}C (max {g['Max_Temperature_Limit']}) "
+                f"status {g['Status']} "
+                f"torque {g['Torque_Enable']} lock {g['Lock']} offset {g['Homing_Offset']} "
+                f"limits {g['Min_Position_Limit']}-{g['Max_Position_Limit']}"
             )
             d = m.get("decoded") or {}
             lines.append(
-                f"           current raw {m.get('Present_Current')} = {_fmt(d, 'current_a', 'A')} "
-                f"load raw {m.get('Present_Load')} = {_fmt(d, 'load_pct', '%')} "
+                f"           current raw {g['Present_Current']} = {_fmt(d, 'current_a', 'A')} "
+                f"load raw {g['Present_Load']} = {_fmt(d, 'load_pct', '%')} "
                 f"temperature {_fmt(d, 'temp_c', 'C')} voltage {_fmt(d, 'voltage_v', 'V')} "
-                f"status {d.get('status')} protection current raw {m.get('Protection_Current')}"
+                f"status {_status_text(d.get('status'))} protection current raw {g['Protection_Current']}"
             )
         lines += _raw_lines(a.get("raw_dump"))
         if a.get("sync_read_present_position"):
@@ -999,15 +1007,89 @@ def summary(report: dict[str, Any], target: Path | None = None) -> str:
                     + (f"  ! {est['warning']}" if est.get("warning") else "")
                 )
         if a.get("calibration_vs_eeprom"):
-            lines.append(f"    calibration file vs motors: {a['calibration_vs_eeprom']}")
+            lines.append(f"    calibration file vs motors: {_compare_text(a['calibration_vs_eeprom'])}")
         if "eeprom_matches" in a:
-            lines.append(f"    motors carry the calibration of: {a['eeprom_matches'] or 'no file found'}")
+            carry = _text(a["eeprom_matches"]) if a["eeprom_matches"] else "no file found"
+            lines.append(f"    motors carry the calibration of: {carry}")
         be = a.get("bus_errors") or {}
         if be.get("errors"):
-            lines.append(f"    bus errors: {be}")
+            lines.append(f"    bus errors: {_bus_errors_text(be)}")
     lines += ["", _log_line(len(report["log_tail"])), ""]
     lines += send_instructions(report, target)
     return redact("\n".join(lines))
+
+
+def _text(v: Any) -> str:
+    """A report value in plain words, never a Python literal (QD-11, QD-16): None is "-", a bool
+    "yes" / "no", a list "a, b" ("none" when empty), a dict "key value, key value"."""
+    if v is None:
+        return "-"
+    if isinstance(v, bool):
+        return "yes" if v else "no"
+    if isinstance(v, (list, tuple, set, frozenset)):
+        items = sorted(v, key=str) if isinstance(v, (set, frozenset)) else v
+        return ", ".join(_text(x) for x in items) or "none"
+    if isinstance(v, dict):
+        return ", ".join(f"{k} {_text(x)}" for k, x in v.items()) or "none"
+    return str(v)
+
+
+def _ranges(ids: list[int]) -> str:
+    """``[1, 2, 3, 5]`` -> ``"1-3, 5"``."""
+    out: list[str] = []
+    for i in sorted(ids):
+        if out and out[-1].split("-")[-1] == str(i - 1):
+            out[-1] = f"{out[-1].split('-')[0]}-{i}"
+        else:
+            out.append(str(i))
+    return ", ".join(out)
+
+
+def _scan_text(scan: Any) -> str:
+    """``{"1": 777, ..., "6": 777}`` -> ``"1-6 (model 777)"``; a scan error stays a sentence."""
+    if not isinstance(scan, dict):
+        return "not scanned" if scan is None else f"scan failed ({scan})"
+    if not scan:
+        return "none"
+    by_model: dict[str, list[int]] = {}
+    for mid, model in scan.items():
+        by_model.setdefault(_text(model), []).append(int(mid))
+    return "; ".join(f"{_ranges(ids)} (model {model})" for model, ids in by_model.items())
+
+
+def _compare_text(cmp: dict[str, Any]) -> str:
+    """``{"shoulder_pan": "match", ...}`` -> ``"all 6 match"`` or ``"5 of 6 match; gripper: ..."``."""
+    other = [f"{name}: {_text(v)}" for name, v in cmp.items() if v != "match"]
+    if not other:
+        return f"all {len(cmp)} match"
+    return f"{len(cmp) - len(other)} of {len(cmp)} match; " + "; ".join(other)
+
+
+def _status_text(status: Any) -> str:
+    """Decoded status bits: ``[]`` is "ok", else the names of the bits that are set."""
+    if status is None:
+        return "-"
+    if isinstance(status, (list, tuple)):
+        return ", ".join(str(x) for x in status) or "ok"
+    return _text(status)
+
+
+def _stream_text(p: Any) -> str:
+    """A camera's default stream as ``640x480 30 fps MJPG``."""
+    if not isinstance(p, dict):
+        return _text(p)
+    fps = p.get("fps")
+    fps_s = f"{fps:g}" if isinstance(fps, (int, float)) and not isinstance(fps, bool) else _text(fps)
+    out = f"{_text(p.get('width'))}x{_text(p.get('height'))} {fps_s} fps"
+    return out + (f" {str(p['fourcc']).strip()}" if str(p.get("fourcc") or "").strip() else "")
+
+
+def _bus_errors_text(be: dict[str, Any]) -> str:
+    """``bus.error_summary()`` as one sentence; the last error is the bus library's own words."""
+    calls = ", ".join(f"{k} x{n}" for k, n in (be.get("by_call") or {}).items())
+    out = f"{be.get('errors') or 0}, {be.get('retried_ok') or 0} retried ok"
+    out += f" ({calls})" if calls else ""
+    return out + (f"; last error: {be['last_error']}" if be.get("last_error") else "")
 
 
 def _log_line(n: int) -> str:
@@ -1042,7 +1124,7 @@ def _raw_lines(dump: dict[str, Any] | None) -> list[str]:
         out.append(f"      id {mid}: {blocks}")
         d = row.get("decoded")
         if d:
-            g = {k: "-" if v is None else v for k, v in d.items()}  # a block that did not answer
+            g = {k: _text(v) for k, v in d.items()}  # "-" for a block that did not answer
             out.append(
                 f"        -> fw {g.get('firmware')} model {g.get('model_number')} "
                 f"temperature raw {g.get('temperature_raw')} = {_fmt(d, 'temp_c', 'C')} "
@@ -1050,7 +1132,7 @@ def _raw_lines(dump: dict[str, Any] | None) -> list[str]:
                 f"voltage raw {g.get('voltage_raw')} = {_fmt(d, 'voltage_v', 'V')} "
                 f"current raw {g.get('current_raw')} = {_fmt(d, 'current_a', 'A')} "
                 f"load raw {g.get('load_raw')} = {_fmt(d, 'load_pct', '%')} "
-                f"status raw {g.get('status_raw')} {g.get('status')}"
+                f"status raw {g.get('status_raw')} {_status_text(d.get('status'))}"
             )
     return out
 

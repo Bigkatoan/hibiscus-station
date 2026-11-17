@@ -27,7 +27,13 @@ import pytest
 from sts_emulator import STSEmulator, checksum, lelab_calibration, sm_decode, sm_encode
 
 from hibiscus_station import doctor
-from hibiscus_station.profiles import FollowerProfile, LeaderProfile, ProfileStore, RobotProfile
+from hibiscus_station.profiles import (
+    CameraProfile,
+    FollowerProfile,
+    LeaderProfile,
+    ProfileStore,
+    RobotProfile,
+)
 from hibiscus_station.settings import StationPaths
 
 WRITES = {"write", "sync_write"}
@@ -749,7 +755,8 @@ def test_a_lelab_file_with_the_profiles_id_is_named_once_and_consistently(
         "calibration 'arm_follower' in LeLab's folder (so101_follower), not used by Station yet"
     ), profile
     assert "MISSING" not in text
-    assert "motors carry the calibration of: ['" in text and "so101_follower" in text
+    carry = next(x for x in text.splitlines() if "motors carry the calibration of: " in x)
+    assert carry.endswith(str(cal_root / "robots" / "so101_follower" / "arm_follower.json")), carry
 
 
 def test_a_missing_calibration_lists_the_other_files_of_that_arm(tmp_path: Path) -> None:
@@ -913,3 +920,84 @@ def test_raw_dump_line_of_a_servo_that_answered_one_block_has_no_python_values()
     text = "\n".join(doctor._raw_lines(dump))
     assert "None" not in text.split(), text
     assert "-> fw - model - " in text and "(max limit - C)" in text
+
+
+#: What a Python container / constant looks like when it leaks into the report (QD-11, QD-16).
+PY_LITERAL = (
+    r"\{'|\{\"|\['|\[\"|\[\]|\{\}|\(\)|', '|\", \"|'[\w./ -]+': |\"[\w./ -]+\": "
+    r"|\b(?:None|True|False)\b|[\[(]\d+(?:, \d+)+[\])]"
+)
+
+
+def _python_literals(text: str) -> list[str]:
+    """Lines with a Python literal. What follows "last error: " is the bus library's own exception
+    text (e.g. lerobot's "motor IDs [1, 2, 3]"), quoted as is for the engineer, not a value of ours."""
+    import re
+
+    return [line for line in text.splitlines() if re.search(PY_LITERAL, line.split("last error: ")[0])]
+
+
+def test_python_literal_scan_catches_every_container_repr() -> None:
+    """The scan of the next test sees the dict / list / bool forms QC found (QD-16)."""
+    for leaked in (
+        "  desk (active): cameras []",
+        "  demo_so101 (active): cameras ['front', 'wrist']",
+        "  ids answering at 1 Mbps {'1': 777, '2': 777}",
+        "    calibration file vs motors: {'shoulder_pan': 'match'}",
+        "    motors carry the calibration of: ['/c/a.json', '/c/b.json']",
+        "    bus errors: {'errors': 3}",
+        "  front  V4L2  {'width': 640}",
+        "    status []",
+        "  x None y",
+    ):
+        assert _python_literals(leaked), leaked
+
+
+def test_report_text_has_no_python_containers_anywhere(
+    tmp_path: Path, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """QD-16: the whole report (two real arms, a LeLab copy the motors also carry, a silent motor,
+    cameras, a running Station with an alert) is plain text: no dict / list / None / True / False."""
+    f, ld = emus
+    home = _calibrated_home(tmp_path, f, ld, monkeypatch)
+    lelab = tmp_path / "calibration" / "robots" / "so101_follower"
+    lelab.mkdir(parents=True)
+    (lelab / "arm_follower.json").write_text(json.dumps(lelab_calibration()), encoding="utf-8")
+    store = ProfileStore(StationPaths(home).robots)
+    prof = store.get("arm")
+    store.put(prof.model_copy(update={"cameras": {"wrist": CameraProfile(), "front": CameraProfile()}}))
+    ld.servos[6].dead = True  # a ping error on the bus, "motor did not answer" in the comparison
+    status = _status(True, None, "follower: timeout id 3")
+    status["status"]["alerts"] = [
+        {"level": "warning", "message_key": "bus.slow", "params": {"arm": "leader", "ids": [1, 2]}}
+    ]
+    status["status"]["last_session"] = {"kind": "teleop", "fps": 30, "loop": {"latency_ms_p50": 12.5}}
+    monkeypatch.setattr(doctor, "running_status", lambda _p: status)
+    monkeypatch.setattr(
+        doctor,
+        "cameras",
+        lambda: [
+            {
+                "id": "/dev/video0",
+                "backend_api": "V4L2",
+                "default_stream_profile": {"fourcc": "MJPG", "width": 640, "height": 480, "fps": 30.0},
+            }
+        ],
+    )
+    text, _t = doctor.run(home, tmp_path / "out", probe_cameras=True, echo=lambda _s: None)
+    assert _python_literals(text) == [], text
+
+    lines = text.splitlines()
+    assert "  arm (active): cameras front, wrist" in lines, text
+    fol = next(x for x in lines if x.startswith("  arm follower on "))
+    assert fol.endswith(": ids answering at 1 Mbps: 1-6 (model 777)"), fol
+    lead = next(x for x in lines if x.startswith("  arm leader on "))
+    assert lead.endswith(": ids answering at 1 Mbps: 1-5 (model 777)"), lead
+    assert "    calibration file vs motors: all 6 match" in lines, text
+    assert "    calibration file vs motors: 5 of 6 match; gripper: motor did not answer" in lines, text
+    carry = [x for x in lines if x.startswith("    motors carry the calibration of: ")]
+    assert carry[0].endswith("so_follower/arm_follower.json, " + str(lelab / "arm_follower.json")), carry
+    assert "  /dev/video0  V4L2  640x480 30 fps MJPG" in lines, text
+    bus = next(x for x in lines if x.startswith("    bus errors: ") and "ping Model_Number [6] x" in x)
+    assert "retried ok (" in bus and "; last error: " in bus, bus
+    assert "    alert warning bus.slow: arm leader, ids 1, 2" in lines, text

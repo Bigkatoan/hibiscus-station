@@ -262,7 +262,8 @@ def test_doctor_reports_ports_files_and_motors_without_secrets(
     text, target = doctor.run(home, tmp_path / "out", probe_cameras=False, echo=lambda _s: None)
     assert "calibration 'arm_follower' MISSING" in text
     assert "so101_follower" in text and "my_follower" in text
-    assert "motors carry the calibration of: ['" in text and "my_follower.json" in text
+    carry = next(x for x in text.splitlines() if "motors carry the calibration of: " in x)
+    assert carry.endswith("my_follower.json"), carry  # a path, not a Python list (QD-16)
     assert "id 6: model 777 fw 3.10" in text
     assert "teleop estimate: ~" in text
     with zipfile.ZipFile(target) as z:

@@ -49,6 +49,11 @@ with its own line (see the README); GitHub never offers a pre-release as its "la
 - **The Docker image did not start with `STATION_ARGS=--mock`.** The demo tried to create `/data-demo`,
   which the image's user may not write. With `HIBISCUS_STATION_HOME` set (the image sets `/data`)
   the demo now keeps its data in `<home>/demo`, and `hibiscus-station health` finds it there.
+- **The doctor report printed raw program values** (`cameras []`, `{'1': 777, ...}`,
+  `{'shoulder_pan': 'match', ...}`, `['…/desk_follower.json']`). It now reads as plain text:
+  `cameras: front, wrist`, `ids answering at 1 Mbps: 1-6 (model 777)`, `calibration file vs motors:
+  all 6 match`, `motors carry the calibration of: …/desk_follower.json`; the same for camera
+  formats, servo status bits, bus errors and Station alerts.
 
 ## [0.2.8] - 2026-11-16
 
