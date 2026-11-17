@@ -69,8 +69,9 @@ Close LeLab and any `lerobot-*` command first: only one program can use a serial
 4. **Teleop.** Move the leader, the follower follows. If the leader is far from the follower pose,
    Station asks you to bring it closer first. Teleop runs as fast as LeLab's (250 Hz by default:
    each tick only reads the leader and sends the follower its goal); the screen shows the measured
-   "latency ~X ms, Y Hz". If the rate is low, run `hibiscus-station doctor`: it times the bus and
-   tells you to set the USB adapter's latency timer to 1 ms (Windows).
+   "latency ~X ms, Y Hz". If the rate is low, run `hibiscus-station doctor` (see
+   [Diagnostic report](#diagnostic-report-doctor)): it times the bus and says what to do for your USB
+   adapter (plug it straight into the PC, without a hub; a 1 ms latency timer exists on FTDI adapters only).
 5. **Record.** Choose a dataset name, the task sentence, the number of episodes and their length.
    Keys: **→** next (save and continue), **←** re-record, **Esc** stop. An episode that reaches its
    time limit is saved (unlike LeLab, which silently re-records it); you can change that to
@@ -93,6 +94,39 @@ Close LeLab and any `lerobot-*` command first: only one program can use a serial
 **Robot 3D view.** Every screen that moves the arm shows the follower in 3D, drawn from its live
 joint positions, each motor coloured by its temperature. If the 3D arm does not match the real one
 (for example `wrist_roll` turns the other way), recalibrate before trusting replays.
+
+## Diagnostic report (doctor)
+
+When the arm does not work as it should, one report lets us find the cause on the first try:
+
+1. Stop Station (Ctrl+C in its window) and close LeLab, Feetech FD and any `lerobot-*` command.
+2. Plug both arms into the computer and power them.
+3. Open PowerShell (Windows) or a terminal, copy and paste:
+
+   ```
+   hibiscus-station doctor --verbose
+   ```
+
+4. Wait about a minute. The end of the report, **WHAT TO SEND / CẦN GỬI GÌ**, gives the full path of
+   `hibiscus-station-doctor-<time>.zip`: send that one file. If it says the motor check is
+   incomplete, do what it says and run the command again.
+
+The report is in English (for engineers), apart from its last section. It starts with **LIKELY
+PROBLEMS** (or "No likely problems found"): for example a demo profile is active, a calibration file
+is missing, another program holds a port (named), Station was killed and left `station.pid` behind,
+the bus is slow, or motors report impossible readings (0 °C, 6.5 A).
+
+`doctor` is **read only**: it writes nothing to a motor and switches no torque on. On every USB serial
+port (also ports no robot profile names) it reads each motor: model, firmware, position, voltage,
+temperature, `Max_Temperature_Limit`, current (`Present_Current`), load (`Present_Load`), status,
+EEPROM against the calibration file, bus speed; then it prints a **raw dump** of registers 0-4, 13-15
+and 56-70 of each motor (the bytes exactly as the motor sent them) with the decoded values, in the
+same units and with the same "unknown" rules as the motor health screen. The zip holds the report,
+the last 200 log lines, the robot profiles, the settings, the calibration files and the last 5
+sessions; never the login token or a Hibiscus access token.
+
+Options: `--no-ping` does not open the serial ports, `--no-cameras` does not probe cameras, `--out
+<folder>` is where the zip goes (default: the current folder).
 
 ## Safety
 

@@ -2,9 +2,12 @@
 
 Collects versions, serial ports (VID:PID, stable path, who holds them), cameras, calibration files,
 robot profiles and the calibration each one expects, the running Station's status, the last log
-lines, and (when the port is free) a read-only ping of every motor on each configured arm: model,
-firmware, voltage, temperature, status, EEPROM calibration compared with the file. Nothing is
-written to a motor and no torque is switched on.
+lines, and (when the port is free) a read-only ping of every motor on each configured arm and on
+every other USB serial port: model, firmware, voltage, temperature, current, load, status, EEPROM
+calibration compared with the file, plus a raw dump of registers 0-4, 13-15 and 56-70 of each
+servo, read with one plain READ instruction per block (no sync read, no rustypot decoding) so a
+field report shows the exact bytes the servo sent (REG-13). Nothing is written to a motor and no
+torque is switched on: only PING, READ and SYNC_READ instructions are sent.
 
 The report is printed and saved with copies of the files into ``hibiscus-station-doctor-<ts>.zip``.
 Login tokens and Hibiscus PATs never go in: the token file and ``server.json`` are skipped and every
@@ -42,12 +45,172 @@ PING_REGISTERS = (
     "Max_Voltage_Limit",
     "Present_Temperature",
     "Max_Temperature_Limit",
+    "Present_Current",
+    "Present_Load",
+    "Protection_Current",
     "Status",
     "Torque_Enable",
     "Lock",
     "Return_Delay_Time",
     "Operating_Mode",
 )
+
+#: Register blocks dumped raw from every servo id, one READ instruction each (SP-1): firmware and
+#: model (0-4), temperature and voltage limits (13-15), the live block (56-70: position, speed,
+#: load, voltage, temperature, status, moving, current).
+RAW_BLOCKS: tuple[tuple[int, int], ...] = ((0, 5), (13, 3), (56, 15))
+RAW_BAUD = 1_000_000
+RAW_TIMEOUT_S = 0.1
+FEETECH_READ = 0x02  # the only instruction the raw dump sends
+
+
+def _checksum(body: bytes) -> int:
+    return (~sum(body)) & 0xFF
+
+
+def read_packet(motor_id: int, addr: int, length: int) -> bytes:
+    """A Feetech READ instruction (never a write): ``FF FF id 4 0x02 addr length checksum``."""
+    body = bytes([motor_id, 4, FEETECH_READ, addr, length])
+    return b"\xff\xff" + body + bytes([_checksum(body)])
+
+
+def _read_answer(ser: Any, motor_id: int, timeout_s: float) -> bytes | None:
+    """The first well-formed status packet from ``motor_id`` (None on timeout)."""
+    buf = bytearray()
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        chunk = ser.read(ser.in_waiting or 1)
+        if chunk:
+            buf += chunk
+        while True:
+            start = buf.find(b"\xff\xff")
+            if start < 0:
+                del buf[:-1]
+                break
+            del buf[:start]
+            if len(buf) < 4:
+                break
+            total = 4 + buf[3]
+            if len(buf) < total:
+                break
+            pkt = bytes(buf[:total])
+            del buf[:total]
+            if pkt[2] == motor_id and _checksum(pkt[2:-1]) == pkt[-1]:
+                return pkt
+    return None
+
+
+def _u16(b: dict[int, int], addr: int) -> int | None:
+    lo, hi = b.get(addr), b.get(addr + 1)
+    return None if lo is None or hi is None else lo | (hi << 8)
+
+
+def decode_raw(b: dict[int, int]) -> dict[str, Any]:
+    """Values from the raw bytes, with the same masks, units and plausibility rules as telemetry
+    (:mod:`hibiscus_station.hw.feetech`). ``*_plausible`` False: Station shows the value as unknown."""
+    from hibiscus_station.hw import feetech
+
+    out: dict[str, Any] = {
+        "firmware": f"{b[0]}.{b[1]}" if 0 in b and 1 in b else None,
+        "model_number": _u16(b, 3),
+        "max_temperature_limit_c": b.get(13),
+        "max_voltage_limit_v": feetech.decode_voltage(b[14]) if 14 in b else None,
+        "min_voltage_limit_v": feetech.decode_voltage(b[15]) if 15 in b else None,
+        "present_position_raw": _u16(b, 56),
+        "present_speed_raw": _u16(b, 58),
+    }
+    rows = (
+        ("temp_c", "temperature_raw", b.get(63)),
+        ("voltage_v", "voltage_raw", b.get(62)),
+        ("current_a", "current_raw", _u16(b, 69)),
+        ("load_pct", "load_raw", _u16(b, 60)),
+        ("status", "status_raw", b.get(65)),
+    )
+    for group, raw_key, raw in rows:
+        out[raw_key] = raw
+        if raw is None:
+            out[group] = None
+            continue
+        value = feetech.decode(group, raw)
+        out[group] = value
+        if group != "status":
+            out[f"{group}_plausible"] = feetech.plausible(group, value)
+    if out.get("max_temperature_limit_c") is not None:
+        lo, hi = feetech.PLAUSIBLE_MAX_TEMP_C
+        out["max_temperature_limit_plausible"] = lo <= out["max_temperature_limit_c"] <= hi
+    return out
+
+
+def raw_dump(port: str, ids: Any = MOTOR_IDS, *, timeout_s: float = RAW_TIMEOUT_S) -> dict[str, Any]:
+    """Each servo's :data:`RAW_BLOCKS`, read with plain READ instructions through pyserial (not
+    rustypot, so a decoding error there cannot hide here). Read only: nothing else is sent."""
+    import serial
+
+    out: dict[str, Any] = {"baud": RAW_BAUD, "blocks": [list(b) for b in RAW_BLOCKS], "motors": {}}
+    try:
+        ser = serial.Serial(port, RAW_BAUD, timeout=0.005, write_timeout=1)
+    except Exception as exc:
+        out["error"] = f"cannot open: {type(exc).__name__}: {exc}"
+        return out
+    try:
+        ser.reset_input_buffer()
+        for mid in ids:
+            row: dict[str, Any] = {"blocks": {}}
+            regs: dict[int, int] = {}
+            for addr, length in RAW_BLOCKS:
+                req = read_packet(mid, addr, length)
+                ser.write(req)
+                ser.flush()
+                ans = _read_answer(ser, mid, timeout_s)
+                blk: dict[str, Any] = {"request": req.hex(" ")}
+                if ans is None:
+                    blk["answer"] = None
+                    blk["error"] = "no answer"
+                else:
+                    params = ans[5:-1]
+                    blk["answer"] = ans.hex(" ")
+                    blk["error_byte"] = ans[4]
+                    blk["data"] = params.hex(" ")
+                    if len(params) != length:
+                        blk["error"] = f"answered {len(params)} bytes, asked {length}"
+                    for i, v in enumerate(params[:length]):
+                        regs[addr + i] = v
+                row["blocks"][f"{addr}-{addr + length - 1}"] = blk
+            if regs:
+                row["decoded"] = decode_raw(regs)
+            else:
+                row["error"] = "no answer"
+            out["motors"][str(mid)] = row
+    except Exception as exc:
+        out["error"] = f"{type(exc).__name__}: {exc}"
+    finally:
+        try:
+            ser.close()
+        except Exception:  # noqa: S110 - best effort close
+            pass
+    return out
+
+
+def decode_registers(row: dict[str, Any]) -> dict[str, Any]:
+    """The telemetry values of one motor's lerobot reads, decoded as Station's telemetry does."""
+    from hibiscus_station.hw import feetech
+
+    out: dict[str, Any] = {}
+    for group, reg in (
+        ("temp_c", "Present_Temperature"),
+        ("voltage_v", "Present_Voltage"),
+        ("current_a", "Present_Current"),
+        ("load_pct", "Present_Load"),
+        ("status", "Status"),
+    ):
+        raw = row.get(reg)
+        if not isinstance(raw, int):
+            continue
+        value = feetech.decode(group, raw)
+        out[group] = value
+        if group != "status":
+            out[f"{group}_plausible"] = feetech.plausible(group, value)
+    return out
 
 
 def _pkg_version(name: str) -> str | None:
@@ -194,8 +357,12 @@ def ping_arm(
     port: str,
     calibration: dict[str, Any] | None = None,
     candidates: dict[str, dict[str, Any]] | None = None,
+    *,
+    raw: bool = True,
+    vid_pid: str | None = None,
 ) -> dict[str, Any]:
-    """Read-only check of an SO-101 arm on ``port``: which ids answer, and their registers."""
+    """Read-only check of an SO-101 arm on ``port``: which ids answer, their registers, and
+    (``raw``) a raw dump of every id once the lerobot bus is closed again."""
     from lerobot.motors import Motor, MotorNormMode
 
     from hibiscus_station.hw.bus import StationMotorsBus
@@ -233,6 +400,7 @@ def ping_arm(
                     row[reg] = bus.read(reg, name, normalize=False, num_retry=1)
                 except Exception as exc:
                     row[reg] = f"error: {exc}"
+            row["decoded"] = decode_registers(row)
             out["motors"][str(m.id)] = row
         t = time.perf_counter()
         n = 20
@@ -247,7 +415,9 @@ def ping_arm(
             "failed": fails,
             "ms_per_read": round((time.perf_counter() - t) * 1000 / n, 2),
         }
-        out["teleop_estimate"] = teleop_estimate(out["sync_read_present_position"]["ms_per_read"])
+        out["teleop_estimate"] = teleop_estimate(
+            out["sync_read_present_position"]["ms_per_read"], usb_chip(vid_pid)
+        )
         if calibration:
             out["calibration_vs_eeprom"] = _compare(calibration, out["motors"])
         # Which calibration file (any id, e.g. LeLab's) the motors' EEPROM carries now.
@@ -262,6 +432,8 @@ def ping_arm(
             bus.disconnect(disable_torque=False)
         except Exception:  # noqa: S110 - best effort close
             pass
+    if raw:
+        out["raw_dump"] = raw_dump(port)
     out["seconds"] = round(time.perf_counter() - t0, 2)
     return out
 
@@ -271,9 +443,42 @@ def ping_arm(
 SLOW_READ_MS = 6.0
 
 
-def teleop_estimate(ms_per_read: float | None) -> dict[str, Any] | None:
+#: USB vendor id -> serial chip family. Only FTDI chips have a latency timer the user can set
+#: (WCH CH340 / CH343, the SO-101 boards' chips, have none: D-21).
+USB_CHIPS: dict[str, str] = {"0403": "FTDI", "1a86": "WCH", "10c4": "CP210x", "067b": "Prolific"}
+
+
+def usb_chip(vid_pid: str | None) -> str | None:
+    """``"FTDI"``, ``"WCH"``... from ``"vvvv:pppp"`` (None when unknown)."""
+    if not vid_pid:
+        return None
+    return USB_CHIPS.get(vid_pid.split(":")[0].lower())
+
+
+def slow_bus_advice(ms_per_read: float, chip: str | None) -> str:
+    """What to do about a slow bus: the latency timer is named only for FTDI chips (D-21)."""
+    head = f"slow bus ({ms_per_read} ms per read)"
+    ftdi = (
+        "set the FTDI adapter's latency timer to 1 ms (Windows: Device Manager > Ports > the COM port "
+        "> Port Settings > Advanced)"
+    )
+    if chip == "FTDI":
+        return f"{head}: {ftdi} and plug the arm straight into the PC, without a hub"
+    if chip is not None:
+        return (
+            f"{head}: slow USB adapter / hub: plug the arm straight into the PC, without a hub "
+            f"(a {chip} adapter has no latency timer to change)"
+        )
+    return (
+        f"{head}: slow USB adapter / hub: plug the arm straight into the PC, without a hub; only if the "
+        f"adapter is an FTDI chip (USB VID 0403): {ftdi}"
+    )
+
+
+def teleop_estimate(ms_per_read: float | None, chip: str | None = None) -> dict[str, Any] | None:
     """Teleop rate and leader -> follower latency this bus allows: one leader read plus one goal
-    write (~1/3 of a read) per tick, a leader move waiting half a tick on average."""
+    write (~1/3 of a read) per tick, a leader move waiting half a tick on average. ``chip``
+    (:func:`usb_chip`) picks the advice for a slow bus."""
     if not ms_per_read or ms_per_read <= 0:
         return None
     tick = ms_per_read * 1.35 + 0.3
@@ -285,11 +490,7 @@ def teleop_estimate(ms_per_read: float | None) -> dict[str, Any] | None:
         "latency_ms": round(ms_per_read * 1.35 + tick / 2, 1),
     }
     if ms_per_read > SLOW_READ_MS:
-        out["warning"] = (
-            f"slow bus ({ms_per_read} ms per read): set the USB serial adapter's latency timer to 1 ms "
-            "(Windows: Device Manager > Ports > the COM port > Port Settings > Advanced) or plug the "
-            "arm in without a hub"
-        )
+        out["warning"] = slow_bus_advice(ms_per_read, chip)
     return out
 
 
@@ -311,7 +512,10 @@ def _compare(cal: dict[str, Any], motors: dict[str, Any]) -> dict[str, Any]:
 
 # ------------------------------------------------------------------------------------- the report
 def running_status(paths: StationPaths) -> dict[str, Any] | None:
-    """``GET /api/v1/status`` of the running Station (None when none runs)."""
+    """``GET /api/v1/status`` of the running Station (None when none runs).
+
+    A ``station.pid`` left behind by a Station that was killed (nothing listens on its port) is
+    "not running" with ``stale_pid`` set, never a raw connection error (D-15)."""
     try:
         info = json.loads(paths.pid.read_text(encoding="utf-8"))
         token = paths.token.read_text(encoding="utf-8").strip()
@@ -328,6 +532,10 @@ def running_status(paths: StationPaths) -> dict[str, Any] | None:
         )
         return {"pid": info.get("pid"), "http": r.status_code, "status": r.json()}
     except Exception as exc:
+        import httpx
+
+        if isinstance(exc, httpx.ConnectError):
+            return {"not_running": True, "stale_pid": info.get("pid")}
         return {"pid": info.get("pid"), "error": f"{type(exc).__name__}: {exc}"}
 
 
@@ -374,32 +582,92 @@ def collect(
         report["cameras"] = cameras()
     arms: list[dict[str, Any]] = []
     if ping:
-        cal_by_path = {c["path"]: c.get("motors") for c in report["calibrations"]}
-        seen: set[str] = set()
-        for robot in report["profiles"].get("robots", []):
-            for arm, a in robot["arms"].items():
-                port = str(a["port"])
-                if port.startswith("mock://") or port in seen:
-                    continue
-                seen.add(port)
-                row: dict[str, Any] = {"robot": robot["id"], "arm": arm, "port": port}
-                holder = station_lock_holder(paths, port)
-                others = port_holders(port)
-                if holder is not None:
-                    row["skipped"] = f"in use by Station (pid {holder}); stop it to ping the motors"
-                elif others:
-                    row["skipped"] = "in use by " + "; ".join(others)
-                elif not Path(port).exists() and os.name != "nt":
-                    row["skipped"] = "port not found (unplugged? another name now?)"
-                else:
-                    echo(f"pinging {arm} on {port}...")
-                    same_arm = {c["path"]: c.get("motors") for c in report["calibrations"] if c["arm"] == arm}
-                    row.update(ping_arm(port, cal_by_path.get(a["expects"]), same_arm))
-                arms.append(row)
+        arms = check_arms(paths, report, echo)
     report["arms"] = arms
+    report["ping"] = ping
     report["warnings"] = warnings(report)
     report["log_tail"] = log_tail(paths)
     return report
+
+
+def _targets(report: dict[str, Any]) -> list[tuple[str, str, str, str | None]]:
+    """(robot, arm, port, calibration file the profile expects) for every arm port in the profiles,
+    then every other detected USB serial port (an arm without a profile, e.g. while a demo profile
+    is active): each port once."""
+    from hibiscus_station.hw.locks import normalize_device
+
+    out: list[tuple[str, str, str, str | None]] = []
+    seen: set[str] = set()
+    for robot in report["profiles"].get("robots", []):
+        for arm, a in robot["arms"].items():
+            port = str(a["port"])
+            if port.startswith("mock://") or normalize_device(port) in seen:
+                continue
+            seen.add(normalize_device(port))
+            out.append((str(robot["id"]), arm, port, a.get("expects")))
+    for row in report["ports"]:
+        port = str(row["device"])
+        if normalize_device(port) in seen:
+            continue
+        seen.add(normalize_device(port))
+        out.append(("-", "no profile", port, None))
+    return out
+
+
+def _vid_pid(report: dict[str, Any], port: str) -> str | None:
+    from hibiscus_station.hw.locks import normalize_device
+
+    for p in report["ports"]:
+        if normalize_device(str(p["device"])) == normalize_device(port) or p.get("stable_path") == port:
+            vp = p.get("vid_pid")
+            return str(vp) if vp else None
+    return None
+
+
+def check_arms(
+    paths: StationPaths, report: dict[str, Any], echo: Callable[[str], None] = lambda _s: None
+) -> list[dict[str, Any]]:
+    """The read-only motor check of every target port that no program holds."""
+    cal_by_path = {c["path"]: c.get("motors") for c in report["calibrations"]}
+    arms: list[dict[str, Any]] = []
+    for robot, arm, port, expects in _targets(report):
+        row: dict[str, Any] = {"robot": robot, "arm": arm, "port": port}
+        holder = station_lock_holder(paths, port)
+        others = port_holders(port)
+        if holder is not None:
+            row["skipped"] = f"in use by Station (pid {holder}); stop it to ping the motors"
+            row["held_by"] = [f"Station pid {holder}"]
+        elif others:
+            row["skipped"] = "in use by " + "; ".join(others)
+            row["held_by"] = others
+        elif not Path(port).exists() and os.name != "nt":
+            row["skipped"] = "port not found (unplugged? another name now?)"
+        else:
+            echo(f"pinging {arm} on {port}...")
+            same_arm = {
+                c["path"]: c.get("motors")
+                for c in report["calibrations"]
+                if arm == "no profile" or c["arm"] == arm
+            }
+            row.update(
+                ping_arm(
+                    port,
+                    cal_by_path.get(expects) if expects else None,
+                    same_arm,
+                    vid_pid=_vid_pid(report, port),
+                )
+            )
+        arms.append(row)
+    return arms
+
+
+#: Port open errors that mean "another program has it" (Windows, macOS, Linux).
+BUSY_MARKERS = ("access is denied", "permission denied", "resource busy", "busy", "errno 13", "errno 16")
+
+
+def _looks_busy(error: str) -> bool:
+    e = error.lower()
+    return any(m in e for m in BUSY_MARKERS)
 
 
 def warnings(report: dict[str, Any]) -> list[str]:
@@ -427,34 +695,134 @@ def warnings(report: dict[str, Any]) -> list[str]:
                     f"{r['id']} {arm}: no calibration '{a['calibration_id']}'"
                     + (f" (files found: {', '.join(found)} - Calibrate > Use this file)" if found else "")
                 )
+    run = report.get("running") or {}
+    if run.get("error"):
+        out.append(f"Station (pid {run.get('pid')}) does not answer: {run['error']}")
+    checked: set[str] = set()
     for a in report.get("arms", []):
-        if a.get("error"):
-            out.append(f"{a['robot']} {a['arm']} on {a['port']}: {a['error']}")
+        checked.add(str(a["port"]))
+        where = f"{a['robot']} {a['arm']} on {a['port']}"
+        if a.get("held_by") and str(a["held_by"][0]).startswith("Station pid"):
+            out.append(
+                f"{where}: held by {a['held_by'][0]}, motors not checked: stop Station and run "
+                "`hibiscus-station doctor --verbose` again"
+            )
+        elif a.get("held_by"):
+            out.append(
+                f"{where} is busy, held by {'; '.join(a['held_by'])}: close that program (LeLab, "
+                "a lerobot-* command, Feetech FD) and run the doctor again"
+            )
+        elif a.get("skipped"):
+            out.append(f"{where}: {a['skipped']}")
+        if a.get("error") and _looks_busy(str(a["error"])):
+            out.append(
+                f"{where} is busy or not accessible ({a['error']}): another program holds it (LeLab, "
+                "a lerobot-* command, Feetech FD, Arduino IDE); close it and run the doctor again"
+            )
+        elif a.get("error"):
+            out.append(f"{where}: {a['error']}")
         missing = [k for k, m in a.get("motors", {}).items() if m.get("error")]
         if missing:
             out.append(
                 f"{a['robot']} {a['arm']}: motor id(s) {', '.join(missing)} do not answer (power? cable?)"
             )
+        est = a.get("teleop_estimate") or {}
+        if est.get("warning"):
+            out.append(f"{where}: {est['warning']}")
+        bad: dict[str, list[str]] = {}
+        dump = (a.get("raw_dump") or {}).get("motors") or {}
+        for mid, m in a.get("motors", {}).items():
+            d = (dump.get(mid) or {}).get("decoded") or m.get("decoded") or {}
+            for key, label in (
+                ("temp_c", "temperature"),
+                ("current_a", "current"),
+                ("load_pct", "load"),
+                ("voltage_v", "voltage"),
+            ):
+                if d.get(f"{key}_plausible") is False:
+                    bad.setdefault(label, []).append(mid)
+        for label, ids in bad.items():
+            out.append(
+                f"{a['robot']} {a['arm']}: motor id(s) {', '.join(ids)} report an impossible {label} "
+                "(Station shows it as unknown); the raw register bytes are in the motor check below"
+            )
     for p in report["ports"]:
-        if p.get("open_by"):
+        if p.get("open_by") and str(p["device"]) not in checked:
             out.append(f"{p['device']} is open by another program: {'; '.join(p['open_by'])}")
     return out
 
 
-def summary(report: dict[str, Any]) -> str:
-    """Human-readable lines (what the terminal shows)."""
-    v = report["versions"]
+def motor_check_incomplete(report: dict[str, Any]) -> bool:
+    """True when the motor check could not read every arm (skipped, held, no port, --no-ping)."""
+    arms = report.get("arms") or []
+    if not report.get("ping", True) or not arms:
+        return True
+    return any(a.get("skipped") or a.get("error") for a in arms)
+
+
+def send_instructions(report: dict[str, Any], target: Path | None) -> list[str]:
+    """The last lines, English then Vietnamese: the one file to send, and when to run again."""
+    name = str(target.resolve()) if target is not None else "hibiscus-station-doctor-<time>.zip"
+    again = motor_check_incomplete(report)
+    no_ping = not report.get("ping", True)
     lines = [
+        "WHAT TO SEND / CẦN GỬI GÌ",
+        f"  EN: Send us this one file: {name}",
+        "      It holds this report, the last log lines, the robot profiles and the calibration files;",
+        "      no login token and no access token.",
+    ]
+    if no_ping:
+        lines += [
+            "      The motors were not checked (--no-ping): to send the full report, run",
+            "      `hibiscus-station doctor --verbose` without --no-ping and send the new file instead.",
+        ]
+    elif again:
+        lines += [
+            "      The motor check is incomplete (see LIKELY PROBLEMS): close Station and LeLab, keep both",
+            "      arms plugged in and powered, run `hibiscus-station doctor --verbose` again and send the",
+            "      new file instead.",
+        ]
+    lines += [
+        "      If we asked for it, add a screenshot of Feetech FD showing the temperature, voltage and",
+        "      current of the same servos.",
+        f"  VI: Bạn chỉ cần gửi cho chúng tôi một tệp: {name}",
+        "      Tệp này có báo cáo này, các dòng nhật ký cuối, hồ sơ robot và các tệp hiệu chỉnh;",
+        "      không có token đăng nhập hay token truy cập.",
+    ]
+    if no_ping:
+        lines += [
+            "      Động cơ chưa được kiểm tra (--no-ping): để gửi báo cáo đầy đủ, chạy",
+            "      `hibiscus-station doctor --verbose` không có --no-ping rồi gửi tệp mới thay cho tệp này.",
+        ]
+    elif again:
+        lines += [
+            "      Phần kiểm tra động cơ chưa đủ (xem LIKELY PROBLEMS): tắt Station và LeLab, giữ cả hai tay",
+            "      cắm cáp và có điện, chạy lại `hibiscus-station doctor --verbose` rồi gửi tệp mới thay cho",
+            "      tệp này.",
+        ]
+    lines += [
+        "      Nếu chúng tôi có nhờ, gửi kèm ảnh chụp màn hình Feetech FD có nhiệt độ, điện áp và dòng",
+        "      của cùng các động cơ.",
+    ]
+    return lines
+
+
+def summary(report: dict[str, Any], target: Path | None = None) -> str:
+    """Human-readable lines (what the terminal shows), ending with what to send."""
+    v = report["versions"]
+    problems = report.get("warnings") or []
+    lines = [
+        "LIKELY PROBLEMS:",
+        *([f"  ! {w}" for w in problems] or ["  No likely problems found"]),
+        "",
         f"Hibiscus Station {v['hibiscus_station']} · Python {v['python']} · lerobot {v['lerobot']} · "
         f"rustypot {v['rustypot']}",
         f"OS: {v['os']} ({v['machine']})",
         f"Data: {report['home']}",
         f"Calibration folder: {report['calibration_root']}",
         "",
+        "Serial ports:",
     ]
-    if report.get("warnings"):
-        lines += ["LIKELY PROBLEMS:", *[f"  ! {w}" for w in report["warnings"]], ""]
-    lines += ["Serial ports:"]
     if not report["ports"]:
         lines.append("  (none) - is the arm's USB cable plugged in? Windows: check Device Manager > Ports")
     for p in report["ports"]:
@@ -487,10 +855,17 @@ def summary(report: dict[str, Any]) -> str:
             lines.append(f"    {arm}: {a['type']} on {a['port']}, calibration '{a['calibration_id']}' {ok}")
     run = report.get("running")
     lines += ["", "Running Station:"]
-    if not run:
-        lines.append("  not running")
+    if not run or run.get("not_running"):
+        lines.append(
+            "  Station is not running"
+            + (
+                f" (station.pid of pid {run['stale_pid']} left behind, nothing answers)"
+                if run and run.get("stale_pid")
+                else ""
+            )
+        )
     elif run.get("error"):
-        lines.append(f"  pid {run.get('pid')}: {run['error']}")
+        lines.append(f"  pid {run.get('pid')} does not answer: {run['error']}")
     else:
         st = run["status"]
         robot = st.get("robot") or {}
@@ -554,10 +929,18 @@ def summary(report: dict[str, Any]) -> str:
                 f"torque {m.get('Torque_Enable')} lock {m.get('Lock')} offset {m.get('Homing_Offset')} "
                 f"limits {m.get('Min_Position_Limit')}-{m.get('Max_Position_Limit')}"
             )
+            d = m.get("decoded") or {}
+            lines.append(
+                f"           current raw {m.get('Present_Current')} = {_fmt(d, 'current_a', 'A')} "
+                f"load raw {m.get('Present_Load')} = {_fmt(d, 'load_pct', '%')} "
+                f"temperature {_fmt(d, 'temp_c', 'C')} voltage {_fmt(d, 'voltage_v', 'V')} "
+                f"status {d.get('status')} protection current raw {m.get('Protection_Current')}"
+            )
+        lines += _raw_lines(a.get("raw_dump"))
         if a.get("sync_read_present_position"):
             s = a["sync_read_present_position"]
             lines.append(f"    sync read: {s['failed']}/{s['reads']} failed, {s['ms_per_read']} ms each")
-            est = teleop_estimate(s.get("ms_per_read"))
+            est = a.get("teleop_estimate")
             if est:
                 lines.append(
                     f"    teleop estimate: ~{est['hz']} Hz, "
@@ -571,35 +954,92 @@ def summary(report: dict[str, Any]) -> str:
         be = a.get("bus_errors") or {}
         if be.get("errors"):
             lines.append(f"    bus errors: {be}")
-    lines += ["", f"Last {len(report['log_tail'])} log lines are in the zip."]
+    lines += ["", f"Last {len(report['log_tail'])} log lines are in the zip.", ""]
+    lines += send_instructions(report, target)
     return redact("\n".join(lines))
 
 
-def write_zip(report: dict[str, Any], paths: StationPaths, out_dir: Path) -> Path:
+def _fmt(d: dict[str, Any], key: str, unit: str) -> str:
+    if d.get(key) is None:
+        return "-"
+    return f"{d[key]} {unit}" + (
+        "" if d.get(f"{key}_plausible", True) else " (IMPLAUSIBLE: shown as unknown)"
+    )
+
+
+def _raw_lines(dump: dict[str, Any] | None) -> list[str]:
+    """The raw register dump, one line of bytes and one of decoded values per servo id."""
+    if not dump:
+        return []
+    out = [f"    raw register dump (READ per block, {dump.get('baud')} baud, hex bytes):"]
+    if dump.get("error"):
+        out.append(f"      ! {dump['error']}")
+    for mid, row in (dump.get("motors") or {}).items():
+        blocks = "  ".join(
+            f"[{rng}] {b.get('data') if b.get('answer') else 'no answer'}"
+            + (f" err 0x{b['error_byte']:02x}" if b.get("error_byte") else "")
+            for rng, b in row.get("blocks", {}).items()
+        )
+        out.append(f"      id {mid}: {blocks}")
+        d = row.get("decoded")
+        if d:
+            out.append(
+                f"        -> fw {d.get('firmware')} model {d.get('model_number')} "
+                f"temperature raw {d.get('temperature_raw')} = {_fmt(d, 'temp_c', 'C')} "
+                f"(max limit {d.get('max_temperature_limit_c')} C) "
+                f"voltage raw {d.get('voltage_raw')} = {_fmt(d, 'voltage_v', 'V')} "
+                f"current raw {d.get('current_raw')} = {_fmt(d, 'current_a', 'A')} "
+                f"load raw {d.get('load_raw')} = {_fmt(d, 'load_pct', '%')} "
+                f"status raw {d.get('status_raw')} {d.get('status')}"
+            )
+    return out
+
+
+def zip_target(out_dir: Path) -> Path:
+    return out_dir / f"hibiscus-station-doctor-{time.strftime('%Y%m%d-%H%M%S')}.zip"
+
+
+def _secrets(paths: StationPaths) -> list[str]:
+    """The local login token as stored on disk: removed literally from every file in the zip, on top
+    of :func:`redact` (which only finds it after ``t=`` / ``Bearer``)."""
+    try:
+        token = paths.token.read_text(encoding="utf-8").strip()
+    except OSError:
+        return []
+    return [token] if len(token) >= 8 else []
+
+
+def write_zip(report: dict[str, Any], paths: StationPaths, out_dir: Path, target: Path | None = None) -> Path:
+    """The zip to send. The token file and ``server.json`` are never added; every text goes
+    through :func:`redact` and loses the literal local token."""
     out_dir.mkdir(parents=True, exist_ok=True)
-    ts = time.strftime("%Y%m%d-%H%M%S")
-    target = out_dir / f"hibiscus-station-doctor-{ts}.zip"
-    text = summary(report)
+    target = target or zip_target(out_dir)
+    secrets = _secrets(paths)
+
+    def clean(text: str) -> str:
+        text = redact(text)
+        for secret in secrets:
+            text = text.replace(secret, "[local token removed]")
+        return text
+
+    def read(f: Path) -> str:
+        return clean(f.read_text(encoding="utf-8", errors="replace"))
+
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as z:
-        z.writestr("report.txt", text)
-        z.writestr("report.json", redact(json.dumps(report, indent=2, default=str)))
-        z.writestr("station.log.tail", "\n".join(report["log_tail"]))
+        z.writestr("report.txt", clean(summary(report, target)))
+        z.writestr("report.json", clean(json.dumps(report, indent=2, default=str)))
+        z.writestr("station.log.tail", clean("\n".join(report["log_tail"])))
         for name in ("robots.yaml", "settings.yaml"):
             f = paths.home / name
             if f.is_file():
-                z.writestr(name, redact(f.read_text(encoding="utf-8", errors="replace")))
+                z.writestr(name, read(f))
         for c in report["calibrations"]:
             p = Path(c["path"])
             if p.is_file() and p.stat().st_size < 64 * 1024:
-                z.writestr(
-                    f"calibration/{c['arm']}/{c['dir']}/{p.name}",
-                    p.read_text(encoding="utf-8", errors="replace"),
-                )
+                z.writestr(f"calibration/{c['arm']}/{c['dir']}/{p.name}", read(p))
         metas = sorted(paths.sessions.glob("*/session.json"), key=lambda f: f.stat().st_mtime)
         for f in metas[-5:] if paths.sessions.is_dir() else []:
-            z.writestr(
-                f"sessions/{f.parent.name}.json", redact(f.read_text(encoding="utf-8", errors="replace"))
-            )
+            z.writestr(f"sessions/{f.parent.name}.json", read(f))
     return target
 
 
@@ -613,5 +1053,8 @@ def run(
 ) -> tuple[str, Path]:
     paths = StationPaths(home)
     report = collect(paths, calibration_root(), ping=ping, probe_cameras=probe_cameras, echo=echo)
-    target = write_zip(report, paths, out_dir)
-    return summary(report), target
+    target = write_zip(report, paths, out_dir, zip_target(out_dir))
+    text = summary(report, target)
+    for secret in _secrets(paths):
+        text = text.replace(secret, "[local token removed]")
+    return text, target
