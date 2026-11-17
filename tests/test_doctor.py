@@ -1097,6 +1097,29 @@ def test_a_corrupted_id_byte_never_makes_a_silent_motor_answer(
     assert m6["state"] == "silent" and m6["evidence"]["corrupt"] == 0, m6
 
 
+def test_damaged_packets_count_for_the_servo_asked_after_a_scan_nobody_answered(
+    tmp_path: Path, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """QD-28 follow-up: the scan got no answer at all (its answers lost), and every packet of id 5
+    has a wrong checksum. A scan nobody answered is not a request whose late answers may still come
+    for id 5's ping: id 5's damaged answers to its own pings count for it, so it "answers only with
+    corrupted packets", never "do not answer"."""
+    f, ld = emus
+    home = _calibrated_home(tmp_path, f, ld, monkeypatch)
+    _mangle(
+        f,
+        lambda instr, req, _p, p: (
+            b"" if instr == 0x01 and req == 0xFE else p[:-1] + bytes([p[-1] ^ 0x5A]) if p[2] == 5 else p
+        ),
+    )
+    text, target = _run(home, tmp_path / "out")
+    problems, fol = text.split("\n\n")[0], _section(text, "follower")
+    assert "do not answer" not in text, problems
+    assert "    id 5: answers only with corrupted packets (checksum), no register could be read" in fol, fol
+    m5 = _arm(_report(target), "follower")["motors"]["5"]
+    assert m5["state"] == "corrupt" and m5["evidence"]["corrupt"] > 0, m5
+
+
 def test_a_motor_whose_every_answer_is_cut_short_is_not_silent(
     tmp_path: Path, emus: tuple[STSEmulator, STSEmulator], monkeypatch: pytest.MonkeyPatch
 ) -> None:

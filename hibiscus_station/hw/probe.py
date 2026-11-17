@@ -341,7 +341,7 @@ class Probe:
             self.damaged[kind] += 1
             return
         cur.damage = cur.damage or kind
-        waiting = any(not r.got and r.damage is None for r in self.open if r.seq < cur.seq)
+        waiting = any(not r.got and r.damage is None and not r.weak for r in self.open if r.seq < cur.seq)
         if cur.single is None or waiting:
             self.damaged[kind] += 1
             return
