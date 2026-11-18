@@ -62,15 +62,20 @@ const BlocklyEditor = lazy(() => import("../../programs/blockly/BlocklyEditor"))
 
 const enc = encodeURIComponent;
 
-/** Problems are told apart by icon and colour (an error, a warning, a run that needs a yes). */
+/**
+ * Problems are told apart by shape AND colour (QC F029 QD-37, WCAG 1.4.1): a filled badge per
+ * severity, glyph on fill ≥ 4.5:1 in both themes (`sev-*` tokens, checked in pixelTheme.test.ts).
+ * error = red badge with an X, warning = amber badge with a triangle, confirm = purple badge with a
+ * question mark; information (blue "i") is never a problem and sits in the Notes box.
+ */
 const SEVERITY_ICON: Record<
   CheckIssue["severity"],
-  { icon: "warning" | "help" | "info"; className: string }
+  { icon: "close" | "warning" | "help" | "info"; className: string }
 > = {
-  error: { icon: "warning", className: "text-destructive" },
-  warning: { icon: "warning", className: "text-warning" },
-  confirm: { icon: "help", className: "text-warning" },
-  info: { icon: "info", className: "text-info" },
+  error: { icon: "close", className: "bg-sev-error text-sev-error-foreground" },
+  warning: { icon: "warning", className: "bg-sev-warning text-sev-warning-foreground" },
+  confirm: { icon: "help", className: "bg-sev-confirm text-sev-confirm-foreground" },
+  info: { icon: "info", className: "bg-info text-info-foreground" },
 };
 
 /** Issues that depend on where the arm is: dropped when the pose is not known (QD-36). */
@@ -486,11 +491,18 @@ function ProgramWorkspace({ program, onDeleted }: { program: Program; onDeleted:
             >
               {problems.map((i) => (
                 <li key={i.id} className="flex items-start gap-2" data-severity={i.severity}>
-                  <PxIcon
-                    name={SEVERITY_ICON[i.severity].icon}
-                    className={cn("mt-0.5 shrink-0", SEVERITY_ICON[i.severity].className)}
-                    label={t(`programs.editor.severity_${i.severity}`)}
-                  />
+                  <span
+                    className={cn(
+                      "mt-0.5 inline-flex shrink-0 border-2 border-frame p-px",
+                      SEVERITY_ICON[i.severity].className,
+                    )}
+                    data-badge={i.severity}
+                  >
+                    <PxIcon
+                      name={SEVERITY_ICON[i.severity].icon}
+                      label={t(`programs.editor.severity_${i.severity}`)}
+                    />
+                  </span>
                   <span>
                     {issueText(i)}
                     {i.block_id ? (
@@ -510,7 +522,7 @@ function ProgramWorkspace({ program, onDeleted }: { program: Program; onDeleted:
             <section
               aria-labelledby="program-notes-title"
               aria-live="polite"
-              className="flex flex-col gap-1 border-2 border-l-8 border-frame border-l-info bg-background px-3 py-2"
+              className="flex flex-col gap-1 border-2 border-l-8 border-frame border-l-info bg-card px-3 py-2"
               data-testid="program-notes"
             >
               <h3

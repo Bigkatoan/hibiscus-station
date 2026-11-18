@@ -3,6 +3,7 @@
     "station": "Station"
   },
   "common": {
+    "technical_details": "Technical details",
     "cancel": "Cancel",
     "close": "Close",
     "dismiss": "Dismiss",
@@ -674,6 +675,7 @@
     "validation_failed": "Some values are not valid.",
     "server_url_invalid": "The server address must start with http:// or https://, for example https://hibiscus.example.org.",
     "server_url_file_share": "This is not a Hibiscus server address but a file-sharing link (OneDrive, SharePoint, Google Drive, Dropbox…). Paste the address of your Hibiscus site, for example https://hibiscus.example.org.",
+    "server_not_hibiscus": "This address did not answer as a Hibiscus server. Check the address of your Hibiscus site (for example https://hibiscus.example.org) and that it is reachable from this computer; the token was not sent.",
     "not_found": "Not found.",
     "busy": "Station is busy ({{state}}).",
     "port_busy": "Another program (LeLab? lerobot?) is using {{port}}.",

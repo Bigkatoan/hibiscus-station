@@ -371,3 +371,146 @@ describe("D-25: Train needs a server, not a robot", () => {
     }
   });
 });
+
+describe("QC F029 r2: QD-37, QD-38, QD-39, QD-41", { timeout: 40000 }, () => {
+  async function checkedFar(h: StationHarness, user: ReturnType<typeof userEvent.setup>) {
+    const start = startOfPickA(h);
+    await holdArm(
+      h,
+      start.map((v, i) => (i === 0 ? v + 60 : v)),
+    );
+    await openEditor(h);
+    await user.click(screen.getByRole("button", { name: "Check" }));
+    expect(await screen.findByTestId("program-notes")).toHaveTextContent("(60° away)");
+  }
+
+  it("QD-38: a reconnect within a second brings the line back without moving the arm", async () => {
+    const h = setupStation();
+    const user = userEvent.setup();
+    await checkedFar(h, user);
+    act(() => {
+      h.sim.disconnect();
+    });
+    await waitFor(
+      () => {
+        expect(screen.queryByTestId("program-notes")).toBeNull();
+      },
+      { timeout: 3000 },
+    );
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 200));
+    });
+    act(() => {
+      h.sim.doConnect("desk_so101");
+    });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("program-notes")).toHaveTextContent("(60° away)");
+      },
+      { timeout: 5000 },
+    );
+  });
+
+  it("QD-37: error, warning and confirm have their own shape and colour", async () => {
+    const h = setupStation();
+    const profile = h.sim.profiles[0];
+    if (profile) profile.follower.allow_fast_replay = true;
+    const p = h.sim.programs.program("sort_cubes");
+    const editor = structuredClone(p.editor) as { blocks: { blocks: Record<string, unknown>[] } };
+    const speedUp = (b: unknown): void => {
+      if (!b || typeof b !== "object") return;
+      const o = b as Record<string, unknown>;
+      if (o.id === "play_a") (o.fields as Record<string, unknown>).SPEED = 150; // confirm
+      for (const v of Object.values(o)) {
+        if (Array.isArray(v)) v.forEach(speedUp);
+        else if (v && typeof v === "object") speedUp(v);
+      }
+    };
+    speedUp(editor);
+    editor.blocks.blocks.push({ type: "hb_relax_arm", id: "lonely", x: 600, y: 40 }); // warning
+    editor.blocks.blocks.push({
+      type: "hb_move_to_pose",
+      id: "nowhere",
+      x: 600,
+      y: 200,
+      fields: { POSE: "nope" },
+    }); // error
+    h.sim.programs.putProgram("sort_cubes", { name: p.name, editor, buttons: p.buttons });
+    const user = userEvent.setup();
+    await checkedFar(h, user);
+    const problems = screen.getByTestId("program-issues");
+    const badge = (sev: string) => {
+      const el = problems.querySelector(`[data-badge="${sev}"]`);
+      if (!el) throw new Error(`no ${sev} badge`);
+      return el;
+    };
+    const shape = (sev: string) => badge(sev).querySelector("path")?.getAttribute("d") ?? "";
+    expect(new Set([shape("error"), shape("warning"), shape("confirm")]).size).toBe(3);
+    expect(badge("error")).toHaveClass("bg-sev-error");
+    expect(badge("warning")).toHaveClass("bg-sev-warning");
+    expect(badge("confirm")).toHaveClass("bg-sev-confirm");
+    expect(within(problems).getByRole("img", { name: "Error" })).toBeInTheDocument();
+    expect(within(problems).getAllByRole("img", { name: "Warning" }).length).toBeGreaterThan(0);
+    expect(within(problems).getByRole("img", { name: "Needs your confirmation" })).toBeInTheDocument();
+  });
+
+  it("QD-39: in Vietnamese, a refusal from the Station shows only the Vietnamese sentence", async () => {
+    const h = setupStation();
+    const { server } = await import("@/test/server");
+    const { http, HttpResponse } = await import("msw");
+    const { stationBase } = await import("./api/client");
+    server.use(
+      http.post(`${stationBase()}/server/pair`, () =>
+        HttpResponse.json(
+          {
+            type: "https://hibiscus.dev/problems/station/server_not_hibiscus",
+            title: "This address did not answer as a Hibiscus server",
+            status: 422,
+            code: "server_not_hibiscus",
+            detail: "https://hibiscus.example.org/api/v1 did not answer as a Hibiscus server: HTTP 404",
+            request_id: "r",
+          },
+          { status: 422, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+    );
+    await act(async () => {
+      await i18n.changeLanguage("vi");
+    });
+    try {
+      const user = userEvent.setup();
+      renderStation("/train", h);
+      await settle();
+      await user.type(await screen.findByLabelText(/Địa chỉ máy chủ/), "https://hibiscus.example.org");
+      await user.type(screen.getByLabelText(/Token truy cập cá nhân/), "hbp_AbCd1234_xxxxxxxxxxxx");
+      await user.click(screen.getByRole("button", { name: "Ghép nối" }));
+      expect(await screen.findByText(/^Địa chỉ này không phản hồi như một máy chủ Hibiscus\./)).toBeVisible();
+      // The English detail is only in the closed "Chi tiết kỹ thuật".
+      expect(screen.getByTestId("error-detail")).not.toBeVisible();
+      expect(within(screen.getByTestId("error-details")).getByText("Chi tiết kỹ thuật")).toBeVisible();
+    } finally {
+      await act(async () => {
+        await i18n.changeLanguage("en");
+      });
+    }
+  });
+
+  it("QD-41: a real server address with ?cid= or a file path is not refused by the hint", async () => {
+    const h = setupStation();
+    const user = userEvent.setup();
+    renderStation("/train", h);
+    await settle();
+    const url = await screen.findByLabelText(/Server URL/);
+    await user.type(screen.getByLabelText(/Personal access token/), "hbp_pat_123");
+    for (const ok of [
+      "https://hibiscus.example.org/?cid=campaign1",
+      "https://hibiscus.example.org/robots.txt",
+    ]) {
+      await user.clear(url);
+      await user.type(url, ok);
+      await user.tab();
+      expect(url).not.toHaveAttribute("aria-invalid");
+      expect(screen.getByRole("button", { name: "Pair" })).toBeEnabled();
+    }
+  });
+});

@@ -3,6 +3,7 @@
     "station": "Station"
   },
   "common": {
+    "technical_details": "Chi tiết kỹ thuật",
     "cancel": "Huỷ",
     "close": "Đóng",
     "dismiss": "Ẩn",
@@ -674,6 +675,7 @@
     "validation_failed": "Một số giá trị không hợp lệ.",
     "server_url_invalid": "Địa chỉ máy chủ phải bắt đầu bằng http:// hoặc https://, ví dụ https://hibiscus.example.org.",
     "server_url_file_share": "Đây không phải địa chỉ máy chủ Hibiscus mà là liên kết chia sẻ tệp (OneDrive, SharePoint, Google Drive, Dropbox…). Hãy dán địa chỉ trang Hibiscus của bạn, ví dụ https://hibiscus.example.org.",
+    "server_not_hibiscus": "Địa chỉ này không phản hồi như một máy chủ Hibiscus. Hãy kiểm tra địa chỉ trang Hibiscus của bạn (ví dụ https://hibiscus.example.org) và máy này có kết nối tới được không; token chưa được gửi đi.",
     "not_found": "Không tìm thấy.",
     "busy": "Station đang bận ({{state}}).",
     "port_busy": "Một chương trình khác (LeLab? lerobot?) đang dùng {{port}}.",

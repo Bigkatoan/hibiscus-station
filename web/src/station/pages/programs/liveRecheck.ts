@@ -78,9 +78,14 @@ export function useLiveRecheck({
   });
   const known = useRef(knownPose.current() !== null);
 
+  // The pose became known or unknown since the last check: check again whatever the movement
+  // (a reconnect within a second leaves the arm where it was: QC F029 QD-38).
+  const force = useRef(false);
+
   const fire = useRef(() => {
     if (inflight.current || !live.current.enabled) return;
     inflight.current = true;
+    force.current = false;
     basis.current = knownPose.current();
     last.current = Date.now();
     live.current
@@ -93,22 +98,26 @@ export function useLiveRecheck({
 
   useEffect(() => {
     if (!enabled) return undefined;
+    const due = () => force.current || poseDelta(basis.current, knownPose.current()) > RECHECK_MOVE_DEG;
     const evaluate = () => {
       const pose = knownPose.current();
-      if (known.current && pose === null) live.current.onPoseLost();
+      if (known.current !== (pose !== null)) {
+        if (pose === null) live.current.onPoseLost();
+        force.current = true;
+      }
       known.current = pose !== null;
-      if (inflight.current || timer.current) return;
-      if (poseDelta(basis.current, pose) <= RECHECK_MOVE_DEG) return;
+      if (inflight.current || timer.current || !due()) return;
       const wait = last.current + RECHECK_MIN_MS - Date.now();
       if (wait <= 0) fire.current();
       else
         timer.current = setTimeout(() => {
           timer.current = null;
-          if (poseDelta(basis.current, knownPose.current()) > RECHECK_MOVE_DEG) fire.current();
+          if (due()) fire.current();
         }, wait);
     };
     const unsubscribe = store.subscribe(evaluate);
-    // A stream that stops sends nothing: look at the pose's age regularly too.
+    // A stream that stops sends nothing: look at the pose's age regularly too. This also picks up
+    // a forced check that had to wait for one in flight.
     const tick = setInterval(evaluate, 1000);
     return () => {
       unsubscribe();

@@ -14,7 +14,7 @@ from typing import Any
 
 from hibiscus_station.errors import StationError
 from hibiscus_station.jobs import Job, JobManager
-from hibiscus_station.server_url import server_url_problem
+from hibiscus_station.server_url import probe_hibiscus, server_url_problem
 from hibiscus_station.settings import write_private
 
 log = logging.getLogger(__name__)
@@ -107,6 +107,14 @@ class ServerLink:
             raise StationError("validation_failed", str(exc)) from exc
         if not looks_like_pat(token):
             raise StationError("validation_failed", "this is not a Hibiscus personal access token (hbp_...)")
+        # QD-40: the token goes only to a host that proved it is a Hibiscus server.
+        why = probe_hibiscus(base)
+        if why is not None:
+            raise StationError(
+                "server_not_hibiscus",
+                f"{base} did not answer as a Hibiscus server: {why}"[:300],
+                params={"reason": why},
+            )
         try:
             with HibiscusApi(base, token) as api:
                 me = api.request("GET", "/auth/me").json()

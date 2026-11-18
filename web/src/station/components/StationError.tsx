@@ -31,19 +31,36 @@ export function errorDetail(error: unknown): string | null {
   return detail;
 }
 
-/** Localised Station error from its Problem `code`, with the server `detail` underneath: the exact
- * reason (motor id, register, port, calibration file) is what lets a user or a bug report act on it. */
+/** True when the UI has its own sentence for this error's `code`. */
+export function knownError(exists: (key: string) => boolean, error: unknown): boolean {
+  return error instanceof StationApiError && Boolean(error.code) && exists(`station:errors.${error.code}`);
+}
+
+/**
+ * Localised Station error from its Problem `code`. The server's own `detail` (motor id, register,
+ * port, calibration file: English, machine words) is what lets an engineer or a bug report act on
+ * it: for a code the UI knows it sits in a closed "Technical details" (FR-73, P-5; QC F029 QD-39),
+ * only an error the UI has no sentence for shows it right away.
+ */
 export function StationError({ error, className }: { error: unknown; className?: string }) {
-  const { t } = useTranslation("station");
+  const { t, i18n } = useTranslation("station");
   if (!error) return null;
   const detail = errorDetail(error);
+  const known = knownError((k) => i18n.exists(k), error);
   return (
     <Alert variant="destructive" className={className}>
       <div className="flex gap-2">
         <PxIcon name="warning" className="mt-0.5 shrink-0" />
         <div className="min-w-0">
           <AlertTitle>{errorText(t, error)}</AlertTitle>
-          {detail ? (
+          {detail && known ? (
+            <details className="mt-1 text-xs" data-testid="error-details">
+              <summary className="cursor-pointer select-none">{t("common.technical_details")}</summary>
+              <p className="mt-1 break-words font-mono" data-testid="error-detail">
+                {detail}
+              </p>
+            </details>
+          ) : detail ? (
             <p className="mt-1 break-words font-mono text-xs" data-testid="error-detail">
               {detail}
             </p>
