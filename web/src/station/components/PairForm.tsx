@@ -59,7 +59,49 @@ const WRAPPERS: [string, string[]][] = [
 
 const on = (host: string, domain: string) => host === domain || host.endsWith(`.${domain}`);
 
-export type ServerUrlProblem = "not_url" | "file_share";
+export type ServerUrlProblem = "not_url" | "file_share" | "insecure";
+
+/** IPv4 networks a plain http:// server may be on: loopback, RFC 1918, link-local, CGNAT. */
+const LOCAL_V4: [number, number][] = [
+  [0x7f000000, 8],
+  [0x0a000000, 8],
+  [0xac100000, 12],
+  [0xc0a80000, 16],
+  [0xa9fe0000, 16],
+  [0x64400000, 10],
+];
+
+function ipv4(host: string): number | null {
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
+  if (!m) return null;
+  const parts = m.slice(1).map(Number);
+  if (parts.some((p) => p > 255)) return null;
+  return parts.reduce((a, p) => a * 256 + p, 0);
+}
+
+/**
+ * A host on this computer or the local network (QD-45): localhost, loopback / private /
+ * link-local / CGNAT addresses (IPv4 and IPv6), `*.local`, `*.lan` and single-label names. Plain
+ * http:// is only allowed there; the same rule as `is_local_host` on the Station.
+ */
+export function isLocalHost(raw: string): boolean {
+  const host = raw
+    .replace(/^\[|\]$/g, "")
+    .replace(/\.$/, "")
+    .toLowerCase();
+  const v4 = ipv4(host);
+  if (v4 !== null)
+    return LOCAL_V4.some(
+      ([net, bits]) => Math.floor(v4 / 2 ** (32 - bits)) === Math.floor(net / 2 ** (32 - bits)),
+    );
+  if (host.includes(":")) {
+    // IPv6: ::1, fc00::/7 (ULA), fe80::/10 (link-local)
+    if (host === "::1") return true;
+    const first = parseInt(host.split(":")[0] ?? "0", 16);
+    return (first & 0xfe00) === 0xfc00 || (first & 0xffc0) === 0xfe80;
+  }
+  return !host.includes(".") || on(host, "localhost") || host.endsWith(".local") || host.endsWith(".lan");
+}
 
 /** Why `raw` cannot be a Hibiscus server address, or null when the hint has nothing to say. */
 export function serverUrlProblem(raw: string, depth = 0): ServerUrlProblem | null {
@@ -78,6 +120,8 @@ export function serverUrlProblem(raw: string, depth = 0): ServerUrlProblem | nul
     const inner = [...u.searchParams].find(([k, v]) => keys.includes(k.toLowerCase()) && v.includes("://"));
     if (inner && serverUrlProblem(inner[1], depth + 1) === "file_share") return "file_share";
   }
+  // The token must never cross the internet in clear text (QD-45).
+  if (u.protocol === "http:" && !isLocalHost(u.hostname)) return "insecure";
   return null;
 }
 
@@ -92,7 +136,8 @@ export function PairForm({ onPaired }: { onPaired?: () => void }) {
     [qk.server, qk.status],
   );
   const problem = url.trim() ? serverUrlProblem(url) : null;
-  // A pasted file-share link is said at once; a half-typed address once the field is left.
+  // A pasted file-share link is said at once; a half-typed (or plain http) address once the field
+  // is left. Pair stays off meanwhile.
   const urlError = problem === "file_share" || (problem && touched) ? t(`pair.url_${problem}`) : undefined;
   const link = problem ? null : tokenUrl(url);
   return (

@@ -184,7 +184,8 @@ def test_a_hibiscus_server_gets_the_token_only_after_it_proved_itself(client: An
     finally:
         srv.shutdown()
     # The fake rejects the token: the pairing fails, but the token was sent there, after the probe.
-    assert r.status_code == 422 and r.json()["code"] == "validation_failed", r.text
+    # Its own code, with its own sentence (QD-44: "validation_failed" hid the reason).
+    assert r.status_code == 422 and r.json()["code"] == "server_unauthorized", r.text
     assert seen.requests[0] == ("hibiscus", "/api/v1/auth/config", None)
     assert [p for _n, p, a in seen.requests if a] == ["/api/v1/auth/me"]
 
@@ -294,4 +295,102 @@ def test_known_share_links_are_refused_before_any_request(client: Any, url: str)
         route = router.route(host__regex=r".*").respond(500)
         r = _pair(client, url)
     assert r.status_code == 422 and r.json()["code"] == "server_url_file_share", r.text
+    assert not route.calls
+
+
+# =========================================================================== QC F029 r3: QD-42 .. QD-45
+def test_a_bad_token_format_has_its_own_code(client: Any) -> None:
+    r = client.post(f"{API}/server/pair", json={"url": "https://hibiscus.example.org", "token": "hbp_short"})
+    assert r.status_code == 422 and r.json()["code"] == "token_format_invalid", r.text
+
+
+def _drip(h: Any, *, headers_too: bool) -> None:
+    """1 byte every 3 s: the per-read timeout never fires (QD-42)."""
+    import time
+
+    head = b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 400\r\n\r\n"
+    try:
+        if not headers_too:
+            h.wfile.write(head)
+            h.wfile.flush()
+            head = b""
+        for b in head + json.dumps(HIBISCUS_CONFIG).encode().ljust(400):
+            h.wfile.write(bytes([b]))
+            h.wfile.flush()
+            time.sleep(3.0)
+    except OSError:
+        pass  # the Station hung up: what we want
+
+
+@pytest.mark.parametrize("headers_too", [False, True], ids=["body-drip", "header-drip"])
+def test_a_dripping_server_is_cut_off_at_the_deadline(client: Any, seen: _Seen, headers_too: bool) -> None:
+    import time
+
+    srv = _serve("drip", seen, lambda h: _drip(h, headers_too=headers_too))
+    try:
+        t0 = time.monotonic()
+        r = _pair(client, _url(srv))
+        took = time.monotonic() - t0
+    finally:
+        srv.shutdown()
+    assert r.status_code == 422 and r.json()["code"] == "server_not_hibiscus", r.text
+    assert took < 7.0, took  # PROBE_TIMEOUT_S = 5 over the whole exchange
+    assert seen.with_token() == []
+
+
+@pytest.mark.parametrize(
+    ("body", "ok"),
+    [
+        (HIBISCUS_CONFIG, True),
+        ({**HIBISCUS_CONFIG, "supported_locales": ["vi", "en", "ja"]}, True),  # QD-43
+        ({**HIBISCUS_CONFIG, "supported_locales": ["en"]}, True),
+        ({**HIBISCUS_CONFIG, "password_min_length": 14, "new_field": 1}, True),
+        ({**HIBISCUS_CONFIG, "turnstile_site_key": "0x4AAA"}, True),
+        ({**HIBISCUS_CONFIG, "supported_locales": ["ja", "fr"]}, False),
+        ({**HIBISCUS_CONFIG, "supported_locales": "vi"}, False),
+        ({k: v for k, v in HIBISCUS_CONFIG.items() if k != "email_delivery_enabled"}, False),
+        ({**HIBISCUS_CONFIG, "password_min_length": "12"}, False),
+        ({"status": "ok"}, False),
+        ([], False),
+    ],
+)
+def test_the_identity_check_is_tolerant_but_typed(body: Any, ok: bool) -> None:
+    from hibiscus_station.server_url import is_hibiscus_identity
+
+    assert is_hibiscus_identity(body) is ok
+
+
+def test_a_hibiscus_server_with_more_languages_is_still_hibiscus(client: Any, seen: _Seen) -> None:
+    cfg = {**HIBISCUS_CONFIG, "supported_locales": ["vi", "en", "ja"]}
+
+    def reply(h: Any) -> None:
+        if h.path == "/api/v1/auth/config":
+            _send(h, 200, json.dumps(cfg).encode(), "application/json")
+        else:
+            _hibiscus_like(h)
+
+    srv = _serve("hibiscus", seen, reply)
+    try:
+        r = _pair(client, _url(srv))
+    finally:
+        srv.shutdown()
+    assert r.json()["code"] == "server_unauthorized", r.text  # got past the probe to the token check
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://robot.example.com",
+        "http://hibiscus.example.org:8000/",
+        "http://8.8.8.8:8000",
+        "http://[2001:db8::1]/",
+    ],
+)
+def test_plain_http_to_a_public_host_is_refused_before_any_request(client: Any, url: str) -> None:
+    import respx
+
+    with respx.mock(assert_all_mocked=True, assert_all_called=False) as router:
+        route = router.route(host__regex=r".*").respond(500)
+        r = _pair(client, url)
+    assert r.status_code == 422 and r.json()["code"] == "server_url_insecure", r.text
     assert not route.calls

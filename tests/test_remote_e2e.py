@@ -66,7 +66,7 @@ def test_pair_and_missing_scope(station: Station, fake: Any) -> None:
 def test_pair_rejects_non_pat(station: Station, fake: Any) -> None:
     with pytest.raises(StationError) as ei:
         station.server.pair("https://hibiscus.test", "not-a-token")
-    assert ei.value.code == "validation_failed"
+    assert ei.value.code == "token_format_invalid"  # its own sentence (QC F029 QD-44)
 
 
 def test_upload_refuses_unfinalized(station: Station, fake: Any, tmp_path: Path) -> None:

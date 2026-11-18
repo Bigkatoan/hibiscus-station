@@ -101,12 +101,19 @@ class ServerLink:
             )
         if problem == "not_url":
             raise StationError("server_url_invalid", "the server address must start with http:// or https://")
+        if problem == "insecure":
+            raise StationError(
+                "server_url_insecure",
+                "plain http:// is only for a server on this computer or the local network; use https://",
+            )
         try:
             base = normalize_server(url)
         except ValueError as exc:
-            raise StationError("validation_failed", str(exc)) from exc
+            raise StationError("server_url_invalid", str(exc)) from exc
         if not looks_like_pat(token):
-            raise StationError("validation_failed", "this is not a Hibiscus personal access token (hbp_...)")
+            raise StationError(
+                "token_format_invalid", "this is not a Hibiscus personal access token (hbp_...)"
+            )
         # QD-40: the token goes only to a host that proved it is a Hibiscus server.
         why = probe_hibiscus(base)
         if why is not None:
@@ -119,8 +126,8 @@ class ServerLink:
             with HibiscusApi(base, token) as api:
                 me = api.request("GET", "/auth/me").json()
         except ApiError as exc:
-            if getattr(exc, "status", 0) == 401:
-                raise StationError("validation_failed", "the server rejected this token") from exc
+            if getattr(exc, "status", 0) in (401, 403):
+                raise StationError("server_unauthorized", "the server rejected this token") from exc
             raise _api_error(exc) from exc
         except Exception as exc:
             raise StationError("server_error", f"cannot reach {base}: {exc}"[:300]) from exc
@@ -129,9 +136,9 @@ class ServerLink:
         missing = [s for s in REQUIRED if s not in expand(scopes)]
         if missing:
             raise StationError(
-                "not_paired",
+                "token_missing_scope",
                 f"the token lacks scope(s) {', '.join(missing)}",
-                params={"missing_scope": missing[0]},
+                params={"missing_scope": missing[0], "missing": missing},
             )
         memberships = me.get("memberships") or []
         ws = workspace_id or tok.get("workspace_id")
@@ -140,12 +147,13 @@ class ServerLink:
         member = next((m for m in memberships if m.get("workspace_id") == ws), None)
         if member is None:
             raise StationError(
-                "validation_failed",
+                "workspace_required",
                 "choose a workspace",
                 params={
                     "workspaces": [
                         {"id": m["workspace_id"], "slug": m.get("workspace_slug")} for m in memberships
-                    ]
+                    ],
+                    "names": [str(m.get("workspace_slug") or m["workspace_id"]) for m in memberships],
                 },
             )
         save_token(base, token)

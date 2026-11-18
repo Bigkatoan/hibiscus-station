@@ -1,5 +1,5 @@
 {
-  "_comment": "Share-link hint (D-25, QD-35, QD-41): the same cases for the Station (tests/test_field_029.py) and the pairing form (web station.unit.test.ts). It is only a friendly early hint for the families the customer named; what keeps the token safe is the identity probe of POST /server/pair (QD-40). null = no hint (the probe decides).",
+  "_comment": "Share-link hint (D-25, QD-35, QD-41): the same cases for the Station (tests/test_field_029.py) and the pairing form (web station.unit.test.ts). It is only a friendly early hint for the families the customer named; what keeps the token safe is the identity probe of POST /server/pair (QD-40). \"insecure\" = plain http:// to a public host (QD-45: only localhost, loopback, private / link-local / CGNAT IPs, *.local, *.lan and single-label names may use http). null = no hint (the probe decides).",
   "cases": [
     [
       "https://hibiscus.example.org",
@@ -207,6 +207,106 @@
     ],
     [
       "https://www.fshare.vn/file/ABCDEF123",
+      null
+    ],
+    [
+      "http://robot.example.com",
+      "insecure"
+    ],
+    [
+      "http://hibiscus.example.org:8000/",
+      "insecure"
+    ],
+    [
+      "HTTP://Hibiscus.Example.ORG",
+      "insecure"
+    ],
+    [
+      "http://8.8.8.8:8000",
+      "insecure"
+    ],
+    [
+      "http://100.128.0.1",
+      "insecure"
+    ],
+    [
+      "http://172.32.0.1",
+      "insecure"
+    ],
+    [
+      "http://[2001:db8::1]/",
+      "insecure"
+    ],
+    [
+      "http://localhost:8000",
+      null
+    ],
+    [
+      "http://app.localhost",
+      null
+    ],
+    [
+      "http://127.0.0.1:18000",
+      null
+    ],
+    [
+      "http://127.8.9.10",
+      null
+    ],
+    [
+      "http://[::1]:8000",
+      null
+    ],
+    [
+      "http://10.0.0.5/",
+      null
+    ],
+    [
+      "http://172.16.4.2:8000",
+      null
+    ],
+    [
+      "http://172.31.255.255",
+      null
+    ],
+    [
+      "http://192.168.1.10:8000",
+      null
+    ],
+    [
+      "http://169.254.10.20",
+      null
+    ],
+    [
+      "http://100.64.0.1",
+      null
+    ],
+    [
+      "http://100.127.255.254",
+      null
+    ],
+    [
+      "http://[fd12:3456::1]/",
+      null
+    ],
+    [
+      "http://[fe80::1]/",
+      null
+    ],
+    [
+      "http://hibiscus.local:8000",
+      null
+    ],
+    [
+      "http://gpu-box.lan",
+      null
+    ],
+    [
+      "http://hibiscus:8000",
+      null
+    ],
+    [
+      "https://robot.example.com",
       null
     ]
   ]

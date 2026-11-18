@@ -31,22 +31,38 @@ export function errorDetail(error: unknown): string | null {
   return detail;
 }
 
-/** True when the UI has its own sentence for this error's `code`. */
-export function knownError(exists: (key: string) => boolean, error: unknown): boolean {
-  return error instanceof StationApiError && Boolean(error.code) && exists(`station:errors.${error.code}`);
+/**
+ * Codes whose own sentence fully explains the error: their Station `detail` (English, machine
+ * words) goes into the closed "Technical details" (FR-73, P-5; QC F029 QD-39). Every other code,
+ * the generic `validation_failed` first (52 places, each with its own reason), keeps the detail in
+ * sight: hiding it hid the reason (QD-44).
+ */
+export const SELF_EXPLAINING = new Set([
+  "server_url_invalid",
+  "server_url_file_share",
+  "server_url_insecure",
+  "server_not_hibiscus",
+  "server_unauthorized",
+  "token_format_invalid",
+  "token_missing_scope",
+  "workspace_required",
+]);
+
+/** True when the UI's sentence for this error says all there is to say. */
+export function selfExplaining(error: unknown): boolean {
+  return error instanceof StationApiError && SELF_EXPLAINING.has(error.code);
 }
 
 /**
- * Localised Station error from its Problem `code`. The server's own `detail` (motor id, register,
- * port, calibration file: English, machine words) is what lets an engineer or a bug report act on
- * it: for a code the UI knows it sits in a closed "Technical details" (FR-73, P-5; QC F029 QD-39),
- * only an error the UI has no sentence for shows it right away.
+ * Localised Station error from its Problem `code`, with the server's own `detail` (motor id,
+ * register, port, calibration file) that lets a user or a bug report act on it: in sight, or in a
+ * closed "Technical details" when the sentence already says everything.
  */
 export function StationError({ error, className }: { error: unknown; className?: string }) {
-  const { t, i18n } = useTranslation("station");
+  const { t } = useTranslation("station");
   if (!error) return null;
   const detail = errorDetail(error);
-  const known = knownError((k) => i18n.exists(k), error);
+  const known = selfExplaining(error);
   return (
     <Alert variant="destructive" className={className}>
       <div className="flex gap-2">

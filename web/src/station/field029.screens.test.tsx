@@ -514,3 +514,97 @@ describe("QC F029 r2: QD-37, QD-38, QD-39, QD-41", { timeout: 40000 }, () => {
     }
   });
 });
+
+describe("QC F029 r3: QD-44, QD-45", { timeout: 40000 }, () => {
+  async function pairWith(url: string, token: string, lang: "en" | "vi") {
+    const h = setupStation();
+    await act(async () => {
+      await i18n.changeLanguage(lang);
+    });
+    const user = userEvent.setup();
+    renderStation("/train", h);
+    await settle();
+    await user.type(await screen.findByLabelText(lang === "vi" ? /Địa chỉ máy chủ/ : /Server URL/), url);
+    await user.type(
+      screen.getByLabelText(lang === "vi" ? /Token truy cập cá nhân/ : /Personal access token/),
+      token,
+    );
+    await user.click(screen.getByRole("button", { name: lang === "vi" ? "Ghép nối" : "Pair" }));
+    return user;
+  }
+  afterEach(async () => {
+    await act(async () => {
+      await i18n.changeLanguage("en");
+    });
+  });
+
+  it.each([
+    ["en", "hbp_rejected_token_123", "The server rejected this token."],
+    ["vi", "hbp_rejected_token_123", "Máy chủ từ chối token này."],
+    ["en", "not-a-token", "This is not a Hibiscus personal access token."],
+    ["vi", "not-a-token", "Đây không phải token truy cập cá nhân của Hibiscus."],
+  ] as const)("QD-44 (%s): pairing says why (%s)", async (lang, token, sentence) => {
+    await pairWith("https://hibiscus.example.org", token, lang);
+    expect(await screen.findByText(new RegExp(`^${sentence.replace(/[.()]/g, "\\$&")}`))).toBeVisible();
+    expect(
+      screen.queryByText(lang === "vi" ? "Một số giá trị không hợp lệ." : "Some values are not valid."),
+    ).toBeNull();
+  });
+
+  it("QD-44: a generic validation_failed keeps its reason in sight", async () => {
+    const h = setupStation();
+    const { server } = await import("@/test/server");
+    const { http, HttpResponse } = await import("msw");
+    const { stationBase } = await import("./api/client");
+    server.use(
+      http.post(`${stationBase()}/server/pair`, () =>
+        HttpResponse.json(
+          {
+            type: "x",
+            title: "Validation failed",
+            status: 422,
+            code: "validation_failed",
+            detail: "dataset name must match [a-z0-9][a-z0-9_-]{0,63}",
+            request_id: "r",
+          },
+          { status: 422, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderStation("/train", h);
+    await settle();
+    await user.type(await screen.findByLabelText(/Server URL/), "https://hibiscus.example.org");
+    await user.type(screen.getByLabelText(/Personal access token/), "hbp_AbCd1234_xxxxxxxxxxxx");
+    await user.click(screen.getByRole("button", { name: "Pair" }));
+    expect(await screen.findByTestId("error-detail")).toBeVisible();
+    expect(screen.getByTestId("error-detail")).toHaveTextContent("dataset name must match");
+  });
+
+  it.each([
+    ["en", "Use an https:// address for a server on the internet"],
+    ["vi", "Hãy dùng địa chỉ https:// cho máy chủ trên internet"],
+  ] as const)("QD-45 (%s): plain http to a public host is refused in the form", async (lang, sentence) => {
+    const h = setupStation();
+    await act(async () => {
+      await i18n.changeLanguage(lang);
+    });
+    const user = userEvent.setup();
+    renderStation("/train", h);
+    await settle();
+    const url = await screen.findByLabelText(lang === "vi" ? /Địa chỉ máy chủ/ : /Server URL/);
+    await user.type(
+      screen.getByLabelText(lang === "vi" ? /Token truy cập cá nhân/ : /Personal access token/),
+      "hbp_x",
+    );
+    await user.type(url, "http://robot.example.com");
+    await user.tab();
+    expect(screen.getByText(new RegExp(`^${sentence.replace(/[.()/]/g, "\\$&")}`))).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: lang === "vi" ? "Ghép nối" : "Pair" })).toBeDisabled();
+    await user.clear(url);
+    await user.type(url, "http://192.168.1.10:8000");
+    await user.tab();
+    expect(url).not.toHaveAttribute("aria-invalid");
+    expect(screen.getByRole("button", { name: lang === "vi" ? "Ghép nối" : "Pair" })).toBeEnabled();
+  });
+});
