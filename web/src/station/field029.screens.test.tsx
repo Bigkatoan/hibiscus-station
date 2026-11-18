@@ -73,98 +73,108 @@ function stopStream(): void {
 async function openEditor(h: StationHarness) {
   renderStation("/programs?tab=programs", h);
   await settle();
-  await screen.findByTestId("blockly-editor");
-  await waitFor(() => {
-    expect(document.querySelector('[data-id="play_a"]')).not.toBeNull();
-  });
+  // The editor is a lazy chunk: the first test of the file loads it (slow on a busy CI runner).
+  await screen.findByTestId("blockly-editor", {}, { timeout: 15000 });
+  await waitFor(
+    () => {
+      expect(document.querySelector('[data-id="play_a"]')).not.toBeNull();
+    },
+    { timeout: 15000 },
+  );
 }
 
-describe("D-24: the first motion's slow approach is information that follows the arm", () => {
-  it("is an information line, not a problem, and goes away once the arm is near", async () => {
-    const h = setupStation();
-    const start = startOfPickA(h);
-    const far = start.map((v, i) => (i === 0 ? v + 60 : v));
-    await holdArm(h, far);
-    const user = userEvent.setup();
-    await openEditor(h);
-    await user.click(screen.getByRole("button", { name: "Check" }));
-    const notes = await screen.findByTestId("program-notes");
-    expect(notes).toHaveTextContent("The arm will first move slowly to the start of this motion (60° away).");
-    expect(within(notes).getByRole("listitem")).toHaveAttribute("data-severity", "info");
-    // Not a problem: no problem list, "No problems found." stays.
-    expect(screen.queryByTestId("program-issues")).toBeNull();
-    expect(screen.getByTestId("program-ok")).toBeInTheDocument();
-    expect(screen.queryByText(/starts far from the arm/)).toBeNull();
-
-    // The arm moves to 20° from the start (within the 30° limit): the line goes away by itself,
-    // without pressing Check again.
-    await holdArm(
-      h,
-      start.map((v, i) => (i === 0 ? v + 20 : v)),
-    );
-    await waitFor(
-      () => {
-        expect(screen.queryByTestId("program-notes")).toBeNull();
-      },
-      { timeout: 4000 },
-    );
-
-    // And comes back, with the new distance, when the arm moves away again.
-    await holdArm(
-      h,
-      start.map((v, i) => (i === 0 ? v - 45 : v)),
-    );
-    await waitFor(
-      () => {
-        expect(screen.getByTestId("program-notes")).toHaveTextContent("(45° away)");
-      },
-      { timeout: 4000 },
-    );
-  });
-
-  it("never asks for a confirmation before a run", async () => {
-    const h = setupStation();
-    const start = startOfPickA(h);
-    await holdArm(
-      h,
-      start.map((v, i) => (i === 0 ? v + 60 : v)),
-    );
-    const user = userEvent.setup();
-    await openEditor(h);
-    await user.click(screen.getByRole("button", { name: "Dry run" }));
-    await waitFor(() => {
-      expect(h.sim.programs.run).not.toBeNull();
-    });
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(screen.getByTestId("program-notes")).toHaveTextContent("(60° away)");
-  });
-
-  it("is in Vietnamese with the distance", async () => {
-    const h = setupStation();
-    const start = startOfPickA(h);
-    await holdArm(
-      h,
-      start.map((v, i) => (i === 0 ? v + 60 : v)),
-    );
-    await act(async () => {
-      await i18n.changeLanguage("vi");
-    });
-    try {
+describe(
+  "D-24: the first motion's slow approach is information that follows the arm",
+  { timeout: 40000 },
+  () => {
+    it("is an information line, not a problem, and goes away once the arm is near", async () => {
+      const h = setupStation();
+      const start = startOfPickA(h);
+      const far = start.map((v, i) => (i === 0 ? v + 60 : v));
+      await holdArm(h, far);
       const user = userEvent.setup();
       await openEditor(h);
-      await user.click(screen.getByRole("button", { name: "Kiểm tra" }));
-      expect(await screen.findByTestId("program-notes")).toHaveTextContent(
-        "Tay sẽ đi chậm về điểm bắt đầu của chuyển động này (cách 60°).",
+      await user.click(screen.getByRole("button", { name: "Check" }));
+      const notes = await screen.findByTestId("program-notes");
+      expect(notes).toHaveTextContent(
+        "The arm will first move slowly to the start of this motion (60° away).",
       );
-    } finally {
-      await act(async () => {
-        await i18n.changeLanguage("en");
-      });
-    }
-  });
-});
+      expect(within(notes).getByRole("listitem")).toHaveAttribute("data-severity", "info");
+      // Not a problem: no problem list, "No problems found." stays.
+      expect(screen.queryByTestId("program-issues")).toBeNull();
+      expect(screen.getByTestId("program-ok")).toBeInTheDocument();
+      expect(screen.queryByText(/starts far from the arm/)).toBeNull();
 
-describe("QC F029 r1: QD-36 and the look of the information line", () => {
+      // The arm moves to 20° from the start (within the 30° limit): the line goes away by itself,
+      // without pressing Check again.
+      await holdArm(
+        h,
+        start.map((v, i) => (i === 0 ? v + 20 : v)),
+      );
+      await waitFor(
+        () => {
+          expect(screen.queryByTestId("program-notes")).toBeNull();
+        },
+        { timeout: 4000 },
+      );
+
+      // And comes back, with the new distance, when the arm moves away again.
+      await holdArm(
+        h,
+        start.map((v, i) => (i === 0 ? v - 45 : v)),
+      );
+      await waitFor(
+        () => {
+          expect(screen.getByTestId("program-notes")).toHaveTextContent("(45° away)");
+        },
+        { timeout: 4000 },
+      );
+    });
+
+    it("never asks for a confirmation before a run", async () => {
+      const h = setupStation();
+      const start = startOfPickA(h);
+      await holdArm(
+        h,
+        start.map((v, i) => (i === 0 ? v + 60 : v)),
+      );
+      const user = userEvent.setup();
+      await openEditor(h);
+      await user.click(screen.getByRole("button", { name: "Dry run" }));
+      await waitFor(() => {
+        expect(h.sim.programs.run).not.toBeNull();
+      });
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(screen.getByTestId("program-notes")).toHaveTextContent("(60° away)");
+    });
+
+    it("is in Vietnamese with the distance", async () => {
+      const h = setupStation();
+      const start = startOfPickA(h);
+      await holdArm(
+        h,
+        start.map((v, i) => (i === 0 ? v + 60 : v)),
+      );
+      await act(async () => {
+        await i18n.changeLanguage("vi");
+      });
+      try {
+        const user = userEvent.setup();
+        await openEditor(h);
+        await user.click(screen.getByRole("button", { name: "Kiểm tra" }));
+        expect(await screen.findByTestId("program-notes")).toHaveTextContent(
+          "Tay sẽ đi chậm về điểm bắt đầu của chuyển động này (cách 60°).",
+        );
+      } finally {
+        await act(async () => {
+          await i18n.changeLanguage("en");
+        });
+      }
+    });
+  },
+);
+
+describe("QC F029 r1: QD-36 and the look of the information line", { timeout: 40000 }, () => {
   async function checkedFar(h: StationHarness, user: ReturnType<typeof userEvent.setup>) {
     const start = startOfPickA(h);
     await holdArm(
