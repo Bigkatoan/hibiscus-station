@@ -698,7 +698,7 @@ Luồng phục hồi bắt buộc (mỗi luồng có AT):
 
 Các điểm dưới đây là **lỗi so với chuẩn chất lượng** trong bản 0.2.8 (không phải yêu cầu mới); chúng
 phải được sửa (hoặc khách hàng miễn bằng văn bản theo mã) trước khi phát hành v1.0. v0.2: K-n đã được Tech
-Lead xác nhận bằng chạy thử mang mã lỗi D-n; danh sách lỗi đầy đủ (D-1 – D-23) ở
+Lead xác nhận bằng chạy thử mang mã lỗi D-n; danh sách lỗi đầy đủ (D-1 – D-25; D-24, D-25 từ báo cáo hiện trường 0.2.9) ở
 [FEATURES.md](FEATURES.md#lỗi-đã-biết-d-n).
 
 | ID | Chỗ | Vấn đề | Yêu cầu liên quan | v0.2 |

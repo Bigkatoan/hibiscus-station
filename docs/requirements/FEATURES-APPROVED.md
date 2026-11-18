@@ -15,7 +15,7 @@ khách duyệt, danh sách lên v1.1, v1.2… Ý tưởng của nhóm dev gửi 
   thuộc nó** (cột Phụ thuộc trong [FEATURES.md](FEATURES.md)). Một Must FAIL chặn cả bản phát hành. Chỉ khách
   hàng miễn được một lỗi, bằng văn bản, theo mã lỗi.
 * Mô tả đầy đủ từng tính năng: [FEATURES.md](FEATURES.md) (F-n) và [SRS.md](SRS.md) (FR-n cùng số); bước kiểm:
-  [ACCEPTANCE.md](ACCEPTANCE.md); hồi quy: [REGRESSION.md](REGRESSION.md) (REG-1 – REG-20, chạy trên mọi bản ứng viên).
+  [ACCEPTANCE.md](ACCEPTANCE.md); hồi quy: [REGRESSION.md](REGRESSION.md) (REG-1 – REG-22, chạy trên mọi bản ứng viên).
 
 ## Quyết định đã chốt
 
@@ -36,7 +36,7 @@ khách duyệt, danh sách lên v1.1, v1.2… Ý tưởng của nhóm dev gửi 
 | F-4 | Khởi động `hibiscus-station` | Must | M1 | AT-5, AT-6, AT-87, AT-95 | D-3, D-4, D-19 | not started | not tested | - |
 | F-5 | Chế độ demo `--mock` | Must | M1 | AT-7 | D-8 | not started | not tested | - |
 | F-6 | Truy cập cục bộ an toàn (chế độ LAN: Could) | Must (LAN: Could) | M1 (LAN: M3) | AT-8, AT-9 (LAN: mạng cô lập, FL-8), AT-98 | — | not started | not tested | - |
-| F-7 | Trang Chào mừng và thanh bước | Must | M1 | AT-10 | D-5 | not started | not tested | - |
+| F-7 | Trang Chào mừng và thanh bước | Must | M1 | AT-10 | D-5, D-25 | in progress (D-25: mã + test xong trên `m1/field-029`, chờ QC) | not tested | - |
 | F-8 | Hồ sơ robot | Must | M1 | AT-11 | — | not started | not tested | - |
 | F-9 | Danh sách cổng USB serial | Must | M1 | AT-12 | — | not started | not tested | - |
 | F-10 | Tìm cổng theo vai trò | Must | M1 | AT-13, AT-14 | — | not started | not tested | - |
@@ -70,7 +70,7 @@ khách duyệt, danh sách lên v1.1, v1.2… Ý tưởng của nhóm dev gửi 
 | F-38 | Ghi dataset LeRobot v3 | Must | M1 | AT-48, AT-49 | D-2, D-19 (tập đang ghi khi đóng cửa sổ) | not started | not tested | - |
 | F-39 | Ghi thêm vào dataset có sẵn | Should | M2 | AT-50 | — | not started | not tested | - |
 | F-40 | Trang Bộ dữ liệu | Must | M1 | AT-51 | D-2 | not started | not tested | - |
-| F-41 | Ghép nối máy chủ Hibiscus | Should | M2 | AT-52 | — | not started | not tested | - |
+| F-41 | Ghép nối máy chủ Hibiscus | Should | M2 | AT-52 | D-25 (sửa ở M1) | in progress (D-25: mã + test xong trên `m1/field-029`, chờ QC) | not tested | - |
 | F-42 | Tải dataset lên | Should | M2 | AT-53, AT-54 | — | not started | not tested | - |
 | F-43 | Trang Huấn luyện | Should | M2 | AT-55 | — | not started | not tested | - |
 | F-44 | Kéo model từ máy chủ | Should | M2 | AT-56 | — | not started | not tested | - |
@@ -85,9 +85,9 @@ khách duyệt, danh sách lên v1.1, v1.2… Ý tưởng của nhóm dev gửi 
 | F-53 | Phát quỹ đạo (10–100 %, "Cần kiểm tra" sau hiệu chỉnh lại) | Should | M2 | AT-66, AT-67 | D-12 | not started | not tested | - |
 | F-54 | Tư thế có tên | Should | M2 | AT-68 | — | not started | not tested | - |
 | F-55 | Bộ nhận diện camera | Should | M2 | AT-69 | — | not started | not tested | - |
-| F-56 | Trình soạn chương trình khối | Should | M2 | AT-70 | — | not started | not tested | - |
+| F-56 | Trình soạn chương trình khối | Should | M2 | AT-70 | D-24 (sửa ở M1) | in progress (D-24: mã + test xong trên `m1/field-029`, chờ QC) | not tested | - |
 | F-57 | Chạy thử chương trình (dry run) trên tay giả lập | Should | M2 | AT-71 | — | not started | not tested | - |
-| F-58 | Chạy chương trình trên robot | Should | M2 | AT-72 | — | not started | not tested | - |
+| F-58 | Chạy chương trình trên robot | Should | M2 | AT-72 | D-24 (sửa ở M1) | in progress (D-24: mã + test xong trên `m1/field-029`, chờ QC) | not tested | - |
 | F-59 | Tín hiệu ngoài | Could | M3 | AT-73 | — | not started | not tested | - |
 | F-60 | Khối "chạy mô hình" trong chương trình | Could | M3 | AT-74 | — | not started | not tested | - |
 | F-61 | Robot 3D | Should | M2 | AT-75 | — | not started | not tested | - |
@@ -126,11 +126,11 @@ bản mới và danh sách hồi quy vẫn đạt.
 | Mốc | Lỗi D-n | Khoảng trống K-n / REG |
 |---|---|---|
 | M0 | D-1 (High), D-15, D-21 | K-11 |
-| M1 | D-2 – D-11, D-12 (phần M1), D-13, D-14, D-16 – D-20, D-22, D-23 (D-9 sau số đo UAT-0) | K-2, K-3 (= D-12), K-4 (= D-5), K-5, K-8 (P-1), K-10, REG-13 / K-9 (sau UAT-0, QĐ-1 = A) |
+| M1 | D-2 – D-11, D-12 (phần M1), D-13, D-14, D-16 – D-20, D-22, D-23 (D-9 sau số đo UAT-0), D-24, D-25 (báo cáo hiện trường của khách check_ver_2.9, 2026-11-18) | K-2, K-3 (= D-12), K-4 (= D-5), K-5, K-8 (P-1), K-10, REG-13 / K-9 (sau UAT-0, QĐ-1 = A) |
 | M2 | D-12 (phần F-53) | — |
 | M3 | — (D-18 của F-3 là tài liệu, đóng ở M1) | — |
 
-23 lỗi: 3 High (D-1, D-9, D-19) · 9 Medium · 11 Low · 0 Critical. K-1, K-6 = D-18; K-7 (spec dev lỗi thời) SA cập nhật cùng
+25 lỗi: 3 High (D-1, D-9, D-19) · 10 Medium · 12 Low · 0 Critical. K-1, K-6 = D-18; K-7 (spec dev lỗi thời) SA cập nhật cùng
 OI-3. Trạng thái mọi lỗi hôm nay: **mở**.
 
 **Dev status M0 (2026-11-17, nhánh `release/v1`):** D-1, D-15, D-21, K-11 có bản sửa kèm test fail-trước-pass-sau
@@ -138,6 +138,18 @@ OI-3. Trạng thái mọi lỗi hôm nay: **mở**.
 AT-77 / AT-2 trên bản pre-release M0. Nền kiểm: NFR-18 (danh sách bỏ qua theo nền tảng), FL-7 (ma trận ảnh + axe,
 các phát hiện ghi làm lỗi M1 trong `tests/e2e/screen_matrix_known.json`), FL-12 (dry run cục bộ) xong ở máy dev;
 CI Linux / Windows / macOS, e2e `windows-latest`, SP-2, SP-3 **chưa chạy** (nhánh chưa đẩy lên GitHub).
+
+**Lỗi hiện trường 0.2.9 (2026-11-18, nguồn: báo cáo hiện trường của khách check_ver_2.9 (2026-11-18)).** Khách đã quyết định cách sửa; hai lỗi vào M1:
+
+| D | Mức | Tính năng | Lỗi | Quyết định của khách | Hồi quy |
+|---|---|---|---|---|---|
+| D-24 | Low | F-56, F-58 | Cảnh báo "chuyển động đầu tiên bắt đầu xa tư thế của tay" tính một lần, nằm mãi trên khối sau khi chạy xong | **"Đổi thành thông tin, tự cập nhật"**: mức `info` mới (không phải cảnh báo, không đếm, không hỏi xác nhận), câu "Tay sẽ đi chậm về điểm bắt đầu của chuyển động này (cách X°)", kiểm lại khi tay di chuyển và khi chạy xong, biến mất khi tay trong ngưỡng | REG-21 |
+| D-25 | Medium | F-7, F-41 | Bước Huấn luyện hiện "Bước này đang bị khoá" khi chưa ghép nối dù form ghép nối dùng được; form nhận liên kết OneDrive | **"Không cần robot, nói rõ hơn"**: không khoá, câu trung tính "Kết nối máy chủ Hibiscus để huấn luyện (không cần robot)."; form kiểm địa chỉ (http(s), không phải OneDrive / SharePoint / Google Drive / Dropbox), lỗi ngay dưới ô, nút Ghép nối tắt tới khi hợp lệ | REG-22 |
+
+**Dev status D-24, D-25 (2026-11-18, nhánh `m1/field-029` từ `release/v1` `ae7d680`):** bản sửa kèm test
+fail-trước-pass-sau (`tests/test_field_029.py`, `web/src/station/field029.screens.test.tsx`, `station.unit.test.ts`).
+Bước Tải lên vẫn khoá "Hãy ghi một bộ dữ liệu trước" (cần dataset đã ghi, tức là cần robot); bước Huấn luyện là bước duy
+nhất chỉ cần máy chủ. Lỗi vẫn **mở** đến khi QC chạy lại AT-10, AT-52, AT-70, AT-72 và REG-21, REG-22 trên bản cài.
 
 ## Số tính năng theo mốc
 

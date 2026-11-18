@@ -143,3 +143,24 @@ người dùng thấy. Đưa khách xem ở lần duyệt tiếp theo.
 * [ACCEPTANCE.md](ACCEPTANCE.md) AT-2: bản cũ ghi `windows-latest` "build wheel", nhưng CI build bộ tệp phát hành
   (wheel thuần Python `py3-none-any`, `install.ps1`, `SHA256SUMS`) **một lần** trên Linux và job Windows cài **chính
   tệp wheel đó** bằng `install.ps1` (đúng tệp người dùng cài). AT-2 nay ghi đúng như vậy; macOS cài smoke cùng bộ tệp.
+
+## Lỗi hiện trường 0.2.9: D-24, D-25 · v1.0 (không đổi phạm vi) · 2026-11-18
+
+**Nguồn:** báo cáo hiện trường của khách hàng check_ver_2.9 (2026-11-18) trên bản 0.2.9. Không phải yêu cầu mới:
+hai lỗi so với chuẩn chất lượng, đăng ký theo quy tắc zero-defect, khách đã quyết định cách sửa.
+
+* **D-24** (Low, F-56, F-58, REG-21): cảnh báo "Chuyển động đầu tiên bắt đầu xa tư thế hiện tại của tay" tính một lần
+  lúc kiểm và nằm mãi trên khối kể cả sau khi chạy. Quyết định của khách: **"Đổi thành thông tin, tự cập nhật"**. Cách
+  sửa: mức `info` mới cho `CheckIssue.severity` (API, `openapi.json`, kiểu của giao diện), không đếm là cảnh báo, không
+  chặn, không hỏi xác nhận; câu "Tay sẽ đi chậm về điểm bắt đầu của chuyển động này (cách X°)." / "The arm will first
+  move slowly to the start of this motion (X° away)."; trình soạn kiểm lại khi tay di chuyển quá 2° (tối đa một lần mỗi
+  1,5 s) và khi chạy xong, dòng biến mất khi tay trong ngưỡng.
+* **D-25** (Medium, F-7, F-41, REG-22): bước Huấn luyện hiện ổ khoá và "Bước này đang bị khoá" khi chưa ghép nối dù
+  form ghép nối dùng được; khách dán một liên kết OneDrive vào ô địa chỉ máy chủ. Quyết định của khách: **"Không cần
+  robot, nói rõ hơn"**. Cách sửa: Huấn luyện không khoá, câu trung tính "Kết nối máy chủ Hibiscus để huấn luyện (không
+  cần robot)."; form ghép nối kiểm địa chỉ (http(s), không phải OneDrive / SharePoint / Google Drive / Dropbox), báo lỗi
+  ngay dưới ô, nút Ghép nối tắt tới khi hợp lệ. Bước Tải lên giữ khoá "ghi dataset trước" (cần dataset, tức là robot).
+* Tài liệu: [FEATURES.md](FEATURES.md) (D-24, D-25; tổng 25 lỗi), [FEATURES-APPROVED.md](FEATURES-APPROVED.md) (mốc
+  M1, F-7, F-41, F-56, F-58), [REGRESSION.md](REGRESSION.md) (REG-21, REG-22), [SRS.md](SRS.md) §8; spec
+  `docs/spec/station-programs.md` §6 (mức `info`). F-41, F-56, F-58 thuộc M2 nhưng hai bản sửa vào M1 theo báo cáo của
+  khách. Nhánh dev `m1/field-029` (từ `release/v1` `ae7d680`).

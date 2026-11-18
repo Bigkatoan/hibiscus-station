@@ -51,6 +51,17 @@ with its own line (see the README); GitHub never offers a pre-release as its "la
 - **The doctor report always starts with LIKELY PROBLEMS**, or "No likely problems found".
 
 ### Fixed
+- **Programs: "the first motion starts far from the arm" is now information, not a warning**
+  (field report 0.2.9). The arm always goes slowly to the start of the first motion, so the editor
+  now says "The arm will first move slowly to the start of this motion (X° away)." in a note apart
+  from the problems, with no warning mark on the block and no confirmation before a run. The note
+  follows the arm: it updates while the arm moves and after a run, and goes away once the arm is
+  close. API: `CheckIssue.severity` has a new value `info` (never blocks a run).
+- **Train no longer looks locked before pairing** (field report 0.2.9). Training runs on the
+  Hibiscus server and needs no robot: the step now says "Connect to a Hibiscus server to train (no
+  robot needed)." instead of "This step is locked". The pairing form checks the server address
+  before pairing and explains when it is not a web address or is a OneDrive, SharePoint, Google
+  Drive or Dropbox link; Pair stays off until the address is valid.
 - **On a flaky bus the doctor said a motor "does not answer (power? cable?)" although it did**:
   the same report showed it in the scan and in sync reads that worked. Whether a motor answers now
   comes from everything it sent during the check (scan, pings, sync reads, register reads, late
