@@ -178,3 +178,17 @@ về giao diện. Không đổi quyết định của khách; chỉ làm đúng 
   khớp cũ quá 2,5 s) → dòng mất ngay và kiểm lại.
 * **Ghi nhận QC:** Ghi chú có khung và tiêu đề riêng ("Ghi chú" / "Notes"), màu info; vấn đề có biểu tượng theo mức.
 * Tài liệu: [FEATURES-APPROVED.md](FEATURES-APPROVED.md) (dev status), [REGRESSION.md](REGRESSION.md) (REG-21, REG-22).
+
+## QC F029 lần 2 → bản sửa lần 3: QD-37 – QD-41 · v1.0 (không đổi phạm vi) · 2026-11-18
+
+**Nguồn:** [QC-F029-r2](qc/QC-F029-r2.md) trên `b74a735` (QD-35, QD-36 PASS; QD-37 – QD-41 mới) và quyết định của Lead:
+bỏ cách chặn theo danh sách, thay bằng bảo đảm theo thiết kế. Không đổi quyết định của khách.
+
+* **QD-40** (Medium): Station chỉ gửi token tới máy đã trả lời đúng danh tính Hibiscus ở `GET /api/v1/auth/config`
+  (không token, không theo chuyển hướng, 5 s); không đạt → 422 `server_not_hibiscus` (EN / VI).
+* **QD-41** (Low): gợi ý liên kết chia sẻ chỉ cho các họ khách đã nêu (+ Safe Links, Teams, `d.docs.live.net`,
+  `google.com/url`); bỏ quy tắc chung gây chặn nhầm.
+* **QD-37** (Low): huy hiệu theo mức, khác hình và màu, tương phản ≥ 4,5:1.
+* **QD-38** (Low): kết nối lại nhanh vẫn kiểm lại.
+* **QD-39** (Low): chỉ câu dịch; chi tiết kỹ thuật thu gọn (FR-73, P-5).
+* Tài liệu: [FEATURES-APPROVED.md](FEATURES-APPROVED.md), [REGRESSION.md](REGRESSION.md), `docs/spec/station.md` §4.8.

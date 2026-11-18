@@ -61,12 +61,21 @@ with its own line (see the README); GitHub never offers a pre-release as its "la
   Hibiscus server and needs no robot: the step now says "Connect to a Hibiscus server to train (no
   robot needed)." instead of "This step is locked". The pairing form checks the server address
   before pairing and explains when it is not a web address or is a file-sharing link (OneDrive in
-  all its forms, including `word.cloud.microsoft` links, SharePoint, Google Drive, Dropbox, Box,
-  WeTransfer, iCloud); Pair stays off until the address is valid. Station itself refuses such an
+  all its forms, including `word.cloud.microsoft` links, SharePoint, Google Drive, Dropbox); Pair
+  stays off until the address is valid. Station itself refuses such an
   address too (`POST /server/pair`: `server_url_file_share` / `server_url_invalid`), before anything
   is sent anywhere.
+- **Pairing never sends your token to something that is not a Hibiscus server.** Before the token
+  leaves, Station asks the address for the public Hibiscus login settings (no token, no redirects,
+  5 s); any other answer is refused with "This address did not answer as a Hibiscus server…"
+  (`server_not_hibiscus`). The share-link check is now only an early hint for OneDrive /
+  SharePoint / Office / Teams, Google Drive / Docs and Dropbox (Outlook Safe Links unwrapped), so a
+  real server address with `?cid=` or a file path is no longer refused.
+- **Error messages show only the translated sentence**; Station's technical detail (English) is in
+  a closed "Technical details" section.
 - **The "move slowly to the start" note no longer stays when the robot is disconnected** (or its
-  joint readings stop), and notes now sit in their own "Notes" box, set apart from warnings.
+  joint readings stop) and comes back on reconnect, also a fast one; notes sit in their own "Notes"
+  box, and errors, warnings and confirmations each have their own badge shape and colour.
 - **On a flaky bus the doctor said a motor "does not answer (power? cable?)" although it did**:
   the same report showed it in the scan and in sync reads that worked. Whether a motor answers now
   comes from everything it sent during the check (scan, pings, sync reads, register reads, late

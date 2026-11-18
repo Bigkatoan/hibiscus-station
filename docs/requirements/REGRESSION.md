@@ -173,7 +173,8 @@ không đạt là một lỗi mở và chặn phát hành của tính năng liê
   chạy, `CheckReport.ok` vẫn đúng.
   Ngắt kết nối robot (hoặc luồng khớp dừng > 2,5 s) sau khi đã Kiểm tra: dòng mất ngay, không cần bấm gì; kết nối lại:
   dòng hiện lại (QD-36). Dòng nằm trong khung "Ghi chú" / "Notes" riêng, màu info, khác biểu tượng của cảnh báo / cần
-  xác nhận (ghi nhận QC F029 lần 1).
+  xác nhận (ghi nhận QC F029 lần 1): lỗi = ô đỏ dấu X, cảnh báo = ô hổ phách tam giác, cần xác nhận = ô tím dấu hỏi,
+  tương phản ≥ 4,5:1 ở sáng / tối (QD-37). Ngắt rồi kết nối lại trong 0,2 s, tay vẫn xa: dòng trở lại (QD-38).
 * **Test tự động:** `tests/test_field_029.py`, `tests/test_compiler.py::test_first_motion_far_from_the_arm_is_information`,
   `web/src/station/field029.screens.test.tsx` (D-24), `station.unit.test.ts` (`poseDelta`). **Nền tảng:** [Vendor]
   giả lập; [UAT-KH] tay thật.
@@ -195,6 +196,11 @@ không đạt là một lỗi mở và chặn phát hành của tính năng liê
   thật sự cần robot (Hiệu chỉnh, Camera, Điều khiển tay, Ghi dữ liệu, Chạy model) và Tải lên (cần dataset đã ghi) vẫn
   khoá như REG-12.
   API: 422 `server_url_file_share` / `server_url_invalid` (câu EN / VI), không có yêu cầu nào ra ngoài, không ghép nối.
+  Một địa chỉ http(s) khác (trang chia sẻ không có trong gợi ý như `drive.usercontent…`-kiểu lạ, fshare, terabox; trang
+  web thường; máy chuyển hướng; máy không trả lời): 422 `server_not_hibiscus` sau một lần hỏi `/api/v1/auth/config`
+  **không mang token**; token chỉ đi tới máy trả lời đúng danh tính Hibiscus (QD-40). `?cid=…`, `/robots.txt` trên máy
+  chủ thật không bị gợi ý chặn (QD-41). Giao diện VI: chỉ câu tiếng Việt, chi tiết tiếng Anh trong "Chi tiết kỹ thuật"
+  thu gọn (QD-39).
 * **Test tự động:** `web/src/station/field029.screens.test.tsx` (D-25), `field028.screens.test.tsx` (Huấn luyện),
   `station.unit.test.ts` (`wizardSteps`, `serverUrlProblem` trên `tests/server_urls.json`), `tests/test_field_029.py`
   (`server_url_problem` trên cùng bộ ca, `POST /server/pair`). **Nền tảng:** [Vendor].

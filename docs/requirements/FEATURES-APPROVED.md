@@ -164,6 +164,27 @@ lần 2 trên `m1/field-029` (test fail-trước-pass-sau, chờ QC lần 2):
 * **Ghi nhận của QC (sửa luôn):** Ghi chú nằm trong khung riêng có tiêu đề "Ghi chú" / "Notes", viền và màu info; vấn đề
   dùng biểu tượng riêng theo mức (lỗi: tam giác đỏ, cảnh báo: tam giác cam, cần xác nhận: dấu hỏi), có nhãn đọc màn hình.
 
+**QC F029 lần 2 ([QC-F029-r2](qc/QC-F029-r2.md), `b74a735`): QD-35, QD-36 PASS; D-24 FAIL (QD-37, QD-38 Low), D-25 FAIL
+(QD-40 Medium, QD-39, QD-41 Low).** Quyết định của Lead: không chạy theo danh sách chặn (không bao giờ đủ, QD-40, và
+đã chặn nhầm, QD-41). Bản sửa lần 3 trên `m1/field-029` (test fail-trước-pass-sau, chờ QC lần 3):
+* **QD-40 (thiết kế):** Station không bao giờ gửi token tới một máy chưa chứng minh là máy chủ Hibiscus. Trước token,
+  `POST /server/pair` hỏi `GET <địa chỉ>/api/v1/auth/config` (cấu hình đăng nhập công khai của máy chủ đã phát hành,
+  không cần đăng nhập): không theo chuyển hướng, chờ tối đa 5 s, phải là `application/json` đúng dạng `AuthConfig`.
+  Không đạt → 422 `server_not_hibiscus` ("Địa chỉ này không phản hồi như một máy chủ Hibiscus…"), token chưa gửi đi.
+  Test với máy chủ cục bộ thật: trang web thường, JSON khác, sai content-type, 404, chuyển hướng sang máy khác, quá
+  giờ, máy giống Hibiscus; và các trang chia sẻ (kiểu `*.usercontent…`, fshare, terabox, sites.google, Box): 0 request
+  mang token.
+* **QD-41:** danh sách liên kết chia sẻ chỉ còn là gợi ý sớm cho các họ khách đã nêu (OneDrive / SharePoint / Office /
+  `cloud.microsoft` / Teams / `d.docs.live.net`, Google Drive / Docs / usercontent, Dropbox), có gỡ Safe Links và
+  `google.com/url`. Bỏ quy tắc chung (`cid`, đuôi tệp, tham số / đường dẫn trên tên miền bất kỳ): `?cid=campaign1`,
+  `/robots.txt` không còn bị chặn nhầm.
+* **QD-37:** mỗi mức có huy hiệu riêng, khác cả hình lẫn màu: lỗi = ô đỏ dấu X, cảnh báo = ô vàng hổ phách hình tam
+  giác, cần xác nhận = ô tím dấu hỏi; chữ trên nền ≥ 4,5:1 ở sáng và tối (token `sev-*`, kiểm trong `pixelTheme.test.ts`).
+* **QD-38:** tư thế đổi từ "không biết" sang "biết" (kết nối lại, kể cả trong 0,2 s) thì luôn kiểm lại, không cần tay
+  di chuyển.
+* **QD-39:** lỗi có câu dịch thì chỉ hiện câu dịch; chi tiết tiếng Anh của Station nằm trong "Chi tiết kỹ thuật" thu
+  gọn (FR-73, P-5), kể cả lỗi token sai định dạng; lỗi không có câu dịch vẫn hiện chi tiết.
+
 ## Số tính năng theo mốc
 
 | Mốc | Số F (mốc chính) | Theo ưu tiên | Phần của tính năng khác làm ở mốc này | Kết thúc khi |
