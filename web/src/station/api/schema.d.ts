@@ -2254,10 +2254,10 @@ export interface components {
       };
       /**
        * Severity
-       * @description error blocks a run; confirm needs an explicit ack in the run request
+       * @description error blocks a run; confirm needs an explicit ack in the run request; warning and info never block (info is not a problem: it says what the run will do, e.g. the slow approach to the first motion)
        * @enum {string}
        */
-      severity: "error" | "warning" | "confirm";
+      severity: "error" | "warning" | "confirm" | "info";
     };
     /**
      * CheckReport

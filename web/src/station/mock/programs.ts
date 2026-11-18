@@ -847,13 +847,50 @@ export class MockPrograms {
 
   checkReport(id: string): CheckReport {
     const p = this.program(id);
-    const issues = this.check(asEditorDoc(p.editor), p.buttons);
+    const doc = asEditorDoc(p.editor);
+    const issues = this.check(doc, p.buttons);
+    const far = this.firstMotionFar(doc);
+    if (far) issues.push(far);
     return {
       ok: !issues.some((i) => i.severity === "error"),
       version: p.version,
       issues,
       ast: p.ast,
       dry_run_required: this.sim.settings.programs.require_dry_run && p.dry_run_version !== p.version,
+    };
+  }
+
+  /**
+   * The validator's first-motion note (D-24): information, not a warning. The first motion under
+   * the start block starts farther than `safety.max_approach_deg` from where the follower is now
+   * (only said while a robot is connected: the pose is unknown otherwise).
+   */
+  firstMotionFar(doc: EditorDoc): CheckIssue | null {
+    const connected = this.sim.activeId !== null && !["disconnected", "error"].includes(this.sim.state);
+    const start = startBlocks(doc)[0];
+    if (!connected || !start) return null;
+    const first = [...walkBlocks({ blocks: { blocks: [start] } })].find((b) => MOTION_TYPES.has(b.type));
+    const f = first?.fields ?? {};
+    let target: Record<string, number> | null = null;
+    if (first?.type === "hb_play_trajectory")
+      target = this.takes.find((x) => x.meta.id === f.TRAJECTORY)?.meta.start_pose ?? null;
+    else if (first?.type === "hb_move_to_pose")
+      target = this.poses.find((x) => x.name === f.POSE)?.positions ?? null;
+    if (!first || !target) return null;
+    let deg = 0;
+    fx.MOTORS.forEach((m, i) => {
+      const v = target[`${m}.pos`];
+      if (m !== "gripper" && v !== undefined) deg = Math.max(deg, Math.abs(v - this.sim.jointPos(i)));
+    });
+    const max = this.sim.settings.safety.max_approach_deg;
+    if (deg <= max) return null;
+    return {
+      id: `first_motion_far:${first.id}`,
+      code: "first_motion_far",
+      severity: "info",
+      block_id: first.id,
+      message_key: "programs.issues.first_motion_far",
+      params: { deg: Math.round(deg * 10) / 10, max_deg: max },
     };
   }
 

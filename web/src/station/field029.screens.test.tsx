@@ -1,0 +1,244 @@
+/**
+ * Field report 0.2.9 (customer check_ver_2.9, 2026-11-18) against the mock Station.
+ *
+ * D-24: "the first motion starts far from the arm" stayed on the program as a warning after the
+ * run. It is now information ("The arm will first move slowly to the start of this motion (X°
+ * away)."), listed apart from the problems, never in the run confirmation, and it follows the arm:
+ * it goes away once the arm is within the limit.
+ *
+ * D-25: Train looked locked ("This step is locked — Pair with a Hibiscus server first") while its
+ * pairing form worked. Training needs no robot: the step shows a neutral prompt, no lock. The
+ * pairing form refuses an address that is not http(s) or is a file-share link (the customer pasted
+ * a OneDrive link).
+ */
+import { act, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { i18n } from "@/lib/i18n";
+import { MOTORS } from "./mock/fixtures";
+import { renderStation, settle, setupStation, type StationHarness } from "./test/utils";
+
+beforeEach(() => {
+  vi.stubGlobal(
+    "createImageBitmap",
+    vi.fn(() => Promise.resolve({ width: 320, height: 240, close: vi.fn() })),
+  );
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(
+    () =>
+      ({
+        drawImage: vi.fn(),
+        measureText: (s: string) => ({ width: s.length * 7 }),
+        font: "",
+      }) as unknown as CanvasRenderingContext2D,
+  );
+  return () => {
+    vi.unstubAllGlobals();
+  };
+});
+
+/** The start pose of "Pick A" (the sample program's first motion), as joint values. */
+function startOfPickA(h: StationHarness): number[] {
+  const take = h.sim.programs.takes.find((x) => x.meta.id === "t_20261116_101500_a1b2");
+  if (!take) throw new Error("no Pick A");
+  return MOTORS.map((m) => take.meta.start_pose[`${m}.pos`] ?? 0);
+}
+
+/** Hold the follower at `pose` and let a few joint messages through. */
+async function holdArm(h: StationHarness, pose: number[]): Promise<void> {
+  h.sim.pinnedPose = pose;
+  await act(async () => {
+    for (let i = 0; i < 4; i += 1) h.sim.step(0.05);
+    await new Promise((r) => setTimeout(r, 0));
+  });
+}
+
+async function openEditor(h: StationHarness) {
+  renderStation("/programs?tab=programs", h);
+  await settle();
+  await screen.findByTestId("blockly-editor");
+  await waitFor(() => {
+    expect(document.querySelector('[data-id="play_a"]')).not.toBeNull();
+  });
+}
+
+describe("D-24: the first motion's slow approach is information that follows the arm", () => {
+  it("is an information line, not a problem, and goes away once the arm is near", async () => {
+    const h = setupStation();
+    const start = startOfPickA(h);
+    const far = start.map((v, i) => (i === 0 ? v + 60 : v));
+    await holdArm(h, far);
+    const user = userEvent.setup();
+    await openEditor(h);
+    await user.click(screen.getByRole("button", { name: "Check" }));
+    const notes = await screen.findByTestId("program-notes");
+    expect(notes).toHaveTextContent("The arm will first move slowly to the start of this motion (60° away).");
+    expect(within(notes).getByRole("listitem")).toHaveAttribute("data-severity", "info");
+    // Not a problem: no problem list, "No problems found." stays.
+    expect(screen.queryByTestId("program-issues")).toBeNull();
+    expect(screen.getByTestId("program-ok")).toBeInTheDocument();
+    expect(screen.queryByText(/starts far from the arm/)).toBeNull();
+
+    // The arm moves to 20° from the start (within the 30° limit): the line goes away by itself,
+    // without pressing Check again.
+    await holdArm(
+      h,
+      start.map((v, i) => (i === 0 ? v + 20 : v)),
+    );
+    await waitFor(
+      () => {
+        expect(screen.queryByTestId("program-notes")).toBeNull();
+      },
+      { timeout: 4000 },
+    );
+
+    // And comes back, with the new distance, when the arm moves away again.
+    await holdArm(
+      h,
+      start.map((v, i) => (i === 0 ? v - 45 : v)),
+    );
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("program-notes")).toHaveTextContent("(45° away)");
+      },
+      { timeout: 4000 },
+    );
+  });
+
+  it("never asks for a confirmation before a run", async () => {
+    const h = setupStation();
+    const start = startOfPickA(h);
+    await holdArm(
+      h,
+      start.map((v, i) => (i === 0 ? v + 60 : v)),
+    );
+    const user = userEvent.setup();
+    await openEditor(h);
+    await user.click(screen.getByRole("button", { name: "Dry run" }));
+    await waitFor(() => {
+      expect(h.sim.programs.run).not.toBeNull();
+    });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByTestId("program-notes")).toHaveTextContent("(60° away)");
+  });
+
+  it("is in Vietnamese with the distance", async () => {
+    const h = setupStation();
+    const start = startOfPickA(h);
+    await holdArm(
+      h,
+      start.map((v, i) => (i === 0 ? v + 60 : v)),
+    );
+    await act(async () => {
+      await i18n.changeLanguage("vi");
+    });
+    try {
+      const user = userEvent.setup();
+      await openEditor(h);
+      await user.click(screen.getByRole("button", { name: "Kiểm tra" }));
+      expect(await screen.findByTestId("program-notes")).toHaveTextContent(
+        "Tay sẽ đi chậm về điểm bắt đầu của chuyển động này (cách 60°).",
+      );
+    } finally {
+      await act(async () => {
+        await i18n.changeLanguage("en");
+      });
+    }
+  });
+});
+
+describe("D-25: Train needs a server, not a robot", () => {
+  it("shows a neutral prompt, no lock, with or without a robot", async () => {
+    for (const connected of [true, false]) {
+      const h = setupStation({ connected });
+      const { unmount } = renderStation("/train", h);
+      await settle();
+      const hint = await screen.findByTestId("step-hint");
+      expect(hint).toHaveTextContent("Connect to a Hibiscus server to train (no robot needed).");
+      expect(screen.queryByTestId("lock-gate")).toBeNull();
+      expect(screen.queryByText("This step is locked")).toBeNull();
+      expect(screen.queryByTestId("locked-content")).toBeNull();
+      // The rail says the same, without a lock.
+      expect(screen.getByTestId("step-hint-train")).toHaveTextContent(
+        "Connect to a Hibiscus server to train (no robot needed).",
+      );
+      expect(screen.getByRole("link", { name: /Train/ })).toHaveAttribute(
+        "title",
+        "Connect to a Hibiscus server to train (no robot needed).",
+      );
+      unmount();
+    }
+  });
+
+  it("the prompt goes away once paired", async () => {
+    const h = setupStation({ paired: true });
+    renderStation("/train", h);
+    await settle();
+    await screen.findByRole("heading", { name: "Train" });
+    expect(screen.queryByTestId("step-hint")).toBeNull();
+    expect(screen.queryByTestId("step-hint-train")).toBeNull();
+  });
+
+  it("the pairing form refuses a OneDrive link and a non-http address", async () => {
+    const h = setupStation();
+    const user = userEvent.setup();
+    renderStation("/train", h);
+    await settle();
+    const url = await screen.findByLabelText(/Server URL/);
+    const pair = screen.getByRole("button", { name: "Pair" });
+    await user.type(screen.getByLabelText(/Personal access token/), "hb_pat_123");
+    await user.type(
+      url,
+      "https://onedrive.live.com/?redeem=aHR0cHM6Ly8xZHJ2Lm1zL2YvcyFBbXBsZQ&id=ABC%21123&cid=0123456789ABCDEF",
+    );
+    expect(
+      screen.getByText(
+        "This is not a Hibiscus server address. Paste the address of your Hibiscus site, for example https://hibiscus.example.org",
+      ),
+    ).toBeInTheDocument();
+    expect(url).toHaveAttribute("aria-invalid", "true");
+    expect(pair).toBeDisabled();
+
+    await user.clear(url);
+    await user.type(url, "hibiscus server");
+    await user.tab();
+    expect(
+      screen.getByText(
+        "Enter an address that starts with http:// or https://, for example https://hibiscus.example.org",
+      ),
+    ).toBeInTheDocument();
+    expect(pair).toBeDisabled();
+
+    await user.clear(url);
+    await user.type(url, "https://hibiscus.example.org");
+    expect(url).not.toHaveAttribute("aria-invalid");
+    expect(pair).toBeEnabled();
+  });
+
+  it("says it in Vietnamese", async () => {
+    const h = setupStation();
+    await act(async () => {
+      await i18n.changeLanguage("vi");
+    });
+    try {
+      const user = userEvent.setup();
+      renderStation("/train", h);
+      await settle();
+      expect(await screen.findByTestId("step-hint")).toHaveTextContent(
+        "Kết nối máy chủ Hibiscus để huấn luyện (không cần robot).",
+      );
+      await user.type(
+        await screen.findByLabelText(/Địa chỉ máy chủ/),
+        "https://contoso-my.sharepoint.com/:f:/g/personal/x/EabC?e=1",
+      );
+      expect(
+        screen.getByText(
+          "Đây không phải địa chỉ máy chủ Hibiscus. Hãy dán địa chỉ trang Hibiscus của bạn, ví dụ https://hibiscus.example.org",
+        ),
+      ).toBeInTheDocument();
+    } finally {
+      await act(async () => {
+        await i18n.changeLanguage("en");
+      });
+    }
+  });
+});

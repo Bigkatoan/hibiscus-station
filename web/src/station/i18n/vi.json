@@ -29,13 +29,15 @@
     "settings": "Cài đặt",
     "programs": "Chương trình"
   },
+  "step_hint": {
+    "pair_server": "Kết nối máy chủ Hibiscus để huấn luyện (không cần robot)."
+  },
   "lock": {
     "connect_first": "Hãy kết nối robot trước.",
     "calibrate_first": "Hãy hiệu chỉnh tay follower trước.",
     "calibrate_leader": "Hãy hiệu chỉnh tay leader trước.",
     "needs_leader": "Cần có tay leader.",
     "record_first": "Hãy ghi một bộ dữ liệu trước.",
-    "pair_first": "Hãy ghép nối với máy chủ Hibiscus trước.",
     "estopped": "Hãy reset nút dừng khẩn cấp trước.",
     "title": "Bước này đang bị khoá",
     "go": "Tới {{step}}",
@@ -292,6 +294,8 @@
   },
   "pair": {
     "url": "Địa chỉ máy chủ",
+    "url_not_url": "Hãy nhập địa chỉ bắt đầu bằng http:// hoặc https://, ví dụ https://hibiscus.example.org",
+    "url_file_share": "Đây không phải địa chỉ máy chủ Hibiscus. Hãy dán địa chỉ trang Hibiscus của bạn, ví dụ https://hibiscus.example.org",
     "token": "Token truy cập cá nhân",
     "token_hint": "Tạo token trên máy chủ: Tài khoản → Token.",
     "create_token": "Tạo token với đúng quyền",
@@ -845,6 +849,7 @@
       "delete_title": "Xoá chương trình {{name}}?",
       "issues": "Vấn đề",
       "no_issues": "Không thấy vấn đề nào.",
+      "notes": "Ghi chú",
       "dry_done": "Phiên bản này đã chạy thử thành công.",
       "workspace": "Trình soạn khối",
       "buttons_title": "Nút cho người vận hành",
@@ -1052,7 +1057,7 @@
       "unknown_joint": "Khớp không tồn tại.",
       "busy_loop": "Vòng lặp này cần có chuyển động hoặc chờ bên trong.",
       "unreachable": "Các khối này không nằm dưới khối bắt đầu nên không bao giờ chạy.",
-      "first_motion_far": "Chuyển động đầu tiên bắt đầu xa tư thế hiện tại của tay.",
+      "first_motion_far": "Tay sẽ đi chậm về điểm bắt đầu của chuyển động này (cách {{deg}}°).",
       "fast_replay": "Tốc độ trên 100 % ({{speed}} %): cần xác nhận.",
       "fast_replay_not_allowed": "Robot này chưa bật tốc độ trên 100 %.",
       "relax_in_loop": "Thả lỏng tay trong vòng lặp: tay sẽ rũ xuống mỗi vòng. Cần xác nhận.",

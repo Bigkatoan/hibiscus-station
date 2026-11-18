@@ -149,11 +149,13 @@ def validate_ast(ast: ProgramAst, ctx: ValidationContext) -> list[CheckIssue]:
                 ),
                 default=0.0,
             )
+            # Information, not a warning (field report 0.2.9, D-24): the player always approaches
+            # the first sample slowly, so this only says what the run will do first.
             if far > ctx.max_approach_deg:
                 add(
                     issue(
                         "first_motion_far",
-                        "warning",
+                        "info",
                         first_motion.id,
                         deg=round(far, 1),
                         max_deg=ctx.max_approach_deg,

@@ -29,13 +29,15 @@
     "settings": "Settings",
     "programs": "Programs"
   },
+  "step_hint": {
+    "pair_server": "Connect to a Hibiscus server to train (no robot needed)."
+  },
   "lock": {
     "connect_first": "Connect a robot first.",
     "calibrate_first": "Calibrate the follower first.",
     "calibrate_leader": "Calibrate the leader first.",
     "needs_leader": "Needs a leader arm.",
     "record_first": "Record a dataset first.",
-    "pair_first": "Pair with a Hibiscus server first.",
     "estopped": "Reset the e-stop first.",
     "title": "This step is locked",
     "go": "Go to {{step}}",
@@ -292,6 +294,8 @@
   },
   "pair": {
     "url": "Server URL",
+    "url_not_url": "Enter an address that starts with http:// or https://, for example https://hibiscus.example.org",
+    "url_file_share": "This is not a Hibiscus server address. Paste the address of your Hibiscus site, for example https://hibiscus.example.org",
     "token": "Personal access token",
     "token_hint": "Create a token on the server: Account → Tokens.",
     "create_token": "Create a token with the right scopes",
@@ -845,6 +849,7 @@
       "delete_title": "Delete program {{name}}?",
       "issues": "Problems",
       "no_issues": "No problems found.",
+      "notes": "Notes",
       "dry_done": "This version passed a dry run.",
       "workspace": "Block editor",
       "buttons_title": "Operator buttons",
@@ -1052,7 +1057,7 @@
       "unknown_joint": "Unknown joint.",
       "busy_loop": "This loop needs a motion or a wait inside.",
       "unreachable": "These blocks are not under the start block and never run.",
-      "first_motion_far": "The first motion starts far from the arm's pose.",
+      "first_motion_far": "The arm will first move slowly to the start of this motion ({{deg}}° away).",
       "fast_replay": "Speed above 100 % ({{speed}} %): confirm.",
       "fast_replay_not_allowed": "Speeds above 100 % are not enabled for this robot.",
       "relax_in_loop": "Relax arm inside a loop: the arm goes limp every round. Confirm.",

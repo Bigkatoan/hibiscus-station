@@ -21,21 +21,61 @@ export function tokenUrl(server: string): string | null {
   }
 }
 
+/** File-sharing sites whose links people paste instead of the server address (field report 0.2.9). */
+const FILE_SHARE_HOSTS = [
+  "onedrive.live.com",
+  "onedrive.com",
+  "1drv.ms",
+  "sharepoint.com",
+  "drive.google.com",
+  "docs.google.com",
+  "dropbox.com",
+  "dropboxusercontent.com",
+  "db.tt",
+];
+
+export type ServerUrlProblem = "not_url" | "file_share";
+
+/**
+ * Why `raw` cannot be a Hibiscus server address, or null when it can (D-25): it must be an
+ * http(s) URL, and not a OneDrive / SharePoint / Google Drive / Dropbox link.
+ */
+export function serverUrlProblem(raw: string): ServerUrlProblem | null {
+  let u: URL;
+  try {
+    u = new URL(raw.trim());
+  } catch {
+    return "not_url";
+  }
+  if ((u.protocol !== "https:" && u.protocol !== "http:") || !u.hostname) return "not_url";
+  const host = u.hostname.toLowerCase().replace(/\.$/, "");
+  if (FILE_SHARE_HOSTS.some((d) => host === d || host.endsWith(`.${d}`))) return "file_share";
+  return null;
+}
+
 /** Pair with a Hibiscus server (§4.8): server URL + personal access token. */
 export function PairForm({ onPaired }: { onPaired?: () => void }) {
   const { t } = useTranslation("station");
   const [url, setUrl] = useState("");
   const [token, setToken] = useState("");
+  const [touched, setTouched] = useState(false);
   const pair = useStationMutation(
     (body: { url: string; token: string }) => api.post<ServerLink>("/server/pair", body),
     [qk.server, qk.status],
   );
-  const link = tokenUrl(url);
+  const problem = url.trim() ? serverUrlProblem(url) : null;
+  // A pasted file-share link is said at once; a half-typed address once the field is left.
+  const urlError = problem === "file_share" || (problem && touched) ? t(`pair.url_${problem}`) : undefined;
+  const link = problem ? null : tokenUrl(url);
   return (
     <form
       className="flex flex-col gap-3"
       onSubmit={(e) => {
         e.preventDefault();
+        if (problem) {
+          setTouched(true);
+          return;
+        }
         pair.mutate(
           { url: url.trim(), token: token.trim() },
           {
@@ -47,13 +87,17 @@ export function PairForm({ onPaired }: { onPaired?: () => void }) {
         );
       }}
     >
-      <Field label={t("pair.url")} required>
+      <Field label={t("pair.url")} required error={urlError}>
         <Input
           type="url"
           value={url}
           placeholder="https://hibiscus.example.org"
+          data-testid="pair-url"
           onChange={(e) => {
             setUrl(e.target.value);
+          }}
+          onBlur={() => {
+            setTouched(true);
           }}
         />
       </Field>
@@ -85,7 +129,11 @@ export function PairForm({ onPaired }: { onPaired?: () => void }) {
           {t("pair.done")}
         </p>
       ) : null}
-      <Button type="submit" className="self-start" disabled={!url.trim() || !token.trim() || pair.isPending}>
+      <Button
+        type="submit"
+        className="self-start"
+        disabled={!url.trim() || problem !== null || !token.trim() || pair.isPending}
+      >
         {t("pair.submit")}
       </Button>
     </form>

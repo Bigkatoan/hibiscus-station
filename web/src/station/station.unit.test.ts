@@ -17,6 +17,8 @@ import en from "./i18n/en.json";
 import vi_ from "./i18n/vi.json";
 import { MockStation } from "./mock/sim";
 import { wizardSteps } from "./StationShell";
+import { serverUrlProblem } from "./components/PairForm";
+import { poseDelta } from "./pages/programs/liveRecheck";
 import { realArmDraft, roleWarnings } from "./pages/RobotPage";
 import { ControlSocket, HEARTBEAT_MS, backoffMs } from "./ws/control";
 import { JOINT_WINDOW_S, StationStore, appendJoints } from "./ws/store";
@@ -299,7 +301,23 @@ describe("wizard rail", () => {
     expect(steps.find((s) => s.key === "teleop")?.lock).toBe("calibrate_leader");
     expect(steps.find((s) => s.key === "run")?.lock).toBeNull();
     expect(steps.find((s) => s.key === "upload")?.lock).toBeNull();
-    expect(steps.find((s) => s.key === "train")?.lock).toBe("pair_first");
+    // Train needs a server, not a robot (D-25): never locked, a neutral prompt until paired.
+    expect(steps.find((s) => s.key === "train")?.lock).toBeNull();
+    expect(steps.find((s) => s.key === "train")?.hint).toBe("pair_server");
+  });
+
+  it("Train is never locked, also with no robot; the prompt goes once paired (D-25)", () => {
+    const sim = new MockStation({ connected: false });
+    let train = wizardSteps(sim.status(), { robots: 0, datasets: [], models: 0 }).find(
+      (s) => s.key === "train",
+    );
+    expect(train).toMatchObject({ lock: null, hint: "pair_server" });
+    const paired = new MockStation({ connected: false, paired: true });
+    train = wizardSteps(paired.status(), { robots: 0, datasets: [], models: 0 }).find(
+      (s) => s.key === "train",
+    );
+    expect(train?.lock).toBeNull();
+    expect(train?.hint ?? null).toBeNull();
   });
 
   it("says why a step is locked: the Station's own reason (field report 0.2.1)", () => {
@@ -380,5 +398,38 @@ describe("station i18n", () => {
       }
     }
     expect(missing).toEqual([]);
+  });
+});
+
+describe("server address check (D-25)", () => {
+  it.each([
+    ["https://hibiscus.example.org", null],
+    ["http://192.168.1.20:8000/", null],
+    ["  https://hibiscus.example.org/app  ", null],
+    ["hibiscus.example.org", "not_url"],
+    ["ftp://hibiscus.example.org", "not_url"],
+    ["file:///C:/Users/me/hibiscus", "not_url"],
+    ["", "not_url"],
+    ["https://onedrive.live.com/?redeem=aHR0cHM6Ly8xZHJ2&id=ABC%21123", "file_share"],
+    ["https://1drv.ms/f/s!AmPle", "file_share"],
+    ["https://contoso-my.sharepoint.com/:f:/g/personal/x/EabC?e=1", "file_share"],
+    ["https://drive.google.com/drive/folders/1AbC", "file_share"],
+    ["https://docs.google.com/document/d/1AbC/edit", "file_share"],
+    ["https://www.dropbox.com/scl/fo/abc/xyz?dl=0", "file_share"],
+    ["https://DL.DROPBOXUSERCONTENT.COM/s/abc/file", "file_share"],
+  ])("%s → %s", (url, problem) => {
+    expect(serverUrlProblem(url)).toBe(problem);
+  });
+});
+
+describe("live re-check of the first motion (D-24)", () => {
+  it("measures the largest joint move in degrees, the gripper (%) left out", () => {
+    const a = { "shoulder_pan.pos": 10, "elbow_flex.pos": -5, "gripper.pos": 0 };
+    expect(poseDelta(a, { ...a })).toBe(0);
+    expect(poseDelta(a, { ...a, "elbow_flex.pos": -8.5 })).toBe(3.5);
+    expect(poseDelta(a, { ...a, "gripper.pos": 90 })).toBe(0);
+    expect(poseDelta(null, a)).toBe(Infinity); // the robot just connected: check
+    expect(poseDelta(a, null)).toBe(Infinity);
+    expect(poseDelta(null, null)).toBe(0);
   });
 });

@@ -657,8 +657,10 @@ IssueCode = Literal[
 class CheckIssue(Wire):
     id: str = Field(description='stable "<code>:<block_id>"; confirmations echo it in RunProgramRequest')
     code: IssueCode
-    severity: Literal["error", "warning", "confirm"] = Field(
-        description="error blocks a run; confirm needs an explicit ack in the run request"
+    severity: Literal["error", "warning", "confirm", "info"] = Field(
+        description="error blocks a run; confirm needs an explicit ack in the run request; warning and "
+        "info never block (info is not a problem: it says what the run will do, e.g. the slow approach "
+        "to the first motion)"
     )
     block_id: str | None
     message_key: str = Field(description='UI string "programs.issues.<code>"')

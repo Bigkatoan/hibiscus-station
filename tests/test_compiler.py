@@ -385,12 +385,12 @@ def test_fast_replay_needs_confirmation_when_the_profile_allows_it() -> None:
     }
 
 
-def test_first_motion_far_from_the_arm_is_a_warning() -> None:
+def test_first_motion_far_from_the_arm_is_information() -> None:
     doc = program(play(A, id_="p"))
     near = ctx(positions={"shoulder_pan.pos": 10.0, "elbow_flex.pos": -5.0, "gripper.pos": 0.0})
     far = ctx(positions={"shoulder_pan.pos": 80.0, "elbow_flex.pos": 0.0, "gripper.pos": 0.0})
     assert issues_of(doc, near) == {}
-    assert issues_of(doc, far) == {"first_motion_far:p": "warning"}
+    assert issues_of(doc, far) == {"first_motion_far:p": "info"}
 
 
 def _program(doc: dict[str, Any], **kw: Any) -> ps.Program:
