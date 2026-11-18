@@ -151,6 +151,19 @@ fail-trước-pass-sau (`tests/test_field_029.py`, `web/src/station/field029.scr
 Bước Tải lên vẫn khoá "Hãy ghi một bộ dữ liệu trước" (cần dataset đã ghi, tức là cần robot); bước Huấn luyện là bước duy
 nhất chỉ cần máy chủ. Lỗi vẫn **mở** đến khi QC chạy lại AT-10, AT-52, AT-70, AT-72 và REG-21, REG-22 trên bản cài.
 
+**QC F029 lần 1 ([QC-F029-r1](qc/QC-F029-r1.md), `deea10b`): D-24 FAIL (QD-36 Low), D-25 FAIL (QD-35 Medium).** Bản sửa
+lần 2 trên `m1/field-029` (test fail-trước-pass-sau, chờ QC lần 2):
+* **QD-35:** kiểm liên kết chia sẻ tệp theo họ tên miền (mọi tên miền con của `cloud.microsoft`, `officeapps.live.com`,
+  `office.com`, `office365.com`, `sharepoint.com`, OneDrive / `*.live.com` có onedrive, `1drv.ms`, Google Drive / Docs,
+  `googleusercontent.com`, Dropbox, Box, WeTransfer, iCloud…) cộng quy tắc chung (tham số `docId`, `driveId`, `resid`,
+  `authkey`…; đường dẫn `/open/onedrive`, `/:w:/`, `/file/d/`…; tên tệp tài liệu). Cùng bộ quy tắc ở giao diện và ở
+  Station: `POST /server/pair` từ chối trước khi gửi gì đi, mã `server_url_file_share` / `server_url_invalid` (422, câu
+  EN / VI). Bộ ca chung `tests/server_urls.json`, có đúng liên kết kiểu khách `word.cloud.microsoft/open/onedrive/?docId=…&driveId=…`.
+* **QD-36:** khi robot ngắt kết nối hoặc luồng khớp cũ quá 2,5 s, dòng thông tin mất ngay và trình soạn kiểm lại; kết nối
+  lại thì dòng hiện lại.
+* **Ghi nhận của QC (sửa luôn):** Ghi chú nằm trong khung riêng có tiêu đề "Ghi chú" / "Notes", viền và màu info; vấn đề
+  dùng biểu tượng riêng theo mức (lỗi: tam giác đỏ, cảnh báo: tam giác cam, cần xác nhận: dấu hỏi), có nhãn đọc màn hình.
+
 ## Số tính năng theo mốc
 
 | Mốc | Số F (mốc chính) | Theo ưu tiên | Phần của tính năng khác làm ở mốc này | Kết thúc khi |

@@ -164,3 +164,17 @@ hai lỗi so với chuẩn chất lượng, đăng ký theo quy tắc zero-defec
   M1, F-7, F-41, F-56, F-58), [REGRESSION.md](REGRESSION.md) (REG-21, REG-22), [SRS.md](SRS.md) §8; spec
   `docs/spec/station-programs.md` §6 (mức `info`). F-41, F-56, F-58 thuộc M2 nhưng hai bản sửa vào M1 theo báo cáo của
   khách. Nhánh dev `m1/field-029` (từ `release/v1` `ae7d680`).
+
+## QC F029 lần 1 → bản sửa lần 2: QD-35, QD-36 · v1.0 (không đổi phạm vi) · 2026-11-18
+
+**Nguồn:** [QC-F029-r1](qc/QC-F029-r1.md) trên `deea10b`: D-24 FAIL (QD-36 Low), D-25 FAIL (QD-35 Medium), kèm một ghi nhận
+về giao diện. Không đổi quyết định của khách; chỉ làm đúng hơn điều khách đã duyệt.
+
+* **QD-35** (D-25): liên kết OneDrive kiểu `word.cloud.microsoft/open/onedrive/?docId=…&driveId=…` (đúng kiểu khách
+  dán), `onedrive.cloud.microsoft`, `view.officeapps.live.com` lọt qua. Sửa: kiểm theo họ tên miền chia sẻ tệp / văn
+  phòng và quy tắc chung (tham số, đường dẫn, tên tệp tài liệu); Station cũng từ chối ở `POST /server/pair` (mã lỗi mới
+  `server_url_file_share`, `server_url_invalid`, 422, câu EN / VI) trước khi gửi gì đi.
+* **QD-36** (D-24): dòng thông tin nằm lại khi robot ngắt kết nối. Sửa: tư thế không còn biết (ngắt kết nối, luồng
+  khớp cũ quá 2,5 s) → dòng mất ngay và kiểm lại.
+* **Ghi nhận QC:** Ghi chú có khung và tiêu đề riêng ("Ghi chú" / "Notes"), màu info; vấn đề có biểu tượng theo mức.
+* Tài liệu: [FEATURES-APPROVED.md](FEATURES-APPROVED.md) (dev status), [REGRESSION.md](REGRESSION.md) (REG-21, REG-22).

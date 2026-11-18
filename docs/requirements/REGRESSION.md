@@ -171,6 +171,9 @@ không đạt là một lỗi mở và chặn phát hành của tính năng liê
   trước khi chạy vì dòng này; dòng tự cập nhật số độ khi tay di chuyển và tự biến mất khi tay đã trong ngưỡng (không
   cần bấm Kiểm tra lại); sau khi chạy xong, dòng phản ánh tư thế mới. API: `CheckIssue.severity = "info"`, không chặn
   chạy, `CheckReport.ok` vẫn đúng.
+  Ngắt kết nối robot (hoặc luồng khớp dừng > 2,5 s) sau khi đã Kiểm tra: dòng mất ngay, không cần bấm gì; kết nối lại:
+  dòng hiện lại (QD-36). Dòng nằm trong khung "Ghi chú" / "Notes" riêng, màu info, khác biểu tượng của cảnh báo / cần
+  xác nhận (ghi nhận QC F029 lần 1).
 * **Test tự động:** `tests/test_field_029.py`, `tests/test_compiler.py::test_first_motion_far_from_the_arm_is_information`,
   `web/src/station/field029.screens.test.tsx` (D-24), `station.unit.test.ts` (`poseDelta`). **Nền tảng:** [Vendor]
   giả lập; [UAT-KH] tay thật.
@@ -179,8 +182,11 @@ không đạt là một lỗi mở và chặn phát hành của tính năng liê
 * **Nguồn:** báo cáo hiện trường của khách check_ver_2.9 (2026-11-18), bản 0.2.9. Quyết định của khách: **"Không cần
   robot, nói rõ hơn"**.
 * **Tái hiện:** chưa ghép nối máy chủ, có hoặc không có robot; mở bước Huấn luyện trên thanh bước (1280 px và 390 px);
-  dán vào ô "Địa chỉ máy chủ" một liên kết OneDrive (`onedrive.live.com`, `1drv.ms`), SharePoint, Google Drive /
-  Docs, Dropbox, rồi một chữ không phải địa chỉ (ví dụ `hibiscus server`), rồi `https://hibiscus.example.org`.
+  dán vào ô "Địa chỉ máy chủ" một liên kết OneDrive (đúng kiểu khách dán:
+  `https://word.cloud.microsoft/open/onedrive/?docId=…&driveId=…`; cả `onedrive.cloud.microsoft`,
+  `view.officeapps.live.com`, `onedrive.live.com`, `1drv.ms`), SharePoint, Google Drive / Docs, Dropbox, Box, WeTransfer,
+  iCloud, rồi một chữ không phải địa chỉ (ví dụ `hibiscus server`), rồi `https://hibiscus.example.org`. Gửi thẳng
+  `POST /api/v1/server/pair` với các địa chỉ đó (QD-35).
 * **Kỳ vọng:** bước Huấn luyện **không** có ổ khoá, không có "Bước này đang bị khoá"; thanh bước và trang hiện câu
   trung tính "Kết nối máy chủ Hibiscus để huấn luyện (không cần robot)." / "Connect to a Hibiscus server to train (no
   robot needed)."; form ghép nối dùng được. Liên kết chia sẻ tệp: lỗi ngay dưới ô "Đây không phải địa chỉ máy chủ
@@ -188,8 +194,10 @@ không đạt là một lỗi mở và chặn phát hành của tính năng liê
   "Hãy nhập địa chỉ bắt đầu bằng http:// hoặc https://…" khi rời ô; nút Ghép nối tắt tới khi địa chỉ hợp lệ. Các bước
   thật sự cần robot (Hiệu chỉnh, Camera, Điều khiển tay, Ghi dữ liệu, Chạy model) và Tải lên (cần dataset đã ghi) vẫn
   khoá như REG-12.
+  API: 422 `server_url_file_share` / `server_url_invalid` (câu EN / VI), không có yêu cầu nào ra ngoài, không ghép nối.
 * **Test tự động:** `web/src/station/field029.screens.test.tsx` (D-25), `field028.screens.test.tsx` (Huấn luyện),
-  `station.unit.test.ts` (`wizardSteps`, `serverUrlProblem`). **Nền tảng:** [Vendor].
+  `station.unit.test.ts` (`wizardSteps`, `serverUrlProblem` trên `tests/server_urls.json`), `tests/test_field_029.py`
+  (`server_url_problem` trên cùng bộ ca, `POST /server/pair`). **Nền tảng:** [Vendor].
 
 ### REG-14 … REG-20 (từ CHANGELOG)
 | REG | Tái hiện | Kỳ vọng | Test tự động | Nền tảng |
