@@ -185,6 +185,21 @@ lần 2 trên `m1/field-029` (test fail-trước-pass-sau, chờ QC lần 2):
 * **QD-39:** lỗi có câu dịch thì chỉ hiện câu dịch; chi tiết tiếng Anh của Station nằm trong "Chi tiết kỹ thuật" thu
   gọn (FR-73, P-5), kể cả lỗi token sai định dạng; lỗi không có câu dịch vẫn hiện chi tiết.
 
+**QC F029 lần 3 ([QC-F029-r3](qc/QC-F029-r3.md), `dc07cdc`): D-24 PASS; QD-37 – QD-41 PASS, không rò token; D-25 FAIL
+(QD-44 Medium; QD-42, QD-43, QD-45 Low).** Bản sửa lần 4 trên `m1/field-029` (test fail-trước-pass-sau, chờ QC lần 4):
+* **QD-44:** ghép nối trả mã riêng cho từng lý do, có câu EN / VI: `server_unauthorized` (máy chủ trả 401 / 403),
+  `token_format_invalid`, `token_missing_scope`, `workspace_required`, `server_url_insecure`. Giao diện chỉ thu gọn chi
+  tiết với các mã mà câu dịch đã nói đủ (danh sách `SELF_EXPLAINING`); mọi mã khác, trước hết `validation_failed` chung
+  (52 chỗ ở Station, mỗi chỗ một lý do), hiện chi tiết ngay như trước QD-39.
+* **QD-42:** bước dò có một hạn chót 5 s cho cả trao đổi (kết nối, tiêu đề, nội dung; `asyncio.wait_for`), test với máy
+  chủ nhỏ giọt 1 byte / 3 s ở phần nội dung và ở phần tiêu đề.
+* **QD-43:** kiểm danh tính theo sự có mặt và kiểu của các trường chính; `supported_locales` là danh sách có "vi" hoặc
+  "en" (cho phép ngôn ngữ khác, ví dụ `["vi","en","ja"]`); không đòi giá trị cố định.
+* **QD-45:** `http://` chỉ cho localhost, địa chỉ loopback / mạng riêng (RFC 1918, ULA) / link-local / CGNAT 100.64/10,
+  `*.local`, `*.lan` và tên một nhãn; máy chủ công khai qua `http://` → `server_url_insecure` ("Hãy dùng địa chỉ
+  https:// …") ở form và ở Station, trước mọi request; cùng bảng ca `tests/server_urls.json`. (Chuyển hướng HTTP → HTTPS
+  của máy chủ prod là việc hạ tầng, không thuộc nhánh này.)
+
 ## Số tính năng theo mốc
 
 | Mốc | Số F (mốc chính) | Theo ưu tiên | Phần của tính năng khác làm ở mốc này | Kết thúc khi |

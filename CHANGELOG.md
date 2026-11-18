@@ -71,8 +71,11 @@ with its own line (see the README); GitHub never offers a pre-release as its "la
   (`server_not_hibiscus`). The share-link check is now only an early hint for OneDrive /
   SharePoint / Office / Teams, Google Drive / Docs and Dropbox (Outlook Safe Links unwrapped), so a
   real server address with `?cid=` or a file path is no longer refused.
-- **Error messages show only the translated sentence**; Station's technical detail (English) is in
-  a closed "Technical details" section.
+- **Pairing says exactly what went wrong**: the server rejected the token, the token is not a
+  Hibiscus token, it lacks a permission, or several workspaces; for these the technical detail
+  (English) is in a closed "Technical details" section, while other errors keep their reason in
+  sight. The identity check gives up after 5 s in total, accepts servers with more languages, and
+  plain `http://` is refused for a server on the internet (it stays allowed on your own network).
 - **The "move slowly to the start" note no longer stays when the robot is disconnected** (or its
   joint readings stop) and comes back on reconnect, also a fast one; notes sit in their own "Notes"
   box, and errors, warnings and confirmations each have their own badge shape and colour.

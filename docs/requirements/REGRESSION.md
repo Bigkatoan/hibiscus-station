@@ -200,7 +200,11 @@ không đạt là một lỗi mở và chặn phát hành của tính năng liê
   web thường; máy chuyển hướng; máy không trả lời): 422 `server_not_hibiscus` sau một lần hỏi `/api/v1/auth/config`
   **không mang token**; token chỉ đi tới máy trả lời đúng danh tính Hibiscus (QD-40). `?cid=…`, `/robots.txt` trên máy
   chủ thật không bị gợi ý chặn (QD-41). Giao diện VI: chỉ câu tiếng Việt, chi tiết tiếng Anh trong "Chi tiết kỹ thuật"
-  thu gọn (QD-39).
+  thu gọn (QD-39). Token bị máy chủ từ chối: "Máy chủ từ chối token này." / "The server rejected this token."; token
+  sai định dạng: "Đây không phải token truy cập cá nhân của Hibiscus…" (QD-44, không còn câu chung "Một số giá trị không
+  hợp lệ."). Máy chủ gửi nhỏ giọt: kết luận trong khoảng 5 s (QD-42). `supported_locales` có thêm ngôn ngữ: vẫn là
+  Hibiscus (QD-43). `http://` tới máy chủ công khai: `server_url_insecure`, 0 request; `http://` trong mạng nội bộ vẫn
+  được (QD-45).
 * **Test tự động:** `web/src/station/field029.screens.test.tsx` (D-25), `field028.screens.test.tsx` (Huấn luyện),
   `station.unit.test.ts` (`wizardSteps`, `serverUrlProblem` trên `tests/server_urls.json`), `tests/test_field_029.py`
   (`server_url_problem` trên cùng bộ ca, `POST /server/pair`). **Nền tảng:** [Vendor].

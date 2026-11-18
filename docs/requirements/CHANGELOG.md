@@ -192,3 +192,15 @@ bỏ cách chặn theo danh sách, thay bằng bảo đảm theo thiết kế. K
 * **QD-38** (Low): kết nối lại nhanh vẫn kiểm lại.
 * **QD-39** (Low): chỉ câu dịch; chi tiết kỹ thuật thu gọn (FR-73, P-5).
 * Tài liệu: [FEATURES-APPROVED.md](FEATURES-APPROVED.md), [REGRESSION.md](REGRESSION.md), `docs/spec/station.md` §4.8.
+
+## QC F029 lần 3 → bản sửa lần 4: QD-42 – QD-45 · v1.0 (không đổi phạm vi) · 2026-11-18
+
+**Nguồn:** [QC-F029-r3](qc/QC-F029-r3.md) trên `dc07cdc` (D-24 PASS; D-25 FAIL: QD-44 Medium, QD-42, QD-43, QD-45 Low).
+
+* **QD-44** (Medium): mã lỗi riêng cho từng lý do ghép nối (`server_unauthorized`, `token_format_invalid`,
+  `token_missing_scope`, `workspace_required`), câu EN / VI; chỉ thu gọn chi tiết khi câu dịch đã nói đủ;
+  `validation_failed` chung lại hiện lý do.
+* **QD-42** (Low): hạn chót 5 s cho cả lần dò.
+* **QD-43** (Low): kiểm danh tính theo trường và kiểu, nhận thêm ngôn ngữ.
+* **QD-45** (Low, bảo mật): `http://` chỉ trong mạng nội bộ; máy chủ công khai → `server_url_insecure`.
+* Tài liệu: [FEATURES-APPROVED.md](FEATURES-APPROVED.md), [REGRESSION.md](REGRESSION.md), `docs/spec/station.md` §4.8.

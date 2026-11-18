@@ -421,11 +421,16 @@ Defaults (all configurable globally in `settings.yaml`, and per robot profile):
   **`models:read`**, and optionally **`runs:read`** (Train screen run list). `POST /server/pair`
   first refuses an address that is not http(s) (`server_url_invalid`) or a known share link
   (`server_url_file_share`: OneDrive / SharePoint / Office / Teams, Google Drive / Docs, Dropbox,
-  Safe Links unwrapped), then **probes the candidate without credentials**: `GET <base>/auth/config`
-  (the public login configuration of the released server), no redirect followed, 5 s timeout,
-  `application/json` with the `AuthConfig` shape. Only a positive identity lets the token leave the
+  Safe Links unwrapped) or plain `http://` to a public host (`server_url_insecure`: http only for
+  localhost, loopback / private / link-local / CGNAT addresses, `*.local`, `*.lan`, single-label
+  names), then **probes the candidate without credentials**: `GET <base>/auth/config` (the public
+  login configuration of the released server), no redirect followed, one 5 s deadline over the
+  whole exchange, `application/json` with the `AuthConfig` fields and types (`supported_locales`
+  names vi or en; other languages and new fields are fine). Only a positive identity lets the token leave the
   Station; anything else is `server_not_hibiscus` (422, QC F029 QD-40). It then
-  checks the token with `GET /auth/me` and the workspace list, and stores the token through
+  checks the token with `GET /auth/me` (401 / 403 → `server_unauthorized`; a malformed token is
+  `token_format_invalid`, a missing scope `token_missing_scope`, several workspaces
+  `workspace_required`) and the workspace list, and stores the token through
   `cli/hibiscus/credentials.save_token`: OS keyring first, otherwise `credentials.json` at 0600,
   refused when group or other can read it (`cli/hibiscus/credentials.py:1-8`). The CLI and Station
   share the stored token.
