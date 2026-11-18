@@ -13,7 +13,7 @@
  */
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18n } from "@/lib/i18n";
 import { MOTORS } from "./mock/fixtures";
 import { renderStation, settle, setupStation, type StationHarness } from "./test/utils";
@@ -43,13 +43,31 @@ function startOfPickA(h: StationHarness): number[] {
   return MOTORS.map((m) => take.meta.start_pose[`${m}.pos`] ?? 0);
 }
 
-/** Hold the follower at `pose` and let a few joint messages through. */
+/** A live joint stream (20 Hz), as from a connected robot; stopped after each test. */
+let stream: ReturnType<typeof setInterval> | null = null;
+afterEach(() => {
+  if (stream) clearInterval(stream);
+  stream = null;
+});
+
+/** Hold the follower at `pose`, with the joint stream running. */
 async function holdArm(h: StationHarness, pose: number[]): Promise<void> {
   h.sim.pinnedPose = pose;
+  stream ??= setInterval(() => {
+    act(() => {
+      h.sim.step(0.05);
+    });
+  }, 50);
   await act(async () => {
     for (let i = 0; i < 4; i += 1) h.sim.step(0.05);
     await new Promise((r) => setTimeout(r, 0));
   });
+}
+
+/** The joint stream stops (robot unplugged, Station stalled): the store keeps the last pose. */
+function stopStream(): void {
+  if (stream) clearInterval(stream);
+  stream = null;
 }
 
 async function openEditor(h: StationHarness) {
@@ -146,6 +164,93 @@ describe("D-24: the first motion's slow approach is information that follows the
   });
 });
 
+describe("QC F029 r1: QD-36 and the look of the information line", () => {
+  async function checkedFar(h: StationHarness, user: ReturnType<typeof userEvent.setup>) {
+    const start = startOfPickA(h);
+    await holdArm(
+      h,
+      start.map((v, i) => (i === 0 ? v + 60 : v)),
+    );
+    await openEditor(h);
+    await user.click(screen.getByRole("button", { name: "Check" }));
+    expect(await screen.findByTestId("program-notes")).toHaveTextContent("(60° away)");
+  }
+
+  it("QD-36: the line goes away when the robot disconnects, and comes back on reconnect", async () => {
+    const h = setupStation();
+    const user = userEvent.setup();
+    await checkedFar(h, user);
+    act(() => {
+      h.sim.disconnect();
+    });
+    await waitFor(
+      () => {
+        expect(screen.queryByTestId("program-notes")).toBeNull();
+      },
+      { timeout: 3000 },
+    );
+    // Still gone a while later (no stale check brings it back).
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 1700));
+    });
+    expect(screen.queryByTestId("program-notes")).toBeNull();
+    act(() => {
+      h.sim.doConnect("desk_so101");
+    });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("program-notes")).toHaveTextContent("(60° away)");
+      },
+      { timeout: 4000 },
+    );
+  });
+
+  it("QD-36: the line goes away when the joint stream goes stale", async () => {
+    const h = setupStation();
+    const user = userEvent.setup();
+    await checkedFar(h, user);
+    stopStream();
+    await waitFor(
+      () => {
+        expect(screen.queryByTestId("program-notes")).toBeNull();
+      },
+      { timeout: 5000 },
+    );
+  });
+
+  it("information has its own titled box, apart from warnings and confirmations (EN + VI)", async () => {
+    const h = setupStation();
+    // A stray "relax arm" block outside the start block: a warning (unreachable).
+    const p = h.sim.programs.program("sort_cubes");
+    const editor = structuredClone(p.editor) as { blocks: { blocks: Record<string, unknown>[] } };
+    editor.blocks.blocks.push({ type: "hb_relax_arm", id: "lonely", x: 600, y: 40 });
+    h.sim.programs.putProgram("sort_cubes", { name: p.name, editor, buttons: p.buttons });
+    const user = userEvent.setup();
+    await checkedFar(h, user);
+    const problems = screen.getByTestId("program-issues");
+    const warning = within(problems)
+      .getAllByRole("listitem")
+      .find((li) => li.getAttribute("data-severity") === "warning");
+    if (!warning) throw new Error("no warning in the problem list");
+    expect(within(warning).getByRole("img", { name: "Warning" })).toBeInTheDocument();
+    const notes = screen.getByTestId("program-notes");
+    expect(within(notes).getByRole("heading", { name: "Notes" })).toBeInTheDocument();
+    expect(within(notes).queryByRole("img", { name: "Warning" })).toBeNull();
+    expect(within(problems).queryByText(/move slowly/)).toBeNull();
+    await act(async () => {
+      await i18n.changeLanguage("vi");
+    });
+    try {
+      expect(within(notes).getByRole("heading", { name: "Ghi chú" })).toBeInTheDocument();
+      expect(within(problems).getAllByRole("img", { name: "Cảnh báo" }).length).toBeGreaterThan(0);
+    } finally {
+      await act(async () => {
+        await i18n.changeLanguage("en");
+      });
+    }
+  });
+});
+
 describe("D-25: Train needs a server, not a robot", () => {
   it("shows a neutral prompt, no lock, with or without a robot", async () => {
     for (const connected of [true, false]) {
@@ -197,6 +302,20 @@ describe("D-25: Train needs a server, not a robot", () => {
     ).toBeInTheDocument();
     expect(url).toHaveAttribute("aria-invalid", "true");
     expect(pair).toBeDisabled();
+
+    // QD-35: the link the customer actually pasted (OneDrive on word.cloud.microsoft).
+    await user.clear(url);
+    await user.type(
+      url,
+      "https://word.cloud.microsoft/open/onedrive/?docId=0123456789ABCDEF%21s1a2b3c4d5e6f&driveId=0123456789ABCDEF",
+    );
+    expect(
+      screen.getByText(
+        "This is not a Hibiscus server address. Paste the address of your Hibiscus site, for example https://hibiscus.example.org",
+      ),
+    ).toBeInTheDocument();
+    expect(pair).toBeDisabled();
+    expect(screen.queryByRole("link", { name: /Create a token/ })).toBeNull();
 
     await user.clear(url);
     await user.type(url, "hibiscus server");

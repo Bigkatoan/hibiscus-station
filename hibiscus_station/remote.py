@@ -14,6 +14,7 @@ from typing import Any
 
 from hibiscus_station.errors import StationError
 from hibiscus_station.jobs import Job, JobManager
+from hibiscus_station.server_url import server_url_problem
 from hibiscus_station.settings import write_private
 
 log = logging.getLogger(__name__)
@@ -90,6 +91,16 @@ class ServerLink:
         from hibiscus.config import normalize_server
         from hibiscus.credentials import looks_like_pat, save_token, token_prefix
 
+        # Before anything leaves the Station (D-25 / QD-35): never send a token to a file-share site.
+        problem = server_url_problem(url)
+        if problem == "file_share":
+            raise StationError(
+                "server_url_file_share",
+                "this is a file-sharing link (OneDrive, SharePoint, Google Drive, Dropbox...), "
+                "not the address of a Hibiscus server",
+            )
+        if problem == "not_url":
+            raise StationError("server_url_invalid", "the server address must start with http:// or https://")
         try:
             base = normalize_server(url)
         except ValueError as exc:

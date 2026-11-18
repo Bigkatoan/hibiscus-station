@@ -15,6 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input, NativeSelect } from "@/components/ui/input";
 import { Alert, AlertTitle } from "@/components/ui/misc";
 import { Link } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import {
@@ -60,6 +61,20 @@ import { blockDetail, isLive } from "./shared";
 const BlocklyEditor = lazy(() => import("../../programs/blockly/BlocklyEditor"));
 
 const enc = encodeURIComponent;
+
+/** Problems are told apart by icon and colour (an error, a warning, a run that needs a yes). */
+const SEVERITY_ICON: Record<
+  CheckIssue["severity"],
+  { icon: "warning" | "help" | "info"; className: string }
+> = {
+  error: { icon: "warning", className: "text-destructive" },
+  warning: { icon: "warning", className: "text-warning" },
+  confirm: { icon: "help", className: "text-warning" },
+  info: { icon: "info", className: "text-info" },
+};
+
+/** Issues that depend on where the arm is: dropped when the pose is not known (QD-36). */
+const POSE_ISSUES = new Set<CheckIssue["code"]>(["first_motion_far"]);
 
 function ButtonsEditor({
   buttons,
@@ -344,14 +359,23 @@ function ProgramWorkspace({ program, onDeleted }: { program: Program; onDeleted:
   const shownVersion = useRef(version);
   shownVersion.current = version;
   const recheck = useCallback(
-    () =>
+    (poseKnown: boolean) =>
       api.post<CheckReport>(`/programs/${enc(programId)}/check`).then((r) => {
         // A save while the check was on its way: its answer is about the old version.
-        if (r.version === shownVersion.current) setIssues(r.issues);
+        if (r.version !== shownVersion.current) return;
+        setIssues(poseKnown ? r.issues : r.issues.filter((i) => !POSE_ISSUES.has(i.code)));
       }),
     [programId],
   );
-  const { markChecked } = useLiveRecheck({ enabled: checked && !dirty && !running, running, recheck });
+  const onPoseLost = useCallback(() => {
+    setIssues((prev) => prev.filter((i) => !POSE_ISSUES.has(i.code)));
+  }, []);
+  const { markChecked } = useLiveRecheck({
+    enabled: checked && !dirty && !running,
+    running,
+    recheck,
+    onPoseLost,
+  });
   const showReport = useCallback(
     (r: CheckReport) => {
       setIssues(r.issues);
@@ -463,8 +487,9 @@ function ProgramWorkspace({ program, onDeleted }: { program: Program; onDeleted:
               {problems.map((i) => (
                 <li key={i.id} className="flex items-start gap-2" data-severity={i.severity}>
                   <PxIcon
-                    name={i.severity === "error" ? "warning" : "info"}
-                    className={i.severity === "error" ? "text-destructive" : "text-info"}
+                    name={SEVERITY_ICON[i.severity].icon}
+                    className={cn("mt-0.5 shrink-0", SEVERITY_ICON[i.severity].className)}
+                    label={t(`programs.editor.severity_${i.severity}`)}
                   />
                   <span>
                     {issueText(i)}
@@ -481,22 +506,30 @@ function ProgramWorkspace({ program, onDeleted }: { program: Program; onDeleted:
             </p>
           )}
           {notes.length > 0 ? (
-            <ul
-              className="flex flex-col gap-1 text-sm text-muted-foreground"
-              aria-label={t("programs.editor.notes")}
+            // Information, not a problem (QC F029 r1): its own titled box, info colour, no warning.
+            <section
+              aria-labelledby="program-notes-title"
               aria-live="polite"
+              className="flex flex-col gap-1 border-2 border-l-8 border-frame border-l-info bg-background px-3 py-2"
               data-testid="program-notes"
             >
-              {notes.map((i) => (
-                <li key={i.id} className="flex items-start gap-2" data-severity="info">
-                  <PxIcon name="info" className="mt-0.5 shrink-0 text-info" />
-                  <span>
+              <h3
+                id="program-notes-title"
+                className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wide text-info"
+              >
+                <PxIcon name="info" /> {t("programs.editor.notes")}
+              </h3>
+              <ul className="flex flex-col gap-1 text-sm">
+                {notes.map((i) => (
+                  <li key={i.id} data-severity="info">
                     {issueText(i)}
-                    {i.block_id ? <span className="text-xs"> · {blockLabel(i.block_id)}</span> : null}
-                  </span>
-                </li>
-              ))}
-            </ul>
+                    {i.block_id ? (
+                      <span className="text-xs text-muted-foreground"> · {blockLabel(i.block_id)}</span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </section>
           ) : null}
           {errors.length === 0 && dryRunVersion === version ? (
             <p className="text-xs text-muted-foreground">{t("programs.editor.dry_done")}</p>

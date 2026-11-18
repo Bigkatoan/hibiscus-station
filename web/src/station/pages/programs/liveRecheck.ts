@@ -7,10 +7,12 @@
  * {@link RECHECK_MOVE_DEG} on some joint since the last one (at most once every
  * {@link RECHECK_MIN_MS}), and when a run ends. The joint stream is read from the store without
  * re-rendering the editor on every joint message.
+ *
+ * When the pose becomes unknown (robot disconnected, joints older than {@link POSE_STALE_MS}), the
+ * pose-dependent lines go at once and the check runs again (QC F029 r1, QD-36).
  */
 import { useCallback, useEffect, useRef } from "react";
 import { useRuntime } from "../../ws/StationProvider";
-import type { StationStore } from "../../ws/store";
 
 /** A joint has to move this much (degrees) since the last check before checking again. */
 export const RECHECK_MOVE_DEG = 2;
@@ -32,37 +34,57 @@ export function poseDelta(a: Pose | null, b: Pose | null): number {
   return max;
 }
 
-function followerOf(store: StationStore): Pose | null {
-  return store.getSnapshot().joints?.arms.follower ?? null;
-}
+/** No joint message for this long: the pose is unknown (stream stopped, robot gone). */
+export const POSE_STALE_MS = 2500;
 
 export function useLiveRecheck({
   enabled,
   running,
   recheck,
+  onPoseLost,
 }: {
   /** The shown issues come from a check of the saved version (no unsaved edit, not running). */
   enabled: boolean;
   /** A run of this program is live (a run end re-checks). */
   running: boolean;
-  /** Runs the check; resolves when the new issues are shown. */
-  recheck: () => Promise<unknown>;
+  /**
+   * Runs the check; resolves when the new issues are shown. `poseKnown` is false when the robot
+   * is not connected or its joints went stale: then nothing about the arm's pose may be shown.
+   */
+  recheck: (poseKnown: boolean) => Promise<unknown>;
+  /** The robot disconnected or its pose went stale (QD-36): drop what depends on the pose now. */
+  onPoseLost: () => void;
 }): { markChecked: () => void } {
   const { store } = useRuntime();
   const basis = useRef<Pose | null>(null);
   const last = useRef(0);
   const inflight = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const live = useRef({ enabled, recheck });
-  live.current = { enabled, recheck };
+  const live = useRef({ enabled, recheck, onPoseLost });
+  live.current = { enabled, recheck, onPoseLost };
+  // When the last joint message arrived (the store keeps the last one after the stream stops).
+  const seen = useRef<{ msg: unknown; at: number }>({
+    msg: store.getSnapshot().joints,
+    at: Date.now(),
+  });
+
+  /** The follower pose, or null when it is not known now (not connected, stale joints). */
+  const knownPose = useRef((): Pose | null => {
+    const snap = store.getSnapshot();
+    if (snap.joints !== seen.current.msg) seen.current = { msg: snap.joints, at: Date.now() };
+    if (!snap.status?.robot?.connected || !snap.joints) return null;
+    if (Date.now() - seen.current.at > POSE_STALE_MS) return null;
+    return snap.joints.arms.follower;
+  });
+  const known = useRef(knownPose.current() !== null);
 
   const fire = useRef(() => {
     if (inflight.current || !live.current.enabled) return;
     inflight.current = true;
-    basis.current = followerOf(store);
+    basis.current = knownPose.current();
     last.current = Date.now();
     live.current
-      .recheck()
+      .recheck(basis.current !== null)
       .catch(() => undefined)
       .finally(() => {
         inflight.current = false;
@@ -72,19 +94,25 @@ export function useLiveRecheck({
   useEffect(() => {
     if (!enabled) return undefined;
     const evaluate = () => {
+      const pose = knownPose.current();
+      if (known.current && pose === null) live.current.onPoseLost();
+      known.current = pose !== null;
       if (inflight.current || timer.current) return;
-      if (poseDelta(basis.current, followerOf(store)) <= RECHECK_MOVE_DEG) return;
+      if (poseDelta(basis.current, pose) <= RECHECK_MOVE_DEG) return;
       const wait = last.current + RECHECK_MIN_MS - Date.now();
       if (wait <= 0) fire.current();
       else
         timer.current = setTimeout(() => {
           timer.current = null;
-          if (poseDelta(basis.current, followerOf(store)) > RECHECK_MOVE_DEG) fire.current();
+          if (poseDelta(basis.current, knownPose.current()) > RECHECK_MOVE_DEG) fire.current();
         }, wait);
     };
     const unsubscribe = store.subscribe(evaluate);
+    // A stream that stops sends nothing: look at the pose's age regularly too.
+    const tick = setInterval(evaluate, 1000);
     return () => {
       unsubscribe();
+      clearInterval(tick);
       if (timer.current) clearTimeout(timer.current);
       timer.current = null;
     };
@@ -99,8 +127,9 @@ export function useLiveRecheck({
 
   /** Call when a check (button, run start) produced the shown issues: the pose now is the basis. */
   const markChecked = useCallback(() => {
-    basis.current = followerOf(store);
+    basis.current = knownPose.current();
+    known.current = basis.current !== null;
     last.current = Date.now();
-  }, [store]);
+  }, []);
   return { markChecked };
 }

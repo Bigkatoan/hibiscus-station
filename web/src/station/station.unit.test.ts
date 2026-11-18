@@ -401,23 +401,20 @@ describe("station i18n", () => {
   });
 });
 
-describe("server address check (D-25)", () => {
-  it.each([
-    ["https://hibiscus.example.org", null],
-    ["http://192.168.1.20:8000/", null],
-    ["  https://hibiscus.example.org/app  ", null],
-    ["hibiscus.example.org", "not_url"],
-    ["ftp://hibiscus.example.org", "not_url"],
-    ["file:///C:/Users/me/hibiscus", "not_url"],
-    ["", "not_url"],
-    ["https://onedrive.live.com/?redeem=aHR0cHM6Ly8xZHJ2&id=ABC%21123", "file_share"],
-    ["https://1drv.ms/f/s!AmPle", "file_share"],
-    ["https://contoso-my.sharepoint.com/:f:/g/personal/x/EabC?e=1", "file_share"],
-    ["https://drive.google.com/drive/folders/1AbC", "file_share"],
-    ["https://docs.google.com/document/d/1AbC/edit", "file_share"],
-    ["https://www.dropbox.com/scl/fo/abc/xyz?dl=0", "file_share"],
-    ["https://DL.DROPBOXUSERCONTENT.COM/s/abc/file", "file_share"],
-  ])("%s → %s", (url, problem) => {
+describe("server address check (D-25, QD-35)", () => {
+  // The same cases as the Station's own check (tests/test_field_029.py).
+  const cases = (
+    JSON.parse(readFileSync(join(process.cwd(), "../tests/server_urls.json"), "utf8")) as {
+      cases: [string, string | null][];
+    }
+  ).cases;
+  it("has the customer's OneDrive link among the cases", () => {
+    expect(cases.length).toBeGreaterThan(30);
+    expect(cases.map((c) => c[0])).toContain(
+      "https://word.cloud.microsoft/open/onedrive/?docId=0123456789ABCDEF%21s1a2b3c4d5e6f&driveId=0123456789ABCDEF",
+    );
+  });
+  it.each(cases)("%s → %s", (url, problem) => {
     expect(serverUrlProblem(url)).toBe(problem);
   });
 });
