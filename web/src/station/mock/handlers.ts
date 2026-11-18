@@ -417,7 +417,9 @@ export function stationHandlers(sim: MockStation, base = `${window.location.orig
       u("/server/pair"),
       guard(async ({ request }) => {
         const b = await json<{ url: string; token: string }>(request);
-        if (!b.token.startsWith("hbp_")) throw new MockProblem(422, "validation_failed");
+        // The Station's pairing codes (QC F029 QD-44): each reason has its own sentence.
+        if (!b.token.startsWith("hbp_")) throw new MockProblem(422, "token_format_invalid");
+        if (b.token.includes("rejected")) throw new MockProblem(422, "server_unauthorized");
         sim.server = pairedLink(b.url.replace(/\/+$/, "").replace(/\/api\/v1$/, ""));
         return sim.server;
       }),

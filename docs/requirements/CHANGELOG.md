@@ -143,3 +143,64 @@ người dùng thấy. Đưa khách xem ở lần duyệt tiếp theo.
 * [ACCEPTANCE.md](ACCEPTANCE.md) AT-2: bản cũ ghi `windows-latest` "build wheel", nhưng CI build bộ tệp phát hành
   (wheel thuần Python `py3-none-any`, `install.ps1`, `SHA256SUMS`) **một lần** trên Linux và job Windows cài **chính
   tệp wheel đó** bằng `install.ps1` (đúng tệp người dùng cài). AT-2 nay ghi đúng như vậy; macOS cài smoke cùng bộ tệp.
+
+## Lỗi hiện trường 0.2.9: D-24, D-25 · v1.0 (không đổi phạm vi) · 2026-11-18
+
+**Nguồn:** báo cáo hiện trường của khách hàng check_ver_2.9 (2026-11-18) trên bản 0.2.9. Không phải yêu cầu mới:
+hai lỗi so với chuẩn chất lượng, đăng ký theo quy tắc zero-defect, khách đã quyết định cách sửa.
+
+* **D-24** (Low, F-56, F-58, REG-21): cảnh báo "Chuyển động đầu tiên bắt đầu xa tư thế hiện tại của tay" tính một lần
+  lúc kiểm và nằm mãi trên khối kể cả sau khi chạy. Quyết định của khách: **"Đổi thành thông tin, tự cập nhật"**. Cách
+  sửa: mức `info` mới cho `CheckIssue.severity` (API, `openapi.json`, kiểu của giao diện), không đếm là cảnh báo, không
+  chặn, không hỏi xác nhận; câu "Tay sẽ đi chậm về điểm bắt đầu của chuyển động này (cách X°)." / "The arm will first
+  move slowly to the start of this motion (X° away)."; trình soạn kiểm lại khi tay di chuyển quá 2° (tối đa một lần mỗi
+  1,5 s) và khi chạy xong, dòng biến mất khi tay trong ngưỡng.
+* **D-25** (Medium, F-7, F-41, REG-22): bước Huấn luyện hiện ổ khoá và "Bước này đang bị khoá" khi chưa ghép nối dù
+  form ghép nối dùng được; khách dán một liên kết OneDrive vào ô địa chỉ máy chủ. Quyết định của khách: **"Không cần
+  robot, nói rõ hơn"**. Cách sửa: Huấn luyện không khoá, câu trung tính "Kết nối máy chủ Hibiscus để huấn luyện (không
+  cần robot)."; form ghép nối kiểm địa chỉ (http(s), không phải OneDrive / SharePoint / Google Drive / Dropbox), báo lỗi
+  ngay dưới ô, nút Ghép nối tắt tới khi hợp lệ. Bước Tải lên giữ khoá "ghi dataset trước" (cần dataset, tức là robot).
+* Tài liệu: [FEATURES.md](FEATURES.md) (D-24, D-25; tổng 25 lỗi), [FEATURES-APPROVED.md](FEATURES-APPROVED.md) (mốc
+  M1, F-7, F-41, F-56, F-58), [REGRESSION.md](REGRESSION.md) (REG-21, REG-22), [SRS.md](SRS.md) §8; spec
+  `docs/spec/station-programs.md` §6 (mức `info`). F-41, F-56, F-58 thuộc M2 nhưng hai bản sửa vào M1 theo báo cáo của
+  khách. Nhánh dev `m1/field-029` (từ `release/v1` `ae7d680`).
+
+## QC F029 lần 1 → bản sửa lần 2: QD-35, QD-36 · v1.0 (không đổi phạm vi) · 2026-11-18
+
+**Nguồn:** [QC-F029-r1](qc/QC-F029-r1.md) trên `deea10b`: D-24 FAIL (QD-36 Low), D-25 FAIL (QD-35 Medium), kèm một ghi nhận
+về giao diện. Không đổi quyết định của khách; chỉ làm đúng hơn điều khách đã duyệt.
+
+* **QD-35** (D-25): liên kết OneDrive kiểu `word.cloud.microsoft/open/onedrive/?docId=…&driveId=…` (đúng kiểu khách
+  dán), `onedrive.cloud.microsoft`, `view.officeapps.live.com` lọt qua. Sửa: kiểm theo họ tên miền chia sẻ tệp / văn
+  phòng và quy tắc chung (tham số, đường dẫn, tên tệp tài liệu); Station cũng từ chối ở `POST /server/pair` (mã lỗi mới
+  `server_url_file_share`, `server_url_invalid`, 422, câu EN / VI) trước khi gửi gì đi.
+* **QD-36** (D-24): dòng thông tin nằm lại khi robot ngắt kết nối. Sửa: tư thế không còn biết (ngắt kết nối, luồng
+  khớp cũ quá 2,5 s) → dòng mất ngay và kiểm lại.
+* **Ghi nhận QC:** Ghi chú có khung và tiêu đề riêng ("Ghi chú" / "Notes"), màu info; vấn đề có biểu tượng theo mức.
+* Tài liệu: [FEATURES-APPROVED.md](FEATURES-APPROVED.md) (dev status), [REGRESSION.md](REGRESSION.md) (REG-21, REG-22).
+
+## QC F029 lần 2 → bản sửa lần 3: QD-37 – QD-41 · v1.0 (không đổi phạm vi) · 2026-11-18
+
+**Nguồn:** [QC-F029-r2](qc/QC-F029-r2.md) trên `b74a735` (QD-35, QD-36 PASS; QD-37 – QD-41 mới) và quyết định của Lead:
+bỏ cách chặn theo danh sách, thay bằng bảo đảm theo thiết kế. Không đổi quyết định của khách.
+
+* **QD-40** (Medium): Station chỉ gửi token tới máy đã trả lời đúng danh tính Hibiscus ở `GET /api/v1/auth/config`
+  (không token, không theo chuyển hướng, 5 s); không đạt → 422 `server_not_hibiscus` (EN / VI).
+* **QD-41** (Low): gợi ý liên kết chia sẻ chỉ cho các họ khách đã nêu (+ Safe Links, Teams, `d.docs.live.net`,
+  `google.com/url`); bỏ quy tắc chung gây chặn nhầm.
+* **QD-37** (Low): huy hiệu theo mức, khác hình và màu, tương phản ≥ 4,5:1.
+* **QD-38** (Low): kết nối lại nhanh vẫn kiểm lại.
+* **QD-39** (Low): chỉ câu dịch; chi tiết kỹ thuật thu gọn (FR-73, P-5).
+* Tài liệu: [FEATURES-APPROVED.md](FEATURES-APPROVED.md), [REGRESSION.md](REGRESSION.md), `docs/spec/station.md` §4.8.
+
+## QC F029 lần 3 → bản sửa lần 4: QD-42 – QD-45 · v1.0 (không đổi phạm vi) · 2026-11-18
+
+**Nguồn:** [QC-F029-r3](qc/QC-F029-r3.md) trên `dc07cdc` (D-24 PASS; D-25 FAIL: QD-44 Medium, QD-42, QD-43, QD-45 Low).
+
+* **QD-44** (Medium): mã lỗi riêng cho từng lý do ghép nối (`server_unauthorized`, `token_format_invalid`,
+  `token_missing_scope`, `workspace_required`), câu EN / VI; chỉ thu gọn chi tiết khi câu dịch đã nói đủ;
+  `validation_failed` chung lại hiện lý do.
+* **QD-42** (Low): hạn chót 5 s cho cả lần dò.
+* **QD-43** (Low): kiểm danh tính theo trường và kiểu, nhận thêm ngôn ngữ.
+* **QD-45** (Low, bảo mật): `http://` chỉ trong mạng nội bộ; máy chủ công khai → `server_url_insecure`.
+* Tài liệu: [FEATURES-APPROVED.md](FEATURES-APPROVED.md), [REGRESSION.md](REGRESSION.md), `docs/spec/station.md` §4.8.

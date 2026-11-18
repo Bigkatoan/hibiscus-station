@@ -101,7 +101,12 @@ both cases without a fault; an e-stop, a fault or a timeout is no pass.
 ## 6. Validation and safety rules
 * A program is checked before it runs: referenced trajectories/poses/detectors exist and match the
   profile's calibration hash; motion blocks are reachable only from the start; no infinite loop
-  without a wait or motion; the first motion starts within the approach limits.
+  without a wait or motion. When the first motion starts farther than `safety.max_approach_deg`
+  from the arm's pose, the check adds `first_motion_far` with severity `info` (not a warning: the
+  player always approaches the first sample slowly); the editor lists it apart as "The arm will first
+  move slowly to the start of this motion (X° away)" and checks again as the arm moves (field report
+  0.2.9, D-24). Severities: `error` blocks a run, `confirm` needs an ack, `warning` and `info` never
+  block.
 * Calibration changed since a trajectory was recorded → the trajectory is marked "needs check"
   and must be replayed once at 25 % speed and confirmed before programs can use it.
 * Speed above 100 % and `relax arm` inside loops need explicit confirmation in the editor.

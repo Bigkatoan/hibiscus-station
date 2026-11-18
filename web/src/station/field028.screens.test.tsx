@@ -153,11 +153,12 @@ describe("Locked steps", () => {
     expect(screen.getByRole("button", { name: "Start teleop" })).toBeEnabled();
   });
 
-  it("Train asks to pair first and keeps the pairing form usable", async () => {
+  it("Train asks to pair (not a lock: field report 0.2.9, D-25) and keeps the pairing form usable", async () => {
     const h = setupStation();
     renderStation("/train", h);
     await settle();
-    expect(await screen.findByTestId("lock-gate")).toHaveAttribute("data-lock", "pair_first");
+    expect(await screen.findByTestId("step-hint")).toHaveAttribute("data-hint", "pair_server");
+    expect(screen.queryByTestId("lock-gate")).toBeNull();
     expect(screen.queryByTestId("locked-content")).toBeNull();
   });
 

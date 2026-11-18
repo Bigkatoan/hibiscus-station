@@ -4,7 +4,7 @@
  * this component only edits the workspace JSON, which the Station compiles (`PUT /programs/{id}`).
  *
  * Live view: `highlight` is the block the runner executes (`program_state.block_id`), `issues` puts
- * a warning icon with the localised text on every block a check flagged.
+ * a warning icon with the localised text on every block a check flagged (not for information).
  */
 import * as Blockly from "blockly/core";
 import "blockly/blocks";
@@ -170,6 +170,8 @@ export default function BlocklyEditor({
     if (!ws) return;
     for (const b of ws.getAllBlocks(false)) b.setWarningText(null);
     for (const issue of issues) {
+      // Information (D-24) is not a problem: no warning triangle on the block.
+      if (issue.severity === "info") continue;
       const b = issue.block_id ? ws.getBlockById(issue.block_id) : null;
       if (b) b.setWarningText(issueText ? issueText(issue) : issue.code, issue.id);
     }

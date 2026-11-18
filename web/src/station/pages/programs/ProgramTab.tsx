@@ -15,6 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input, NativeSelect } from "@/components/ui/input";
 import { Alert, AlertTitle } from "@/components/ui/misc";
 import { Link } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import {
@@ -53,12 +54,32 @@ import {
   type EditorDoc,
 } from "../../programs/blockly/serialize";
 import { useStation, useStatus } from "../../ws/StationProvider";
+import { useLiveRecheck } from "./liveRecheck";
 import { RunPanel } from "./RunPanel";
 import { blockDetail, isLive } from "./shared";
 
 const BlocklyEditor = lazy(() => import("../../programs/blockly/BlocklyEditor"));
 
 const enc = encodeURIComponent;
+
+/**
+ * Problems are told apart by shape AND colour (QC F029 QD-37, WCAG 1.4.1): a filled badge per
+ * severity, glyph on fill ≥ 4.5:1 in both themes (`sev-*` tokens, checked in pixelTheme.test.ts).
+ * error = red badge with an X, warning = amber badge with a triangle, confirm = purple badge with a
+ * question mark; information (blue "i") is never a problem and sits in the Notes box.
+ */
+const SEVERITY_ICON: Record<
+  CheckIssue["severity"],
+  { icon: "close" | "warning" | "help" | "info"; className: string }
+> = {
+  error: { icon: "close", className: "bg-sev-error text-sev-error-foreground" },
+  warning: { icon: "warning", className: "bg-sev-warning text-sev-warning-foreground" },
+  confirm: { icon: "help", className: "bg-sev-confirm text-sev-confirm-foreground" },
+  info: { icon: "info", className: "bg-info text-info-foreground" },
+};
+
+/** Issues that depend on where the arm is: dropped when the pose is not known (QD-36). */
+const POSE_ISSUES = new Set<CheckIssue["code"]>(["first_motion_far"]);
 
 function ButtonsEditor({
   buttons,
@@ -278,6 +299,8 @@ function ProgramWorkspace({ program, onDeleted }: { program: Program; onDeleted:
   const [name, setName] = useState(program.name);
   const [buttons, setButtons] = useState<OperatorButton[]>(program.buttons);
   const [issues, setIssues] = useState<CheckIssue[]>(program.issues);
+  // The shown issues come from a check (not only the compiler's): they depend on the arm's pose.
+  const [checked, setChecked] = useState(false);
   const [version, setVersion] = useState(program.version);
   const [dryRunVersion, setDryRunVersion] = useState(program.dry_run_version);
   const refs = useEditorRefs(buttons);
@@ -295,6 +318,7 @@ function ProgramWorkspace({ program, onDeleted }: { program: Program; onDeleted:
     (p: Program) => {
       setSaved(stableJson({ e: doc, b: buttons, n: name }));
       setIssues(p.issues);
+      setChecked(false);
       setVersion(p.version);
       setDryRunVersion(p.dry_run_version);
       qc.setQueryData(qk.program(p.id), p);
@@ -334,6 +358,38 @@ function ProgramWorkspace({ program, onDeleted }: { program: Program; onDeleted:
     };
   }, [dryRunEnded, program.id]);
 
+  // "The arm will first move slowly to the start of this motion (X° away)" follows the arm: check
+  // again when it moved or a run ended (D-24).
+  const programId = program.id;
+  const shownVersion = useRef(version);
+  shownVersion.current = version;
+  const recheck = useCallback(
+    (poseKnown: boolean) =>
+      api.post<CheckReport>(`/programs/${enc(programId)}/check`).then((r) => {
+        // A save while the check was on its way: its answer is about the old version.
+        if (r.version !== shownVersion.current) return;
+        setIssues(poseKnown ? r.issues : r.issues.filter((i) => !POSE_ISSUES.has(i.code)));
+      }),
+    [programId],
+  );
+  const onPoseLost = useCallback(() => {
+    setIssues((prev) => prev.filter((i) => !POSE_ISSUES.has(i.code)));
+  }, []);
+  const { markChecked } = useLiveRecheck({
+    enabled: checked && !dirty && !running,
+    running,
+    recheck,
+    onPoseLost,
+  });
+  const showReport = useCallback(
+    (r: CheckReport) => {
+      setIssues(r.issues);
+      setChecked(true);
+      markChecked();
+    },
+    [markChecked],
+  );
+
   const issueText = useCallback(
     (i: CheckIssue) => t(`programs.issues.${i.code}`, { ...i.params, defaultValue: i.code }),
     [t],
@@ -365,6 +421,9 @@ function ProgramWorkspace({ program, onDeleted }: { program: Program; onDeleted:
   );
   const highlight = running && live.block_id && ids.has(live.block_id) ? live.block_id : null;
   const errors = issues.filter((i) => i.severity === "error");
+  // Information (the slow approach to the first motion) is not a problem: listed apart, no warning.
+  const problems = issues.filter((i) => i.severity !== "info");
+  const notes = issues.filter((i) => i.severity === "info");
 
   return (
     <div className="flex flex-col gap-4">
@@ -401,11 +460,7 @@ function ProgramWorkspace({ program, onDeleted }: { program: Program; onDeleted:
               variant="outline"
               disabled={running || check.isPending || dirty}
               onClick={() => {
-                check.mutate(undefined, {
-                  onSuccess: (r) => {
-                    setIssues(r.issues);
-                  },
-                });
+                check.mutate(undefined, { onSuccess: showReport });
               }}
             >
               <PxIcon name="search" /> {t("programs.editor.check")}
@@ -428,18 +483,26 @@ function ProgramWorkspace({ program, onDeleted }: { program: Program; onDeleted:
             </ConfirmButton>
           </div>
           <StationError error={save.error ?? check.error ?? del.error ?? catalog.error} />
-          {issues.length > 0 ? (
+          {problems.length > 0 ? (
             <ul
               className="flex flex-col gap-1 text-sm"
               aria-label={t("programs.editor.issues")}
               data-testid="program-issues"
             >
-              {issues.map((i) => (
+              {problems.map((i) => (
                 <li key={i.id} className="flex items-start gap-2" data-severity={i.severity}>
-                  <PxIcon
-                    name={i.severity === "error" ? "warning" : "info"}
-                    className={i.severity === "error" ? "text-destructive" : "text-info"}
-                  />
+                  <span
+                    className={cn(
+                      "mt-0.5 inline-flex shrink-0 border-2 border-frame p-px",
+                      SEVERITY_ICON[i.severity].className,
+                    )}
+                    data-badge={i.severity}
+                  >
+                    <PxIcon
+                      name={SEVERITY_ICON[i.severity].icon}
+                      label={t(`programs.editor.severity_${i.severity}`)}
+                    />
+                  </span>
                   <span>
                     {issueText(i)}
                     {i.block_id ? (
@@ -454,6 +517,32 @@ function ProgramWorkspace({ program, onDeleted }: { program: Program; onDeleted:
               <PxIcon name="check" /> {t("programs.editor.no_issues")}
             </p>
           )}
+          {notes.length > 0 ? (
+            // Information, not a problem (QC F029 r1): its own titled box, info colour, no warning.
+            <section
+              aria-labelledby="program-notes-title"
+              aria-live="polite"
+              className="flex flex-col gap-1 border-2 border-l-8 border-frame border-l-info bg-card px-3 py-2"
+              data-testid="program-notes"
+            >
+              <h3
+                id="program-notes-title"
+                className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wide text-info"
+              >
+                <PxIcon name="info" /> {t("programs.editor.notes")}
+              </h3>
+              <ul className="flex flex-col gap-1 text-sm">
+                {notes.map((i) => (
+                  <li key={i.id} data-severity="info">
+                    {issueText(i)}
+                    {i.block_id ? (
+                      <span className="text-xs text-muted-foreground"> · {blockLabel(i.block_id)}</span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
           {errors.length === 0 && dryRunVersion === version ? (
             <p className="text-xs text-muted-foreground">{t("programs.editor.dry_done")}</p>
           ) : null}
@@ -485,9 +574,7 @@ function ProgramWorkspace({ program, onDeleted }: { program: Program; onDeleted:
         <RunPanel
           programId={program.id}
           ensureSaved={() => (dirty ? doSave() : Promise.resolve(true))}
-          onReport={(r) => {
-            setIssues(r.issues);
-          }}
+          onReport={showReport}
           issueText={issueText}
           blockLabel={blockLabel}
           detectors={detectorsUsed}

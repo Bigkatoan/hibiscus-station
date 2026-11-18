@@ -51,6 +51,34 @@ with its own line (see the README); GitHub never offers a pre-release as its "la
 - **The doctor report always starts with LIKELY PROBLEMS**, or "No likely problems found".
 
 ### Fixed
+- **Programs: "the first motion starts far from the arm" is now information, not a warning**
+  (field report 0.2.9). The arm always goes slowly to the start of the first motion, so the editor
+  now says "The arm will first move slowly to the start of this motion (X° away)." in a note apart
+  from the problems, with no warning mark on the block and no confirmation before a run. The note
+  follows the arm: it updates while the arm moves and after a run, and goes away once the arm is
+  close. API: `CheckIssue.severity` has a new value `info` (never blocks a run).
+- **Train no longer looks locked before pairing** (field report 0.2.9). Training runs on the
+  Hibiscus server and needs no robot: the step now says "Connect to a Hibiscus server to train (no
+  robot needed)." instead of "This step is locked". The pairing form checks the server address
+  before pairing and explains when it is not a web address or is a file-sharing link (OneDrive in
+  all its forms, including `word.cloud.microsoft` links, SharePoint, Google Drive, Dropbox); Pair
+  stays off until the address is valid. Station itself refuses such an
+  address too (`POST /server/pair`: `server_url_file_share` / `server_url_invalid`), before anything
+  is sent anywhere.
+- **Pairing never sends your token to something that is not a Hibiscus server.** Before the token
+  leaves, Station asks the address for the public Hibiscus login settings (no token, no redirects,
+  5 s); any other answer is refused with "This address did not answer as a Hibiscus server…"
+  (`server_not_hibiscus`). The share-link check is now only an early hint for OneDrive /
+  SharePoint / Office / Teams, Google Drive / Docs and Dropbox (Outlook Safe Links unwrapped), so a
+  real server address with `?cid=` or a file path is no longer refused.
+- **Pairing says exactly what went wrong**: the server rejected the token, the token is not a
+  Hibiscus token, it lacks a permission, or several workspaces; for these the technical detail
+  (English) is in a closed "Technical details" section, while other errors keep their reason in
+  sight. The identity check gives up after 5 s in total, accepts servers with more languages, and
+  plain `http://` is refused for a server on the internet (it stays allowed on your own network).
+- **The "move slowly to the start" note no longer stays when the robot is disconnected** (or its
+  joint readings stop) and comes back on reconnect, also a fast one; notes sit in their own "Notes"
+  box, and errors, warnings and confirmations each have their own badge shape and colour.
 - **On a flaky bus the doctor said a motor "does not answer (power? cable?)" although it did**:
   the same report showed it in the scan and in sync reads that worked. Whether a motor answers now
   comes from everything it sent during the check (scan, pings, sync reads, register reads, late

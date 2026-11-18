@@ -2053,11 +2053,12 @@
             "type": "object"
           },
           "severity": {
-            "description": "error blocks a run; confirm needs an explicit ack in the run request",
+            "description": "error blocks a run; confirm needs an explicit ack in the run request; warning and info never block (info is not a problem: it says what the run will do, e.g. the slow approach to the first motion)",
             "enum": [
               "error",
               "warning",
-              "confirm"
+              "confirm",
+              "info"
             ],
             "title": "Severity",
             "type": "string"

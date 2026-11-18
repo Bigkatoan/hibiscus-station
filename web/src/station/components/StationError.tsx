@@ -31,19 +31,52 @@ export function errorDetail(error: unknown): string | null {
   return detail;
 }
 
-/** Localised Station error from its Problem `code`, with the server `detail` underneath: the exact
- * reason (motor id, register, port, calibration file) is what lets a user or a bug report act on it. */
+/**
+ * Codes whose own sentence fully explains the error: their Station `detail` (English, machine
+ * words) goes into the closed "Technical details" (FR-73, P-5; QC F029 QD-39). Every other code,
+ * the generic `validation_failed` first (52 places, each with its own reason), keeps the detail in
+ * sight: hiding it hid the reason (QD-44).
+ */
+export const SELF_EXPLAINING = new Set([
+  "server_url_invalid",
+  "server_url_file_share",
+  "server_url_insecure",
+  "server_not_hibiscus",
+  "server_unauthorized",
+  "token_format_invalid",
+  "token_missing_scope",
+  "workspace_required",
+]);
+
+/** True when the UI's sentence for this error says all there is to say. */
+export function selfExplaining(error: unknown): boolean {
+  return error instanceof StationApiError && SELF_EXPLAINING.has(error.code);
+}
+
+/**
+ * Localised Station error from its Problem `code`, with the server's own `detail` (motor id,
+ * register, port, calibration file) that lets a user or a bug report act on it: in sight, or in a
+ * closed "Technical details" when the sentence already says everything.
+ */
 export function StationError({ error, className }: { error: unknown; className?: string }) {
   const { t } = useTranslation("station");
   if (!error) return null;
   const detail = errorDetail(error);
+  const known = selfExplaining(error);
   return (
     <Alert variant="destructive" className={className}>
       <div className="flex gap-2">
         <PxIcon name="warning" className="mt-0.5 shrink-0" />
         <div className="min-w-0">
           <AlertTitle>{errorText(t, error)}</AlertTitle>
-          {detail ? (
+          {detail && known ? (
+            <details className="mt-1 text-xs" data-testid="error-details">
+              <summary className="cursor-pointer select-none">{t("common.technical_details")}</summary>
+              <p className="mt-1 break-words font-mono" data-testid="error-detail">
+                {detail}
+              </p>
+            </details>
+          ) : detail ? (
             <p className="mt-1 break-words font-mono text-xs" data-testid="error-detail">
               {detail}
             </p>

@@ -58,6 +58,11 @@ export interface Step {
   lock: string | null;
   /** The exact reason behind the lock, from the Station (missing calibration file, bus error...). */
   why?: string | null;
+  /**
+   * Not a lock: what to do first on the step's own page (field report 0.2.9, D-25: Train only needs
+   * a Hibiscus server, no robot, and the pairing form is on the page). Key under `step_hint.`.
+   */
+  hint?: string | null;
 }
 
 export function wizardSteps(
@@ -127,7 +132,8 @@ export function wizardSteps(
       key: "train",
       icon: "icon_train",
       done: false,
-      lock: status?.server.paired ? null : "pair_first",
+      lock: null,
+      hint: status?.server.paired ? null : "pair_server",
     },
     {
       to: "/run",
@@ -165,7 +171,13 @@ function WizardRail({ steps, onNavigate }: { steps: Step[]; onNavigate?: () => v
                   s.lock && "opacity-70",
                 )
               }
-              title={s.lock ? [t(`lock.${s.lock}`), s.why].filter(Boolean).join(" — ") : undefined}
+              title={
+                s.lock
+                  ? [t(`lock.${s.lock}`), s.why].filter(Boolean).join(" — ")
+                  : s.hint
+                    ? t(`step_hint.${s.hint}`)
+                    : undefined
+              }
             >
               <span className="w-4 text-right tabular-nums text-xs text-muted-foreground">{i + 1}</span>
               <PixelAnim name={s.icon} />
@@ -175,6 +187,13 @@ function WizardRail({ steps, onNavigate }: { steps: Step[]; onNavigate?: () => v
             </NavLink>
             {s.lock ? (
               <p className="hidden pl-8 text-xs text-muted-foreground md:block">{t(`lock.${s.lock}`)}</p>
+            ) : s.hint ? (
+              <p
+                className="hidden pl-8 text-xs text-muted-foreground md:block"
+                data-testid={`step-hint-${s.key}`}
+              >
+                {t(`step_hint.${s.hint}`)}
+              </p>
             ) : null}
             {s.lock && s.why ? (
               <p

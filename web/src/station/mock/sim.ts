@@ -1067,7 +1067,12 @@ export class MockStation {
     }
   }
 
+  /** Tests / demos: hold the follower at these joint values (degrees; gripper %) instead of the sweep. */
+  pinnedPose: number[] | null = null;
+
   private pos(i: number): number {
+    const pinned = this.pinnedPose?.[i];
+    if (pinned !== undefined) return pinned;
     return Math.round(Math.sin(this.t * 0.8 + i) * (i === 5 ? 40 : 35) * 10) / 10 + (i === 5 ? 50 : 0);
   }
 

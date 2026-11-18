@@ -17,6 +17,8 @@ import en from "./i18n/en.json";
 import vi_ from "./i18n/vi.json";
 import { MockStation } from "./mock/sim";
 import { wizardSteps } from "./StationShell";
+import { serverUrlProblem } from "./components/PairForm";
+import { poseDelta } from "./pages/programs/liveRecheck";
 import { realArmDraft, roleWarnings } from "./pages/RobotPage";
 import { ControlSocket, HEARTBEAT_MS, backoffMs } from "./ws/control";
 import { JOINT_WINDOW_S, StationStore, appendJoints } from "./ws/store";
@@ -299,7 +301,23 @@ describe("wizard rail", () => {
     expect(steps.find((s) => s.key === "teleop")?.lock).toBe("calibrate_leader");
     expect(steps.find((s) => s.key === "run")?.lock).toBeNull();
     expect(steps.find((s) => s.key === "upload")?.lock).toBeNull();
-    expect(steps.find((s) => s.key === "train")?.lock).toBe("pair_first");
+    // Train needs a server, not a robot (D-25): never locked, a neutral prompt until paired.
+    expect(steps.find((s) => s.key === "train")?.lock).toBeNull();
+    expect(steps.find((s) => s.key === "train")?.hint).toBe("pair_server");
+  });
+
+  it("Train is never locked, also with no robot; the prompt goes once paired (D-25)", () => {
+    const sim = new MockStation({ connected: false });
+    let train = wizardSteps(sim.status(), { robots: 0, datasets: [], models: 0 }).find(
+      (s) => s.key === "train",
+    );
+    expect(train).toMatchObject({ lock: null, hint: "pair_server" });
+    const paired = new MockStation({ connected: false, paired: true });
+    train = wizardSteps(paired.status(), { robots: 0, datasets: [], models: 0 }).find(
+      (s) => s.key === "train",
+    );
+    expect(train?.lock).toBeNull();
+    expect(train?.hint ?? null).toBeNull();
   });
 
   it("says why a step is locked: the Station's own reason (field report 0.2.1)", () => {
@@ -380,5 +398,35 @@ describe("station i18n", () => {
       }
     }
     expect(missing).toEqual([]);
+  });
+});
+
+describe("server address check (D-25, QD-35)", () => {
+  // The same cases as the Station's own check (tests/test_field_029.py).
+  const cases = (
+    JSON.parse(readFileSync(join(process.cwd(), "../tests/server_urls.json"), "utf8")) as {
+      cases: [string, string | null][];
+    }
+  ).cases;
+  it("has the customer's OneDrive link among the cases", () => {
+    expect(cases.length).toBeGreaterThan(30);
+    expect(cases.map((c) => c[0])).toContain(
+      "https://word.cloud.microsoft/open/onedrive/?docId=0123456789ABCDEF%21s1a2b3c4d5e6f&driveId=0123456789ABCDEF",
+    );
+  });
+  it.each(cases)("%s → %s", (url, problem) => {
+    expect(serverUrlProblem(url)).toBe(problem);
+  });
+});
+
+describe("live re-check of the first motion (D-24)", () => {
+  it("measures the largest joint move in degrees, the gripper (%) left out", () => {
+    const a = { "shoulder_pan.pos": 10, "elbow_flex.pos": -5, "gripper.pos": 0 };
+    expect(poseDelta(a, { ...a })).toBe(0);
+    expect(poseDelta(a, { ...a, "elbow_flex.pos": -8.5 })).toBe(3.5);
+    expect(poseDelta(a, { ...a, "gripper.pos": 90 })).toBe(0);
+    expect(poseDelta(null, a)).toBe(Infinity); // the robot just connected: check
+    expect(poseDelta(a, null)).toBe(Infinity);
+    expect(poseDelta(null, null)).toBe(0);
   });
 });

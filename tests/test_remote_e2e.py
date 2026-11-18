@@ -24,10 +24,21 @@ from hibiscus_station.station import RecordRequest, RunRequest, Station, TeleopR
 
 @pytest.fixture
 def fake(tmp_path: Path) -> Iterator[Any]:
-    from fake_server import FakeHibiscus
+    from fake_server import BASE, FakeHibiscus
 
     server = FakeHibiscus(tmp_path / "server")
     with respx.mock(assert_all_called=False, assert_all_mocked=True) as router:
+        # The public login configuration (contract v0.1.1 getAuthConfig, no credentials): the identity
+        # probe of pairing (QD-40). The vendored fake has no handler for it.
+        router.get(f"{BASE}/auth/config").respond(
+            200,
+            json={
+                "turnstile_site_key": None,
+                "email_delivery_enabled": False,
+                "password_min_length": 12,
+                "supported_locales": ["vi", "en"],
+            },
+        )
         server.mount(router)
         yield server
 
@@ -55,7 +66,7 @@ def test_pair_and_missing_scope(station: Station, fake: Any) -> None:
 def test_pair_rejects_non_pat(station: Station, fake: Any) -> None:
     with pytest.raises(StationError) as ei:
         station.server.pair("https://hibiscus.test", "not-a-token")
-    assert ei.value.code == "validation_failed"
+    assert ei.value.code == "token_format_invalid"  # its own sentence (QC F029 QD-44)
 
 
 def test_upload_refuses_unfinalized(station: Station, fake: Any, tmp_path: Path) -> None:

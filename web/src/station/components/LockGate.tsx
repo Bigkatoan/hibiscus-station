@@ -1,8 +1,10 @@
 /**
  * A locked wizard step (field report 0.2.8: the rail showed a lock but the page still worked). The
  * page opens and says why it is locked, with a link to the step to do first; its controls are
- * disabled (`<fieldset disabled>`) until the lock lifts. "Pair first" is resolved on the page
- * itself (the Train page is the pairing form), so that page stays usable.
+ * disabled (`<fieldset disabled>`) until the lock lifts.
+ *
+ * A step whose only need is a Hibiscus server (Train) is not locked (field report 0.2.9, D-25): it
+ * needs no robot and its page is the pairing form, so it shows a neutral prompt, no lock.
  */
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -19,10 +21,8 @@ export const LOCK_TARGET: Record<string, { to: string; step: string } | null> = 
   calibrate_first: { to: "/calibrate", step: "calibrate" },
   calibrate_leader: { to: "/calibrate", step: "calibrate" },
   record_first: { to: "/record", step: "record" },
-  pair_first: null,
   estopped: null,
 };
-const RESOLVED_ON_PAGE = new Set(["pair_first"]);
 
 export function LockGate({ step, children }: { step: string; children: ReactNode }) {
   const { t } = useTranslation("station");
@@ -30,7 +30,8 @@ export function LockGate({ step, children }: { step: string; children: ReactNode
   const s = steps.find((x) => x.key === step);
   const lock = ready && s?.lock ? s.lock : null;
   const target = lock ? (LOCK_TARGET[lock] ?? null) : null;
-  const disabled = lock !== null && !RESOLVED_ON_PAGE.has(lock);
+  const disabled = lock !== null;
+  const hint = !lock && ready && s?.hint ? s.hint : null;
   // The page is always rendered inside the same fieldset, so a lock that comes and goes (an e-stop
   // during a run) never remounts it and its local state (the run summary) survives.
   return (
@@ -56,6 +57,16 @@ export function LockGate({ step, children }: { step: string; children: ReactNode
               </Button>
             ) : null}
           </div>
+        </div>
+      ) : hint ? (
+        <div
+          role="status"
+          data-testid="step-hint"
+          data-hint={hint}
+          className="flex items-start gap-3 border-4 border-frame bg-card px-3 py-3"
+        >
+          <PxIcon name="info" className="mt-1 shrink-0 text-info" />
+          <p className="font-bold">{t(`step_hint.${hint}`)}</p>
         </div>
       ) : null}
       <fieldset

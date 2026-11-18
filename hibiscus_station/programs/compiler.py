@@ -52,7 +52,7 @@ YIELDING_KINDS = MOTION_KINDS | {"wait", "wait_until", "ask"}
 #: deeper document would exhaust the compiler's, the interpreter's or pydantic's recursion limits.
 MAX_NESTING = 32
 
-Severity = Literal["error", "warning", "confirm"]
+Severity = Literal["error", "warning", "confirm", "info"]
 ValueType = Literal["number", "text", "any"]
 
 _STMT: TypeAdapter[Any] = TypeAdapter(Stmt)

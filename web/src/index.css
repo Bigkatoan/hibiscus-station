@@ -38,6 +38,12 @@
     --warning-foreground: 255 246 220; /* #fff6dc */
     --info: 47 111 159; /* #2f6f9f */
     --info-foreground: 255 246 220; /* #fff6dc */
+    --sev-error: 179 18 46; /* #b3122e */
+    --sev-error-foreground: 255 246 220; /* #fff6dc */
+    --sev-warning: 255 197 49; /* #ffc531 */
+    --sev-warning-foreground: 59 32 39; /* #3b2027 */
+    --sev-confirm: 107 63 160; /* #6b3fa0 */
+    --sev-confirm-foreground: 255 246 220; /* #fff6dc */
     --border: 201 154 98; /* #c99a62 */
     --input: 59 32 39; /* #3b2027 */
     --ring: 94 241 227; /* #5ef1e3 */
@@ -84,6 +90,12 @@
     --warning-foreground: 22 26 46; /* #161a2e */
     --info: 111 183 232; /* #6fb7e8 */
     --info-foreground: 22 26 46; /* #161a2e */
+    --sev-error: 255 158 181; /* #ff9eb5 */
+    --sev-error-foreground: 22 26 46; /* #161a2e */
+    --sev-warning: 255 197 49; /* #ffc531 */
+    --sev-warning-foreground: 22 26 46; /* #161a2e */
+    --sev-confirm: 201 167 255; /* #c9a7ff */
+    --sev-confirm-foreground: 22 26 46; /* #161a2e */
     --border: 61 69 102; /* #3d4566 */
     --input: 139 155 180; /* #8b9bb4 */
     --ring: 94 241 227; /* #5ef1e3 */

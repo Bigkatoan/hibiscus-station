@@ -36,6 +36,8 @@ không đạt là một lỗi mở và chặn phát hành của tính năng liê
 | REG-18 | Lỗi khi ghi / in tiếng Việt trên Windows (code page thay vì UTF-8) | 0.2.0 → 0.2.1 | F-64, F-71 | AT-78 |
 | REG-19 | Vòng điều khiển 30 Hz không giữ nhịp trên Windows (đồng hồ hệ thống 15,6 ms) | 0.2.0 → 0.2.1 | F-24, F-38 | AT-89 |
 | REG-20 | Camera chọn "0" trên giao diện mở như tệp tên `0`; dò camera mở lại camera đang dùng (Windows từ chối) | 0.2.0 → 0.2.1 | F-21 | AT-28 |
+| REG-21 | (check_ver_2.9, 2026-11-18) Cảnh báo "Chuyển động đầu tiên bắt đầu xa tư thế hiện tại của tay" vẫn hiện trên khối sau khi chương trình đã chạy; không cập nhật khi tay di chuyển (D-24; khách: "Đổi thành thông tin, tự cập nhật") | 0.2.9 → M1 | F-56, F-58 | AT-70, AT-72 |
+| REG-22 | (check_ver_2.9, 2026-11-18) Bước Huấn luyện "Bước này đang bị khoá — Hãy ghép nối với máy chủ Hibiscus trước" khi form ghép nối vẫn dùng được; khách dán một liên kết OneDrive dài vào ô địa chỉ máy chủ (D-25; khách: "Không cần robot, nói rõ hơn") | 0.2.9 → M1 | F-7, F-41 | AT-10, AT-52 |
 
 ## Chi tiết từng mục (tái hiện → kỳ vọng)
 
@@ -156,6 +158,56 @@ không đạt là một lỗi mở và chặn phát hành của tính năng liê
   là đặc tính của servo: Station hiện "không rõ" (đã có) và hành vi chạy theo QĐ-1 = A (AT-93), kèm lời giải thích
   cho người dùng; (3) mục HIL "đơn vị dòng 6,5 mA/bước" và "bố cục bit Status" được xác nhận hoặc sửa.
 * **Nền tảng:** [UAT-KH] (chỉ tay của khách tái hiện được).
+
+### REG-21 — Thông báo "chuyển động đầu tiên xa" nằm mãi sau khi chạy (D-24)
+* **Nguồn:** báo cáo hiện trường của khách check_ver_2.9 (2026-11-18), bản 0.2.9. Quyết định của khách: **"Đổi thành
+  thông tin, tự cập nhật"**.
+* **Tái hiện:** kết nối robot; đưa tay xa điểm đầu của chuyển động đầu tiên trong chương trình (> `max_approach_deg`,
+  mặc định 30°); mở chương trình, bấm Kiểm tra; chạy (chạy thử và chạy trên robot); sau khi chạy xong, di chuyển tay
+  về gần điểm đầu, rồi lại ra xa.
+* **Kỳ vọng:** một dòng **thông tin** (biểu tượng i, không phải tam giác cảnh báo, không nằm trong danh sách "Vấn đề",
+  "Không thấy vấn đề nào." vẫn hiện, không có dấu cảnh báo trên khối): "Tay sẽ đi chậm về điểm bắt đầu của chuyển động
+  này (cách X°)." / "The arm will first move slowly to the start of this motion (X° away)."; không có hộp xác nhận
+  trước khi chạy vì dòng này; dòng tự cập nhật số độ khi tay di chuyển và tự biến mất khi tay đã trong ngưỡng (không
+  cần bấm Kiểm tra lại); sau khi chạy xong, dòng phản ánh tư thế mới. API: `CheckIssue.severity = "info"`, không chặn
+  chạy, `CheckReport.ok` vẫn đúng.
+  Ngắt kết nối robot (hoặc luồng khớp dừng > 2,5 s) sau khi đã Kiểm tra: dòng mất ngay, không cần bấm gì; kết nối lại:
+  dòng hiện lại (QD-36). Dòng nằm trong khung "Ghi chú" / "Notes" riêng, màu info, khác biểu tượng của cảnh báo / cần
+  xác nhận (ghi nhận QC F029 lần 1): lỗi = ô đỏ dấu X, cảnh báo = ô hổ phách tam giác, cần xác nhận = ô tím dấu hỏi,
+  tương phản ≥ 4,5:1 ở sáng / tối (QD-37). Ngắt rồi kết nối lại trong 0,2 s, tay vẫn xa: dòng trở lại (QD-38).
+* **Test tự động:** `tests/test_field_029.py`, `tests/test_compiler.py::test_first_motion_far_from_the_arm_is_information`,
+  `web/src/station/field029.screens.test.tsx` (D-24), `station.unit.test.ts` (`poseDelta`). **Nền tảng:** [Vendor]
+  giả lập; [UAT-KH] tay thật.
+
+### REG-22 — Bước Huấn luyện trông như bị khoá; form ghép nối nhận liên kết OneDrive (D-25)
+* **Nguồn:** báo cáo hiện trường của khách check_ver_2.9 (2026-11-18), bản 0.2.9. Quyết định của khách: **"Không cần
+  robot, nói rõ hơn"**.
+* **Tái hiện:** chưa ghép nối máy chủ, có hoặc không có robot; mở bước Huấn luyện trên thanh bước (1280 px và 390 px);
+  dán vào ô "Địa chỉ máy chủ" một liên kết OneDrive (đúng kiểu khách dán:
+  `https://word.cloud.microsoft/open/onedrive/?docId=…&driveId=…`; cả `onedrive.cloud.microsoft`,
+  `view.officeapps.live.com`, `onedrive.live.com`, `1drv.ms`), SharePoint, Google Drive / Docs, Dropbox, Box, WeTransfer,
+  iCloud, rồi một chữ không phải địa chỉ (ví dụ `hibiscus server`), rồi `https://hibiscus.example.org`. Gửi thẳng
+  `POST /api/v1/server/pair` với các địa chỉ đó (QD-35).
+* **Kỳ vọng:** bước Huấn luyện **không** có ổ khoá, không có "Bước này đang bị khoá"; thanh bước và trang hiện câu
+  trung tính "Kết nối máy chủ Hibiscus để huấn luyện (không cần robot)." / "Connect to a Hibiscus server to train (no
+  robot needed)."; form ghép nối dùng được. Liên kết chia sẻ tệp: lỗi ngay dưới ô "Đây không phải địa chỉ máy chủ
+  Hibiscus. Hãy dán địa chỉ trang Hibiscus của bạn, ví dụ https://hibiscus.example.org"; chữ không phải http(s): lỗi
+  "Hãy nhập địa chỉ bắt đầu bằng http:// hoặc https://…" khi rời ô; nút Ghép nối tắt tới khi địa chỉ hợp lệ. Các bước
+  thật sự cần robot (Hiệu chỉnh, Camera, Điều khiển tay, Ghi dữ liệu, Chạy model) và Tải lên (cần dataset đã ghi) vẫn
+  khoá như REG-12.
+  API: 422 `server_url_file_share` / `server_url_invalid` (câu EN / VI), không có yêu cầu nào ra ngoài, không ghép nối.
+  Một địa chỉ http(s) khác (trang chia sẻ không có trong gợi ý như `drive.usercontent…`-kiểu lạ, fshare, terabox; trang
+  web thường; máy chuyển hướng; máy không trả lời): 422 `server_not_hibiscus` sau một lần hỏi `/api/v1/auth/config`
+  **không mang token**; token chỉ đi tới máy trả lời đúng danh tính Hibiscus (QD-40). `?cid=…`, `/robots.txt` trên máy
+  chủ thật không bị gợi ý chặn (QD-41). Giao diện VI: chỉ câu tiếng Việt, chi tiết tiếng Anh trong "Chi tiết kỹ thuật"
+  thu gọn (QD-39). Token bị máy chủ từ chối: "Máy chủ từ chối token này." / "The server rejected this token."; token
+  sai định dạng: "Đây không phải token truy cập cá nhân của Hibiscus…" (QD-44, không còn câu chung "Một số giá trị không
+  hợp lệ."). Máy chủ gửi nhỏ giọt: kết luận trong khoảng 5 s (QD-42). `supported_locales` có thêm ngôn ngữ: vẫn là
+  Hibiscus (QD-43). `http://` tới máy chủ công khai: `server_url_insecure`, 0 request; `http://` trong mạng nội bộ vẫn
+  được (QD-45).
+* **Test tự động:** `web/src/station/field029.screens.test.tsx` (D-25), `field028.screens.test.tsx` (Huấn luyện),
+  `station.unit.test.ts` (`wizardSteps`, `serverUrlProblem` trên `tests/server_urls.json`), `tests/test_field_029.py`
+  (`server_url_problem` trên cùng bộ ca, `POST /server/pair`). **Nền tảng:** [Vendor].
 
 ### REG-14 … REG-20 (từ CHANGELOG)
 | REG | Tái hiện | Kỳ vọng | Test tự động | Nền tảng |
