@@ -400,7 +400,14 @@ cuối; Phát lần nữa → từ đầu.
   bị → "Đang chuẩn bị video…".
 * **Đang ghi:** khi bộ dữ liệu đang được ghi (phiên ghi / chạy model có ghi đang mở nó) → 409 `episode_saving`, câu "Bộ dữ
   liệu này đang được ghi. Video mở được khi phiên ghi kết thúc." (LeRobot chỉ ghi chỉ mục tập khi `finalize`); không
-  bao giờ 5xx (D-2).
+  bao giờ 5xx (D-2). Phiên **phát lại** chỉ đọc dataset: video vẫn phát (QV-1). Với các mã lỗi của F-72 chỉ hiện câu
+  dịch; dòng của Station nằm trong "Chi tiết kỹ thuật" thu gọn (FR-73, QD-39, QV-6).
+* **Không có video:** dataset ghi với "Mã hoá video" tắt (lưu ảnh) → "Bộ dữ liệu này không có video (đã ghi với "Mã hoá
+  video" tắt)." một lần, không có ô camera trống (`no_video`, 404; QV-5).
+* **Bộ đệm:** mỗi bản cắt có tệp dấu (kích thước, SHA-256) ghi sau bản cắt; bản cắt bị cụt / rỗng / ghi đè / mất dấu
+  được cắt lại, không bao giờ phục vụ (QV-2). Ghi nguyên tử (tệp tạm rồi đổi tên).
+* **Biểu đồ:** trục hoành từ 0 tới hết tập; bấm ở bất cứ đâu trên trục (không bám vào mẫu telemetry) → video tới đúng
+  thời điểm đó, kể cả khung đầu và khung cuối (QV-9).
 * Thư mục LeRobot không bị đổi (AT-49). Giao diện 1280 / 390 px, sáng / tối, không cuộn ngang (NFR-11), hai ngôn ngữ
   (NFR-10). Traces BR-7, BR-14.
 

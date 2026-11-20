@@ -241,3 +241,17 @@ danh sách / tải trang chi tiết, phần CR-1 ở khung xem tập.
 * [REGRESSION.md](REGRESSION.md): REG-23 (video AV1 không phát trên Edge Windows cài sẵn).
 * [ARCHITECTURE.md](ARCHITECTURE.md): ADR-14, §4.1 (bộ đệm video), §4.2 (88 thao tác).
 * Spec `docs/spec/station.md` §5.2 (hai endpoint, mã lỗi). Nhánh dev `m1/episode-video` (từ `release/v1` `b2ed862`).
+
+## QC F072 lần 1 → bản sửa lần 2: QV-1, QV-2, QV-5, QV-6, QV-9 · v1.1 (không đổi phạm vi) · 2026-11-20
+
+**Nguồn:** [QC-F072-r1](qc/QC-F072-r1.md) trên `ccee707`: F-72 FAIL vì QV-1 (Trung bình, chặn); Lead nâng QV-2, QV-5,
+QV-6, QV-9 lên sửa cùng vòng. Không đổi quyết định của khách (CR-1).
+
+* **QV-1** (chặn): phiên phát lại không còn chặn video (chỉ phiên ghi / chạy model có ghi mới trả 409 `episode_saving`).
+* **QV-2**: bản cắt trong bộ đệm có tệp dấu (kích thước, SHA-256); bản cắt hỏng được cắt lại.
+* **QV-5**: dataset ghi không mã hoá video → mã `no_video` (404) và câu "Bộ dữ liệu này không có video…".
+* **QV-6**: `episode_saving`, `video_missing`, `video_unavailable`, `no_video` vào danh sách tự giải thích (QD-39): chỉ
+  câu dịch, chi tiết thu gọn.
+* **QV-9**: trục biểu đồ 0 → hết tập; cú bấm lấy đúng thời điểm dưới con trỏ.
+* **Backlog M1** (không chặn): QV-3, QV-4, QV-7, QV-8 ([FEATURES-APPROVED.md](FEATURES-APPROVED.md), dòng F-72).
+* Tài liệu: [SRS.md](SRS.md) FR-77, [FEATURES-APPROVED.md](FEATURES-APPROVED.md), spec `docs/spec/station.md` §5.2.

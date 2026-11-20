@@ -105,7 +105,7 @@ khách duyệt, danh sách lên v1.1, v1.2… Ý tưởng của nhóm dev gửi 
 | F-69 | Cập nhật bản wheel | Must | M1 | AT-84 | K-8, D-18 (= K-6), P-1 | not started | not tested | - |
 | F-70 | Docker: backup / restore / update / rollback | Could | M3 | AT-85 | — | not started | not tested | - |
 | F-71 | Dữ liệu tách bạch và bền | Must | M1 | AT-86 | — | not started | not tested | - |
-| F-72 | Xem video từng tập trong Bộ dữ liệu (CR-1, v1.1) | Must | M1 | AT-99 | REG-23 (AV1 không phát trên Edge Windows cài sẵn) | in progress (mã + test xong trên `m1/episode-video`, chờ QC; Edge thật trên Windows 11 cài sẵn: NOT VERIFIED tới UAT-1) | not tested | - |
+| F-72 | Xem video từng tập trong Bộ dữ liệu (CR-1, v1.1) | Must | M1 | AT-99 | REG-23 (AV1 không phát trên Edge Windows cài sẵn); QC F072 r1: QV-1 (chặn), QV-2, QV-5, QV-6, QV-9 (Lead nâng lên, sửa cùng vòng); **backlog M1:** QV-3 (`video_path` sai mẫu → 500), QV-4 (mp4 gốc cụt: `source` thiếu khung vẫn 200), QV-7 (Range sai cú pháp → 400), QV-8 (chuyển đổi lỗi không được ghi nhớ) | in progress (bản sửa QC r1: QV-1, QV-2, QV-5, QV-6, QV-9 trên `m1/episode-video`, chờ QC r2; Edge thật trên Windows 11 cài sẵn: NOT VERIFIED tới UAT-1) | FAIL r1 ([QC-F072-r1](qc/QC-F072-r1.md): QV-1) | - |
 
 ## Đề xuất thay đổi đã duyệt (P-1 – P-8)
 
