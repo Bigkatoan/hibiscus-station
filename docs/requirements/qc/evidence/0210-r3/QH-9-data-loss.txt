@@ -1,0 +1,17 @@
+QH-9: append overwrites episodes when meta/info.json under-counts total_episodes (hand edit)
+
+Dataset: a copy of cnt3 (9 episodes over 5 data files, all closed and finalized).
+Edit: meta/info.json "total_episodes": 0. Every other field is unchanged and valid, so the info.json validator accepts it.
+The Station's own detail says finalized=false ("no episodes saved yet") and lists 9 rows.
+Record page / POST /sessions/record {mode: "append", dataset: tez}  ->  200, and 1 episode is recorded.
+
+data/ episode_index counts after the append (0.2.10 @ 2893a29):
+  data/chunk-000/file-000.parquet {0: 30}        <- held episodes 0, 1, 2 before; 1 and 2 are gone
+  data/chunk-000/file-001.parquet {3: 30, 4: 30}
+  ...
+Detail afterwards: episodes=1, finalized=true, rows 1 and 2 "unreadable".
+The same happens on the published 0.2.9 wheel (pre-existing, not a regression).
+With "total_episodes": 3 (rows on disk: 9), append is also accepted (200), and the dataset
+shows finalized=true before the append.
+Suggested guard: refuse append (dataset_not_finalized / dataset_unreadable) unless check_recording() is
+complete and total_episodes equals the rows in meta/episodes (or the data files).

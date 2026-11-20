@@ -1,0 +1,6 @@
+mutations 825
+stats {('list', 200): 825, ('detail', 200): 825, ('healthy', 200): 825, ('tel', 200): 825, ('append', 409, 'dataset_unreadable'): 706, ('replay', 409, 'dataset_unreadable'): 706, ('append', 422, 'dataset_incompatible'): 9, ('replay', 200, None): 119, ('append', 200, None): 110}
+healthy identical True
+FAILS 2
+   ('total_episodes=0', 'append accepted on a not-finalized dataset', 200)
+   ('total_episodes=0', 'replay accepted on a not-finalized/unreadable dataset', 200)
