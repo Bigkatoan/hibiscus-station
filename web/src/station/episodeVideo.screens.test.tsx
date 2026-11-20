@@ -11,7 +11,7 @@ import { stationBase } from "./api/client";
 import type { EpisodeCamera } from "./api/types";
 import { formatOrder, videoUrl } from "./components/EpisodeViewer";
 import { i18n } from "@/lib/i18n";
-import { episodeSeconds } from "./pages/DatasetsPage";
+import { episodeReviewable, episodeSeconds } from "./pages/DatasetsPage";
 import { renderStation, settle, setupStation } from "./test/utils";
 
 let play: MockInstance<() => Promise<void>>;
@@ -58,6 +58,14 @@ describe("format choice (ADR-14)", () => {
     expect(videoUrl("pick n", 2, "wrist", "vp9")).toBe(
       `${stationBase()}/datasets/pick%20n/episodes/2/videos/wrist?format=vp9`,
     );
+  });
+
+  it("opens the viewer only for a written episode (hotfix 0.2.10 EpisodeSummary.state)", () => {
+    expect(episodeReviewable({ index: 0 })).toBe(true); // a Station before the hotfix
+    expect(episodeReviewable({ index: 0, state: "saved" })).toBe(true);
+    expect(episodeReviewable({ index: 0, state: "saving" })).toBe(false);
+    expect(episodeReviewable({ index: 0, state: "unreadable" })).toBe(false);
+    expect(episodeReviewable(undefined)).toBe(false);
   });
 
   it("puts the chart on the video's clock: frame index / fps", () => {

@@ -95,6 +95,16 @@ export function DatasetsPage() {
  * Seconds into the episode of each telemetry line: frames recorded so far / fps (the video's own
  * time base), else the time since the episode's first line (telemetry from before F-72).
  */
+/**
+ * Only a written episode has videos to show. Hotfix 0.2.10 (D-2) adds `EpisodeSummary.state`
+ * (saved / saving / unreadable); rows without it come from a Station before that hotfix.
+ */
+export function episodeReviewable(e: object | undefined): boolean {
+  if (!e) return false;
+  const state = (e as { state?: unknown }).state;
+  return state === undefined || state === "saved";
+}
+
 export function episodeSeconds(
   t: readonly number[],
   frameIndex: readonly (number | null)[],
@@ -487,7 +497,7 @@ export function DatasetDetailPage() {
               </CardContent>
             </Card>
           </div>
-          {episode !== null ? (
+          {episode !== null && episodeReviewable(d.episode_list.find((e) => e.index === episode)) ? (
             <EpisodeReview key={`${name}/${String(episode)}`} name={name} index={episode} fps={d.fps} />
           ) : (
             <Card>

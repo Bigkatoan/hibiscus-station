@@ -293,3 +293,16 @@ def test_episode_telemetry_carries_the_frame_index_for_the_video_cursor(
     assert len(tel["frame_index"]) == len(tel["t"]) > 0
     fi = [f for f in tel["frame_index"] if f is not None]
     assert fi == sorted(fi) and fi[0] >= 0
+
+
+def test_an_episode_whose_metadata_was_never_written_is_404_never_500(client: Any, multi: Path) -> None:
+    """Hotfix 0.2.10 (D-2): a Station closed before ``finalize`` leaves a ``meta/episodes`` parquet
+    without a footer, and LeRobot may be rewriting ``meta/info.json``. The viewer answers a clear
+    code; episodes in closed files still play."""
+    (multi / "meta" / "episodes" / "chunk-000" / "file-001.parquet").write_bytes(b"PAR1 no footer")
+    assert client.get(f"{API}/datasets/multi/episodes/1/videos/front").status_code == 200
+    r = client.get(f"{API}/datasets/multi/episodes/3/videos")
+    assert r.status_code == 404 and r.json()["code"] == "not_found"
+    (multi / "meta" / "info.json").write_text("", encoding="utf-8")
+    r = client.get(f"{API}/datasets/multi/episodes/1/videos")
+    assert r.status_code == 422 and r.json()["code"] == "video_unavailable"

@@ -73,7 +73,12 @@ def _info(root: Path) -> dict[str, Any]:
     path = root / "meta" / "info.json"
     if not path.is_file():
         raise StationError("not_found", f"no dataset {root.name}")
-    data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:  # rewritten in place by LeRobot, or damaged
+        raise StationError("video_unavailable", f"cannot read {root.name}/meta/info.json") from exc
+    if not isinstance(data, dict):
+        raise StationError("video_unavailable", f"cannot read {root.name}/meta/info.json")
     return data
 
 
@@ -81,11 +86,14 @@ def _episode_row(root: Path, index: int) -> dict[str, Any] | None:
     import pyarrow.parquet as pq
 
     for f in sorted((root / "meta" / "episodes").rglob("*.parquet")):
-        cols = pq.read_schema(f).names
-        want = ["episode_index", *[c for c in cols if c.startswith("videos/")]]
-        if "length" in cols:
-            want.append("length")
-        t = pq.read_table(f, columns=want).to_pydict()
+        try:
+            cols = pq.read_schema(f).names
+            want = ["episode_index", *[c for c in cols if c.startswith("videos/")]]
+            if "length" in cols:
+                want.append("length")
+            t = pq.read_table(f, columns=want).to_pydict()
+        except Exception:  # noqa: S112 - a file LeRobot never closed (Station closed before finalize)
+            continue
         for i, idx in enumerate(t.get("episode_index", [])):
             if int(idx) == index:
                 return {k: v[i] for k, v in t.items()}
