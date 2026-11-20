@@ -61,3 +61,17 @@ test = "tests/test_platform.py::test_windows_lock_is_a_byte_past_the_header"
 platforms = ["linux", "macos"]
 reason = "Windows byte-range lock semantics"
 covered_by = "Windows CI (python, windows-latest)"
+
+# -- real POSIX permission bits (chmod 000 / a 0o500 folder). Windows has NTFS ACLs, no POSIX
+#    modes. The same product paths run on every OS in the simulated-PermissionError twins.
+[[skip]]
+test = "tests/test_field_0210.py::test_an_unreadable_info_json_real_chmod"
+platforms = ["windows"]
+reason = "POSIX permissions: chmod 000 does not make a file unreadable on Windows (NTFS ACLs)"
+covered_by = "tests/test_field_0210.py::test_an_unreadable_info_json_is_a_dataset_error_not_a_motor_error on all 3 OS"
+
+[[skip]]
+test = "tests/test_field_0210.py::test_a_datasets_folder_that_cannot_be_written_real_chmod"
+platforms = ["windows"]
+reason = "POSIX permissions: chmod 0o500 does not make a folder read-only on Windows (NTFS ACLs)"
+covered_by = "tests/test_field_0210.py::test_a_datasets_folder_that_cannot_be_written_is_not_a_motor_error on all 3 OS"

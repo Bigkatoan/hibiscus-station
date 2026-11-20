@@ -15,6 +15,7 @@ against ``hibiscus-station --mock`` (see CHANGELOG 0.2.10):
 
 from __future__ import annotations
 
+import contextlib
 import gzip
 import json
 import os
@@ -22,6 +23,7 @@ import subprocess
 import sys
 import threading
 import time
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -472,35 +474,123 @@ def test_append_into_a_dataset_with_a_broken_info_json_is_a_clean_4xx(station: S
     assert _tree(station.paths.datasets) == before
 
 
-@pytest.mark.skipif(sys.platform == "win32" or os.geteuid() == 0, reason="POSIX permissions")
-def test_an_unreadable_info_json_is_a_dataset_error_not_a_motor_error(
-    connected: Station, client: Any
-) -> None:
-    """QH-5: chmod 000 meta/info.json, then append: 502 bus_error ("A motor did not answer")."""
-    st = connected
+def _deny(monkeypatch: pytest.MonkeyPatch, inside: Path, *, writes_only: bool) -> None:
+    """The OS refuses access to ``inside`` (a file, or everything under a folder) with
+    PermissionError, as chmod 000 / a read-only folder does on POSIX and an ACL does on Windows.
+    Patched at the os / io layer every Python file access goes through, so the product code runs
+    unchanged on every OS (NFR-18: no "POSIX permissions" skip on Windows)."""
+    import builtins
+    import io
+
+    def norm(path: Any) -> str:  # realpath: Windows 8.3 short names (RUNNER~1) and symlinks
+        return os.path.normcase(os.path.realpath(os.fsdecode(path)))
+
+    root = norm(inside)
+
+    def hit(path: Any) -> bool:
+        if isinstance(path, int):
+            return False
+        p = norm(path)
+        return p == root or p.startswith(root + os.sep)
+
+    def refuse(path: Any) -> PermissionError:
+        return PermissionError(13, "Permission denied", os.fsdecode(path))
+
+    real_open, real_os_open, real_mkdir = io.open, os.open, os.mkdir
+
+    def fake_open(file: Any, mode: str = "r", *a: Any, **kw: Any) -> Any:
+        writing = any(c in mode for c in "wax+")
+        if hit(file) and (writing or not writes_only):
+            raise refuse(file)
+        return real_open(file, mode, *a, **kw)
+
+    def fake_os_open(path: Any, flags: int, *a: Any, **kw: Any) -> int:
+        writing = bool(flags & (os.O_WRONLY | os.O_RDWR | os.O_CREAT))
+        if hit(path) and (writing or not writes_only):
+            raise refuse(path)
+        return real_os_open(path, flags, *a, **kw)
+
+    def fake_mkdir(path: Any, *a: Any, **kw: Any) -> None:
+        if hit(path) and norm(path) != root:
+            raise refuse(path)
+        real_mkdir(path, *a, **kw)
+
+    monkeypatch.setattr(io, "open", fake_open)
+    monkeypatch.setattr(builtins, "open", fake_open)
+    monkeypatch.setattr(os, "open", fake_os_open)
+    monkeypatch.setattr(os, "mkdir", fake_mkdir)
+
+
+def _append_to_unreadable_info(st: Station, client: Any, deny: Any) -> Any:
     motors = [f"{m}.pos" for m in st.owner.follower.bus.motors]  # type: ignore[union-attr]
     (shape,) = st.hub.shapes().values()
     rec = _recorder(st.paths.datasets, motors=motors, fps=15, cam=shape)
     _save(rec, 1)
     rec.finalize()
     info = st.paths.datasets / "ds" / "meta" / "info.json"
-    info.chmod(0)
-    try:
-        r = client.post(
+    with deny(info):
+        return client.post(
             "/api/v1/sessions/record",
             json={"dataset": "ds", "mode": "append", "task": "pick", "fps": 15, "countdown_s": 0},
         )
-    finally:
-        info.chmod(0o644)
+
+
+def test_an_unreadable_info_json_is_a_dataset_error_not_a_motor_error(
+    connected: Station, client: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """QH-5: an info.json the OS refuses to open, then append: 502 bus_error ("A motor did not
+    answer"). Runs on every OS: the refusal is simulated (see _deny)."""
+
+    @contextlib.contextmanager
+    def deny(path: Path) -> Iterator[None]:
+        with monkeypatch.context() as m:
+            _deny(m, path, writes_only=False)
+            yield
+
+    r = _append_to_unreadable_info(connected, client, deny)
     assert r.status_code == 409 and r.json()["code"] == "dataset_unreadable", r.text
-    assert st.owner.state == "idle"
+    assert "cannot be opened" in r.json()["detail"], r.text  # the refusal was hit, not a later check
+    assert connected.owner.state == "idle"
 
 
 @pytest.mark.skipif(sys.platform == "win32" or os.geteuid() == 0, reason="POSIX permissions")
+def test_an_unreadable_info_json_real_chmod(connected: Station, client: Any) -> None:
+    """The same as above with a real chmod 000 (POSIX, not root): the OS error itself."""
+
+    @contextlib.contextmanager
+    def deny(path: Path) -> Iterator[None]:
+        path.chmod(0)
+        try:
+            yield
+        finally:
+            path.chmod(0o644)
+
+    r = _append_to_unreadable_info(connected, client, deny)
+    assert r.status_code == 409 and r.json()["code"] == "dataset_unreadable", r.text
+    assert connected.owner.state == "idle"
+
+
 def test_a_datasets_folder_that_cannot_be_written_is_not_a_motor_error(
-    connected: Station, client: Any
+    connected: Station, client: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """QH-5, the same class on the "new dataset" path: a read-only datasets folder."""
+    """QH-5, the same class on the "new dataset" path: a datasets folder the OS refuses to write
+    into. Runs on every OS: the refusal is simulated (see _deny)."""
+    st = connected
+    st.paths.datasets.mkdir(parents=True, exist_ok=True)
+    with monkeypatch.context() as m:
+        _deny(m, st.paths.datasets, writes_only=True)
+        r = client.post(
+            "/api/v1/sessions/record",
+            json={"dataset": "ro", "task": "pick", "fps": 15, "countdown_s": 0},
+        )
+    assert r.status_code == 409 and r.json()["code"] == "dataset_io_error", r.text
+    assert st.owner.state == "idle"
+    assert not (st.paths.datasets / "ro").exists()
+
+
+@pytest.mark.skipif(sys.platform == "win32" or os.geteuid() == 0, reason="POSIX permissions")
+def test_a_datasets_folder_that_cannot_be_written_real_chmod(connected: Station, client: Any) -> None:
+    """The same as above with a real read-only folder (POSIX chmod 0o500, not root)."""
     st = connected
     st.paths.datasets.mkdir(parents=True, exist_ok=True)
     st.paths.datasets.chmod(0o500)
