@@ -14,6 +14,13 @@ repository (`station/`); 0.2.0 is the first release of this standalone repositor
 These changes are in the test build **1.0.0a1** (a pre-release, the M0 milestone of 1.0). Install it
 with its own line (see the README); GitHub never offers a pre-release as its "latest" release.
 
+### Fixed
+- **macOS: Station no longer dies while saving recorded episodes.** The AV1 encoder that LeRobot
+  uses (SVT-AV1 3.0.0) sometimes freed a still-busy macOS semaphore when it closed, and macOS stopped
+  the whole Station ("Trace/BPT trap: 5"). On macOS each episode is now encoded in a separate worker
+  process; if that worker dies, Station starts a new one and encodes the episode again. Linux and
+  Windows are unchanged.
+
 ### Added
 - **Watch the camera video of every recorded episode** (Datasets → a dataset → click an episode):
   every camera plays together, with play / pause, a time slider and a red time cursor on the
