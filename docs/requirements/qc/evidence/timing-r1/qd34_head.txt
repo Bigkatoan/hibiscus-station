@@ -1,0 +1,66 @@
+qd34-pipe                          {'slow': 57}
+qd34-block                         {'slow': 57}
+f-pipe0.0005-dead6                 {'dead dead=6': 3}
+f-pipe0.0005-drop0.1               {'CABLES 3pin unreliable': 3}
+f-pipe0.0005-drop0.1 [cable-advice list] {'f-pipe0.0005-drop0.1-s1': 1, 'f-pipe0.0005-drop0.1-s2': 1, 'f-pipe0.0005-drop0.1-s3': 1}
+f-pipe0.0005-drop0.3               {'CABLES 3pin unreliable': 3}
+f-pipe0.0005-drop0.3 [cable-advice list] {'f-pipe0.0005-drop0.3-s1': 1, 'f-pipe0.0005-drop0.3-s2': 1, 'f-pipe0.0005-drop0.3-s3': 1}
+f-pipe0.0005-corrupt0.1            {'CABLES 3pin unreliable corrupt': 3}
+f-pipe0.0005-corrupt0.1 [cable-advice list] {'f-pipe0.0005-corrupt0.1-s1': 1, 'f-pipe0.0005-corrupt0.1-s2': 1, 'f-pipe0.0005-corrupt0.1-s3': 1}
+f-pipe0.0005-spike0.05-0.3         {'CABLES 3pin unreliable late stalled': 3}
+f-pipe0.0005-spike0.05-0.3 [cable-advice list] {'f-pipe0.0005-spike0.05-0.3-s1': 1, 'f-pipe0.0005-spike0.05-0.3-s2': 1, 'f-pipe0.0005-spike0.05-0.3-s3': 1}
+f-pipe0.0005-spike0.1-0.12         {'slow CABLES 3pin unreliable late stalled': 1, 'slow unreliable late stalled': 2}
+f-pipe0.0005-spike0.1-0.12 [cable-advice list] {'f-pipe0.0005-spike0.1-0.12-s1': 1}
+f-pipe0.0005-flaky3                {'CABLES 3pin unreliable': 3}
+f-pipe0.0005-flaky3 [cable-advice list] {'f-pipe0.0005-flaky3-s1': 1, 'f-pipe0.0005-flaky3-s2': 1, 'f-pipe0.0005-flaky3-s3': 1}
+f-pipe0.0005-stallsync0.3          {'CABLES 3pin unreliable late stalled': 3}
+f-pipe0.0005-stallsync0.3 [cable-advice list] {'f-pipe0.0005-stallsync0.3-s1': 1, 'f-pipe0.0005-stallsync0.3-s2': 1, 'f-pipe0.0005-stallsync0.3-s3': 1}
+f-pipe0.047-dead6                  {'dead dead=6': 3}
+f-pipe0.047-drop0.1                {'CABLES 3pin unreliable': 2, 'slow CABLES 3pin unreliable': 1}
+f-pipe0.047-drop0.1 [cable-advice list] {'f-pipe0.047-drop0.1-s1': 1, 'f-pipe0.047-drop0.1-s2': 1, 'f-pipe0.047-drop0.1-s3': 1}
+f-pipe0.047-drop0.3                {'CABLES 3pin unreliable': 3}
+f-pipe0.047-drop0.3 [cable-advice list] {'f-pipe0.047-drop0.3-s1': 1, 'f-pipe0.047-drop0.3-s2': 1, 'f-pipe0.047-drop0.3-s3': 1}
+f-pipe0.047-corrupt0.1             {'CABLES 3pin unreliable corrupt': 2, 'slow CABLES 3pin unreliable corrupt': 1}
+f-pipe0.047-corrupt0.1 [cable-advice list] {'f-pipe0.047-corrupt0.1-s1': 1, 'f-pipe0.047-corrupt0.1-s2': 1, 'f-pipe0.047-corrupt0.1-s3': 1}
+f-pipe0.047-spike0.05-0.3          {'slow CABLES 3pin unreliable late stalled': 2, 'slow CABLES 3pin unreliable late flaky stalled flaky=6': 1}
+f-pipe0.047-spike0.05-0.3 [cable-advice list] {'f-pipe0.047-spike0.05-0.3-s1': 1, 'f-pipe0.047-spike0.05-0.3-s2': 1, 'f-pipe0.047-spike0.05-0.3-s3': 1}
+f-pipe0.047-spike0.1-0.12          {'slow CABLES 3pin unreliable late stalled': 3}
+f-pipe0.047-spike0.1-0.12 [cable-advice list] {'f-pipe0.047-spike0.1-0.12-s1': 1, 'f-pipe0.047-spike0.1-0.12-s2': 1, 'f-pipe0.047-spike0.1-0.12-s3': 1}
+f-pipe0.047-flaky3                 {'CABLES 3pin unreliable': 3}
+f-pipe0.047-flaky3 [cable-advice list] {'f-pipe0.047-flaky3-s1': 1, 'f-pipe0.047-flaky3-s2': 1, 'f-pipe0.047-flaky3-s3': 1}
+f-pipe0.047-stallsync0.3           {'slow CABLES 3pin unreliable late stalled': 3}
+f-pipe0.047-stallsync0.3 [cable-advice list] {'f-pipe0.047-stallsync0.3-s1': 1, 'f-pipe0.047-stallsync0.3-s2': 1, 'f-pipe0.047-stallsync0.3-s3': 1}
+f-pipe0.049-dead6                  {'dead dead=6': 3}
+f-pipe0.049-drop0.1                {'CABLES 3pin unreliable': 2, 'slow CABLES 3pin unreliable': 1}
+f-pipe0.049-drop0.1 [cable-advice list] {'f-pipe0.049-drop0.1-s1': 1, 'f-pipe0.049-drop0.1-s2': 1, 'f-pipe0.049-drop0.1-s3': 1}
+f-pipe0.049-drop0.3                {'CABLES 3pin unreliable': 3}
+f-pipe0.049-drop0.3 [cable-advice list] {'f-pipe0.049-drop0.3-s1': 1, 'f-pipe0.049-drop0.3-s2': 1, 'f-pipe0.049-drop0.3-s3': 1}
+f-pipe0.049-corrupt0.1             {'CABLES 3pin unreliable corrupt': 2, 'slow CABLES 3pin unreliable corrupt': 1}
+f-pipe0.049-corrupt0.1 [cable-advice list] {'f-pipe0.049-corrupt0.1-s1': 1, 'f-pipe0.049-corrupt0.1-s2': 1, 'f-pipe0.049-corrupt0.1-s3': 1}
+f-pipe0.049-spike0.05-0.3          {'slow CABLES 3pin unreliable late stalled': 2, 'slow CABLES 3pin unreliable late flaky stalled flaky=6': 1}
+f-pipe0.049-spike0.05-0.3 [cable-advice list] {'f-pipe0.049-spike0.05-0.3-s1': 1, 'f-pipe0.049-spike0.05-0.3-s2': 1, 'f-pipe0.049-spike0.05-0.3-s3': 1}
+f-pipe0.049-spike0.1-0.12          {'slow CABLES 3pin unreliable late stalled': 3}
+f-pipe0.049-spike0.1-0.12 [cable-advice list] {'f-pipe0.049-spike0.1-0.12-s1': 1, 'f-pipe0.049-spike0.1-0.12-s2': 1, 'f-pipe0.049-spike0.1-0.12-s3': 1}
+f-pipe0.049-flaky3                 {'CABLES 3pin unreliable': 3}
+f-pipe0.049-flaky3 [cable-advice list] {'f-pipe0.049-flaky3-s1': 1, 'f-pipe0.049-flaky3-s2': 1, 'f-pipe0.049-flaky3-s3': 1}
+f-pipe0.049-stallsync0.3           {'slow CABLES 3pin unreliable late stalled': 3}
+f-pipe0.049-stallsync0.3 [cable-advice list] {'f-pipe0.049-stallsync0.3-s1': 1, 'f-pipe0.049-stallsync0.3-s2': 1, 'f-pipe0.049-stallsync0.3-s3': 1}
+f-pipe0.051-dead6                  {'dead dead=6': 3}
+f-pipe0.051-drop0.1                {'CABLES 3pin unreliable': 1, 'slow CABLES 3pin unreliable': 1, 'CABLES 3pin unreliable late stalled': 1}
+f-pipe0.051-drop0.1 [cable-advice list] {'f-pipe0.051-drop0.1-s1': 1, 'f-pipe0.051-drop0.1-s2': 1, 'f-pipe0.051-drop0.1-s3': 1}
+f-pipe0.051-drop0.3                {'CABLES 3pin unreliable late stalled': 1, 'CABLES 3pin unreliable': 1, 'CABLES 3pin unreliable late flaky stalled flaky=1': 1}
+f-pipe0.051-drop0.3 [cable-advice list] {'f-pipe0.051-drop0.3-s1': 1, 'f-pipe0.051-drop0.3-s2': 1, 'f-pipe0.051-drop0.3-s3': 1}
+f-pipe0.051-corrupt0.1             {'CABLES 3pin unreliable corrupt': 2, 'slow CABLES 3pin unreliable corrupt': 1}
+f-pipe0.051-corrupt0.1 [cable-advice list] {'f-pipe0.051-corrupt0.1-s1': 1, 'f-pipe0.051-corrupt0.1-s2': 1, 'f-pipe0.051-corrupt0.1-s3': 1}
+f-pipe0.051-spike0.05-0.3          {'slow CABLES 3pin unreliable late stalled': 3}
+f-pipe0.051-spike0.05-0.3 [cable-advice list] {'f-pipe0.051-spike0.05-0.3-s1': 1, 'f-pipe0.051-spike0.05-0.3-s2': 1, 'f-pipe0.051-spike0.05-0.3-s3': 1}
+f-pipe0.051-spike0.1-0.12          {'slow CABLES 3pin unreliable late stalled': 3}
+f-pipe0.051-spike0.1-0.12 [cable-advice list] {'f-pipe0.051-spike0.1-0.12-s1': 1, 'f-pipe0.051-spike0.1-0.12-s2': 1, 'f-pipe0.051-spike0.1-0.12-s3': 1}
+f-pipe0.051-flaky3                 {'CABLES 3pin unreliable': 3}
+f-pipe0.051-flaky3 [cable-advice list] {'f-pipe0.051-flaky3-s1': 1, 'f-pipe0.051-flaky3-s2': 1, 'f-pipe0.051-flaky3-s3': 1}
+f-pipe0.051-stallsync0.3           {'slow CABLES 3pin unreliable late stalled': 3}
+f-pipe0.051-stallsync0.3 [cable-advice list] {'f-pipe0.051-stallsync0.3-s1': 1, 'f-pipe0.051-stallsync0.3-s2': 1, 'f-pipe0.051-stallsync0.3-s3': 1}
+f-pipe0.047-leader                 {'slow': 1}
+f-pipe0.047-leader-dead6           {'dead dead=6': 1}
+f-pipe0.049-leader                 {'slow': 1}
+f-pipe0.049-leader-dead6           {'dead dead=6': 1}

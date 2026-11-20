@@ -1,0 +1,8 @@
+{
+ "build": "head",
+ "tag": "L48-plain",
+ "mode": "plain",
+ "teleop_ws_hz": 30.001,
+ "record_wall_s": 15.033,
+ "record_ws_hz": null
+}

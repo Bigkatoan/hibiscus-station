@@ -1,0 +1,118 @@
+{
+ "tag": "en-1280-light",
+ "calibrated": {
+  "follower": true,
+  "leader": true
+ },
+ "rest_pose_initially": {
+  "shoulder_pan.pos": -1.58,
+  "shoulder_lift.pos": 1.71,
+  "elbow_flex.pos": 2.2,
+  "wrist_flex.pos": 0.0,
+  "wrist_roll.pos": -3.3,
+  "gripper.pos": 50.0
+ },
+ "put_issues": [],
+ "check_after_home": [
+  200,
+  []
+ ],
+ "go_home_enabled": true,
+ "go_home_session": [
+  "playing",
+  "rest"
+ ],
+ "go_home_end": [
+  "idle",
+  null,
+  2.3,
+  "completed"
+ ],
+ "go_home_hb": {
+  "n": 23,
+  "max_gap": 0.25,
+  "last_hb_age": 2.26
+ },
+ "away_vs_home_maxdiff": 33.333,
+ "after_go_home_vs_home_maxdiff": 0.085,
+ "leader_table": {
+  "connected_text": true,
+  "not_measured": 0,
+  "tables_overflowing": 0,
+  "tables": 3
+ },
+ "relax_dialog": {
+  "title": true,
+  "ok": true
+ },
+ "torque_after_cancel": true,
+ "torque_after_confirm": false,
+ "record_start": [
+  200,
+  null,
+  ""
+ ],
+ "elapsed_before_click": 6.03,
+ "click_call_s": 0.04,
+ "stop_to_saving_s": 0.04,
+ "phase_after_stop": "saving",
+ "elapsed_at_saving": 6.1,
+ "stop_to_idle_s": 3.23,
+ "hold_maxdiff_3s": 0.0,
+ "torque_after_stop": true,
+ "record_summary": {
+  "saved": 1,
+  "discarded": 0,
+  "cameras": {
+   "front": {
+    "backend": "MockCamera",
+    "size": [
+     640,
+     480
+    ],
+    "fps_configured": 30,
+    "fps_measured": 29.7,
+    "age_ms_p50": 4.0,
+    "age_ms_p95": 25.0,
+    "ticks": 277,
+    "stale_ticks": 0,
+    "last_error": null
+   },
+   "wrist": {
+    "backend": "MockCamera",
+    "size": [
+     320,
+     240
+    ],
+    "fps_configured": 30,
+    "fps_measured": 29.7,
+    "age_ms_p50": 4.5,
+    "age_ms_p95": 25.5,
+    "ticks": 277,
+    "stale_ticks": 0,
+    "last_error": null
+   }
+  },
+  "frames": null
+ },
+ "stop_dataset": {
+  "episodes": 1,
+  "frames": 183,
+  "finalized": true
+ },
+ "dry_run": 200,
+ "dry_state": "completed",
+ "robot_run": [
+  200,
+  null
+ ],
+ "robot_run_state": {
+  "status": "completed",
+  "reason": null,
+  "error": null
+ },
+ "robot_run_log_tail": [],
+ "page_errors": [],
+ "5xx": []
+}
+PARTIAL {"tag": "en-1280-light", "calibrated": {"follower": true, "leader": true}, "rest_pose_initially": {"shoulder_pan.pos": -1.58, "shoulder_lift.pos": 1.71, "elbow_flex.pos": 2.2, "wrist_flex.pos": 0.0, "wrist_roll.pos": -3.3, "gripper.pos": 50.0}, "put_issues": [], "check_after_home": [200, []], "go_home_enabled": true, "go_home_session": ["playing", "rest"], "go_home_end": ["idle", null, 2.3, "completed"], "go_home_hb": {"n": 23, "max_gap": 0.25, "last_hb_age": 2.26}, "away_vs_home_maxdiff": 33.333, "after_go_home_vs_home_maxdiff": 0.085, "leader_table": {"connected_text": true, "not_measured": 0, "tables_overflowing": 0, "tables": 3}, "relax_dialog": {"title": true, "ok": true}, "torque_after_cancel": true, "torque_after_confirm": false, "record_start": [200, null, ""], "elapsed_before_click": 6.03, "click_call_s": 0.04, "stop_to_saving_s": 0.04, "phase_after_stop": "saving", "elapsed_at_saving": 6.1, "stop_to_idle_s": 3.23, "hold_maxdiff_3s": 0.0, "torque_after_stop": true, "record_summary": {"saved": 1, "discarded": 0, "cameras": {"front": {"backend": "MockCamera", "size": [640, 480], "fps_configured": 30, "fps_measured": 29.7, "age_ms_p50": 4.0, "age_ms_p95": 25.0, "ticks": 277, "stale_ticks": 0, "last_error": null}, "wrist": {"backend": "MockCamera", "size": [320, 240], "fps_configured": 30, "fps_measured": 29.7, "age_ms_p50": 4.5, "age_ms_p95": 25.5, "ticks": 277, "stale_ticks": 0, "last_error": null}}, "frames": null}, "stop_dataset": {"episodes": 1, "frames": 183, "finalized": true}, "dry_run": 200, "dry_state": "completed", "robot_run": [200, null], "robot_run_state": {"status": "completed", "reason": null, "error": null}, "robot_run_log_tail": [], "page_errors": [], "5xx": []}

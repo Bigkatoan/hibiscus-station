@@ -1,0 +1,32 @@
+== attack10
+3c3
+< ## failed reads, no bus problem named: 1
+---
+> ## failed reads, no bus problem named: 3
+## dead motor called 'answers with corrupted packets': 4
+## dead motor not named 'do not answer': 4
+## failed reads, no bus problem named: 3
+## live motor named 'do not answer (power? cable?)': 1
+## r10 noise: dead motor called corrupted: 4
+## r10 timing-only fault blamed on a servo (QD-30): 7
+## r10 timing-only fault: a servo line says it is flaky / silent: 7
+checked 249
+== special
+identical
+checked 91
+== attack
+3d2
+< ## r10 steady slow adapter given cable advice (QD-30): 1
+## failed reads, no bus problem named: 1
+## live motor named 'do not answer (power? cable?)': 1
+checked 238
+== edge
+1c1
+< ## failed reads, no bus problem named: 1
+---
+> ## failed reads, no bus problem named: 2
+3d2
+< ## r10 steady slow adapter given cable advice (QD-30): 3
+## failed reads, no bus problem named: 2
+## live motor named 'do not answer (power? cable?)': 1
+checked 43

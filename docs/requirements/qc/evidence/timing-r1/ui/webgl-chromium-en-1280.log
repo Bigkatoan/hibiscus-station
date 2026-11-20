@@ -1,0 +1,94 @@
+{
+ "mode": "chromium",
+ "lang": "en",
+ "width": 1280,
+ "webgl2_probe": true,
+ "/teleop": {
+  "how": "inline",
+  "twins": [
+   {
+    "state": "ready",
+    "note": null
+   }
+  ],
+  "fallback_ok": true,
+  "nav": true,
+  "errors": [],
+  "ghost_card": null,
+  "ghost_player": null
+ },
+ "/record": {
+  "how": "inline",
+  "twins": [
+   {
+    "state": "ready",
+    "note": null
+   }
+  ],
+  "fallback_ok": true,
+  "nav": true,
+  "errors": [],
+  "ghost_card": null,
+  "ghost_player": null
+ },
+ "/run": {
+  "how": "inline",
+  "twins": [
+   {
+    "state": "ready",
+    "note": null
+   }
+  ],
+  "fallback_ok": true,
+  "nav": true,
+  "errors": [],
+  "ghost_card": null,
+  "ghost_player": null
+ },
+ "/programs?tab=programs": {
+  "how": "inline",
+  "twins": [
+   {
+    "state": "ready",
+    "note": null
+   }
+  ],
+  "fallback_ok": true,
+  "nav": true,
+  "errors": [],
+  "ghost_card": null,
+  "ghost_player": null
+ },
+ "/programs?tab=trajectories": {
+  "how": "inline",
+  "twins": [
+   {
+    "state": "ready",
+    "note": null
+   }
+  ],
+  "fallback_ok": true,
+  "nav": true,
+  "errors": [],
+  "ghost_card": 1,
+  "ghost_player": 1
+ },
+ "teleop_ui": {
+  "clicked": true,
+  "running": true,
+  "twins_live": [
+   {
+    "state": "ready",
+    "note": null
+   }
+  ],
+  "idle_after_stop": "idle"
+ },
+ "errors_total": [
+  "console.warning:[.WebGL-0x1e8400197400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+  "console.warning:[.WebGL-0x1e8400197400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+  "console.warning:[.WebGL-0x1e8400197400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+  "console.warning:[.WebGL-0x1e8400197400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+ ],
+ "5xx": []
+}

@@ -1,0 +1,10 @@
+real-ad0.0455-s1: unreliable bus: 1 of 20 reads failed (1 got their answers only after the timeout) although every motor answers a ping
+real-ad0.0455-s2: unreliable bus: 1 of 20 reads failed (1 got their answers only after the timeout) although every motor answers a ping
+real-ad0.045-s1: unreliable bus: 1 of 20 reads failed (1 got their answers only after the timeout) although every motor answers a ping
+real-ad0.045-s2: unreliable bus: 1 of 20 reads failed (1 got their answers only after the timeout) although every motor answers a ping
+real-ad0.0465-s1: unreliable bus: 1 of 20 reads failed (1 got their answers only after the timeout) although every motor answers a ping
+real-ad0.0465-s2: unreliable bus: 1 of 20 reads failed (1 got their answers only after the timeout) although every motor answers a ping
+real-ad0.046-s1: unreliable bus: 1 of 20 reads failed (1 got their answers only after the timeout) although every motor answers a ping
+real-ad0.046-s2: unreliable bus: 1 of 20 reads failed (1 got their answers only after the timeout) although every motor answers a ping
+real-ad0.047-s1: unreliable bus: 1 of 20 reads failed (1 got their answers only after the timeout) although every motor answers a ping
+real-ad0.047-s2: unreliable bus: 1 of 20 reads failed (1 got their answers only after the timeout) although every motor answers a ping

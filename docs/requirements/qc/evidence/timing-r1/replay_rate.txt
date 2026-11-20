@@ -1,0 +1,4 @@
+head-idle replay-approach tick rate (Hz, 3 windows of ~2 s before the dead-man trip): [30.0, 30.0, 30.0]
+base-idle replay-approach tick rate (Hz, 3 windows of ~2 s before the dead-man trip): [29.92, 29.92, 29.92]
+head-load replay-approach tick rate (Hz, 3 windows of ~2 s before the dead-man trip): [30.02, 30.0, 29.98]
+base-load replay-approach tick rate (Hz, 3 windows of ~2 s before the dead-man trip): [29.14, 29.37, 28.88]

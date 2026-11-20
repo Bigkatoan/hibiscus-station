@@ -1,0 +1,12 @@
+ 02:59:59 up 8 days,  6:46,  2 users,  load average: 30.18, 23.25, 14.22
+head L48-r1 shim teleop ws 29.996 tick 30.005 lag -2.7 sd 2.645 p99 40.253 minW 7.954 | record wall 15.004 tick 29.997 lag 1.6 sd 2.092 p99 39.716 minW 19.358
+base L48-r1 shim teleop ws 29.319 tick 29.335 lag 331.9 sd 1.186 p99 38.088 minW 25.785 | record wall 15.461 tick 29.135 lag 444.3 sd 1.626 p99 40.804 minW 25.71
+head L48-r2 shim teleop ws 29.985 tick 30.0 lag 0.0 sd 2.004 p99 38.125 minW 19.55 | record wall 15.084 tick 29.853 lag 73.9 sd 3.97 p99 41.484 minW 8.417
+base L48-r2 shim teleop ws 29.255 tick 29.254 lag 372.5 sd 1.846 p99 39.034 minW 25.577 | record wall 15.44 tick 29.178 lag 422.8 sd 1.52 p99 40.149 minW 20.377
+head L48-r3 shim teleop ws 29.994 tick 30.005 lag -2.7 sd 2.228 p99 39.616 minW 7.024 | record wall 15.038 tick 29.998 lag 1.2 sd 2.062 p99 39.044 minW 23.097
+base L48-r3 shim teleop ws 29.216 tick 29.221 lag 388.2 sd 2.017 p99 39.98 minW 26.234 | record wall 15.553 tick 28.996 lag 519.5 sd 1.669 p99 40.631 minW 24.347
+head L48-plain plain teleop ws 30.001 tick None lag None sd None p99 None minW None | record wall 15.033 tick None lag None sd None p99 None minW None
+base L48-plain plain teleop ws 29.494 tick None lag None sd None p99 None minW None | record wall 15.473 tick None lag None sd None p99 None minW None
+head L48-fps15 shim teleop ws 30.017 tick 30.006 lag -2.9 sd 1.955 p99 37.224 minW 14.66 | record wall 15.014 tick 14.997 lag 2.8 sd 2.061 p99 71.248 minW 58.489
+base L48-fps15 shim teleop ws 29.312 tick 29.305 lag 346.2 sd 1.464 p99 38.891 minW 26.475 | record wall 15.25 tick 14.735 lag 268.3 sd 1.603 p99 73.031 minW 57.482
+ 03:11:05 up 8 days,  6:57,  2 users,  load average: 58.30, 56.18, 37.97

@@ -1,0 +1,13 @@
+base-L48-fps15 writes 712 gaps<0.75T 0 max consecutive 0 max writes in 100 ms 4 min gap ms 26.5
+base-L48-r1 writes 937 gaps<0.75T 0 max consecutive 0 max writes in 100 ms 4 min gap ms 25.7
+base-L48-r2 writes 936 gaps<0.75T 1 max consecutive 1 max writes in 100 ms 4 min gap ms 20.4
+base-L48-r3 writes 935 gaps<0.75T 1 max consecutive 1 max writes in 100 ms 4 min gap ms 24.3
+base-idle writes 3118 gaps<0.75T 0 max consecutive 0 max writes in 100 ms 4 min gap ms 32.8
+base-load writes 3098 gaps<0.75T 1 max consecutive 1 max writes in 100 ms 4 min gap ms 24.1
+head-L48-fps15 writes 724 gaps<0.75T 3 max consecutive 1 max writes in 100 ms 4 min gap ms 14.7
+head-L48-r1 writes 948 gaps<0.75T 8 max consecutive 1 max writes in 100 ms 4 min gap ms 8.0
+head-L48-r2 writes 949 gaps<0.75T 9 max consecutive 1 max writes in 100 ms 4 min gap ms 8.4
+head-L48-r3 writes 948 gaps<0.75T 10 max consecutive 2 max writes in 100 ms 5 min gap ms 7.0
+head-idle writes 3125 gaps<0.75T 1 max consecutive 1 max writes in 100 ms 4 min gap ms 13.3
+head-load writes 3128 gaps<0.75T 16 max consecutive 1 max writes in 100 ms 4 min gap ms 4.3
+smoke writes 0 gaps<0.75T 0 max consecutive 0 max writes in 100 ms 0 min gap ms None

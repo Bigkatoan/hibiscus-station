@@ -1,0 +1,64 @@
+== base
+real-ad                            {'slow': 28, 'slow CABLES 3pin unreliable': 10}
+real-ad0.0475-dead6                {'dead dead=6': 1}
+real-ad0.0475-drop0.1              {'CABLES 3pin unreliable': 1}
+real-ad0.0475-corrupt0.1           {'CABLES 3pin unreliable corrupt': 1}
+real-ad0.0475-spike0.05-0.3        {'slow CABLES 3pin unreliable late stalled': 1}
+real-ad0.0475-stallsync0.3         {'slow CABLES 3pin unreliable late stalled': 1}
+real-ad0.0475-flaky3               {'CABLES 3pin unreliable': 1}
+real-ad0.048-dead6                 {'dead dead=6': 1}
+real-ad0.048-drop0.1               {'CABLES 3pin unreliable': 1}
+real-ad0.048-corrupt0.1            {'CABLES 3pin unreliable corrupt': 1}
+real-ad0.048-spike0.05-0.3         {'slow CABLES 3pin unreliable late stalled': 1}
+real-ad0.048-stallsync0.3          {'slow CABLES 3pin unreliable late stalled': 1}
+real-ad0.048-flaky3                {'CABLES 3pin unreliable': 1}
+real-ad0.0485-dead6                {'dead dead=6': 1}
+real-ad0.0485-drop0.1              {'CABLES 3pin unreliable': 1}
+real-ad0.0485-corrupt0.1           {'CABLES 3pin unreliable corrupt': 1}
+real-ad0.0485-spike0.05-0.3        {'slow CABLES 3pin unreliable late stalled': 1}
+real-ad0.0485-stallsync0.3         {'slow CABLES 3pin unreliable late stalled': 1}
+real-ad0.0485-flaky3               {'CABLES 3pin unreliable': 1}
+real-ad0.049-dead6                 {'dead dead=6': 1}
+real-ad0.049-drop0.1               {'CABLES 3pin unreliable': 1}
+real-ad0.049-corrupt0.1            {'CABLES 3pin unreliable corrupt': 1}
+real-ad0.049-spike0.05-0.3         {'slow CABLES 3pin unreliable late stalled': 1}
+real-ad0.049-stallsync0.3          {'slow CABLES 3pin unreliable late stalled': 1}
+real-ad0.049-flaky3                {'CABLES 3pin unreliable': 1}
+real-ad0.0495-dead6                {'dead dead=6': 1}
+real-ad0.0495-drop0.1              {'CABLES 3pin unreliable': 1}
+real-ad0.0495-corrupt0.1           {'CABLES 3pin unreliable corrupt': 1}
+real-ad0.0495-spike0.05-0.3        {'slow CABLES 3pin unreliable late stalled': 1}
+real-ad0.0495-stallsync0.3         {'slow CABLES 3pin unreliable late stalled': 1}
+real-ad0.0495-flaky3               {'CABLES 3pin unreliable': 1}
+== head
+real-ad                            {'slow': 38}
+real-ad0.0475-dead6                {'dead dead=6': 1}
+real-ad0.0475-drop0.1              {'CABLES 3pin unreliable': 1}
+real-ad0.0475-corrupt0.1           {'CABLES 3pin unreliable corrupt': 1}
+real-ad0.0475-spike0.05-0.3        {'slow CABLES 3pin unreliable late stalled': 1}
+real-ad0.0475-stallsync0.3         {'slow CABLES 3pin unreliable late stalled': 1}
+real-ad0.0475-flaky3               {'CABLES 3pin unreliable': 1}
+real-ad0.048-dead6                 {'dead dead=6': 1}
+real-ad0.048-drop0.1               {'CABLES 3pin unreliable': 1}
+real-ad0.048-corrupt0.1            {'CABLES 3pin unreliable corrupt': 1}
+real-ad0.048-spike0.05-0.3         {'slow CABLES 3pin unreliable late stalled': 1}
+real-ad0.048-stallsync0.3          {'slow CABLES 3pin unreliable late stalled': 1}
+real-ad0.048-flaky3                {'CABLES 3pin unreliable': 1}
+real-ad0.0485-dead6                {'dead dead=6': 1}
+real-ad0.0485-drop0.1              {'CABLES 3pin unreliable': 1}
+real-ad0.0485-corrupt0.1           {'CABLES 3pin unreliable corrupt': 1}
+real-ad0.0485-spike0.05-0.3        {'slow CABLES 3pin unreliable late stalled': 1}
+real-ad0.0485-stallsync0.3         {'slow CABLES 3pin unreliable late stalled': 1}
+real-ad0.0485-flaky3               {'CABLES 3pin unreliable': 1}
+real-ad0.049-dead6                 {'dead dead=6': 1}
+real-ad0.049-drop0.1               {'CABLES 3pin unreliable': 1}
+real-ad0.049-corrupt0.1            {'CABLES 3pin unreliable corrupt': 1}
+real-ad0.049-spike0.05-0.3         {'slow CABLES 3pin unreliable late stalled': 1}
+real-ad0.049-stallsync0.3          {'slow CABLES 3pin unreliable late stalled': 1}
+real-ad0.049-flaky3                {'CABLES 3pin unreliable': 1}
+real-ad0.0495-dead6                {'dead dead=6': 1}
+real-ad0.0495-drop0.1              {'CABLES 3pin unreliable': 1}
+real-ad0.0495-corrupt0.1           {'CABLES 3pin unreliable corrupt': 1}
+real-ad0.0495-spike0.05-0.3        {'slow CABLES 3pin unreliable late stalled': 1}
+real-ad0.0495-stallsync0.3         {'slow CABLES 3pin unreliable late stalled': 1}
+real-ad0.0495-flaky3               {'CABLES 3pin unreliable': 1}

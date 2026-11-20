@@ -1,0 +1,89 @@
+{
+ "mode": "chromium-nowebgl",
+ "lang": "vi",
+ "width": 390,
+ "webgl2_probe": false,
+ "/teleop": {
+  "how": "inline",
+  "twins": [
+   {
+    "state": "no-webgl",
+    "note": "Máy này không hiển thị được mô hình 3D (trình duyệt không hỗ trợ WebGL). Mọi chức năng khác vẫn dùng được."
+   }
+  ],
+  "fallback_ok": true,
+  "nav": true,
+  "errors": [],
+  "ghost_card": null,
+  "ghost_player": null
+ },
+ "/record": {
+  "how": "section",
+  "twins": [
+   {
+    "state": "no-webgl",
+    "note": "Máy này không hiển thị được mô hình 3D (trình duyệt không hỗ trợ WebGL). Mọi chức năng khác vẫn dùng được."
+   }
+  ],
+  "fallback_ok": true,
+  "nav": true,
+  "errors": [],
+  "ghost_card": null,
+  "ghost_player": null
+ },
+ "/run": {
+  "how": "inline",
+  "twins": [
+   {
+    "state": "no-webgl",
+    "note": "Máy này không hiển thị được mô hình 3D (trình duyệt không hỗ trợ WebGL). Mọi chức năng khác vẫn dùng được."
+   }
+  ],
+  "fallback_ok": true,
+  "nav": true,
+  "errors": [],
+  "ghost_card": null,
+  "ghost_player": null
+ },
+ "/programs?tab=programs": {
+  "how": "inline",
+  "twins": [
+   {
+    "state": "no-webgl",
+    "note": "Máy này không hiển thị được mô hình 3D (trình duyệt không hỗ trợ WebGL). Mọi chức năng khác vẫn dùng được."
+   }
+  ],
+  "fallback_ok": true,
+  "nav": true,
+  "errors": [],
+  "ghost_card": null,
+  "ghost_player": null
+ },
+ "/programs?tab=trajectories": {
+  "how": "inline",
+  "twins": [
+   {
+    "state": "no-webgl",
+    "note": "Máy này không hiển thị được mô hình 3D (trình duyệt không hỗ trợ WebGL). Mọi chức năng khác vẫn dùng được."
+   }
+  ],
+  "fallback_ok": true,
+  "nav": true,
+  "errors": [],
+  "ghost_card": 1,
+  "ghost_player": 1
+ },
+ "teleop_ui": {
+  "clicked": true,
+  "running": true,
+  "twins_live": [
+   {
+    "state": "no-webgl",
+    "note": "Máy này không hiển thị được mô hình 3D (trình duyệt không hỗ trợ WebGL). Mọi chức năng khác vẫn dùng được."
+   }
+  ],
+  "idle_after_stop": "idle"
+ },
+ "errors_total": [],
+ "5xx": []
+}

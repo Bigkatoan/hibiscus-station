@@ -1,0 +1,10 @@
+good.png True
+trunc.png False
+badcrc.png False
+noiend.png False
+trailing.png False
+notpng.png False
+shortlen.png RAISES IncompleteRead
+good.jpg False
+404.png False
+non-local False
