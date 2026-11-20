@@ -204,7 +204,7 @@ def press_estop_frozen_within_one_tick(st: Station, world: Any) -> None:
     t_press = time.monotonic()
     st.owner.press_estop("user")
     tick = st.owner.tick  # the tick in flight at the press is at most this one
-    wait_for(lambda: st.owner.state == "estopped", 10)
+    wait_for(lambda: at, 10)  # the owner thread sets the state, then tells its listeners
     writes = [t for t, _ in world.goal_writes() if t > t_press]
     assert len(writes) <= 2, writes  # the hold write (+ at most the tick in flight)
     assert at and at[0] <= tick + 1, (at, tick)

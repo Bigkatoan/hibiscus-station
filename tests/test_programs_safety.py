@@ -197,8 +197,8 @@ def test_deadman_loss_while_the_program_waits(real: Station, client: Any) -> Non
     assert st.owner.state == "programming" and not estop_at, st.owner.state
     clock.t = armed + timeout + 0.001  # just past it
     tick = st.owner.tick  # the tick in flight when the timeout passed is at most this one
-    wait_for(lambda: st.owner.state == "estopped", 10)
-    assert estop_at and estop_at[0] <= tick + 1, (estop_at, tick)
+    wait_for(lambda: estop_at, 10)  # the owner thread sets the state, then tells its listeners
+    assert estop_at[0] <= tick + 1, (estop_at, tick)
     assert st.owner.reason == "ui_lost"
     assert rt.join(2) and rt.outcome == "estopped"
     st.owner.call("estop_reset")
