@@ -14,6 +14,7 @@ release/v1, where ``tests/test_field_029.py`` is the field report *on* 0.2.9 (D-
 
 from __future__ import annotations
 
+import math
 import threading
 import time
 from typing import Any
@@ -172,12 +173,40 @@ def two_cams(station: Station) -> Station:
     return station
 
 
+def _steady_camera(cam: Any, fps: float) -> None:
+    """``cam`` delivers exactly ``fps`` frames per second of its own clock: its latest frame is
+    always the one of the last 1/fps step (never older than 1/fps). The mock's frame thread runs
+    on the host's scheduler: a Windows runner left it without CPU for over 250 ms (9.3 fps of 12),
+    and the product rightly called that 250 ms old frame stale."""
+    t0 = time.perf_counter()
+    frames: dict[int, Any] = {}
+
+    def step() -> int:
+        return math.floor((time.perf_counter() - t0) * fps)
+
+    class Steady(type(cam)):  # type: ignore[misc]
+        @property
+        def latest_timestamp(self) -> float:
+            return t0 + step() / fps
+
+        def read_latest(self, max_age_ms: int = 500) -> Any:
+            k = step()
+            age_ms = (time.perf_counter() - (t0 + k / fps)) * 1000
+            if age_ms > max_age_ms:
+                raise TimeoutError(f"frame is {age_ms:.0f} ms old")
+            if k not in frames:
+                frames.clear()
+                frames[k] = self._render(k)
+            return frames[k]
+
+    cam.__class__ = Steady
+
+
 def test_a_camera_slower_than_configured_never_reads_as_stale(two_cams: Station) -> None:
     """Defect 1b: a webcam configured at 30 fps that delivers 12 fps (Windows MSMF in low light)
     is not "No fresh frames": every tick of the episode gets the latest frame, the clock runs."""
     st = two_cams
-    st.hub.camera("wrist").fps = 12  # the device delivers fewer frames than the profile asks
-    time.sleep(0.3)
+    _steady_camera(st.hub.camera("wrist"), 12)  # the device delivers fewer frames than the profile asks
     st.start_record(
         RecordRequest(
             dataset="slowcam", task="t", fps=30, countdown_s=0.2, episode_time_s=1.5, num_episodes=1

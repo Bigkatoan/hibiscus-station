@@ -416,7 +416,9 @@ def test_run_model_block_uses_the_inferring_path(
     sessions: list[Any] = []
 
     def script(rt: FakeRuntime, port: MotionPort) -> str:
-        rt.run(port, RunModelStmt(id="m", kind="run_model", model=entry.key, duration_s=0.6))
+        # an explicit timeout: the automatic one (expected + 5 s of wall time) aborts a motion
+        # that hangs, which a starved test host can look like; this test is about the path
+        rt.run(port, RunModelStmt(id="m", kind="run_model", model=entry.key, duration_s=0.6, timeout_s=60))
         sessions.append(st.owner.session)
         h = port.submit(
             RunModelStmt(
