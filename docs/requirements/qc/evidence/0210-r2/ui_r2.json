@@ -1,0 +1,286 @@
+{
+ "en-1280-light": {
+  "crasha": {
+   "notice": 1,
+   "notice_text_ok": true,
+   "long_row_text": 0,
+   "short_row_text": 3,
+   "rows": 3,
+   "states": [
+    "unreadable",
+    "unreadable",
+    "unreadable"
+   ],
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "unreadable_btn_enabled": true,
+   "tel_charts": 2,
+   "pick_msg_gone": true,
+   "replay_disabled": true
+  },
+  "crashb": {
+   "notice": 1,
+   "notice_text_ok": true,
+   "long_row_text": 0,
+   "short_row_text": 12,
+   "rows": 12,
+   "states": [
+    "unreadable",
+    "unreadable",
+    "unreadable",
+    "unreadable",
+    "unreadable",
+    "unreadable",
+    "unreadable",
+    "unreadable",
+    "unreadable",
+    "unreadable",
+    "unreadable",
+    "unreadable"
+   ],
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "unreadable_btn_enabled": true,
+   "tel_charts": 2,
+   "pick_msg_gone": true,
+   "replay_disabled": true
+  },
+  "mixd": {
+   "notice": 0,
+   "notice_text_ok": false,
+   "long_row_text": 2,
+   "short_row_text": 0,
+   "rows": 5,
+   "states": [
+    "saved",
+    "saved",
+    "saved",
+    "unreadable",
+    "unreadable"
+   ],
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "unreadable_btn_enabled": true,
+   "tel_charts": 2,
+   "pick_msg_gone": true,
+   "replay_disabled": true
+  },
+  "cnt15": {
+   "notice": 0,
+   "notice_text_ok": false,
+   "long_row_text": 0,
+   "short_row_text": 0,
+   "rows": 15,
+   "states": [
+    "saved",
+    "saved",
+    "saved",
+    "saved",
+    "saved",
+    "saved",
+    "saved",
+    "saved",
+    "saved",
+    "saved",
+    "saved",
+    "saved",
+    "saved",
+    "saved",
+    "saved"
+   ],
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   }
+  },
+  "e_huge": {
+   "notice": 0,
+   "notice_text_ok": false,
+   "long_row_text": 0,
+   "short_row_text": 0,
+   "rows": 6,
+   "states": [
+    "saved",
+    "saved",
+    "saved",
+    "saved",
+    "saved",
+    "saved"
+   ],
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   }
+  },
+  "append_dmgi1": {
+   "card": 1,
+   "text_ok": true,
+   "mode": "new",
+   "name": "dmgi1_2"
+  },
+  "append_crasha": {
+   "card": 1,
+   "text_ok": true,
+   "mode": "new",
+   "name": "crasha_2"
+  },
+  "errors": [
+   "console:Failed to load resource: the server responded with a status of 409 (Conflict)",
+   "console:Failed to load resource: the server responded with a status of 409 (Conflict)"
+  ],
+  "5xx": []
+ },
+ "vi-390-dark": {
+  "crasha": {
+   "notice": 1,
+   "notice_text_ok": true,
+   "long_row_text": 0,
+   "short_row_text": 3,
+   "rows": 3,
+   "states": [
+    "unreadable",
+    "unreadable",
+    "unreadable"
+   ],
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "unreadable_btn_enabled": true,
+   "tel_charts": 4,
+   "pick_msg_gone": true,
+   "replay_disabled": true
+  },
+  "crashb": {
+   "notice": 1,
+   "notice_text_ok": true,
+   "long_row_text": 0,
+   "short_row_text": 12,
+   "rows": 12,
+   "states": [
+    "unreadable",
+    "unreadable",
+    "unreadable",
+    "unreadable",
+    "unreadable",
+    "unreadable",
+    "unreadable",
+    "unreadable",
+    "unreadable",
+    "unreadable",
+    "unreadable",
+    "unreadable"
+   ],
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "unreadable_btn_enabled": true,
+   "tel_charts": 4,
+   "pick_msg_gone": true,
+   "replay_disabled": true
+  },
+  "mixd": {
+   "notice": 0,
+   "notice_text_ok": false,
+   "long_row_text": 2,
+   "short_row_text": 0,
+   "rows": 5,
+   "states": [
+    "saved",
+    "saved",
+    "saved",
+    "unreadable",
+    "unreadable"
+   ],
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "unreadable_btn_enabled": true,
+   "tel_charts": 4,
+   "pick_msg_gone": true,
+   "replay_disabled": true
+  },
+  "cnt15": {
+   "notice": 0,
+   "notice_text_ok": false,
+   "long_row_text": 0,
+   "short_row_text": 0,
+   "rows": 15,
+   "states": [
+    "saved",
+    "saved",
+    "saved",
+    "saved",
+    "saved",
+    "saved",
+    "saved",
+    "saved",
+    "saved",
+    "saved",
+    "saved",
+    "saved",
+    "saved",
+    "saved",
+    "saved"
+   ],
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   }
+  },
+  "e_huge": {
+   "notice": 0,
+   "notice_text_ok": false,
+   "long_row_text": 0,
+   "short_row_text": 0,
+   "rows": 6,
+   "states": [
+    "saved",
+    "saved",
+    "saved",
+    "saved",
+    "saved",
+    "saved"
+   ],
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   }
+  },
+  "append_dmgi1": {
+   "card": 1,
+   "text_ok": true,
+   "mode": "new",
+   "name": "dmgi1_2"
+  },
+  "append_crasha": {
+   "card": 1,
+   "text_ok": true,
+   "mode": "new",
+   "name": "crasha_2"
+  },
+  "errors": [
+   "console:Failed to load resource: the server responded with a status of 409 (Conflict)",
+   "console:Failed to load resource: the server responded with a status of 409 (Conflict)"
+  ],
+  "5xx": []
+ }
+}

@@ -1,0 +1,6 @@
+detail: AttributeError 8 ['features=true', 'features=-1', 'features=1.5', 'features=1000000000000000000000000000000', 'features=Infinity', 'features=NaN', 'features="x"', 'features=[1]']
+detail: OverflowError 1 ['total_episodes=Infinity']
+list: AttributeError 8 ['features=true', 'features=-1', 'features=1.5', 'features=1000000000000000000000000000000', 'features=Infinity', 'features=NaN', 'features="x"', 'features=[1]']
+list: OverflowError 1 ['total_episodes=Infinity']
+replay: OverflowError 1 ['fps=Infinity']
+replay: ValueError 6 ['features.action.names="x"', 'features.action.names=""', 'features.action.names=[]', 'features.action.names=[1]', 'features.action.names={}', 'features.action.names={"a": 1}']

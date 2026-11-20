@@ -1,0 +1,89 @@
+{
+ "initial": [
+  [
+   "demo_so101"
+  ],
+  "demo_so101"
+ ],
+ "put_so-101-1": 200,
+ "put_SO_101": 422,
+ "after_put": [
+  [
+   "demo_so101",
+   "so-101-1"
+  ],
+  "demo_so101"
+ ],
+ "cal_files": [
+  "demo_follower.json",
+  "demo_leader.json"
+ ],
+ "del_connected": [
+  409,
+  [
+   "busy",
+   {
+    "state": "idle",
+    "robot": "demo_so101"
+   }
+  ]
+ ],
+ "state_teleop": "teleop",
+ "del_in_session": [
+  409,
+  [
+   "busy",
+   {
+    "state": "teleop",
+    "robot": "demo_so101"
+   }
+  ]
+ ],
+ "state_cal": [
+  200,
+  "idle"
+ ],
+ "del_calibrating": [
+  409,
+  [
+   "busy",
+   {
+    "state": "idle",
+    "robot": "demo_so101"
+   }
+  ]
+ ],
+ "del_other_while_connected": [
+  204,
+  null
+ ],
+ "state_disc": "disconnected",
+ "del_SO_101": [
+  404,
+  [
+   "not_found",
+   null
+  ]
+ ],
+ "del_missing": [
+  404,
+  [
+   "not_found",
+   null
+  ]
+ ],
+ "after_del": [
+  [
+   "demo_so101"
+  ],
+  "demo_so101"
+ ],
+ "cal_kept": true,
+ "datasets_kept": true,
+ "put_new": 200,
+ "connect_new": 200,
+ "new_calibrated": {
+  "follower": true,
+  "leader": true
+ }
+}
