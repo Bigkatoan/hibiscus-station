@@ -9,6 +9,7 @@ import type {
   CompatReport,
   Detector,
   DiscoveredCamera,
+  EpisodeVideos,
   Job,
   LocalDataset,
   LocalDatasetDetail,
@@ -47,6 +48,7 @@ export const qk = {
   datasets: ["station", "datasets"],
   dataset: (name: string) => ["station", "datasets", name],
   episodeTelemetry: (name: string, i: number) => ["station", "datasets", name, "episodes", i],
+  episodeVideos: (name: string, i: number) => ["station", "datasets", name, "episodes", i, "videos"],
   models: ["station", "models"],
   compat: (key: string, robot: string) => ["station", "models", key, "compat", robot],
   jobs: ["station", "jobs"],
@@ -137,6 +139,15 @@ export const useEpisodeTelemetry = (name: string, index: number | null) =>
     queryKey: qk.episodeTelemetry(name, index ?? -1),
     queryFn: () =>
       api.get<TelemetrySeries>(`/datasets/${encodeURIComponent(name)}/episodes/${String(index)}/telemetry`),
+    enabled: index !== null,
+  });
+
+/** F-72: the cameras of one episode (409 `episode_saving` while the dataset is being recorded). */
+export const useEpisodeVideos = (name: string, index: number | null) =>
+  useQuery({
+    queryKey: qk.episodeVideos(name, index ?? -1),
+    queryFn: () =>
+      api.get<EpisodeVideos>(`/datasets/${encodeURIComponent(name)}/episodes/${String(index)}/videos`),
     enabled: index !== null,
   });
 

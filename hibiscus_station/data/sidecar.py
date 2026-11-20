@@ -93,6 +93,7 @@ def to_series(lines: list[dict[str, Any]]) -> dict[str, Any]:
     series: dict[str, Any] = {
         "arm_motors": {},
         "t": [],
+        "frame_index": [],
         "temp_c": {},
         "voltage_v": {},
         "current_a": {},
@@ -108,6 +109,8 @@ def to_series(lines: list[dict[str, Any]]) -> dict[str, Any]:
             continue
         i = len(series["t"])
         series["t"].append(line.get("t"))
+        fi = line.get("frame_index")
+        series["frame_index"].append(int(fi) if isinstance(fi, (int, float)) else None)
         for field in ("temp_c", "voltage_v", "current_a", "load_pct"):
             vals = line.get(field)
             if not isinstance(vals, dict):

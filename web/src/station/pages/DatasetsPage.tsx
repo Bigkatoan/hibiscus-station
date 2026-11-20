@@ -1,10 +1,10 @@
 /**
- * Datasets & Upload (§6.7): local datasets, the episode list with its telemetry review chart
- * (temperature per joint, alerts as markers), replay, delete, and the resumable upload with
- * progress (hashing → uploading → done).
+ * Datasets & Upload (§6.7): local datasets, the episode list with its review (every camera's video
+ * in step with the telemetry chart: temperature per joint, alerts as markers, F-72), replay, delete,
+ * and the resumable upload with progress (hashing → uploading → done).
  */
 import { PxIcon } from "@/hibiscus/PixelAnim";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { LineChart } from "@/components/charts/LineChart";
@@ -21,11 +21,13 @@ import {
   useDataset,
   useDatasets,
   useEpisodeTelemetry,
+  useEpisodeVideos,
   useServerDatasets,
   useStationMutation,
 } from "../api/hooks";
 import type { Job, LocalDatasetDetail, Session } from "../api/types";
 import { JobProgress, formatBytes, scalar, useLatestJob } from "../components/controls";
+import { EpisodePlayer, type EpisodeClock } from "../components/EpisodeViewer";
 import { PairForm } from "../components/PairForm";
 import { StationError } from "../components/StationError";
 import { DEFAULT_THRESHOLDS, levelCss, peakTemp, tempLevel } from "../health";
@@ -89,26 +91,69 @@ export function DatasetsPage() {
   );
 }
 
-function TelemetryChart({ name, index }: { name: string; index: number }) {
+/**
+ * Seconds into the episode of each telemetry line: frames recorded so far / fps (the video's own
+ * time base), else the time since the episode's first line (telemetry from before F-72).
+ */
+export function episodeSeconds(
+  t: readonly number[],
+  frameIndex: readonly (number | null)[],
+  fps: number | null,
+) {
+  const t0 = t[0] ?? 0;
+  return t.map((x, i) => {
+    const f = frameIndex[i];
+    return fps && f !== null && f !== undefined ? f / fps : x - t0;
+  });
+}
+
+function TelemetryChart({
+  name,
+  index,
+  fps,
+  time,
+  onSeek,
+}: {
+  name: string;
+  index: number;
+  fps: number | null;
+  time: number | null;
+  onSeek: (t: number) => void;
+}) {
   const { t } = useTranslation("station");
   const tel = useEpisodeTelemetry(name, index);
+  const hover = useRef<number | null>(null);
   const series = useMemo(() => {
     const d = tel.data;
     if (!d) return [];
-    return Object.entries(d.temp_c.follower ?? {}).map(([motor, ys]) => ({ label: motor, x: d.t, y: ys }));
-  }, [tel.data]);
+    const x = episodeSeconds(d.t, d.frame_index ?? [], fps);
+    return Object.entries(d.temp_c.follower ?? {}).map(([motor, ys]) => ({ label: motor, x, y: ys }));
+  }, [tel.data, fps]);
   const alerts = tel.data?.alerts ?? [];
+  const t0 = tel.data?.t[0] ?? 0;
   return (
     <div className="flex flex-col gap-2" data-testid="episode-telemetry">
       <StationError error={tel.error} />
       {series.length ? (
-        <LineChart
-          title={t("datasets.temp_chart", { n: index + 1 })}
-          series={series}
-          height={200}
-          xLabel={t("joints.seconds")}
-          markerX={alerts[0]?.t ?? null}
-        />
+        // A click on the chart moves the videos there (the scrubber is the keyboard way).
+        // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+        <div
+          className="cursor-crosshair"
+          onClick={() => {
+            if (hover.current !== null) onSeek(hover.current);
+          }}
+        >
+          <LineChart
+            title={t("datasets.temp_chart", { n: index + 1 })}
+            series={series}
+            height={200}
+            xLabel={t("joints.seconds")}
+            markerX={time ?? (alerts[0] ? alerts[0].t - t0 : null)}
+            onCursorX={(x) => {
+              hover.current = x;
+            }}
+          />
+        </div>
       ) : tel.isSuccess ? (
         <p className="text-sm text-muted-foreground">{t("datasets.no_telemetry")}</p>
       ) : null}
@@ -122,11 +167,61 @@ function TelemetryChart({ name, index }: { name: string; index: number }) {
               >
                 {t(`level.${a.level === "info" ? "ok" : a.level}`)}
               </span>
-              {a.t.toFixed(1)} s · {a.motor ?? a.kind} {a.value !== null ? `· ${a.value}` : ""}
+              {(a.t - t0).toFixed(1)} s · {a.motor ?? a.kind} {a.value !== null ? `· ${a.value}` : ""}
             </li>
           ))}
         </ul>
       ) : null}
+    </div>
+  );
+}
+
+/** F-72: the episode's cameras and its telemetry chart, on one clock. */
+function EpisodeReview({ name, index, fps }: { name: string; index: number; fps: number | null }) {
+  const { t } = useTranslation("station");
+  const videos = useEpisodeVideos(name, index);
+  const [clock, setClock] = useState<EpisodeClock | null>(null);
+  const [seekRequest, setSeekRequest] = useState<{ t: number; nonce: number } | null>(null);
+  const onClock = useCallback((c: EpisodeClock) => {
+    setClock(c);
+  }, []);
+  const onSeek = useCallback((v: number) => {
+    setSeekRequest((r) => ({ t: v, nonce: (r?.nonce ?? 0) + 1 }));
+  }, []);
+  return (
+    <div className="flex min-w-0 flex-col gap-4">
+      <Card data-testid="episode-review">
+        <CardHeader>
+          <CardTitle>{t("datasets.video_title", { n: index + 1 })}</CardTitle>
+          <CardDescription>{t("datasets.video_desc")}</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          <StationError error={videos.error} />
+          {videos.data ? (
+            <EpisodePlayer
+              key={`${name}/${String(index)}`}
+              videos={videos.data}
+              onClock={onClock}
+              seekRequest={seekRequest}
+            />
+          ) : null}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("datasets.telemetry")}</CardTitle>
+          <CardDescription>{t("datasets.telemetry_desc")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TelemetryChart
+            name={name}
+            index={index}
+            fps={fps}
+            time={videos.data && clock ? clock.time : null}
+            onSeek={onSeek}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -392,19 +487,19 @@ export function DatasetDetailPage() {
               </CardContent>
             </Card>
           </div>
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("datasets.telemetry")}</CardTitle>
-              <CardDescription>{t("datasets.telemetry_desc")}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {episode !== null ? (
-                <TelemetryChart name={name} index={episode} />
-              ) : (
+          {episode !== null ? (
+            <EpisodeReview key={`${name}/${String(episode)}`} name={name} index={episode} fps={d.fps} />
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>{t("datasets.review")}</CardTitle>
+                <CardDescription>{t("datasets.video_desc")}</CardDescription>
+              </CardHeader>
+              <CardContent>
                 <p className="text-sm text-muted-foreground">{t("datasets.pick_episode")}</p>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </div>
       ) : null}
     </div>

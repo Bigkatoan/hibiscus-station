@@ -492,6 +492,17 @@ class Station:
 
         return self.jobs.submit("upload", work, subject=name)
 
+    def check_dataset_readable(self, name: str, episode: int | None = None) -> None:
+        """F-72: LeRobot buffers the episode index until ``finalize``, and appends each saved episode
+        to the open video file: a dataset being recorded is not read until its session ends."""
+        s = self.owner.session
+        if s is not None and s.dataset == name:
+            raise StationError(
+                "episode_saving",
+                "this dataset is being recorded: its videos open when the session ends",
+                params={"dataset": name, "episode": episode, "state": self.owner.state},
+            )
+
     def delete_dataset(self, name: str) -> None:
         s = self.owner.session
         if s is not None and s.dataset == name:

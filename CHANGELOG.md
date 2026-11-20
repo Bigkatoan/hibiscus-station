@@ -15,6 +15,14 @@ These changes are in the test build **1.0.0a1** (a pre-release, the M0 milestone
 with its own line (see the README); GitHub never offers a pre-release as its "latest" release.
 
 ### Added
+- **Watch the camera video of every recorded episode** (Datasets → a dataset → click an episode):
+  every camera plays together, with play / pause, a time slider and a red time cursor on the
+  episode's temperature chart (click the chart to jump there). Works in Edge, Chrome and Firefox on
+  Windows without installing anything: Station records AV1 as LeRobot does, and when the browser
+  cannot play AV1 (Edge without the "AV1 Video Extension") Station converts that episode once to
+  H.264 or VP9 and keeps the copy next to the dataset (`<name>.hibiscus/video-cache/`); the LeRobot
+  dataset itself is never changed. New API: `GET /api/v1/datasets/{name}/episodes/{i}/videos` and
+  `.../videos/{camera}?format=source|h264|vp9` (HTTP Range).
 - **Windows: install, update and go back with one line in PowerShell.** No admin rights, no git and
   no Python needed: paste the line from the README into PowerShell and it installs uv (checked by
   SHA-256), Python 3.12 and Station with exactly the libraries we tested for this release, checked

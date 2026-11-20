@@ -3530,6 +3530,81 @@
         "title": "DiscoveredCameras",
         "type": "object"
       },
+      "EpisodeCamera": {
+        "additionalProperties": false,
+        "properties": {
+          "camera": {
+            "title": "Camera",
+            "type": "string"
+          },
+          "codec": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "codec the camera was recorded with (meta/info.json; LeRobot: av1)",
+            "title": "Codec"
+          },
+          "duration_s": {
+            "title": "Duration S",
+            "type": "number"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "enum": [
+                  "video_missing",
+                  "video_unavailable"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "formats": {
+            "description": "formats GET .../videos/{camera}?format= serves: source = the recorded packets cut to the episode, vp9 = WebM / VP9, h264 = mp4 / H.264 (made on first request, cached)",
+            "items": {
+              "enum": [
+                "source",
+                "vp9",
+                "h264"
+              ],
+              "type": "string"
+            },
+            "title": "Formats",
+            "type": "array"
+          },
+          "mime": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "type + RFC 6381 codecs string of the recorded codec, for canPlayType (null: unknown)",
+            "title": "Mime"
+          }
+        },
+        "required": [
+          "camera",
+          "codec",
+          "mime",
+          "duration_s",
+          "error",
+          "formats"
+        ],
+        "title": "EpisodeCamera",
+        "type": "object"
+      },
       "EpisodeInfo": {
         "additionalProperties": false,
         "properties": {
@@ -3669,6 +3744,58 @@
           "max_temp_c"
         ],
         "title": "EpisodeSummary",
+        "type": "object"
+      },
+      "EpisodeVideos": {
+        "additionalProperties": false,
+        "description": "F-72: the cameras of one episode. Every format starts at the episode's first frame (t = 0).",
+        "properties": {
+          "cameras": {
+            "items": {
+              "$ref": "#/components/schemas/EpisodeCamera"
+            },
+            "title": "Cameras",
+            "type": "array"
+          },
+          "dataset": {
+            "title": "Dataset",
+            "type": "string"
+          },
+          "episode": {
+            "title": "Episode",
+            "type": "integer"
+          },
+          "fps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fps"
+          },
+          "length_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Length S"
+          }
+        },
+        "required": [
+          "dataset",
+          "episode",
+          "fps",
+          "length_s",
+          "cameras"
+        ],
+        "title": "EpisodeVideos",
         "type": "object"
       },
       "ErrorMsg": {
@@ -12432,6 +12559,21 @@
             "title": "Current A",
             "type": "object"
           },
+          "frame_index": {
+            "description": "dataset episodes: frames recorded in the episode when the line was sampled (video time = frame_index / fps); null for lines outside an episode",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Frame Index",
+            "type": "array"
+          },
           "load_pct": {
             "additionalProperties": {
               "additionalProperties": {
@@ -14594,6 +14736,139 @@
           }
         },
         "summary": "Episode Telemetry",
+        "tags": [
+          "datasets"
+        ]
+      }
+    },
+    "/api/v1/datasets/{name}/episodes/{index}/videos": {
+      "get": {
+        "description": "F-72: every camera of an episode, with the formats the viewer can ask for.",
+        "operationId": "episode_videos_api_v1_datasets__name__episodes__index__videos_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "index",
+            "required": true,
+            "schema": {
+              "title": "Index",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EpisodeVideos"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem (spec \u00a75.1)"
+          }
+        },
+        "summary": "Episode Videos",
+        "tags": [
+          "datasets"
+        ]
+      }
+    },
+    "/api/v1/datasets/{name}/episodes/{index}/videos/{camera}": {
+      "get": {
+        "description": "F-72: one camera of one episode, with HTTP Range support (409 ``episode_saving`` while\nthe dataset is being recorded).",
+        "operationId": "episode_video_api_v1_datasets__name__episodes__index__videos__camera__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "index",
+            "required": true,
+            "schema": {
+              "title": "Index",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "camera",
+            "required": true,
+            "schema": {
+              "title": "Camera",
+              "type": "string"
+            }
+          },
+          {
+            "description": "source = recorded codec, cut to the episode (no re-encode); vp9 = WebM / VP9, h264 = mp4 / H.264 (re-encoded once, cached in the sidecar)",
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "default": "source",
+              "description": "source = recorded codec, cut to the episode (no re-encode); vp9 = WebM / VP9, h264 = mp4 / H.264 (re-encoded once, cached in the sidecar)",
+              "enum": [
+                "source",
+                "vp9",
+                "h264"
+              ],
+              "title": "Format",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "video/mp4": {},
+              "video/webm": {}
+            },
+            "description": "the episode's video of this camera, t = 0 at its first frame"
+          },
+          "206": {
+            "description": "the byte range asked for with `Range: bytes=a-b`"
+          },
+          "416": {
+            "description": "the range is outside the file"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "RFC 9457 problem (spec \u00a75.1)"
+          }
+        },
+        "summary": "Episode Video",
         "tags": [
           "datasets"
         ]

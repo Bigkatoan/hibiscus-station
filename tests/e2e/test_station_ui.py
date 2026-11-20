@@ -294,6 +294,48 @@ def test_station_ui_end_to_end(
         expect(page.get_by_text("#2").first).to_be_visible()
         d.shot("09-dataset")
 
+        # ------------------------------------------------------------ 7b. F-72 / AT-99: every camera's video plays here
+        # (CI: Chromium and Firefox on Linux, Microsoft Edge on windows-latest). The browser picks the
+        # first format it says it plays (AV1 as recorded, else H.264, else VP9, ADR-14).
+        page.get_by_role("button", name="#1", exact=True).click()
+        for name, _ in wanted:
+            expect(page.get_by_test_id(f"episode-video-{name}")).to_have_attribute(
+                "data-state", "ready", timeout=120000
+            )
+        page.get_by_test_id("episode-play").click()
+        played = (
+            "Math.min(...[...document.querySelectorAll('[data-testid^=\"episode-video-\"] video')]"
+            ".map((v) => v.currentTime))"
+        )
+        wait_for(lambda: float(page.evaluate(played)) > 0.3, 30, "every camera to play")
+        probe = {
+            m: page.evaluate(f"document.createElement('video').canPlayType({json.dumps(t)})")
+            for m, t in {
+                "av1": 'video/mp4; codecs="av01.0.05M.08"',
+                "h264": 'video/mp4; codecs="avc1.42E01E"',
+                "vp9": 'video/webm; codecs="vp9"',
+            }.items()
+        }
+        formats = {
+            n: page.get_by_test_id(f"episode-video-{n}").get_attribute("data-format") for n, _ in wanted
+        }
+        d.shots.mkdir(parents=True, exist_ok=True)
+        (d.shots / f"f72-video-{d.ui.lang}.json").write_text(
+            json.dumps(
+                {
+                    "browser": browser.browser_type.name,
+                    "version": browser.version,
+                    "canPlayType": probe,
+                    "formats": formats,
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        if probe["av1"] == "":  # Edge without the AV1 Video Extension: a converted cut plays
+            assert all(f in ("h264", "vp9") for f in formats.values()), formats
+        d.shot("09b-episode-video")
+
         # ------------------------------------------------------------ 8. import the ACT checkpoint
         d.go("/run")
         page.get_by_label(re.compile(re.escape(d.t("run.import_path").lstrip("…")))).fill(str(checkpoint))
