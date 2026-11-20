@@ -28,7 +28,7 @@ jobs:
   python:
     # NFR-18 / AT-2: the full non-hardware suite on the three platforms, for the exact commit. Every
     # SKIPPED test must be in tools/ci/allowed-skips.toml for that platform (check_skips.py).
-    name: python (${{ matrix.platform }})
+    name: python (${{ matrix.platform }}${{ matrix.rep && format(' run {0}', matrix.rep) || '' }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -37,6 +37,16 @@ jobs:
           - {os: ubuntu-24.04, platform: linux}
           - {os: windows-latest, platform: windows}
           - {os: macos-latest, platform: macos}
+          # TEMPORARY (m1/episode-video-mac only): seven more macOS runs of the same job (ADR-15 proof)
+          - {os: macos-latest, platform: macos, rep: 2}
+          - {os: macos-latest, platform: macos, rep: 3}
+          - {os: macos-latest, platform: macos, rep: 4}
+          - {os: macos-latest, platform: macos, rep: 5}
+          - {os: macos-latest, platform: macos, rep: 6}
+          - {os: macos-latest, platform: macos, rep: 7}
+          - {os: macos-latest, platform: macos, rep: 8}
+    env:
+      HIBISCUS_TRAP_LOG: sigtrap-stacks.log
     defaults:
       run: {shell: bash}
     steps:
@@ -85,7 +95,7 @@ jobs:
         run: uv run hibiscus-station openapi "$RUNNER_TEMP/station-openapi.json" && diff -u openapi.json "$RUNNER_TEMP/station-openapi.json"
       - uses: actions/upload-artifact@v5
         if: ${{ !cancelled() }}
-        with: {name: "pytest-${{ matrix.platform }}", path: pytest-junit.xml, retention-days: 30, if-no-files-found: ignore}
+        with: {name: "pytest-${{ matrix.platform }}${{ matrix.rep || '' }}", path: "pytest-junit.xml\nsigtrap-stacks.log", retention-days: 30, if-no-files-found: ignore}
 
   web:
     name: web (eslint, prettier, tsc, vitest, build + CSP check)
