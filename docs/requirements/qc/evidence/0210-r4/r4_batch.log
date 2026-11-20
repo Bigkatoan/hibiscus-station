@@ -1,0 +1,36 @@
+up 1097916
+1 {"dur": 1.5, "final_status": 200, "episodes": 1, "finalized": true, "rows": 1, "states": ["saved"], "frames": [30], "hammer": {"codes": {"list|200": 54, "detail|404": 26, "detail|200": 28, "tel|saving|404": 2, "tel|saved|200": 15}, "bad": [], "nbad": 0}, "rows_lt_total_while_live": [], "snaps": 28}
+3 {"dur": 3.9, "final_status": 200, "episodes": 3, "finalized": true, "rows": 3, "states": ["saved"], "frames": [30], "hammer": {"codes": {"list|200": 48, "detail|200": 48, "tel|saving|404": 4, "tel|saved|200": 75}, "bad": [], "nbad": 0}, "rows_lt_total_while_live": [], "snaps": 48}
+10 {"dur": 12.7, "final_status": 200, "episodes": 10, "finalized": true, "rows": 10, "states": ["saved"], "frames": [30], "hammer": {"codes": {"list|200": 122, "detail|200": 122, "tel|saving|404": 16, "tel|saved|200": 285}, "bad": [], "nbad": 0}, "rows_lt_total_while_live": [], "snaps": 122}
+11 {"dur": 13.9, "final_status": 200, "episodes": 11, "finalized": true, "rows": 11, "states": ["saved"], "frames": [30], "hammer": {"codes": {"list|200": 127, "detail|200": 127, "tel|saving|404": 18, "tel|saved|200": 302}, "bad": [], "nbad": 0}, "rows_lt_total_while_live": [], "snaps": 127}
+15 {"dur": 18.7, "final_status": 200, "episodes": 15, "finalized": true, "rows": 15, "states": ["saved"], "frames": [30], "hammer": {"codes": {"list|200": 165, "detail|404": 4, "detail|200": 161, "tel|saving|404": 18, "tel|saved|200": 408}, "bad": [], "nbad": 0}, "rows_lt_total_while_live": [], "snaps": 161}
+{"codes": {"list|200": 1092, "detail|200": 1092, "tel|saving|404": 153, "tel|saved|200": 2494, "tel|saving|200": 1}, "bad": [], "nbad": 0}
+{"codes": {"list|200": 1090, "detail|200": 1090, "tel|saving|404": 152, "tel|saved|200": 2493, "tel|saving|200": 1}, "bad": [], "nbad": 0}
+200 12 True ['saved', 'saved', 'saved', 'saved', 'saved', 'saved', 'saved', 'saved', 'saved', 'saved', 'saved', 'saved'] 4154639
+rerecord 200 (1, 'reset')
+after rerecord (1, 'episode')
+ep2 (2, 'episode')
+next 200
+{"codes": {"list|200": 91, "detail|200": 91, "tel|saving|404": 8, "tel|saved|200": 84}, "bad": [], "nbad": 0}
+rerec 3 [(0, 'saved', 120), (1, 'saved', 120), (2, 'saved', 31)]
+stop http 200 0.01 recording saving
+idle after 0.62
+{"codes": {"list|200": 101, "detail|200": 101, "tel|saving|404": 10, "tel|saved|200": 97}, "bad": [], "nbad": 0}
+stopper 3 True [(0, 'saved', 150), (1, 'saved', 150), (2, 'saved', 61)]
+stop@saving 200 0.01
+idle after 0.62
+stopsave 2 True [(0, 'saved', 60), (1, 'saved', 60)]
+cnt3 before 3 after 5 True rows 5 ['saved'] idx ok True live snaps 15 bad live [(1795172239.3, 3, 4, 0), (1795172240.6, 4, 5, 0)] 0
+cnt11 before 11 after 23 True rows 23 ['saved'] idx ok True live snaps 93 bad live [(1795172243.3, 11, 12, 0), (1795172244.6, 12, 13, 0), (1795172245.8, 13, 14, 0), (1795172246.0, 13, 14, 0), (1795172247.1, 14, 15, 0)] 0
+cnt3 before 5 after 6 True rows 6 ['saved'] idx ok True live snaps 7 bad live [(1795172260.1, 5, 6, 0)] 0
+killed at {'index': 3, 'of': 40, 'saved': 3, 'phase': 'episode', 'elapsed_s': 0.0, 'limit_s': 1.5}
+up 1117143
+killed at {'index': 12, 'of': 40, 'saved': 12, 'phase': 'episode', 'elapsed_s': 0.0, 'limit_s': 1.5}
+up 1120189
+crasha     append 409 dataset_not_finalized    identical=True | reasons=['data/chunk-000/file-000.parquet', 'meta/episodes missing'] | replay 409 dataset_unreadable
+crashb     append 409 dataset_not_finalized    identical=True | reasons=['meta/episodes/chunk-000/file-000.parquet', 'data/chunk-000/file-000.parquet'] | replay 409 dataset_unreadable
+CRASH-FILES-IDENTICAL
+crasha 200 3 False uuu
+crashb 200 12 False uuuuuuuuuuuu
+tracebacks 0 unhandled 0
+BATCH-DONE

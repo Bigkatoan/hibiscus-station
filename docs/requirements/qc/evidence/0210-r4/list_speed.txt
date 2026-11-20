@@ -1,0 +1,5 @@
+List speed, mock Station, 61 datasets (25 x 15 episodes, 25 x 23 episodes (11+12 resumed), 11 QH-9 fixtures), 12 GET /datasets each:
+  0.2.10 @ 1e4071f : first 0.372 s, median 0.372 s, max 0.384 s (52 finalized, 9 inconsistent)
+  0.2.9 (published): first 0.043 s, median 0.041 s, max 0.043 s
+  detail of one 15-episode dataset on 1e4071f: 0.011 s
+About 6 ms per dataset: meta/episodes is read for every finalized dataset on every list call.
