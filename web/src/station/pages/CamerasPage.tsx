@@ -19,8 +19,20 @@ import { CameraTile } from "../components/CameraGrid";
 import { StationError } from "../components/StationError";
 import { PxIcon } from "@/hibiscus/PixelAnim";
 import { useStatus } from "../ws/StationProvider";
+import { fmtFixed } from "../units";
 
 export const FPS_WARN_RATIO = 0.9;
+
+/**
+ * The device a discovered camera sits on (a by-id path, /dev/videoN, an index), or null when there
+ * is none worth showing: a demo camera has no device, and a held one may have no path (QC 0.2.9
+ * QD-15, where the row read "held · None").
+ */
+export function deviceText(d: DiscoveredCamera): string | null {
+  const text = d.stable_path ?? d.id;
+  if (!text || text === "None" || text === "null" || /^mock[:/]/.test(text)) return null;
+  return text;
+}
 
 function configFor(d: DiscoveredCamera): CameraConfig {
   const def = d.default ?? { width: 640, height: 480, fps: 30, fourcc: null };
@@ -166,7 +178,7 @@ function AddCamera({
           <p className="text-sm">
             {probe.data.ok
               ? t("cameras.measured", {
-                  fps: probe.data.measured_fps.toFixed(1),
+                  fps: fmtFixed(probe.data.measured_fps),
                   w: probe.data.width,
                   h: probe.data.height,
                 })
@@ -261,10 +273,10 @@ export function CamerasPage() {
                 <div className="flex flex-wrap items-center gap-2 text-sm">
                   <PxIcon name="camera" />
                   <span className="font-bold">{d.name}</span>
-                  <Badge variant="outline">{d.type}</Badge>
-                  <span className="break-all font-mono text-xs text-muted-foreground">
-                    {d.stable_path ?? d.id}
-                  </span>
+                  {d.type !== "held" ? <Badge variant="outline">{t(`cameras.type_${d.type}`)}</Badge> : null}
+                  {deviceText(d) ? (
+                    <span className="break-all font-mono text-xs text-muted-foreground">{deviceText(d)}</span>
+                  ) : null}
                   <span className="text-xs">
                     {d.default ? `${d.default.width}×${d.default.height}@${d.default.fps}` : ""}
                   </span>

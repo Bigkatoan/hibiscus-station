@@ -9,6 +9,7 @@ import type { OperatorInput, ProgramLogLine, ProgramState } from "../../api/type
 import type { EditorRefs } from "../../programs/blockly/refs";
 import { jointName, PROGRAM_DONE } from "../../ws/store";
 import { useRuntime } from "../../ws/StationProvider";
+import { fmtSeconds, svgNum } from "../../units";
 
 /** One colour per joint, in the order of the SO-101 motors (palette colours, both themes). */
 export const JOINT_COLOURS = [PALETTE.b, PALETTE.r, PALETTE.g, PALETTE.Y, PALETTE.u, PALETTE.k];
@@ -85,7 +86,7 @@ export function JointPlot({
         const hi = Math.max(...v);
         const r = Math.max(1, hi - lo);
         const pts = v
-          .map((y, k) => `${x(k).toFixed(1)},${(pad + (1 - (y - lo) / r) * (height - 2 * pad)).toFixed(1)}`)
+          .map((y, k) => `${svgNum(x(k))},${svgNum(pad + (1 - (y - lo) / r) * (height - 2 * pad))}`)
           .join(" ");
         return (
           <polyline
@@ -154,9 +155,7 @@ export function useProgramInput(programId: string | null): (ev: OperatorInput) =
   );
 }
 
-export function formatSeconds(s: number): string {
-  return `${s.toFixed(s < 10 ? 1 : 0)} s`;
-}
+export const formatSeconds = fmtSeconds;
 
 /** Program status label key (`programs.status.<status>`). */
 export function useStatusLabel(): (s: ProgramState["status"]) => string {

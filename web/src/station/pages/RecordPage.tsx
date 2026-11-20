@@ -4,6 +4,7 @@
  * the saved-episode strip and the end card.
  */
 import { PxIcon } from "@/hibiscus/PixelAnim";
+import type { TFunction } from "i18next";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -13,7 +14,7 @@ import { Mascot } from "@/components/Mascot";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox, Input, NativeSelect } from "@/components/ui/input";
-import { api } from "../api/client";
+import { api, StationApiError } from "../api/client";
 import { qk, useDataset, useDatasets, useStationMutation } from "../api/hooks";
 import type { CameraStatus, RecordRequest, Session } from "../api/types";
 
@@ -26,6 +27,8 @@ import { StationError } from "../components/StationError";
 import { useCritical, useSessionControl } from "../components/controls";
 import { DEFAULT_THRESHOLDS, levelCss, peakTemp, tempLevel } from "../health";
 import { useRuntime, useStatus } from "../ws/StationProvider";
+import type { SessionEndInfo } from "../ws/store";
+import { fmtFixed, fmtSize } from "../units";
 
 /** MB per episode: about 2 Mbit/s of encoded video per 640×480@30 camera (scaled by pixels × fps). */
 export function estimateEpisodeMb(
@@ -65,10 +68,12 @@ export function useRecordKeys(enabled: boolean, onKey: (a: "next" | "rerecord" |
 
 function EpisodeStrip({ dataset, saved }: { dataset: string; saved: number }) {
   const { t } = useTranslation("station");
-  const detail = useDataset(dataset);
+  // Nothing to show before the first saved episode, and a new dataset that keeps none is removed
+  // when the session ends: never ask for it then (QC 0.2.9 QD-18, a console 404).
+  const detail = useDataset(dataset, saved > 0);
   const { refetch } = detail;
   useEffect(() => {
-    void refetch();
+    if (saved > 0) void refetch();
   }, [saved, refetch]);
   const eps = detail.data?.episode_list ?? [];
   if (eps.length === 0) return null;
@@ -85,7 +90,11 @@ function EpisodeStrip({ dataset, saved }: { dataset: string; saved: number }) {
               className="flex shrink-0 flex-col items-center border-2 border-frame bg-card px-2 py-1 text-xs"
             >
               <span className="font-extrabold text-base">#{e.index + 1}</span>
-              <span className="tabular-nums">{e.length_s !== null ? e.length_s.toFixed(1) : "–"} s</span>
+              {e.state === "saving" ? (
+                <span>{t("datasets.saving")}</span>
+              ) : (
+                <span className="tabular-nums">{e.length_s !== null ? fmtFixed(e.length_s) : "–"} s</span>
+              )}
               {max !== null ? (
                 <span
                   className="mt-0.5 inline-flex items-center gap-0.5 border px-0.5 tabular-nums"
@@ -175,6 +184,11 @@ function RecordLive({ session }: { session: Session }) {
                   <kbd className="text-xs opacity-80">Esc</kbd>
                 </Button>
               </div>
+              {session.episode.phase === "saving" || status?.state === "stopping" ? (
+                <p className="text-sm font-bold" role="status" data-testid="record-saving">
+                  {t("record.saving_note")}
+                </p>
+              ) : null}
               {session.dataset ? (
                 <EpisodeStrip dataset={session.dataset} saved={session.episode.saved} />
               ) : null}
@@ -220,6 +234,32 @@ function RecordSetup() {
         ? t("record.name_exists")
         : undefined;
   const can = nameOk && !nameError && form.task.trim() !== "" && status?.state === "idle";
+  // Field report 0.2.10: a dataset the Station left unfinalized (closed mid-session) cannot be
+  // continued; offer a new dataset with the same task and settings.
+  // M1-1: a dataset recorded with another robot setup gets the same offer
+  const offerKey: Record<string, string> = {
+    dataset_not_finalized: "record.unfinalized",
+    dataset_unreadable: "record.unreadable",
+    dataset_incompatible: "record.incompatible",
+  };
+  const offer =
+    start.error instanceof StationApiError && start.error.code in offerKey
+      ? offerKey[start.error.code]
+      : undefined;
+  const unfinished =
+    offer !== undefined && start.error instanceof StationApiError
+      ? typeof start.error.params.dataset === "string"
+        ? start.error.params.dataset
+        : form.dataset
+      : null;
+  const recordNew = (base: string) => {
+    const names = new Set((datasets.data?.datasets ?? []).map((d) => d.name));
+    let i = 2;
+    const stem = base.slice(0, 60);
+    while (names.has(`${stem}_${String(i)}`)) i += 1;
+    start.reset();
+    setForm((f) => ({ ...f, mode: "new", dataset: `${stem}_${String(i)}` }));
+  };
 
   return (
     <Card>
@@ -362,18 +402,136 @@ function RecordSetup() {
           </label>
           <p className="text-sm text-muted-foreground sm:col-span-2" data-testid="disk-estimate">
             {t("record.estimate", {
-              mb: mb.toFixed(0),
-              total: ((mb * form.num_episodes) / 1024).toFixed(2),
-              cams: cams.length,
+              size: fmtSize(mb * 1e6),
+              total: fmtSize(mb * 1e6 * form.num_episodes),
+              count: cams.length,
             })}
           </p>
-          <StationError error={start.error} className="sm:col-span-2" />
+          {unfinished !== null ? (
+            <div
+              className="flex flex-wrap items-center gap-3 border-2 border-destructive p-3 text-sm sm:col-span-2"
+              role="alert"
+              data-testid="record-unfinalized"
+            >
+              <p className="min-w-[min(14rem,100%)] flex-1">
+                {t(offer ?? "record.unfinalized", { dataset: unfinished })}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  recordNew(unfinished);
+                }}
+              >
+                {t("record.new_instead")}
+              </Button>
+            </div>
+          ) : (
+            <StationError error={start.error} className="sm:col-span-2" />
+          )}
           <div className="sm:col-span-2">
             <Button type="submit" size="lg" disabled={!can || start.isPending}>
               {t("record.start")}
             </Button>
           </div>
         </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** The dataset's folder on this computer, shown on request, with a copy button. */
+function DatasetPath({ path }: { path: string }) {
+  const { t } = useTranslation("station");
+  const [copied, setCopied] = useState(false);
+  // navigator.clipboard exists only in a secure context (127.0.0.1 is one; a LAN address is not)
+  const canCopy = typeof navigator !== "undefined" && "clipboard" in navigator;
+  return (
+    <details className="mt-1 text-sm" data-testid="record-path">
+      <summary className="cursor-pointer text-muted-foreground underline">{t("record.path_show")}</summary>
+      <div className="mt-1 flex flex-wrap items-center gap-2">
+        <code className="min-w-0 break-all text-xs">{path}</code>
+        {canCopy ? (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              navigator.clipboard.writeText(path).then(
+                () => {
+                  setCopied(true);
+                },
+                () => undefined,
+              );
+            }}
+          >
+            <PxIcon name="copy" /> {copied ? t("record.path_copied") : t("record.path_copy")}
+          </Button>
+        ) : null}
+      </div>
+    </details>
+  );
+}
+
+/** What the end of a record session says about the episodes it did not keep (QC 0.2.9 QD-12). */
+interface RecordEnd {
+  /** The episode in progress was dropped (an e-stop or a fault in the middle of it). */
+  dropped: boolean;
+  /** The dataset still exists (false: a new dataset that kept no episode was removed). */
+  kept: boolean;
+  /** Why the session ended: "stopped", "completed", or an e-stop / fault reason. */
+  reason: string;
+}
+
+function recordEnd(end: SessionEndInfo | null, last: Session): RecordEnd {
+  const summary = (end?.id === last.id ? end.summary : null) ?? {};
+  const raw = end?.id === last.id ? (end.reason ?? end.outcome) : last.outcome;
+  return {
+    dropped: summary.dropped_in_progress === true,
+    // an older Station sends no flag: with no episode saved, a new dataset was removed
+    kept: typeof summary.dataset_kept === "boolean" ? summary.dataset_kept : last.episode.saved > 0,
+    // the mock and older Stations prefix e-stop outcomes with "estop_"
+    reason: raw.startsWith("estop_") ? raw.slice("estop_".length) : raw,
+  };
+}
+
+function droppedText(t: TFunction<"station">, ended: Session, info: RecordEnd): string {
+  return t("record.dropped", {
+    n: ended.episode.saved + 1,
+    reason: t(`reasons.${info.reason}`, { defaultValue: t("reasons.internal") }),
+  });
+}
+
+function NothingSaved({
+  ended,
+  info,
+  onAgain,
+}: {
+  ended: Session;
+  info: RecordEnd | null;
+  onAgain: () => void;
+}) {
+  const { t } = useTranslation("station");
+  const end = info ?? { dropped: false, kept: false, reason: ended.outcome };
+  const name = ended.dataset ?? "";
+  let said: string;
+  if (end.dropped) said = droppedText(t, ended, end);
+  else if (end.reason === "stopped" || end.reason === "completed") said = t("record.none_stopped");
+  else
+    said = t("record.none_ended", {
+      reason: t(`reasons.${end.reason}`, { defaultValue: t("reasons.internal") }),
+    });
+  return (
+    <Card data-testid="record-none">
+      <CardContent className="flex flex-wrap items-center gap-4 pt-3 sm:pt-4">
+        <Mascot mood="idle" />
+        <div className="min-w-[min(14rem,100%)] flex-1" role="status">
+          <p className="break-words font-extrabold text-base">{t("record.none_title")}</p>
+          <p className="text-sm">{said}</p>
+          <p className="text-sm text-muted-foreground">
+            {end.kept ? t("record.none_kept", { name }) : t("record.none_removed", { name })}
+          </p>
+        </div>
+        <Button onClick={onAgain}>{t("record.again")}</Button>
       </CardContent>
     </Card>
   );
@@ -387,15 +545,19 @@ export function RecordPage() {
   const session = status?.session?.kind === "record" ? status.session : null;
   const wasRecording = useRef(false);
   const [ended, setEnded] = useState<Session | null>(null);
+  const [endInfo, setEndInfo] = useState<RecordEnd | null>(null);
   useEffect(() => {
     if (session) {
       wasRecording.current = true;
       setEnded(null);
+      setEndInfo(null);
     } else if (wasRecording.current) {
       wasRecording.current = false;
-      // The store keeps the final `session` message (phase "done", saved count).
-      const last = store.getSnapshot().lastSession;
+      // The store keeps the final `session` message (phase "done", saved count, summary).
+      const snap = store.getSnapshot();
+      const last = snap.lastSession;
       setEnded(last?.kind === "record" ? last : null);
+      setEndInfo(last?.kind === "record" ? recordEnd(snap.lastEnd, last) : null);
     }
   }, [session, store]);
 
@@ -406,14 +568,31 @@ export function RecordPage() {
     <div className="flex flex-col gap-4">
       <PageHeader title={t("record.title")} description={t("record.desc")} />
       {session ? <RecordLive session={session} /> : null}
-      {!session && ended ? (
+      {!session && ended?.episode.saved === 0 ? (
+        <NothingSaved
+          ended={ended}
+          info={endInfo}
+          onAgain={() => {
+            setEnded(null);
+          }}
+        />
+      ) : null}
+      {!session && ended && ended.episode.saved > 0 ? (
         <Card data-testid="record-done">
+          {/* QC 0.2.9 QD-11: at 390 px the text wraps under the mascot / above the buttons instead of
+              squeezing into a one-word column; the local path sits behind a disclosure. */}
           <CardContent className="flex flex-wrap items-center gap-4 pt-3 sm:pt-4">
             <Mascot mood="happy" />
-            <div className="min-w-0 flex-1">
-              <p className="font-extrabold text-base">
-                {t("record.done", { n: ended.episode.saved, path: endedPath ?? ended.dataset ?? "" })}
+            <div className="min-w-[min(14rem,100%)] flex-1" data-testid="record-done-text">
+              <p className="break-words font-extrabold text-base">
+                {t("record.done", { count: ended.episode.saved, name: ended.dataset ?? "" })}
               </p>
+              {endInfo?.dropped ? (
+                <p className="text-sm text-muted-foreground" data-testid="record-dropped">
+                  {droppedText(t, ended, endInfo)}
+                </p>
+              ) : null}
+              {endedPath ? <DatasetPath path={endedPath} /> : null}
             </div>
             <div className="flex flex-wrap gap-2">
               <Button asChild>

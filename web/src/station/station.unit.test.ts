@@ -15,7 +15,12 @@ import {
 } from "./health";
 import en from "./i18n/en.json";
 import vi_ from "./i18n/vi.json";
+import { i18n } from "@/lib/i18n";
+import { registerStationI18n } from "./i18n";
+import { StationApiError } from "./api/client";
+import { errorDetail, errorText, selfExplaining } from "./components/StationError";
 import { MockStation } from "./mock/sim";
+import { countsWithoutPlural } from "@/test/plurals";
 import { wizardSteps } from "./StationShell";
 import { serverUrlProblem } from "./components/PairForm";
 import { poseDelta } from "./pages/programs/liveRecheck";
@@ -368,6 +373,14 @@ function flatKeys(o: Record<string, unknown>, prefix = ""): string[] {
   );
 }
 
+function flatEntries(o: Record<string, unknown>, prefix = ""): [string, string][] {
+  return Object.entries(o).flatMap(([k, v]): [string, string][] =>
+    typeof v === "object" && v !== null
+      ? flatEntries(v as Record<string, unknown>, `${prefix}${k}.`)
+      : [[`${prefix}${k}`, String(v)]],
+  );
+}
+
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((f) => {
     const p = join(dir, f);
@@ -382,6 +395,116 @@ describe("station i18n", () => {
     expect(flatKeys(vi_).sort()).toEqual([...enKeys].sort());
   });
 
+  it('vi says "Hiệu chỉnh" for calibration, never "Hiệu chuẩn" (QC 0.2.9 QD-9)', () => {
+    const wrong = flatEntries(vi_).filter(([, v]) => /hiệu chuẩn/i.test(v));
+    expect(wrong).toEqual([]);
+  });
+
+  it("counts read as words: 1 episode, 2 episodes (QC 0.2.9 QD-8)", () => {
+    registerStationI18n();
+    const t = i18n.getFixedT("en", "station");
+    const summary = { frames: t("datasets.frames", { count: 302 }), fps: 30, size: "1 MB" };
+    expect(t("record.done", { count: 1, name: "d" })).toBe("1 episode saved in dataset d");
+    expect(t("record.done", { count: 2, name: "d" })).toBe("2 episodes saved in dataset d");
+    expect(t("datasets.summary", { count: 1, ...summary })).toMatch(/^1 episode · 302 frames/);
+    expect(t("datasets.summary", { count: 3, ...summary })).toMatch(/^3 episodes · /);
+    const tv = i18n.getFixedT("vi", "station");
+    expect(tv("record.done", { count: 1, name: "d" })).toBe("Đã lưu 1 tập vào bộ dữ liệu d");
+  });
+
+  it('no "camera(s)" shortcuts: counts take real plurals (QC 0.2.9 QD-17)', () => {
+    const shortcuts = flatEntries(en).filter(([, v]) => /[a-z]\(s\)/i.test(v));
+    expect(shortcuts).toEqual([]);
+    registerStationI18n();
+    const t = i18n.getFixedT("en", "station");
+    expect(t("record.estimate", { count: 1, size: "15 MB", total: "150 MB" })).toContain("with 1 camera,");
+    expect(t("record.estimate", { count: 2, size: "15 MB", total: "150 MB" })).toContain("with 2 cameras,");
+    const line = t("run.summary_line", {
+      duration: "00:30",
+      episodes: t("run.summary_episodes", { count: 1 }),
+      alerts: t("run.summary_alerts", { count: 2 }),
+    });
+    expect(line).toBe("00:30 · 1 episode · 2 alerts");
+  });
+
+  it("a program run counts its steps in words: 1 step, 2 steps (QC 0.2.9 QD-20)", () => {
+    registerStationI18n();
+    const t = i18n.getFixedT("en", "station");
+    const now = (n: number) =>
+      t("programs.run.now", { t: "1.5", steps: t("programs.run.steps", { count: n }), block: "relax arm" });
+    expect(now(1)).toBe("1.5 s · 1 step · relax arm");
+    expect(now(2)).toBe("1.5 s · 2 steps · relax arm");
+    expect(t("programs.run.steps", { count: 1 })).toBe("1 step");
+    const tv = i18n.getFixedT("vi", "station");
+    expect(tv("programs.run.steps", { count: 1 })).toBe("1 bước");
+    expect(
+      tv("programs.run.now", { t: "1,5", steps: tv("programs.run.steps", { count: 3 }), block: "x" }),
+    ).toBe("1,5 s · 3 bước · x");
+  });
+
+  it("every English count has _one and _other forms (plural class sweep, QC 0.2.9 QD-20)", () => {
+    expect(countsWithoutPlural(flatEntries(en))).toEqual([]);
+    registerStationI18n();
+    const t = i18n.getFixedT("en", "station");
+    expect(
+      t("programs.traj.capturing", {
+        s: "0.1",
+        limit: 60,
+        samples: t("programs.traj.samples", { count: 1 }),
+      }),
+    ).toBe("Recording · 0.1 / 60 s · 1 sample");
+    expect(t("datasets.frames", { count: 1 })).toBe("1 frame");
+  });
+
+  it("the leader tooltip reads naturally in vi (QC 0.2.9 QD-17)", () => {
+    const tip = (vi_ as { health: { not_measured_title: string } }).health.not_measured_title;
+    expect(tip).not.toMatch(/vẫn đã/);
+    expect(tip).toMatch(/^Tay leader đã kết nối, nhưng servo/);
+  });
+
+  it("a motor_hot refusal names the motor and its temperature, in vi too (QC 0.2.9 QD-3)", () => {
+    registerStationI18n();
+    const err = new StationApiError(409, {
+      type: "about:blank",
+      title: "A motor is too hot",
+      status: 409,
+      code: "motor_hot",
+      detail: "a motor is still hot; let it cool down",
+      params: { motors: [{ arm: "follower", motor: "elbow_flex", temp_c: 66.4 }] },
+      request_id: "r1",
+    });
+    expect(errorText(i18n.getFixedT("en", "station"), err)).toBe(
+      "Motors too hot: follower elbow_flex 66 °C. Let them cool down first.",
+    );
+    expect(errorText(i18n.getFixedT("vi", "station"), err)).toBe(
+      "Động cơ quá nóng: follower elbow_flex 66 °C. Hãy để nguội trước.",
+    );
+    expect(errorDetail(err)).toBeNull(); // the English server detail adds nothing
+  });
+
+  it.each([
+    ["dataset_unreadable", true],
+    ["dataset_io_error", true],
+    ["dataset_not_finalized", false],
+    ["validation_failed", false],
+  ] as const)(
+    "0.2.10 dataset refusal %s: its sentence says it all = %s (detail behind Technical details)",
+    (code, all) => {
+      const err = new StationApiError(409, {
+        type: "about:blank",
+        title: code,
+        status: 409,
+        code,
+        detail: `dataset d cannot be read (meta/info.json: total_episodes is 3, 2 episode rows)`,
+        request_id: "r1",
+      });
+      expect(selfExplaining(err)).toBe(all);
+      expect(errorText(i18n.getFixedT("en", "station"), err)).not.toBe(
+        i18n.getFixedT("en", "station")("errors.unknown_error"),
+      );
+    },
+  );
+
   it("every literal key used in the station UI exists", () => {
     const root = join(process.cwd(), "src/station/");
     const tops = new Set(Object.keys(en));
@@ -394,7 +517,9 @@ describe("station i18n", () => {
         const [, top, rest] = m;
         if (!top || !rest || !tops.has(top)) continue;
         const key = `${top}.${rest}`;
-        if (!enKeys.includes(key)) missing.push(`${file.slice(root.length)}: ${key}`);
+        // a plural (i18next `count`) lives under key_one / key_other
+        if (!enKeys.includes(key) && !enKeys.includes(`${key}_other`))
+          missing.push(`${file.slice(root.length)}: ${key}`);
       }
     }
     expect(missing).toEqual([]);

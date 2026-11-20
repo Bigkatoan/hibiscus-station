@@ -9,7 +9,7 @@ Hai điểm Station làm thêm so với LeLab:
 * **Sức khỏe động cơ.** Nhiệt độ, điện áp, dòng, tải và cờ báo lỗi của từng động cơ được hiện trên
   mọi màn hình làm robot chuyển động. Động cơ ấm hiện màu vàng (50 °C), nóng màu cam (60 °C: không
   cho bắt đầu phiên mới), nguy hiểm màu đỏ (65 °C hai lần liên tiếp, hoặc cờ quá nhiệt / quá tải).
-  Khi nguy hiểm, Station giữ tay robot, đưa về tư thế nghỉ nếu bạn đã lưu, rồi tắt torque, trước khi
+  Khi nguy hiểm, Station giữ tay robot, đưa về Home nếu bạn đã đặt, rồi tắt torque, trước khi
   bảo vệ 70 °C của chính servo làm tay robot rơi.
 * **Camera khi chạy model.** Màn hình Run model hiện tất cả camera trực tiếp, đúng những khung hình
   model nhận được, bên cạnh vị trí khớp, lệnh điều khiển, nhiệt độ động cơ, tốc độ (FPS) và thời gian
@@ -56,9 +56,11 @@ Hãy tắt LeLab và mọi lệnh `lerobot-*` trước: mỗi cổng serial ch�
    đúng tay đó, cổng tìm được vào đúng ô đó. Station đọc điện áp động cơ của mỗi cổng (chỉ đọc) và
    gợi ý: tay leader thường chạy ~5 V, follower 7,4 V hoặc 12 V. Nếu hai tay có vẻ bị nhầm, bấm
    "Đổi chỗ follower ⇄ leader" (Station không tự đổi). Bấm Connect. Lúc này bạn thấy vị
-   trí các khớp và nhiệt độ động cơ. Khi tay robot đang ở tư thế gập an toàn, bấm "Dùng tư thế hiện
-   tại làm tư thế nghỉ": Station sẽ đưa tay về đây trước khi tắt torque.
-2. **Calibrate.** Với mỗi tay: đưa mọi khớp về giữa hành trình, bấm *Set home*, rồi đưa từng khớp đi
+   trí các khớp và nhiệt độ động cơ. Khi tay follower đang ở tư thế gập an toàn, bấm **Đặt Home tại
+   vị trí hiện tại** (ở thanh trên cùng, khung Robot 3D hoặc trang Robot; trang Hiệu chỉnh cũng nhắc
+   việc này): **Về Home** sẽ đưa tay về đây thật chậm, và Station đỗ tay ở đây trước khi dừng an toàn
+   tắt torque.
+2. **Hiệu chỉnh.** Với mỗi tay: đưa mọi khớp về giữa hành trình, bấm *Đặt tư thế giữa*, rồi đưa từng khớp đi
    hết hành trình và bấm *Finish*. File hiệu chỉnh được lưu đúng chỗ lerobot dùng, nên LeLab và các
    lệnh `lerobot-*` dùng lại được. File có sẵn dùng lại được bằng *Dùng hiệu chỉnh này*.
 3. **Camera.** Thêm các camera tìm thấy. Tên camera (`wrist`, `front`, ...) là tên model sẽ cần
@@ -71,7 +73,11 @@ Hãy tắt LeLab và mọi lệnh `lerobot-*` trước: mỗi cổng serial ch�
    latency timer 1 ms chỉ có ở bộ chuyển FTDI).
 5. **Ghi dữ liệu.** Chọn tên dataset, câu mô tả nhiệm vụ, số episode và độ dài. Phím: **→** sang
    episode tiếp (lưu), **←** ghi lại, **Esc** dừng. Episode chạm giới hạn thời gian sẽ được **lưu**
-   (khác LeLab, vốn lặng lẽ ghi lại); bạn có thể đổi thành *bỏ*.
+   (khác LeLab, vốn lặng lẽ ghi lại); bạn có thể đổi thành *bỏ*. **Dừng** kết thúc episode ngay: trang
+   hiện "Đang lưu tập…" trong lúc ghi file (camera vẫn chạy, tay robot giữ nguyên vị trí), rồi hiện
+   thẻ kết thúc. **Dừng khẩn** (phím Space) thì khác: tập đang ghi bị bỏ, vì những khung hình cuối
+   được ghi lúc tay robot đang bị dừng. Nếu chưa lưu được tập nào, thẻ kết thúc nói rõ điều đó và lý
+   do, và bộ dữ liệu mới không có tập nào sẽ không được giữ lại (không có gì để tải lên).
 6. **Tải lên.** Ghép Station với server Hibiscus một lần (URL server và personal access token có
    quyền `datasets:write` và `models:read`; thêm `runs:read` để xem các run). Sau đó tải dataset lên
    thành dataset mới hoặc phiên bản mới. Mất mạng giữa chừng thì lần sau tải tiếp từ chỗ dở.
@@ -128,9 +134,14 @@ camera, `--out <thư mục>` nơi lưu tệp zip (mặc định: thư mục hi�
 
 ## An toàn
 
+* **Dừng:** nút Dừng của mỗi màn hình (hoặc **Esc** khi đang ghi) dừng chuyển động và tay robot **giữ
+  nguyên tại chỗ** (vẫn giữ torque, không rơi). Sau đó chọn **Về Home** (đi chậm, Space để dừng) hoặc
+  **Thả lỏng** (Station nhắc bạn đỡ tay robot trước).
 * **E-stop:** nút đỏ lớn hoặc phím **Space**. Lần bấm đầu: tay robot đứng yên và vẫn giữ torque. Bấm
-  lần hai trong vòng 2 giây (hoặc *Relax*): tắt torque, hãy đỡ tay robot. *Đã an toàn, reset* để
-  quay lại trạng thái chờ.
+  lần hai trong vòng 2 giây: tắt torque, hãy đỡ tay robot (màn hình nhắc việc này). Nút *Thả lỏng*
+  hỏi bạn đã đỡ tay chưa rồi mới tắt torque. *Đã an toàn, reset* để quay lại trạng thái chờ; sau khi
+  chính bạn bấm e-stop, *Về Home* sẽ reset rồi đưa tay về Home. Sau khi dừng vì nhiệt hoặc điện, chỉ
+  reset khi động cơ đã an toàn.
 * Khi model đang chạy, trình duyệt phải luôn mở: nếu Station không nhận tín hiệu từ trình duyệt
   trong 1 giây, robot sẽ dừng.
 * Mỗi bước chuyển động bị giới hạn (`max relative target`, mặc định 5 độ).

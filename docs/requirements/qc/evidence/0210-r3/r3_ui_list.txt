@@ -1,0 +1,6 @@
+en-1280-light {'nav': True, 'unexpected': False, 'blank': False} Datasets |  | LeRobot datasets on this machine. |  | cnt1 |  | 1 episode · 30 frames · 30 fps · 189 kB |  | wrist, front |  | finalized | cnt10 |  | 10 episodes · 300 frames · 30 fps · 1.2 MB |  | wrist, front |  | finalized | cnt11 |  | 23 episodes · 690 frames · 30 fps · 2.8 MB |  | wrist, front |  | finalized | cnt15 |  | 15 episodes · 450 frames ·  []
+  detail of a good dataset: 15 rows
+  record page append options: 6 {'nav': True, 'unexpected': False, 'blank': False}
+vi-390-dark {'nav': True, 'unexpected': False, 'blank': False} Bộ dữ liệu |  | Các bộ dữ liệu LeRobot trên máy này. |  | cnt1 |  | 1 tập · 30 khung hình · 30 fps · 189 kB |  | wrist, front |  | đã hoàn tất | cnt10 |  | 10 tập · 300 khung hình · 30 fps · 1,2 MB |  | wrist, front |  | đã hoàn tất | cnt11 |  | 23 tập · 690 khung hình · 30 fps · 2,8 MB |  | wrist, front |  | đã hoàn tất | cnt15 |  | 15 tập · 450 khung []
+  detail of a good dataset: 15 rows
+  record page append options: 6 {'nav': True, 'unexpected': False, 'blank': False}

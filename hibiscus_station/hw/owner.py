@@ -15,7 +15,7 @@ import threading
 import time
 from collections.abc import Callable
 from concurrent.futures import Future
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +23,7 @@ from hibiscus_station import __version__
 from hibiscus_station.data.sessions import SessionLog
 from hibiscus_station.errors import StationError
 from hibiscus_station.hw import calibration as calib
-from hibiscus_station.hw.cameras import CameraHub, FrameSet
+from hibiscus_station.hw.cameras import CameraHub, FrameSet, fresh_age_ms
 from hibiscus_station.hw.factory import build_follower, build_leader, calibration_files
 from hibiscus_station.hw.locks import DeviceBusyError, DeviceLock
 from hibiscus_station.hw.loop import Deadline, LoopStats
@@ -269,6 +269,16 @@ class HardwareOwner:
         self.emit("alert", payload)
         if self.session_log is not None:
             self.session_log.line({"t": payload["t"], "alert": payload})
+
+    def drop_alerts(self, which: Callable[[Alert], bool] = lambda _a: True) -> None:
+        """Remove the alerts ``which`` selects, each with an ``active: false`` alert event.
+
+        Every open page keeps the alerts it was told about and drops one only on such an event
+        (``web/src/station/ws/store.ts``), so an alert must never leave ``self.alerts`` silently
+        (QC 0.2.9 QD-23: the thermal-stop banner stayed on screen after the e-stop reset).
+        """
+        for a in [a for a in self.alerts.values() if which(a)]:
+            self._alert(replace(a, active=False))
 
     def raise_alert(
         self,
@@ -717,7 +727,7 @@ class HardwareOwner:
             self._wait_until(deadline)
             return
         cam_fps = min((c.fps for c in (self.profile.cameras.values() if self.profile else [])), default=30)
-        frames, stale = self.hub.read_latest_all(max_age_ms=2000.0 / max(1, cam_fps))
+        frames, stale = self.hub.read_latest_all(max_age_ms=fresh_age_ms(cam_fps))
         obs_full = {**obs, **frames}
         self.hub.publish(
             FrameSet(self.tick, time.monotonic(), frames, policy_input=s.policy_input, stale=stale)
@@ -730,7 +740,7 @@ class HardwareOwner:
         if s.uses_leader and self.leader is not None:
             t_leader = time.perf_counter()
             inp.leader = self._read_leader()
-        action = s.step(self, inp)
+        action = None if s.holding else s.step(self, inp)
         if self.estop.is_set:  # pressed during inference: never send this action
             self._enter_estop()
             return
@@ -813,7 +823,7 @@ class HardwareOwner:
         if self.session is None:  # bus lost on the leader
             return
         inp = TickInput(self.tick, now, dict(self.last_obs), {}, [], leader=leader)
-        action = s.step(self, inp)
+        action = None if s.holding else s.step(self, inp)
         if self.estop.is_set:
             self._enter_estop()
             return
@@ -986,6 +996,26 @@ class HardwareOwner:
         except Exception as exc:
             log.exception("session teardown failed")
             s.summary["teardown_error"] = str(exc)[:300]
+        if self.hub.has_cameras():
+            cams = self.hub.stats()
+            s.summary["cameras"] = cams
+            for name, c in cams.items():
+                slow = c["fps_measured"] is not None and c["fps_measured"] < 0.8 * c["fps_configured"]
+                if c["stale_ticks"] or slow:  # the evidence a doctor zip carries (station.log)
+                    log.warning(
+                        "camera %s during %s: %s fps of %s configured (%s, %sx%s), %d/%d stale ticks, "
+                        "frame age p95 %s ms, last error: %s",
+                        name,
+                        s.kind,
+                        c["fps_measured"],
+                        c["fps_configured"],
+                        c["backend"],
+                        *c["size"],
+                        c["stale_ticks"],
+                        c["ticks"],
+                        c["age_ms_p95"],
+                        c["last_error"],
+                    )
         summary = {
             **s.view(),
             "outcome": outcome,
@@ -1017,12 +1047,17 @@ class HardwareOwner:
             s.outcome = outcome
         self._teardown_session(reason=outcome)
         p = self.profile
-        cancelled_rest = s.kind == "rest" and s.outcome != "completed"  # stop means stop: no park
-        if (
+        if s.outcome == "stopped" and self.follower is not None:
+            # CR-1: a user Stop (teleop, record, replay, run model, program, trajectory, Return
+            # Home) holds the measured position with torque as it is (never parks, never relaxes);
+            # the UI then offers "Return Home" and "Relax" (support the arm first).
+            self._hold()
+            self.interrupted = True
+        elif (
             p is not None
             and p.follower.on_session_end == "relax"
             and self.follower is not None
-            and not cancelled_rest
+            and not (s.kind == "rest" and s.outcome != "completed")  # a cancelled move: no park
         ):
             if self._park(self.settings.safety.park_s) or not p.follower.rest_pose:
                 self._torque_off()
@@ -1091,6 +1126,11 @@ class HardwareOwner:
             self.telemetry.remove_arm(arm)
             self.guard.reset_arm(arm)
         self.hub.close_all()
+        # The guard forgot every motor level and the cameras are closed: no later reading could
+        # ever clear an alert about them, so they go now (with their events) instead of staying
+        # on every page for good, also after a reconnect.
+        self._camera_alerted.clear()
+        self.drop_alerts(lambda a: a.arm is not None or a.camera is not None)
         for lk in self.locks:
             lk.release()
         self.locks = []
@@ -1291,7 +1331,7 @@ class HardwareOwner:
             self._torque_off()
         self._close_devices()
         self.estop.clear()
-        self.alerts.clear()
+        self.drop_alerts()
         self.interrupted = False
         self._set_state("disconnected")
         return self.status()
@@ -1308,7 +1348,7 @@ class HardwareOwner:
             if not confirm and not (self.profile and self.profile.follower.rest_pose):
                 raise StationError(
                     "validation_failed",
-                    "torque off without a rest pose drops the arm: confirm=true is required",
+                    "torque off without a Home drops the arm: confirm=true is required",
                     params={"confirm_required": True},
                 )
             self._torque_off()
@@ -1655,6 +1695,7 @@ class HardwareOwner:
             },
         )
         self.hub.loop_active = True
+        self.hub.reset_stats()
         self.watchdog.arm()
         session.t0 = time.monotonic()
         session.begin(self, obs)
@@ -1668,6 +1709,12 @@ class HardwareOwner:
             raise StationError("busy", "no session running", params={"state": self.state})
         s.control(self, action)
         s.phase_changed = True
+        if action == "stop" and not s.holding:
+            # CR-1 (2026-11-17): Stop holds the arm exactly where it is, within this command:
+            # Goal := Present, torque unchanged, and no further goal from this session.
+            s.holding = True
+            self._hold()
+            self.last_sent = {}
         view = s.view()
         if s.finished:
             self._stop_session(s.outcome)
@@ -1684,12 +1731,7 @@ class HardwareOwner:
             )
         self.estop.clear()
         self.relaxed_in_estop = False
-        for aid in [
-            a
-            for a, al in self.alerts.items()
-            if al.level == "critical" and al.message_key == "motor.critical.stopped"
-        ]:
-            self.alerts.pop(aid, None)
+        self.drop_alerts(lambda a: a.level == "critical" and a.message_key == "motor.critical.stopped")
         self._set_state("idle")
         return self.status()
 

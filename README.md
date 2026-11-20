@@ -31,7 +31,7 @@ macOS from the wheel.
 * **Motor health on every screen that moves the arm.** Temperature, voltage, current, load and the
   alarm flags of every servo, follower and leader, read inside the control loop without slowing it.
   Warm at 50 °C, hot at 60 °C (no new session), critical at 65 °C twice in a row: Station holds the
-  arm, parks it at your rest pose and turns the torque off before the servo's own 70 °C cutoff drops
+  arm, parks it at Home and turns the torque off before the servo's own 70 °C cutoff drops
   it.
 * **Cameras while a model runs.** One owner per camera feeds both the control loop and the UI, so
   you see the exact frames the policy received, tagged with the control tick, next to joints vs.

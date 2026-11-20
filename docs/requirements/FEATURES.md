@@ -205,10 +205,12 @@ D-24, D-25: khách hàng báo từ hiện trường (bản 0.2.9, check_ver_2.9,
 | D-23 | Low | F-47 | FR-47, FR-73, NFR-16 | Model cần backbone từ HF Hub (SmolVLA, adapter PEFT) khi không có mạng: lỗi thô thay vì câu dịch | SA-F4 | M1 |
 | D-24 | Low | F-56, F-58 | FR-56, FR-58, AT-70, AT-72 (REG-21) | Cảnh báo `first_motion_far` ("Chuyển động đầu tiên bắt đầu xa tư thế hiện tại của tay") tính một lần theo tư thế lúc kiểm, nằm mãi trên khối chuyển động đầu tiên kể cả sau khi chạy xong, dù trình phát luôn đi chậm (minimum-jerk) về điểm đầu. Quyết định của khách: **"Đổi thành thông tin, tự cập nhật"** → mức `info` (không phải cảnh báo, không đếm, không hỏi xác nhận), câu "Tay sẽ đi chậm về điểm bắt đầu của chuyển động này (cách X°)", kiểm lại khi tay di chuyển / khi chạy xong, biến mất khi tay đã ở trong ngưỡng | Khách hàng: báo cáo hiện trường của khách check_ver_2.9 (2026-11-18) | M1 |
 | D-25 | Medium | F-7, F-41 | FR-7, FR-41, AT-10, AT-52 (REG-22) | Bước Huấn luyện hiện ổ khoá và "Bước này đang bị khoá — Hãy ghép nối với máy chủ Hibiscus trước" trong khi form ghép nối vẫn dùng được ngay đó; form nhận cả liên kết OneDrive (khách đã dán một liên kết OneDrive dài vào ô địa chỉ máy chủ). Quyết định của khách: **"Không cần robot, nói rõ hơn"** → Huấn luyện chạy trên máy chủ, không khoá: câu trung tính "Kết nối máy chủ Hibiscus để huấn luyện (không cần robot)."; form kiểm địa chỉ trước khi gửi (phải là http(s), không phải liên kết OneDrive / SharePoint / Google Drive / Dropbox), báo lỗi ngay dưới ô, nút Ghép nối tắt tới khi hợp lệ | Khách hàng: báo cáo hiện trường của khách check_ver_2.9 (2026-11-18) | M1 |
+| D-26 | Medium | F-8 | FR-8, AT-11 (REG-26) | Không xoá được hồ sơ robot dù F-8 đã duyệt "tạo / sửa / xoá" (hồ sơ trùng "so-101-1" và "SO_101" trên COM8 / COM7). Sửa trong hotfix 0.2.10: nút Xoá có xác nhận, giữ tệp hiệu chỉnh và dataset, 409 `busy` khi đang dùng | Khách hàng: báo cáo 2026-11-20 | M1 (đã sửa ở 0.2.10) |
 
 Tổng: **25 lỗi**: 3 High (D-1, D-9, D-19) · 10 Medium (D-2, D-3, D-5 – D-8, D-20, D-22, D-25) · 12 Low. Không có
 Critical. D-24, D-25 (2026-11-18) từ báo cáo hiện trường của khách trên bản 0.2.9 (check_ver_2.9); sửa ở M1 theo
-quyết định của khách dù F-41, F-56, F-58 thuộc M2.
+quyết định của khách dù F-41, F-56, F-58 thuộc M2. D-26 (2026-11-20) thêm sau baseline, sửa cùng D-2 trong hotfix 0.2.10
+(REG-23 – REG-26).
 
 **Còn mở, chưa có mã D** (khoảng trống của BA, SRS §8, Tech Lead chưa kiểm lại): K-2 (tài liệu UAT phần
 cứng lỗi thời, F-13 / F-17), K-5 (hướng dẫn ghi 5° cho mọi chuyển động, F-30), K-7 (spec dev lỗi thời), K-8

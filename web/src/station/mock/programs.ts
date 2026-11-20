@@ -970,7 +970,7 @@ export class MockPrograms {
       if (b.type === "hb_button_pressed" && !buttons.some((x) => x.name === f.BUTTON))
         add("unknown_button", "error", b.id, { button: f.BUTTON });
       if (b.type === "hb_relax_arm" && loopDepth.get(b.id)) add("relax_in_loop", "confirm", b.id);
-      if (b.type === "hb_go_home" && !this.sim.profile?.follower.rest_pose)
+      if ((b.type === "hb_go_home" || b.type === "hb_relax_arm") && !this.sim.profile?.follower.rest_pose)
         add("no_rest_pose", "error", b.id);
       if (b.type === "hb_repeat_forever") {
         const inner = [...walkBlocks({ blocks: { blocks: b.inputs?.DO?.block ? [b.inputs.DO.block] : [] } })];
@@ -1079,10 +1079,14 @@ export class MockPrograms {
     return this.run ? structuredClone(this.run.state) : null;
   }
 
-  stateOf(id: string): ProgramState {
+  /** `null` when the program has not run since the Station started; 404 for no such program. */
+  stateOf(id: string): ProgramState | null {
     if (this.run?.state.program_id === id) return structuredClone(this.run.state);
     const last = this.lastState.get(id);
-    if (!last) throw new MockProblem(404, "not_found");
+    if (!last) {
+      this.program(id);
+      return null;
+    }
     return structuredClone(last);
   }
 

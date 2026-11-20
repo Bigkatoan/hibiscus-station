@@ -15,6 +15,40 @@ export function formatBytes(bytes: number | null | undefined, locale = "en"): st
   return `${new Intl.NumberFormat(safeLocale(locale), { maximumFractionDigits: digits, minimumFractionDigits: 0 }).format(value)} ${UNITS[unit] ?? "B"}`;
 }
 
+const SIZE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB"] as const;
+
+/**
+ * A size people read: decimal kB / MB / GB (what a disk or a file manager says), one decimal under
+ * 10 and none above, so it never reads "0.00 GiB" for a few megabytes (QC 0.2.9 QD-21).
+ */
+export function formatSize(bytes: number | null | undefined, locale = "en"): string {
+  if (bytes === null || bytes === undefined || !Number.isFinite(bytes) || bytes < 0) return "—";
+  let unit = 0;
+  let value = bytes;
+  while (value >= 1000 && unit < SIZE_UNITS.length - 1) {
+    value /= 1000;
+    unit += 1;
+  }
+  let digits = unit === 0 || value >= 10 ? 0 : 1;
+  // 999.7 kB rounds to "1,000 kB": say "1 MB" instead
+  if (Number(value.toFixed(digits)) >= 1000 && unit < SIZE_UNITS.length - 1) {
+    value /= 1000;
+    unit += 1;
+    digits = 1;
+  }
+  const n = new Intl.NumberFormat(safeLocale(locale), { maximumFractionDigits: digits }).format(value);
+  return `${n} ${SIZE_UNITS[unit] ?? "B"}`;
+}
+
+/** A number of seconds (or any measured value) with fixed decimals in the user's locale: "1.5" / "1,5". */
+export function formatFixed(value: number | null | undefined, locale = "en", digits = 1): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "—";
+  return new Intl.NumberFormat(safeLocale(locale), {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value);
+}
+
 interface DurationUnits {
   d: string;
   h: string;

@@ -56,7 +56,11 @@ export function StationProvider({ runtime, children }: { runtime: StationRuntime
       }
       const hasSession = Boolean(snap.status?.session);
       if (hadSession && !hasSession) {
-        void client.invalidateQueries({ queryKey: qk.datasets });
+        // The list refetches now; one dataset's detail only when it is next shown. A session that
+        // kept no episode removed its new dataset, and a page still showing it (the record strip,
+        // unmounting) must not ask for it again (QC 0.2.9 QD-18: a 404 in the console).
+        void client.invalidateQueries({ queryKey: qk.datasets, exact: true });
+        void client.invalidateQueries({ queryKey: qk.datasets, refetchType: "none" });
         void client.invalidateQueries({ queryKey: qk.sessions });
       }
       hadSession = hasSession;

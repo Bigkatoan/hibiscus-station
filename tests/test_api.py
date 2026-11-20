@@ -195,6 +195,19 @@ def test_camera_probe_and_discover(client: TestClient, station: Station) -> None
     assert any(c["type"] == "mock" for c in cams)
 
 
+def test_discover_lists_each_held_camera_without_a_none_path(client: TestClient, station: Station) -> None:
+    """QC 0.2.9 QD-15: a held mock camera was listed as "held · None"; two of them shared one row."""
+    station.profiles.put(mock_profile(cameras=2, leader=False))
+    client.post("/api/v1/robots/desk/connect")
+    wait_for(lambda: len(station.hub.holders()) == 2, 5)
+    cams = client.get("/api/v1/cameras/discover").json()["cameras"]
+    held = [c for c in cams if c["type"] == "held"]
+    assert sorted(c["in_use_by"] for c in held) == ["front", "wrist"]
+    for c in cams:
+        assert "None" not in c["id"] and c["stable_path"] != "None", c
+    assert len({c["id"] for c in cams}) == len(cams)
+
+
 def test_models_import_compat_load_over_rest(client: TestClient, station: Station, tmp_path: Path) -> None:
     from hibiscus_station.mock.policy import make_dummy_act, zip_dir
 

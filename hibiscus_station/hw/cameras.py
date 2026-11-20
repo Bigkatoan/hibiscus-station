@@ -77,6 +77,64 @@ class FrameSet:
 
 
 # --------------------------------------------------------------------------- hub
+#: A frame is "fresh" for the control loop when it is at most this old (field report 0.2.9). Two
+#: camera periods (66 ms at 30 fps) flagged most ticks of a Windows webcam that delivers fewer
+#: frames than configured (MSMF / DirectShow in low light, a busy USB hub) as "No fresh frames"
+#: and dropped them from the dataset. The latest frame of a slower camera is what the loop gets.
+MIN_FRESH_MS = 250.0
+FRESH_PERIODS = 3.0
+
+
+def fresh_age_ms(camera_fps: float) -> float:
+    return max(MIN_FRESH_MS, FRESH_PERIODS * 1000.0 / max(1.0, float(camera_fps)))
+
+
+@dataclass
+class CamStats:
+    """What a camera really delivered during a session (session summary, doctor zip)."""
+
+    ticks: int = 0
+    stale_ticks: int = 0
+    new_frames: int = 0
+    first_t: float | None = None
+    last_t: float | None = None
+    last_frame_id: int = 0
+    ages_ms: list[float] = field(default_factory=list)
+
+    def note(self, frame: Any, age_ms: float | None, now: float) -> None:
+        self.ticks += 1
+        if id(frame) != self.last_frame_id:
+            self.last_frame_id = id(frame)
+            self.new_frames += 1
+            if self.first_t is None:
+                self.first_t = now
+            self.last_t = now
+        if age_ms is not None and len(self.ages_ms) < 20000:
+            self.ages_ms.append(age_ms)
+
+
+def _p(values: list[float], q: float) -> float | None:
+    if not values:
+        return None
+    return round(float(np.percentile(np.asarray(values), q)), 1)
+
+
+def camera_backend(camera: Any) -> str:
+    """OpenCV backend (MSMF / DSHOW / V4L2 ...) of a lerobot OpenCVCamera, else the camera class."""
+    cap = getattr(camera, "videocapture", None)
+    if cap is not None:
+        try:
+            return str(cap.getBackendName())
+        except Exception:  # noqa: S110 - a closed capture has no backend name
+            pass
+    return type(camera).__name__
+
+
+def frame_age_ms(camera: Any, now_perf: float) -> float | None:
+    ts = getattr(camera, "latest_timestamp", None)
+    return (now_perf - float(ts)) * 1000.0 if isinstance(ts, (int, float)) else None
+
+
 @dataclass
 class _Cam:
     name: str
@@ -85,12 +143,17 @@ class _Cam:
     lock: DeviceLock | None
     stale_since: float | None = None
     error: str | None = None
+    stats: CamStats = field(default_factory=CamStats)
 
 
 def device_key(p: CameraProfile) -> str:
     if p.type == "realsense":
         return f"realsense:{p.serial_number_or_name}"
     return str(p.index_or_path)
+
+
+def _has_device(p: CameraProfile) -> bool:
+    return p.serial_number_or_name is not None if p.type == "realsense" else p.index_or_path is not None
 
 
 def camera_target(index_or_path: int | str | None) -> int | Path:
@@ -284,7 +347,12 @@ class CameraHub:
         return {n: (c.profile.height, c.profile.width, 3) for n, c in self._cams.items()}
 
     def holders(self) -> dict[str, str]:
-        return {device_key(c.profile): n for n, c in self._cams.items()}
+        """``{device key: camera name}``. A camera with no device (a mock) is keyed by its name, so
+        two of them never share one entry and none reads as the device "None" (QC 0.2.9 QD-15)."""
+        return {
+            (device_key(c.profile) if _has_device(c.profile) else f"{c.profile.type}:{n}"): n
+            for n, c in self._cams.items()
+        }
 
     def has_cameras(self) -> bool:
         return bool(self._cams)
@@ -296,17 +364,45 @@ class CameraHub:
         now = time.monotonic() if now is None else now
         frames: dict[str, Any] = {}
         stale: list[str] = []
+        perf = time.perf_counter()
         for name, c in list(self._cams.items()):
             try:
                 frames[name] = c.camera.read_latest(max_age_ms=int(max(1, max_age_ms)))
                 c.stale_since = None
                 c.error = None
+                c.stats.note(frames[name], frame_age_ms(c.camera, perf), now)
             except (TimeoutError, RuntimeError, ConnectionError, OSError) as exc:
                 if c.stale_since is None:
                     c.stale_since = now
                 c.error = str(exc)[:200]
+                c.stats.ticks += 1
+                c.stats.stale_ticks += 1
                 stale.append(name)
         return frames, stale
+
+    def reset_stats(self) -> None:
+        for c in list(self._cams.values()):
+            c.stats = CamStats()
+
+    def stats(self) -> dict[str, dict[str, Any]]:
+        """Per camera: backend, configured vs measured fps, frame age, stale ticks, last error."""
+        out: dict[str, dict[str, Any]] = {}
+        for n, c in list(self._cams.items()):
+            st = c.stats
+            span = (st.last_t - st.first_t) if st.first_t is not None and st.last_t is not None else 0.0
+            measured = round((st.new_frames - 1) / span, 1) if span > 0 and st.new_frames > 1 else None
+            out[n] = {
+                "backend": camera_backend(c.camera),
+                "size": [c.profile.width, c.profile.height],
+                "fps_configured": c.profile.fps,
+                "fps_measured": measured,
+                "age_ms_p50": _p(st.ages_ms, 50),
+                "age_ms_p95": _p(st.ages_ms, 95),
+                "ticks": st.ticks,
+                "stale_ticks": st.stale_ticks,
+                "last_error": c.error,
+            }
+        return out
 
     def stale_for(self, name: str, now: float | None = None) -> float:
         c = self._cams.get(name)

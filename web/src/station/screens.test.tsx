@@ -103,7 +103,11 @@ describe("Run model (R2)", () => {
     // Cameras stay on screen after the stop.
     expect(screen.getByTestId("camera-wrist")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "I'm clear, reset" }));
-    expect(await screen.findByText(/Motors too hot: elbow_flex/)).toBeInTheDocument();
+    // QC 0.2.9 QD-3: the motor and its temperature, never "[object Object]" or the raw detail
+    const refused = await screen.findByText(/Motors too hot:/);
+    expect(refused).toHaveTextContent("Motors too hot: follower elbow_flex 66 °C. Let them cool down first.");
+    expect(document.body).not.toHaveTextContent("[object Object]");
+    expect(document.body).not.toHaveTextContent("let it cool down");
     expect(h.sim.state).toBe("estopped");
   });
 });
@@ -116,7 +120,7 @@ describe("Record (§6.6)", () => {
     await settle();
     await user.type(await screen.findByLabelText(/Dataset name/), "cube_demo");
     await user.type(screen.getByLabelText(/^Task/), "Pick the cube");
-    expect(screen.getByTestId("disk-estimate")).toHaveTextContent("2 camera(s)");
+    expect(screen.getByTestId("disk-estimate")).toHaveTextContent("2 cameras");
     await user.click(screen.getByRole("button", { name: "Start recording" }));
     await waitFor(() => {
       expect(h.sim.state).toBe("recording");
@@ -137,11 +141,19 @@ describe("Record (§6.6)", () => {
     expect(h.sim.session?.s.episode.phase).toBe("episode");
     await advance(h.sim, 1);
     fireEvent.keyDown(document.body, { key: "Escape" });
+    await advance(h.sim, 1.2); // the stopped episode is saved inside the session (0.2.9)
     await waitFor(() => {
       expect(h.sim.state).toBe("idle");
     });
     const done = await screen.findByTestId("record-done");
-    expect(done).toHaveTextContent("1 episodes saved in ~/.hibiscus/station/datasets/cube_demo");
+    // QC 0.2.9 QD-11: the dataset name; the local path only on request
+    expect(within(done).getByText("1 episode saved in dataset cube_demo")).toBeVisible();
+    const where = within(done).getByTestId("record-path");
+    expect(within(where).getByText("~/.hibiscus/station/datasets/cube_demo")).not.toBeVisible();
+    fireEvent.click(within(where).getByText("Where is it on this computer?"));
+    await waitFor(() => {
+      expect(within(where).getByText("~/.hibiscus/station/datasets/cube_demo")).toBeVisible();
+    });
     expect(within(done).getByRole("link", { name: "Upload" })).toHaveAttribute(
       "href",
       "/datasets/cube_demo?upload=1",
@@ -198,7 +210,7 @@ describe("Calibrate (§6.3, LeLab-simple)", () => {
     expect(screen.getByTestId("cal-now-leader")).toHaveTextContent("Done! Now the Leader arm.");
   });
 
-  it("guides Home → Ranges with a tick per joint; Save only when every joint moved", async () => {
+  it("guides Middle → Ranges with a tick per joint; Save only when every joint moved", async () => {
     const h = setupStation({ calib: "fresh" });
     const user = userEvent.setup();
     renderStation("/calibrate", h);
@@ -210,7 +222,7 @@ describe("Calibrate (§6.3, LeLab-simple)", () => {
       screen.getByRole("img", { name: "SO-101 arm with every joint in the middle of its range" }),
     ).toBeInTheDocument();
     expect(screen.getByText("The follower is limp: hold it.")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Set home" }));
+    await user.click(screen.getByRole("button", { name: "Set middle" }));
     await screen.findByTestId("cal-ranges");
     await advance(h.sim, 1.2);
     await waitFor(() => {

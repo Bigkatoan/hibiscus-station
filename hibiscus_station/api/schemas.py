@@ -517,6 +517,10 @@ class LocalDataset(Out):
 
 class EpisodeSummary(Out):
     index: int
+    state: Literal["saved", "saving", "unreadable"] = Field(
+        description="saving: being encoded and written now; unreadable: counted by the dataset but "
+        "its episode metadata was never written (the Station closed before the dataset was finalized)"
+    )
     frames: int | None
     length_s: float | None
     tasks: list[str] | None

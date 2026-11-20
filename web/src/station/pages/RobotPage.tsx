@@ -22,12 +22,13 @@ import { Input, NativeSelect } from "@/components/ui/input";
 import { api } from "../api/client";
 import { qk, useCalibrations, usePortProbe, usePorts, useRobots, useStationMutation } from "../api/hooks";
 import type { Port, PortProbe, RobotProfile, Status } from "../api/types";
+import { GoHomeButton, RelaxButton, SetHomeButton } from "../components/HomeControls";
 import { JointPanel } from "../components/JointPanel";
 import { MotorHealthPanel } from "../components/MotorHealthPanel";
 import { StationError } from "../components/StationError";
 import { Sprite } from "@/hibiscus/PixelAnim";
-import { useStation, useStatus } from "../ws/StationProvider";
-import type { StationSnapshot } from "../ws/store";
+import { useStatus } from "../ws/StationProvider";
+import { fmtFixed } from "../units";
 
 export function slugify(name: string): string {
   return (
@@ -274,7 +275,7 @@ function ProbeHint({ probe }: { probe: PortProbe }) {
   const key = probe.role_hint ? `robot.probe_looks_${probe.role_hint}` : "robot.probe_unknown";
   return (
     <p className="text-xs text-muted-foreground" data-testid="probe-hint">
-      {t(key, { v: probe.voltage_v.toFixed(1) })}
+      {t(key, { v: fmtFixed(probe.voltage_v) })}
       {fw}
     </p>
   );
@@ -452,7 +453,7 @@ function ProfileForm({ initial, onDone }: { initial: RobotProfile | null; onDone
           >
             {t("robot.role_warning", {
               slot: t(`robot.role_${w.slot}`),
-              v: w.voltage_v.toFixed(1),
+              v: fmtFixed(w.voltage_v),
               looks: t(`robot.role_${w.looks_like}`),
             })}
           </p>
@@ -521,65 +522,45 @@ function ProfileForm({ initial, onDone }: { initial: RobotProfile | null; onDone
   );
 }
 
-const selFollowerJoints = (s: StationSnapshot) => s.joints?.arms.follower;
-
 function ConnectedPanel({ profile }: { profile: RobotProfile }) {
   const { t } = useTranslation("station");
   const status = useStatus();
-  const joints = useStation(selFollowerJoints);
-  const restPose = useStationMutation(
-    (pose: Record<string, number>) =>
-      api.put<RobotProfile>(`/robots/${encodeURIComponent(profile.id)}`, {
-        ...profile,
-        follower: { ...profile.follower, rest_pose: pose },
-      }),
-    [qk.robots],
-  );
   const torque = useStationMutation((enabled: boolean) =>
-    api.post<Status>("/robots/torque", {
-      arm: "follower",
-      enabled,
-      confirm: !profile.follower.rest_pose ? true : undefined,
-    }),
+    api.post<Status>("/robots/torque", { arm: "follower", enabled }),
   );
   const torqueOn = status?.robot?.follower_torque ?? false;
   const canTorque = status?.state === "idle" || status?.state === "estopped";
+  // QC 0.2.9 QD-6: next to Robot 3D, half the page was too narrow for the motor health tables
+  // (they scrolled sideways, "Load" and "Status" hidden): the cards stack, each full width.
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid gap-4" data-testid="robot-connected">
       <Card>
         <CardHeader>
           <CardTitle>{t("joints.title")}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <JointPanel />
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!joints || restPose.isPending}
-              onClick={() => {
-                if (joints) restPose.mutate({ ...joints });
-              }}
-            >
-              {t("robot.set_rest")}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!canTorque || torque.isPending}
-              onClick={() => {
-                if (torqueOn && !profile.follower.rest_pose && !window.confirm(t("robot.relax_confirm")))
-                  return;
-                torque.mutate(!torqueOn);
-              }}
-            >
-              {torqueOn ? t("robot.torque_off") : t("robot.torque_on")}
-            </Button>
+          <div className="flex flex-wrap items-start gap-2">
+            <SetHomeButton />
+            <GoHomeButton />
+            {torqueOn ? (
+              <RelaxButton />
+            ) : (
+              <Button
+                variant="outline"
+                disabled={!canTorque || torque.isPending}
+                onClick={() => {
+                  torque.mutate(true);
+                }}
+              >
+                {t("robot.torque_on")}
+              </Button>
+            )}
           </div>
           {profile.follower.rest_pose ? (
             <p className="text-xs text-muted-foreground">{t("robot.rest_saved")}</p>
           ) : null}
-          <StationError error={restPose.error ?? torque.error} />
+          <StationError error={torque.error} />
         </CardContent>
       </Card>
       <Card>
@@ -604,6 +585,12 @@ export function RobotPage() {
     api.post<Status>(`/robots/${encodeURIComponent(id)}/connect`, {}),
   );
   const disconnect = useStationMutation(() => api.post<Status>("/robots/disconnect", {}));
+  // F-8 / D-26: delete a profile (robots.yaml only; calibration files and datasets stay)
+  const [deleting, setDeleting] = useState<RobotProfile | null>(null);
+  const del = useStationMutation(
+    (id: string) => api.del(`/robots/${encodeURIComponent(id)}`),
+    [qk.robots, qk.status],
+  );
   const list = robots.data?.robots ?? [];
   const ports = usePorts();
   const realPorts = (ports.data?.ports ?? []).filter((p) => p.vid_pid !== null);
@@ -674,13 +661,20 @@ export function RobotPage() {
       ) : null}
       {status?.state === "connecting" ? (
         <p role="status" className="border-2 border-frame bg-card p-2 text-sm">
-          {t("robot.connecting")} {status.detail ?? ""}
+          {t("robot.connecting")}
         </p>
       ) : null}
-      <StationError error={connect.error ?? disconnect.error} />
+      <StationError error={connect.error ?? disconnect.error ?? del.error} />
       <ul className="grid gap-3 md:grid-cols-2">
         {list.map((r) => {
           const isConn = r.id === connectedId;
+          // the Station refuses too (409 busy): connected, connecting, in a session, port lost
+          const inUse =
+            isConn ||
+            (status?.robot?.id === r.id &&
+              (status.state === "connecting" ||
+                status.state === "calibrating" ||
+                (status.state === "error" && status.reason === "device_lost")));
           return (
             <li key={r.id}>
               <Card>
@@ -738,6 +732,23 @@ export function RobotPage() {
                     >
                       {t("common.edit")}
                     </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={inUse || del.isPending}
+                      aria-describedby={inUse ? `delete-why-${r.id}` : undefined}
+                      onClick={() => {
+                        del.reset();
+                        setDeleting(r);
+                      }}
+                    >
+                      <PxIcon name="trash" /> {t("robot.delete")}
+                    </Button>
+                    {inUse ? (
+                      <span id={`delete-why-${r.id}`} className="self-center text-xs text-muted-foreground">
+                        {t("robot.delete_disconnect_first")}
+                      </span>
+                    ) : null}
                   </div>
                 </CardContent>
               </Card>
@@ -749,6 +760,47 @@ export function RobotPage() {
         <p className="text-sm text-muted-foreground">{t("robot.empty")}</p>
       ) : null}
       {connected ? <ConnectedPanel profile={connected} /> : null}
+      <Dialog
+        open={deleting !== null}
+        onOpenChange={(o) => {
+          if (!o) setDeleting(null);
+        }}
+      >
+        <DialogContent data-testid="delete-robot-dialog">
+          <DialogHeader>
+            <DialogTitle>{t("robot.delete_title", { name: deleting?.name ?? "" })}</DialogTitle>
+            <DialogDescription>{t("robot.delete_desc")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleting(null);
+              }}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={del.isPending}
+              onClick={() => {
+                const target = deleting;
+                if (!target) return;
+                del.mutate(target.id, {
+                  onSettled: () => {
+                    setDeleting(null);
+                  },
+                  onSuccess: () => {
+                    if (editing !== null && editing !== "new" && editing.id === target.id) setEditing(null);
+                  },
+                });
+              }}
+            >
+              <PxIcon name="trash" /> {t("robot.delete_confirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

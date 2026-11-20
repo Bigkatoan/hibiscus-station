@@ -310,7 +310,7 @@ describe("mock station: programs", () => {
     run(sim, 0.3);
     sim.estop("user");
     expect(sim.programs.run).toBeNull();
-    expect(sim.programs.stateOf("sort_cubes").status).toBe("estopped");
+    expect(sim.programs.stateOf("sort_cubes")?.status).toBe("estopped");
     sim.estopReset();
     run(sim, 1);
     expect(sim.programs.run).toBeNull();
@@ -323,7 +323,7 @@ describe("mock station: programs", () => {
     sim.programs.startRun("sort_cubes", { dry_run: false, confirm: [], fps: 30 });
     run(sim, 1.2);
     expect(sim.state).toBe("estopped");
-    expect(sim.programs.stateOf("sort_cubes").status).toBe("estopped");
+    expect(sim.programs.stateOf("sort_cubes")?.status).toBe("estopped");
   });
 
   it("check flags busy loops, missing trajectories, fast replays (confirm) and unreachable stacks", () => {

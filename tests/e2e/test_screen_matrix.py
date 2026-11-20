@@ -340,7 +340,7 @@ SELFTEST_HTML = """<!doctype html><html lang="vi"><body style="margin:0;font:16p
 <div style="width:2000px">rộng hơn màn hình</div>
 <span style="display:inline-block;width:40px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">Chưa kết nối robot</span>
 <p>Start calibration</p><p>Hiệu chuẩn</p><p>calibrate.start</p><p>NaN</p>
-<button aria-label="Use current pose as rest pose">x</button>
+<button aria-label="Set Home at current position">x</button>
 <p style="color:#808080;background:#8a8a8a">chữ khó đọc</p>
 <div data-testid="estop-dock" style="position:fixed;right:0;bottom:0;width:200px;height:100px"></div>
 <p style="position:fixed;right:20px;bottom:20px;margin:0">dưới nút dừng</p>
@@ -362,7 +362,7 @@ def test_audit_finds_each_kind_of_problem(browser: Any) -> None:
         ("overflow", ""),
         ("clipped", "Chưa kết nối robot"),
         ("english-in-vi", "Start calibration"),
-        ("english-in-vi", "Use current pose as rest pose"),  # an aria-label counts: a screen reader says it
+        ("english-in-vi", "Set Home at current position"),  # an aria-label counts: a screen reader says it
         ("forbidden-term", "Hiệu chuẩn"),
         ("raw-key", "calibrate.start"),
         ("garbage", "NaN"),

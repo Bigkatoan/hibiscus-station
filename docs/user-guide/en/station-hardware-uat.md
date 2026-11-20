@@ -51,10 +51,12 @@ item fails, open an issue with the session folder `~/.hibiscus/station/sessions/
 | # | Check | How | Expected | Result |
 |---|---|---|---|---|
 | 3.1 | E-stop freeze | During teleop press Space (or the red button); film it with a phone at high frame rate | Arm freezes in under 100 ms, torque stays on, the arm does not fall | |
-| 3.2 | E-stop relax | Press Space again within 2 s | Torque off (support the arm) | |
+| 3.2 | E-stop relax | Press Space again within 2 s | Torque off; the dock says "Support the arm" | |
+| 3.2a | Stop holds (CR-1) | Teleop, record, a program and a trajectory: press the screen's Stop (Esc while recording) | The arm stays exactly where it was (no drop, no move); the banner offers Return Home and Relax; Relax asks to support the arm first | |
+| 3.2b | Record Stop (field 0.2.8) | Record a 30 s episode with two cameras, press Stop at ~10 s | At once: "Saving episode 1…", timer stops, cameras stay live; then the end card; the dataset holds ~10 s | |
 | 3.3 | Reset | "I'm clear, reset" | Back to idle | |
-| 3.4 | Thermal stop | Settings: lower `temp_critical_c` to (current temperature + 1), keep the rules (hot ≤ critical − 3, warn ≤ hot − 5); teleop until it triggers | Red banner, hold, park at rest pose (if saved), torque off, state `estopped (thermal)`; reset refused while a motor is hot | |
-| 3.5 | Rest pose | Robot screen: "Use current follower pose as rest pose", then trigger 3.4 again | The arm moves to the rest pose before torque goes off | |
+| 3.4 | Thermal stop | Settings: lower `temp_critical_c` to (current temperature + 1), keep the rules (hot ≤ critical − 3, warn ≤ hot − 5); teleop until it triggers | Red banner, hold, park at Home (if set), torque off, state `estopped (thermal)`; reset refused while a motor is hot | |
+| 3.5 | Home | Top bar: "Set Home at current position", then trigger 3.4 again | The arm moves Home before torque goes off | |
 | 3.6 | Dead-man | During a model run, close the browser tab | Robot freezes within about 1 s (`ui_lost`) | |
 | 3.7 | Relative target cap | Run a model or replay with max relative target 2.0 | Movements are slowed; clipped joints are flagged in the joint panel | |
 | 3.8 | USB unplug | Unplug the follower USB during teleop | State `error (bus_lost)`, no crash; reconnect works | |
@@ -100,8 +102,8 @@ Record two short trajectories A and B first, a pose `home`, and a colour detecto
 | 7.2 | Zero offsets in the twin | Put the arm in the calibration middle pose (every joint mid-range) | The 3D arm shows the same pose within about 5° per joint; note any offset per joint: ______ | |
 | 7.3 | E-stop during the approach | Start replaying A with the arm far from its start (> 30°); press Space while it is moving to the start | Arm freezes within one tick; no new goal is sent after the press (film it: the arm never moves again until Reset); state `estopped` | |
 | 7.4 | E-stop during a replay | Replay A at 100 %; press Space half way | Same as 7.3; the program run ends with outcome `estopped` | |
-| 7.5 | Thermal critical mid-program | Lower `temp_critical_c` as in 3.4 and run the program on the robot until it triggers | The program stops within one tick, the arm parks at the rest pose, then torque off; state `estopped (thermal)`; the program run ends with outcome `estopped` | |
-| 7.6 | Relax with a rest pose | Rest pose saved; after a session press *Relax* (or profile `on_session_end: relax`) | The arm moves to the rest pose first, then torque off; it does not drop | |
+| 7.5 | Thermal critical mid-program | Lower `temp_critical_c` as in 3.4 and run the program on the robot until it triggers | The program stops within one tick, the arm parks at Home, then torque off; state `estopped (thermal)`; the program run ends with outcome `estopped` | |
+| 7.6 | Relax with a Home | Home set; after a session press *Relax* (or profile `on_session_end: relax`) | The arm moves Home first, then torque off; it does not drop | |
 | 7.7 | Run a model with a camera unplugged | Run model, unplug a camera the policy uses | Alert; the run pauses; after `camera_lost_stop_s` (3 s) the session stops (`camera_lost`), arm held | |
 | 7.8 | Re-record after recalibration | Recalibrate the follower | A, B, poses and the program are marked "needs check"; a hardware run is refused until A and B are re-recorded or confirmed with a slow check replay | |
 | 7.9 | Dry run again after trimming | Trim A's start or end and save | The program version changes; "Run on robot" is refused until a new dry run passes | |
@@ -117,7 +119,7 @@ Record two short trajectories A and B first, a pose `home`, and a colour detecto
 | 8.2 | Stable names | `hibiscus-station-ctl ports` | Each adapter shows a `/dev/serial/by-id/...` path, and `/dev/hibiscus/arm-...` once the udev rule is installed | |
 | 8.3 | Arm unplugged at boot | Reboot with the arms unplugged, plug them in later | Container starts and is healthy; the arms connect after plugging in | |
 | 8.4 | Autostart | Reboot, do not log in | `hibiscus-station-ctl status` shows `healthy` within 3 min | |
-| 8.5 | Safe stop on shutdown | Teleop, then `hibiscus-station-ctl down` | Arm holds, parks at the rest pose, torque off before the container exits | |
+| 8.5 | Safe stop on shutdown | Teleop, then `hibiscus-station-ctl down` | Arm holds, parks at Home, torque off before the container exits | |
 | 8.6 | Update and rollback | `hibiscus-station-ctl update <new tag>`, then `rollback` | Backup written; healthy on the new tag; rollback returns to the old tag with calibration, trajectories and programs intact | |
 | 8.7 | LAN mode | Set `STATION_BIND`, token and allowed hosts; open the link from a laptop | Works from the listed name; any other name or IP gets `403 forbidden_host` | |
 | 8.8 | Model speed on this device | Run the ACT example at 30 fps | Note p50/p95 inference: ______ / ______ ms (Pi 5 CPU: expect overruns for anything bigger than ACT) | |

@@ -235,13 +235,16 @@ def build_router() -> APIRouter:
 
     @r.post("/robots/rest", tags=["robots"])
     def go_rest(request: Request) -> wire.Session:
-        """idle → playing (session kind ``rest``): move the follower to its rest pose, minimum jerk at
-        a capped peak speed, dead-man heartbeat on; ``POST /sessions/current/control {"action": "stop"}``
-        cancels it. Offered after an interrupted motion (``Status.interrupted``)."""
+        """Return Home. idle → playing (session kind ``rest``): move the follower to its Home (the
+        profile's ``follower.rest_pose``), minimum jerk at a capped peak speed, dead-man heartbeat on;
+        ``POST /sessions/current/control {"action": "stop"}`` cancels it (the arm holds where it is).
+        Offered after a Stop or an interrupted motion (``Status.interrupted``)."""
         return _out(wire.Session, station(request).go_rest())
 
     @r.post("/robots/rest-pose", tags=["robots"])
     def rest_pose(request: Request) -> wire.RestPose:
+        """Set Home at current position: the follower's present pose becomes the profile's Home
+        (stored as ``follower.rest_pose``). idle only, follower calibrated."""
         return _out(wire.RestPose, station(request).owner.call("set_rest_pose"))
 
     # ------------------------------------------------------------------ calibration
@@ -442,12 +445,12 @@ def build_router() -> APIRouter:
     @r.post("/server/pair", tags=["server"])
     def pair(request: Request, body: PairRequest) -> wire.ServerLinkView:
         return _out(
-            wire.ServerLinkView, station(request).server.pair(body.url, body.token, body.workspace_id)
+            wire.ServerLinkView, station(request).pair_server(body.url, body.token, body.workspace_id)
         )
 
     @r.delete("/server", status_code=204, tags=["server"])
     def unpair(request: Request) -> Response:
-        station(request).server.unpair()
+        station(request).unpair_server()
         return Response(status_code=204)
 
     @r.get("/server/datasets", tags=["server"])

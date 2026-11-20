@@ -263,10 +263,13 @@ def _active(station: Station, program_id: str) -> Interpreter:
     return rt
 
 
-def state(station: Station, program_id: str) -> ProgramState:
+def state(station: Station, program_id: str) -> ProgramState | None:
+    """The running (or last ended) run; ``None`` when the program has not run since the Station
+    started (the normal state of a program, never an error); ``not_found`` for no such program."""
     rt = station.programs.runs.get(program_id)
     if rt is None:
-        raise StationError("not_found", "this program has not run since the Station started")
+        store(station).get(program_id)
+        return None
     return rt.state()
 
 

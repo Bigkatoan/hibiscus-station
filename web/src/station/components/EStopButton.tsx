@@ -1,7 +1,9 @@
 /**
  * The big e-stop (§4.7, §6.0). Space triggers it from anywhere (never scrolls the page); inside a
  * text field Space types and Esc stops instead. The first press freezes the arm with torque on;
- * a second press within 2 s (or "Relax") turns torque off. In `estopped` it becomes "Reset".
+ * a second press within 2 s turns torque off at once (the dock then says "Support the arm", D-6);
+ * the "Relax" button asks to support the arm first. In `estopped` it becomes "Reset", and after a
+ * user stop it also offers "Return Home" (CR-1).
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -12,6 +14,7 @@ import { useStationMutation } from "../api/hooks";
 import { MOVING_STATES, type Status } from "../api/types";
 import { useRuntime, useStation, useStatus } from "../ws/StationProvider";
 import { PROGRAM_DONE } from "../ws/store";
+import { GoHomeButton, RelaxButton, useHomeState } from "./HomeControls";
 import { StationError } from "./StationError";
 import { Sprite } from "@/hibiscus/PixelAnim";
 
@@ -39,9 +42,7 @@ export function EStopButton({ size = 96 }: { size?: 96 | 128 }) {
   const [pressedAt, setPressedAt] = useState<number | null>(null);
   const pressedRef = useRef<number | null>(null);
   const reset = useStationMutation(() => api.post<Status>("/estop/reset"));
-  const relax = useStationMutation(() =>
-    api.post<Status>("/robots/torque", { arm: "follower", enabled: false, confirm: true }),
-  );
+  const home = useHomeState();
 
   const press = useCallback(() => {
     // The WS path takes effect without a queue; REST is the fallback when the socket is down.
@@ -86,7 +87,7 @@ export function EStopButton({ size = 96 }: { size?: 96 | 128 }) {
   }, [pressedAt]);
 
   if (!moving && !estopped) return null;
-  const torqueOn = status?.robot?.follower_torque ?? false;
+  const torqueOn = status?.robot?.follower_torque === true;
   const showRelax = torqueOn && (estopped || pressedAt !== null);
 
   return (
@@ -101,28 +102,27 @@ export function EStopButton({ size = 96 }: { size?: 96 | 128 }) {
               reason: t(`reasons.${status?.reason ?? "user"}`, { defaultValue: status?.reason ?? "" }),
             })}
           </p>
+          {!torqueOn ? (
+            <p className="text-sm font-bold" role="alert" data-testid="estop-support-arm">
+              {t("estop.support")}
+            </p>
+          ) : null}
           <StationError error={reset.error} />
-          <Button
-            onClick={() => {
-              reset.mutate(undefined);
-            }}
-            disabled={reset.isPending}
-          >
-            {t("estop.reset")}
-          </Button>
+          <div className="flex flex-wrap justify-end gap-2">
+            {/* CR-1: from a user stop the arm can go Home directly (the latch is reset first) */}
+            {home.hasHome && home.goBlocked === null ? <GoHomeButton /> : null}
+            <Button
+              onClick={() => {
+                reset.mutate(undefined);
+              }}
+              disabled={reset.isPending}
+            >
+              {t("estop.reset")}
+            </Button>
+          </div>
         </div>
       ) : null}
-      {showRelax ? (
-        <Button
-          variant="outline"
-          onClick={() => {
-            relax.mutate(undefined);
-          }}
-          disabled={relax.isPending}
-        >
-          {t("estop.relax")}
-        </Button>
-      ) : null}
+      {showRelax ? <RelaxButton /> : null}
       {!estopped ? (
         <button
           type="button"

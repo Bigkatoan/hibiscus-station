@@ -116,8 +116,11 @@ def test_program_crud_check_and_refusals(station: Station, client: Any) -> None:
     listed = {p["id"]: p for p in client.get(f"{API}/programs").json()["programs"]}
     assert listed["ab"]["ok"] and not listed["empty"]["ok"] and listed["ab"]["last_run"] is None
     assert client.get(f"{API}/programs/empty").json()["version"] == 1
-    # never ran: state 404, controls 409
-    assert client.get(f"{API}/programs/ab/state").status_code == 404
+    # never ran: state null (QC 0.2.9 QD-10: a 404 here was a console error on every Programs tab
+    # load), an unknown program 404; controls 409
+    never = client.get(f"{API}/programs/ab/state")
+    assert never.status_code == 200 and never.json() is None
+    assert client.get(f"{API}/programs/nope/state").status_code == 404
     assert client.post(f"{API}/programs/ab/pause").status_code == 409
     assert client.post(f"{API}/programs/ab/fake", json={"gripper_holding": True}).status_code == 409
     assert client.get(f"{API}/programs/ab/runs").json() == {"runs": []}
@@ -150,6 +153,19 @@ def test_confirmations_and_a_dry_run_without_a_robot(station: Station, client: A
     assert client.get(f"{API}/programs/ab").json()["dry_run_version"] == p.version
     runs = client.get(f"{API}/programs/ab/runs").json()["runs"]
     assert len(runs) == 1 and runs[0]["dry_run"] and runs[0]["outcome"] == "completed"
+
+
+def test_a_finished_run_keeps_its_duration(station: Station, client: Any) -> None:
+    """QC 0.2.9 QD-16: a run that completed in 3.3 s read "360.7 s" minutes later, because the
+    state's ``t`` kept counting from the start. It must freeze when the run ends."""
+    _put(client, program(wait(0.3)))
+    assert _run(client, dry_run=True).status_code == 200
+    rt = _runtime(station)
+    assert rt.join(20) and rt.outcome == "completed", rt.state()
+    first = client.get(f"{API}/programs/ab/state").json()
+    assert first["status"] == "completed" and 0.3 <= first["t"] < 5, first
+    time.sleep(0.6)
+    assert client.get(f"{API}/programs/ab/state").json()["t"] == first["t"]
 
 
 def wire_session(body: dict[str, Any]) -> dict[str, Any]:

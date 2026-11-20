@@ -39,6 +39,7 @@ import type {
   Program,
   ProgramInput,
 } from "../../api/types";
+import { SetHomeButton } from "../../components/HomeControls";
 import { StationError } from "../../components/StationError";
 import { emptyRefs, SO101_JOINTS, type EditorRefs } from "../../programs/blockly/refs";
 import {
@@ -300,6 +301,9 @@ function ProgramWorkspace({ program, onDeleted }: { program: Program; onDeleted:
   const [buttons, setButtons] = useState<OperatorButton[]>(program.buttons);
   const [issues, setIssues] = useState<CheckIssue[]>(program.issues);
   // The shown issues come from a check (not only the compiler's): they depend on the arm's pose.
+  // QC 0.2.9 QD-2: the issues saved with the program miss what depends on the robot (its Home,
+  // its calibration, the trajectories...); until the Station has checked this version against the
+  // robot the page never says "No problems found".
   const [checked, setChecked] = useState(false);
   const [version, setVersion] = useState(program.version);
   const [dryRunVersion, setDryRunVersion] = useState(program.dry_run_version);
@@ -313,7 +317,6 @@ function ProgramWorkspace({ program, onDeleted }: { program: Program; onDeleted:
   );
   const check = useStationMutation(() => api.post<CheckReport>(`/programs/${enc(program.id)}/check`));
   const del = useStationMutation(() => api.del(`/programs/${enc(program.id)}`));
-
   const applySaved = useCallback(
     (p: Program) => {
       setSaved(stableJson({ e: doc, b: buttons, n: name }));
@@ -389,6 +392,22 @@ function ProgramWorkspace({ program, onDeleted }: { program: Program; onDeleted:
     },
     [markChecked],
   );
+
+  // Check on open and after every save (a new version). A failed check (no robot profile, Station
+  // busy) leaves "not checked yet"; the Check button shows its error.
+  useEffect(() => {
+    let current = true;
+    setChecked(false);
+    api
+      .post<CheckReport>(`/programs/${enc(program.id)}/check`)
+      .then((r) => {
+        if (current) showReport(r);
+      })
+      .catch(() => undefined);
+    return () => {
+      current = false;
+    };
+  }, [program.id, version, showReport]);
 
   const issueText = useCallback(
     (i: CheckIssue) => t(`programs.issues.${i.code}`, { ...i.params, defaultValue: i.code }),
@@ -509,12 +528,29 @@ function ProgramWorkspace({ program, onDeleted }: { program: Program; onDeleted:
                       <span className="text-xs text-muted-foreground"> · {blockLabel(i.block_id)}</span>
                     ) : null}
                   </span>
+                  {i.code === "no_rest_pose" ? (
+                    // CR-2: fix it in place (relax arm / go Home need this robot's Home)
+                    <SetHomeButton
+                      label={t("home.set_now")}
+                      className="h-7 px-2 text-xs"
+                      onDone={() => {
+                        check.mutate(undefined, { onSuccess: showReport });
+                      }}
+                    />
+                  ) : null}
                 </li>
               ))}
             </ul>
-          ) : (
+          ) : checked ? (
             <p className="flex items-center gap-2 text-sm text-success" data-testid="program-ok">
               <PxIcon name="check" /> {t("programs.editor.no_issues")}
+            </p>
+          ) : (
+            <p
+              className="flex items-center gap-2 text-sm text-muted-foreground"
+              data-testid="program-unchecked"
+            >
+              <PxIcon name="search" /> {t("programs.editor.not_checked")}
             </p>
           )}
           {notes.length > 0 ? (
@@ -525,12 +561,12 @@ function ProgramWorkspace({ program, onDeleted }: { program: Program; onDeleted:
               className="flex flex-col gap-1 border-2 border-l-8 border-frame border-l-info bg-card px-3 py-2"
               data-testid="program-notes"
             >
-              <h3
+              <h2
                 id="program-notes-title"
                 className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wide text-info"
               >
                 <PxIcon name="info" /> {t("programs.editor.notes")}
-              </h3>
+              </h2>
               <ul className="flex flex-col gap-1 text-sm">
                 {notes.map((i) => (
                   <li key={i.id} data-severity="info">

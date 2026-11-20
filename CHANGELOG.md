@@ -13,6 +13,9 @@ repository (`station/`); 0.2.0 is the first release of this standalone repositor
 
 These changes are in the test build **1.0.0a1** (a pre-release, the M0 milestone of 1.0). Install it
 with its own line (see the README); GitHub never offers a pre-release as its "latest" release.
+It also holds every fix of the hotfixes [0.2.9](#029---2026-11-17) and [0.2.10](#0210---2026-11-20)
+(datasets show every episode while they are saved, no 500 or blank page on a damaged or unfinished
+dataset, robot profiles can be deleted).
 
 ### Added
 - **Windows: install, update and go back with one line in PowerShell.** No admin rights, no git and
@@ -151,6 +154,222 @@ with its own line (see the README); GitHub never offers a pre-release as its "la
   on your PATH. To use installed tools, run ...`) right before "Done", on every first install. The
   installer puts the command folder on PATH itself before installing, so the warning is gone; it now
   says so in both languages, and you only open a new PowerShell window and type `hibiscus-station`.
+
+## [0.2.10] - 2026-11-20
+
+Hotfix for the field report on 0.2.9 (Windows, SO-101, 2026-11-19): "I cannot see the video and
+the episodes I recorded." Known defect D-2.
+
+### Fixed
+- **The dataset page lists every recorded episode, also while the dataset is still being written.**
+  Since 0.2.9 episodes are saved in the background, and LeRobot only writes the episode list
+  (`meta/episodes`) when the dataset is finalized at the end of the session. Until then the page
+  (and the Record page's saved-episode strip) showed no episode at all. From the 11th episode of a
+  session, LeRobot's half-written episode file made the page answer "Internal error", and a Station
+  closed in the middle of a session left a dataset whose page and the Datasets list answered
+  "Internal error" for good. Now every episode shows as soon as it is saved; the episode being
+  saved shows "Saving…" and the page refreshes by itself until it is written; an episode the
+  Station never finished writing says so on its own row ("Cannot be read: the Station closed before
+  this episode was fully saved. The other episodes are fine.") and the rest of the page works.
+- **No more "Internal error" on the Datasets pages while an episode is saved.** Reading the dataset
+  size while the encoder deleted its temporary frames, reading `meta/info.json` while LeRobot
+  rewrote it, and a damaged telemetry file each failed the whole page.
+- **Replay of an episode that is still being written** answers "Station is busy (saving)" instead
+  of "Internal error"; its Replay button stays disabled until the episode is saved.
+- A dataset page that fails to display keeps the menu and says so, with Reload and All datasets,
+  instead of a blank error page.
+
+- **Adding episodes to a dataset the Station left unfinished** (the console window closed in the
+  middle of a session, then "Append to an existing dataset") answered "Internal error" or, with
+  fewer than 10 episodes, "A motor did not answer on the serial bus" after LeRobot asked the
+  Hugging Face Hub for the dataset. Such a dataset cannot be repaired safely: LeRobot kept its
+  episode list in memory and its data file was never closed. Station now refuses with
+  `409 dataset_not_finalized` before LeRobot touches anything, says why on the Record page ("…was
+  not finished: the Station closed while it was being recorded… Its files are kept as they
+  are.") and offers "Record into a new dataset" with the same task and settings. Not one file of
+  the unfinished dataset is changed.
+- **QC 0.2.10 round 1.**
+  - A damaged episode count in a dataset's `meta/info.json` (e.g. 1 000 000 000) no longer makes
+    the dataset page use memory until the Station is killed (QH-1). Episode rows are listed from
+    what is on disk; an impossible count shows the dataset as not finalized with the reason.
+  - "Append to an existing dataset" whose `meta/info.json` is empty, cut short, not an object or
+    has malformed features answered "Internal error" (also in 0.2.9). It now answers
+    `409 dataset_unreadable` ("…cannot be read: its files are damaged or cannot be opened…"), offers
+    "Record into a new dataset" and changes no file (QH-2). Replay of such a dataset answers the
+    same.
+  - A dataset file that cannot be opened (no permission) or a datasets folder that cannot be
+    written was reported as "A motor did not answer on the serial bus" (`502 bus_error`). It is
+    now `dataset_unreadable` or `409 dataset_io_error`; `bus_error` stays for the serial bus (QH-5).
+  - When every episode of a dataset is unreadable, the page says once that the Station closed
+    while it was being recorded, without "The other episodes are fine"; their telemetry can be
+    opened (QH-3).
+  - Replay of an episode of a dataset the Station left unfinished answers `dataset_unreadable`,
+    not "still being saved; try again when the dataset is finalized" (QH-4).
+- **QC 0.2.10 round 2: one damaged dataset never breaks the Datasets page or Replay.**
+  - A single dataset whose `meta/info.json` had `features` that is not an object, a
+    `total_episodes` of `Infinity`, or a `robot_type` that is not text made the whole Datasets
+    list (and that dataset's page) answer "Internal error", and the Upload step locked (QH-7, also
+    in 0.2.9). Each dataset is now summarised on its own: one that cannot be read is listed as not
+    finalized with an "unreadable: …" reason, and every other dataset shows as usual.
+  - Replay answered "Internal error" for `fps` 0 or `Infinity` and for joint names that do not
+    match the actions, and started at absurd rates for `fps` 1e30 or -5 (QH-8, M1-2). It now
+    answers `409 dataset_unreadable`.
+  - One validator for `meta/info.json` is shared by the list, the dataset page, append and replay:
+    fps (a finite number from 1 to 1000), the counts, the codebase version, LeRobot's file
+    templates and chunk sizes, every feature (dtype, shape, names matching the shape) and the joint
+    names of the action. A dataset that fails it is unreadable, with the reasons (M1-2). A pytest
+    fuzz sets every key, feature and feature field to 14 hostile values (648 cases) and checks list,
+    detail, telemetry, append and replay: no 5xx, no file changed, other datasets unaffected.
+  - Appending to a dataset recorded with another robot setup (`422 dataset_incompatible`) also
+    offers "Record into a new dataset" (M1-1).
+- **QC 0.2.10 round 3 (QH-9, data loss, also in 0.2.9): appending never overwrites earlier
+  episodes.** When a dataset's `meta/info.json` counted fewer episodes than its episode list holds
+  (for example `total_episodes: 0` with 9 on disk), "Append to an existing dataset" was accepted
+  and LeRobot overwrote `data/chunk-000/file-000.parquet`, destroying episodes; the dataset also
+  read as finalized. Append now needs a complete and consistent dataset: the recording check
+  passes, `total_episodes` equals the rows in `meta/episodes`, `total_frames` equals the sum of
+  their lengths, the indexes are 0..N-1 with contiguous frame ranges, and every data and video
+  file the rows name exists. Otherwise it answers `409 dataset_unreadable` with the reason and no
+  file changes; the list and the dataset page use the same check and show such a dataset as not
+  finalized ("inconsistent: …").
+- **D-26: robot profiles can be deleted** (approved feature F-8, "create / edit / delete"; customer
+  report 2026-11-20: duplicate profiles such as "so-101-1" and "SO_101" on COM8/COM7 could not be
+  removed). Each profile card on the Robot page has Delete / Xoá, with a confirmation that names
+  the profile and says that calibration files and datasets are not deleted (only the entry in
+  robots.yaml is removed). The connected profile says "Disconnect before deleting" / "Ngắt kết nối
+  trước khi xoá"; the Station also refuses (409 `busy`) while that robot is connecting,
+  calibrating, in a session or waiting for a lost USB adapter. Deleting the active profile on real
+  arms never makes the demo profile active; `--mock` creates the demo profile again only when no
+  profile is left, as before.
+
+### Changed
+- API: each `episode_list` row of `GET /datasets/{name}` has a `state`: `saved`, `saving` or
+  `unreadable` (openapi.json regenerated). `POST /sessions/record` with `mode: "append"` on a
+  dataset that was never finalized answers `409 dataset_not_finalized` (`params.dataset`,
+  `params.reasons`). New error codes `dataset_unreadable` (409) and `dataset_io_error` (409).
+
+### Known test issues
+- `tests/test_programs_safety.py::test_deadman_loss_while_the_program_waits` can exceed its 1.5 s
+  margin on the Windows CI runner (1.61 s once, QC QH-6); a rerun passes. The product is not
+  affected.
+
+## [0.2.9] - 2026-11-17
+
+Field report on 0.2.8 (Windows, real SO-101, 2026-11-17) and the customer's decisions CR-1 and CR-2.
+
+### Fixed
+- **"I pressed Stop while recording but it ran to the end, and the cameras stopped."** Stop did end
+  the episode at the press (the dataset in the report holds 22.5 s of the 30 s), but the episode was
+  then encoded inside the control loop: for as long as the encoder ran (11 s for 22 s of two
+  640x480 cameras on a fast PC, more on a laptop) Station sent no news, the cameras froze ("No fresh
+  frames"), every button was greyed out and the timer kept counting to 00:30. Now Stop shows
+  "Saving episode 1…" at once, the timer stops where you pressed, the cameras stay live and the arm
+  holds its position while the episode is written, then the end card appears. An e-stop while an
+  episode waits to be saved never delays the second Space (relax) any more, and a slow save is
+  never cut off half written.
+- **"No fresh frames" on a webcam that gives fewer pictures than asked** (common on Windows in low
+  light or on a shared USB hub). A frame now counts as fresh for three camera periods (at least
+  250 ms) instead of two, so these cameras no longer flicker or lose frames from the dataset. Each
+  session now records, per camera, the measured frame rate, frame age, stale ticks and the camera
+  driver (MSMF / DirectShow); the doctor zip carries it.
+- **"The leader is still not recognised."** The leader's 5 V servos do not report temperature or
+  current, and the bare "–" looked like a missing arm. The Leader heading now says
+  "Connected · 6/6 motors answer" and those values read "not measured", with the reason on hover.
+- **The stop card says whether the arm really holds.** After a double Space (relax) or a temperature
+  safe stop the card said "Stopped. The arm holds its position." while the torque was off, and its
+  hint mentioned a Relax button that was not there. It now follows the live torque state: held →
+  "holds its position" with Return Home and Relax; off → "Torque is off: the arm is limp and does
+  not hold its position" with Return Home only.
+- **Programs: no false "No problems found".** A program is checked against the robot (its Home,
+  calibration, trajectories) when it opens and after every save; until then the page says it is
+  checking, never the all-clear.
+- **Readable thermal messages.** "I'm clear, reset" while a motor is still hot says "Motors too hot:
+  follower elbow_flex 66 °C. Let them cool down first." (was "[object Object]"), and the stop
+  reason reads "66 °C" (was "66 C").
+- **Replay page** says "Replaying episode N" (was "recording") and its "moving to the start" note
+  ends with the approach (it said "Follower moving to the leader pose…" for the whole replay).
+- **Record end card** says "N episodes saved in dataset <name>"; the folder on this computer is
+  behind "Where is it on this computer?" with Copy path, and the card wraps properly at 390 px.
+- Motor health tables fit beside Robot 3D on the Robot page at 1280 px; "1 episode" (was
+  "1 episodes"); a draft trajectory says why Play is disabled (save the take first); Vietnamese
+  says "Hiệu chỉnh" everywhere (was "Hiệu chuẩn" in a few places).
+- **A recording that kept no episode says so.** An e-stop in episode 1, or Stop during the
+  countdown, ended with "0 episodes saved" and an Upload button for a dataset that did not exist.
+  The card now says "No episode was saved.", why (for example "Episode 1 was stopped (e-stop
+  pressed), so it was not kept."), that the new dataset was not created, and offers Record again
+  only. An e-stop in a later episode adds that line under "N episodes saved". The page of a
+  dataset that no longer exists says so plainly.
+- **The Docker route installs this release.** `install.sh`, the README image table,
+  `deploy/.env.example`, `docs/deploy.md` and the systemd unit comment still named 0.2.1.
+- **No raw words on screen.** The Sessions page showed keys such as `session.kind_program` and
+  the English "stopped" in Vietnamese; the Cameras page showed "held · None" for a camera in use;
+  some job phases, model compatibility problems and a motor fault bit showed their internal names.
+- **A finished program run keeps its time** (it kept counting: "360.7 s" for a 3.3 s run).
+- Wording: the Vietnamese leader tooltip reads naturally; "2 cameras", "1 episode · 2 alerts"
+  (was "camera(s)", "episode(s)", "alert(s)").
+- **No English server text under a translated banner.** The dead-man stop printed "no heartbeat
+  from the UI for 1.0 s" under the Vietnamese banner and on the locked steps. Station's own lines
+  (dead-man stop, hot motor, motor fault bits, low voltage, missing or refused calibration) now read
+  in your language; any other server line (an error's detail, an OS error, a program fault) sits
+  behind a closed "Technical details" / "Chi tiết kỹ thuật".
+- **No console 404 after a recording that kept no episode** (the page asked again for the dataset
+  Station had just removed).
+- **Sizes in MB / GB.** The Record form said "0.00 GiB in total" for a short recording; it now says
+  "about 3 MB in total". Dataset, model and upload sizes use decimal kB / MB / GB, and decimals
+  follow the language ("1,5" in Vietnamese).
+- **The Docker image's demo mode starts.** `--mock` in the image (HIBISCUS_STATION_HOME=/data) tried
+  to create /data-demo, which the container user cannot, so the container never became healthy. With
+  an explicit home the demo now lives in `<home>/demo`, and `hibiscus-station health` finds it.
+- Counts: "1 step" in a program run, "1 sample" in a trajectory take, "1 frame" (were "1 steps",
+  "1 samples", "1 frames"); speed hints read "°/s".
+- **The red "Motor critical" banner goes away after the reset.** After a temperature stop, once the
+  motor had cooled and you pressed "I'm clear, reset", the banner stayed on the open page (even
+  while the arm moved again) until a reload, and in Vietnamese it said "about 0 s until cool
+  enough". Every alert Station removes (reset, disconnect, unplugged USB) now leaves every open
+  page at once; a page that reconnects starts from Station's current alerts; the countdown is
+  hidden once the motor is cool. A motor warning from before an unplug no longer stays after the
+  reconnect. Deleting the loaded model and pairing or unpairing also update other open pages.
+- Vietnamese: "Hãy đặt lại nút dừng khẩn cấp trước." (was "reset"), "bộ dữ liệu" (was "dataset"),
+  "điều khiển tay" (was "teleop"), "tệp", "mô-men"; the Calibrate step is "Kiểm tra hai tay".
+
+### Changed
+- **Stop holds the arm where it is (CR-1).** Pressing Stop in teleop, record, replay, run model,
+  programs, trajectories or Return Home keeps the arm exactly in place with torque on: no further
+  motion, no parking and no relax (even if the robot profile relaxes at the end of a session). You
+  then choose **Return Home** (slow, Space stops it) or **Relax** (Station asks you to support the
+  arm first). After your own e-stop the e-stop panel offers Return Home directly. Temperature or
+  electrical safe stops and an unplugged USB keep their safe behaviour. A second Space within 2 s
+  still relaxes at once and the screen says "Support the arm".
+- **"Rest pose" is now "Home" (CR-2)** in English and Vietnamese. **Set Home at current position**
+  and **Return Home** are in the top bar and under every Robot 3D panel (and on the Robot page);
+  the Calibrate page asks you to set Home when you finish; a program block that needs Home
+  (relax arm, go Home) shows **Set Home now** right in the list of problems. The calibration step
+  that used to be called "Set home" (the middle of each joint) is now **Set middle**, so the two
+  never mix. Saved profiles keep working (the stored field is still `rest_pose`).
+- `GET /programs/{id}/state` answers `null` (200) for a program that has not run since the Station
+  started (was 404, which browsers log as an error on every Programs tab load); 404 now means no
+  such program.
+- Programs: **relax arm** and **go Home** still need a Home. Relax first parks at Home so the arm
+  never drops from a raised pose with nobody holding it; with no Home the program cannot start
+  until you press "Set Home now" (one click). The Relax buttons outside programs always ask you to
+  support the arm.
+
+### Known issues (also in 0.2.8; waived by the customer for this hotfix, fixed in 1.0)
+These four on-screen messages are wrong or out of date in 0.2.8 as well; 0.2.9 does not add them.
+The robot itself always stops safely. Waived by the customer on 2026-11-17 (QC-0.2.9-r5,
+QD-24 to QD-27).
+- **QD-24:** during an over-temperature stop, the arm first moves back toward Home for about two
+  seconds with torque on, but the red banner already says "Robot stopped, torque off" and "The arm
+  is held in place". Keep clear of the arm until it is still.
+- **QD-25:** after a hot motor has cooled down, the page still says it is at the old temperature
+  (for example 66 °C) and "Let it cool down" until you press "I'm clear, reset". The reset works as
+  soon as the motor is cool; the message does not tell you so.
+- **QD-26:** after Disconnect or an unplugged USB cable, the open page keeps showing the last motor
+  temperatures (and, after an unplug, the last FPS) as if they were live. Reload the page to see
+  the real state.
+- **QD-27:** while the robot is disconnected, Teleop says "No camera configured." and the Record
+  estimate says "with 0 cameras" even though the profile has cameras. Connect the robot and the
+  right numbers come back.
 
 ## [0.2.8] - 2026-11-16
 
@@ -446,7 +665,9 @@ same install smoke test. The Docker deploy stays Linux only.
   per-motor temperature / voltage / current / load telemetry, thermal auto-stop, a dead-man switch
   and a keyboard e-stop. Mock hardware for demos and CI; a hardware acceptance checklist.
 
-[Unreleased]: https://github.com/Bigkatoan/hibiscus-station/compare/v0.2.8...HEAD
+[Unreleased]: https://github.com/Bigkatoan/hibiscus-station/compare/v0.2.10...HEAD
+[0.2.10]: https://github.com/Bigkatoan/hibiscus-station/compare/v0.2.9...v0.2.10
+[0.2.9]: https://github.com/Bigkatoan/hibiscus-station/compare/v0.2.8...v0.2.9
 [0.2.8]: https://github.com/Bigkatoan/hibiscus-station/compare/v0.2.7...v0.2.8
 [0.2.7]: https://github.com/Bigkatoan/hibiscus-station/compare/v0.2.6...v0.2.7
 [0.2.6]: https://github.com/Bigkatoan/hibiscus-station/compare/v0.2.5...v0.2.6

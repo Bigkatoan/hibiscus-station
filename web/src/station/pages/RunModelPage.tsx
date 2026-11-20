@@ -579,8 +579,10 @@ function RunSummary({ summary, onClose }: { summary: Summary; onClose: () => voi
         <p>
           {t("run.summary_line", {
             duration: formatClock(summary.duration),
-            episodes: summary.session.episode.saved || summary.session.episode.index,
-            alerts: summary.alerts,
+            episodes: t("run.summary_episodes", {
+              count: summary.session.episode.saved || summary.session.episode.index,
+            }),
+            alerts: t("run.summary_alerts", { count: summary.alerts }),
           })}
         </p>
         {peaks.length ? (

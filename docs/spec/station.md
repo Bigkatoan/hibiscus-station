@@ -261,9 +261,21 @@ disconnected ──connect──▶ connecting ──ok──▶ idle ◀──�
 * At most one motion session at a time. A `start_*` outside `idle` returns `409 busy`, with the
   current state.
 * Leaving any motion state goes through `stopping`, which cannot be interrupted, with a 10 s
-  deadline. After it the follower is "held" (torque on, goal = present position), unless the
-  profile sets `on_session_end: relax`. That setting relaxes the arm after parking at `rest_pose`.
-  A relax without a rest pose asks for confirmation in the UI.
+  deadline. It never waits for a video encoder: a record session saves its last episode inside the
+  session (phase `saving`, the loop keeps running), and an episode still buffered when an e-stop or
+  an error ends the session is saved and the dataset finalized on a background thread; the next
+  session on that dataset waits for it (0.2.9).
+* **User Stop = hold (CR-1, 0.2.9).** `control: stop` (the Stop button, Esc while recording,
+  `POST /sessions/current/control`, a program or trajectory Stop) in any motion session writes
+  `Goal_Position := Present_Position` within the command, torque stays as it is, and the session
+  sends no further goal (a record session still saves its episode). The arm never parks and never
+  relaxes after a user Stop, whatever `on_session_end` says; `Status.interrupted` becomes true and
+  the UI offers **Return Home** (`POST /robots/rest`, slow, dead-man on, cancellable) and **Relax**
+  (asks to support the arm first). A session that ends by itself (completed) is held, unless the
+  profile sets `on_session_end: relax`, which parks at Home (`rest_pose`) and then relaxes.
+  Thermal / electrical safe stops and a lost device keep their own sequence (§4.7).
+* **Home (CR-2, 0.2.9)** is the UI name of the profile's `follower.rest_pose` (the stored field
+  keeps its name). A relax without a Home asks for confirmation in the UI.
 * A bus failure (`ConnectionError` 3 ticks in a row) causes `error`. Station tries
   `disable_torque` as a best effort and closes the port.
 
@@ -409,7 +421,8 @@ Defaults (all configurable globally in `settings.yaml`, and per robot profile):
 | Calibrated range clamp | on | Goals are clamped into `[range_min, range_max]` of the calibration (normalised). |
 | Smooth approach | 1.5 s | Teleop start: follower to leader pose. Run start: no move (the policy starts from the current pose), but the cap applies from tick 1. |
 | Episode time limit | record 30 s, run 30 s (max 600 s) | Enforced by the owner, not the UI. |
-| E-stop | Space key, on-screen button, `POST /estop`, WS `{"type":"estop"}` | **Freeze**: within the current tick, no more goals, `Goal_Position := Present_Position`, torque stays on (the arm does not fall), and the state latches to `estopped`. **Second press within 2 s, or the "Relax" button: torque off.** Reset with `POST /estop/reset` (UI button "I'm clear, reset"). |
+| E-stop | Space key, on-screen button, `POST /estop`, WS `{"type":"estop"}` | **Freeze**: within the current tick, no more goals, `Goal_Position := Present_Position`, torque stays on (the arm does not fall), and the state latches to `estopped`. **Second press within 2 s: torque off ("Support the arm" is shown); the "Relax" button asks to support the arm first.** Reset with `POST /estop/reset` (UI button "I'm clear, reset"); after a user stop the UI also offers "Return Home" (reset, then the slow move). |
+| Stop (CR-1) | Stop button, Esc while recording, `POST /sessions/current/control {"action":"stop"}`, program / trajectory Stop | **Hold** where the arm is: `Goal_Position := Present_Position` in the command, torque as it is, no further goal; never parks, never relaxes. Then "Return Home" / "Relax" (support the arm first). |
 | Dead-man heartbeat | `inferring` and `replaying`: on; `teleop`/`recording`: off (a human holds the leader) | The UI sends `{"type":"heartbeat"}` every 250 ms on the control WS. No heartbeat from any client for 1.0 s → e-stop (`reason=ui_lost`). Covers a closed tab, a crashed browser, a laptop lid. |
 | Thermal/electrical | §4.5.3 | |
 | Loop overrun | warn when p95 tick time > 1.2 T over 2 s | In `inferring`, if inference alone is above 2 T for 5 s, the session pauses with "model too slow for N fps on this machine (CPU)". Suggests a lower fps or a CUDA device. |
@@ -553,7 +566,7 @@ Defaults (all configurable globally in `settings.yaml`, and per robot profile):
 | `DELETE /robots/{id}` | → 204 | does not delete calibration files |
 | `POST /robots/{id}/connect` | `{}` → `Status` | `disconnected → connecting → idle` |
 | `POST /robots/disconnect` | `{relax?: bool}` → `Status` | |
-| `POST /robots/torque` | `{arm: "follower", enabled: bool}` → `Status` | idle/estopped only; `enabled:false` needs `confirm: true` without a rest pose |
+| `POST /robots/torque` | `{arm: "follower", enabled: bool}` → `Status` | idle/estopped only; `enabled:false` needs `confirm: true` without a Home (`rest_pose`) |
 | **Calibration** | | |
 | `GET /calibrations` | → `{files: CalibrationFile[]}` | scans lerobot's `HF_LEROBOT_CALIBRATION` for `so_follower`, `so_leader` |
 | `POST /calibration/start` | `{arm: "follower"\|"leader", id: string, keep_existing?: bool}` → `Status` | `keep_existing`: writes the existing file to the motors and returns to idle (the UI form of `_keep_calibration_file`, `robots/robot.py:186-201`) |
@@ -593,7 +606,7 @@ Defaults (all configurable globally in `settings.yaml`, and per robot profile):
 | `GET /server/datasets` | → `{datasets: {id, name, latest_version}[]}` | proxy, used to pick an upload target |
 | `GET /server/models` | → `{models: {id, name, status, policy_type, size_bytes, created_at}[]}` | proxy, `status=ready` first |
 | `GET /server/runs` | `?dataset_id=` → `{runs: {id, number, status, policy_type, progress, model_id, url}[], new_run_url}` | proxy, needs `runs:read` (otherwise 409 `not_paired`, with `params.missing_scope`). `progress` is 0..1 (`current_step / total_steps`), `model_id` the model built from the final checkpoint (for "Pull & run") |
-| `POST /robots/rest-pose` | `{}` → `{rest_pose}` | stores the current follower pose as the rest pose |
+| `POST /robots/rest-pose` | `{}` → `{rest_pose}` | "Set Home at current position": stores the current follower pose as Home (`rest_pose`) |
 | `POST /mock/inject` | `{port, motor?, temp_c?, clear_temp?}` → `{ok}` | **`--mock` only**, not in `openapi.json`: fault injection for demos and the e2e UI test |
 | **WebSocket** | | |
 | `GET /ws` (upgrade, i.e. `/api/v1/ws`) | control/event stream §5.3 | cookie, `Authorization: Bearer`, or subprotocols `hst.v1, bearer.<token>`; Host and Origin checked |
@@ -783,8 +796,13 @@ WCAG AA as in `docs/ux/pixel-style.md`.
 * **E-stop** (`EStopButton`): a 96×96 red pixel button, fixed bottom-right on every screen while
   `state ∈ {teleop, recording, replaying, inferring, calibrating}`. Space triggers it from anywhere
   (it never scrolls the page; it is ignored only while focus is in a text input, where Esc does the
-  same). A second press, or the "Relax" button that appears, turns torque off. In `estopped`, the
-  button becomes "Reset" (green) with the reason.
+  same). A second press within 2 s turns torque off at once and the dock says "Support the arm"
+  (D-6); the "Relax" button asks to support the arm first. In `estopped`, the button becomes
+  "Reset" (green) with the reason, and after a user stop (not thermal / electrical) "Return Home"
+  resets the latch and moves Home (CR-1).
+* **Home** (CR-2): "Set Home at current position" and "Return Home" in the top bar and under every
+  Robot 3D panel, each disabled with its reason; after calibration the Calibrate page asks to set
+  Home; a program issue `no_rest_pose` carries "Set Home now" in place.
 * **Banners:** critical (red, full width, cannot be dismissed until it clears), hot (orange),
   info. Hibi speech bubble on the right for warnings (`HibiAlert`), with the joint name and value.
 * **Health drawer** (`MotorHealthPanel` large): for each arm, a table motor × {temp, V, A, load,
@@ -810,8 +828,8 @@ Pairing can be skipped and done later from Settings.
   "Another program (LeLab? lerobot?) is using this port".
 * Once connected: a live **joint table** (positions) and the **MotorHealthPanel**, compact, for each
   arm. This is the first place the user sees temperatures (R1).
-* Rest pose: "Use current follower pose as rest pose" (saved in the profile; used for parking and
-  safe stop).
+* Home: "Set Home at current position" (saved in the profile as `follower.rest_pose`; used by
+  Return Home, parking and safe stop).
 
 ### 6.3 Calibrate
 * Per arm (Follower | Leader tabs): the existing calibration file for `calibration_id`, if any
@@ -856,6 +874,22 @@ then joints. Start runs a 1.5 s smooth approach with the overlay "Follower movin
     the sidecar.
 * At the end: "20 episodes saved in `~/.hibiscus/station/datasets/picknplace_red`" → **Upload**
   (primary) or **Record more**.
+* **A session that kept no episode** (QC 0.2.9 QD-12): an e-stop (or a fault: thermal stop,
+  UI lost, camera lost, USB device lost) in the middle of an episode drops that episode, because
+  its last frames were taken while the arm was being stopped. A Stop in the countdown records
+  nothing. When no episode was saved:
+  * a **new** dataset is **removed** (`finalize()` deletes the empty folder and its sidecar). An
+    empty LeRobot dataset holds no data, would block the same name with `dataset_exists`, and
+    could only be deleted by hand; removing it loses nothing recorded. An **appended** dataset
+    keeps its earlier episodes unchanged;
+  * the session summary says so: `saved: 0`, `discarded` counts the dropped episode,
+    `dropped_in_progress: true|false`, `dataset_kept: true|false`;
+  * the end card says plainly "No episode was saved." and why ("Episode 1 was stopped (e-stop
+    pressed), so it was not kept." / "You stopped before the first episode was recorded."), and
+    whether the dataset was not created or is unchanged. It offers **Record again**, never
+    **Upload**. When earlier episodes were saved, the normal card adds the line about the dropped
+    one;
+  * the page of a dataset that no longer exists says so, with no numbers, Delete or Upload.
 
 ### 6.7 Upload (and Datasets)
 * The Datasets list (local): name, episodes, frames, fps, cameras, size, finalized ✓, uploaded ✓

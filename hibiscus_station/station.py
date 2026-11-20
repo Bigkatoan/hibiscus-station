@@ -28,7 +28,7 @@ from hibiscus_station.programs.hub import ProgramsHub
 from hibiscus_station.remote import ServerLink, pull_model, upload_dataset
 from hibiscus_station.sessions.base import MotionSession
 from hibiscus_station.sessions.record import RecordSession
-from hibiscus_station.sessions.recorder import DatasetRecorder, check_name
+from hibiscus_station.sessions.recorder import DatasetRecorder, check_name, unreadable_error, wait_closed
 from hibiscus_station.sessions.replay import ReplaySession, load_episode_actions
 from hibiscus_station.sessions.rest import RestSession
 from hibiscus_station.sessions.run import RunSession
@@ -210,14 +210,27 @@ class Station:
         return self.profiles.put(profile)
 
     def delete_robot(self, robot_id: str) -> None:
+        """Remove the profile from robots.yaml only: calibration files, datasets, models and
+        sessions stay (D-26). Refused while the robot is in use: connected, connecting, in a
+        session or waiting for a lost USB adapter (its profile is what reconnect uses)."""
+        o = self.owner
         if (
-            self.owner.profile is not None
-            and self.owner.profile.id == robot_id
-            and self.owner.follower is not None
+            o.profile is not None
+            and o.profile.id == robot_id
+            and (
+                o.follower is not None
+                or o.session is not None
+                or o.lost is not None
+                or o.state in ("connecting", "calibrating")
+            )
         ):
-            raise StationError("busy", "disconnect this robot first", params={"state": self.owner.state})
+            raise StationError(
+                "busy", "disconnect this robot first", params={"state": o.state, "robot": robot_id}
+            )
         if not self.profiles.delete(robot_id):
             raise StationError("not_found", f"no robot {robot_id}")
+        if not self.mock:
+            self._retire_demo_active()  # the next active profile is never a demo one on real arms
 
     def reconnect(
         self, timeout_s: float = 30.0, lister: Callable[[], list[dict[str, Any]]] | None = None
@@ -316,7 +329,7 @@ class Station:
         if not rest:
             raise StationError(
                 "validation_failed",
-                "this robot has no rest pose: set one on the Robot page first",
+                "this robot has no Home: set Home at the current position first",
                 params={"code": "no_rest_pose"},
             )
         target = {k: float(v) for k, v in rest.items()}
@@ -332,6 +345,8 @@ class Station:
     def start_record(self, req: RecordRequest) -> dict[str, Any]:
         profile = self._profile()
         check_name(req.dataset)
+        # the previous session may still be saving its last episode in the background
+        wait_closed(self.paths.datasets / req.dataset, timeout=15.0)
 
         def build(owner: HardwareOwner) -> MotionSession:
             rec = DatasetRecorder(
@@ -374,7 +389,13 @@ class Station:
     def start_replay(self, req: ReplayRequest) -> dict[str, Any]:
         self._profile()
         check_name(req.dataset)
-        fps, actions = load_episode_actions(self.paths.datasets / req.dataset, req.episode)
+        try:
+            fps, actions = load_episode_actions(self.paths.datasets / req.dataset, req.episode)
+        except StationError:
+            raise
+        except Exception as exc:  # any damage the checks missed: a dataset error, never a 500 (QH-8)
+            log.exception("replay of %s episode %d", req.dataset, req.episode)
+            raise unreadable_error(req.dataset, f"{type(exc).__name__}: {exc}"[:300]) from exc
 
         def build(owner: HardwareOwner) -> MotionSession:
             s = ReplaySession(
@@ -587,8 +608,25 @@ class Station:
                 raise StationError("busy", "this model is running")
             self.loaded = None
             self.owner.loaded_model = None
+            self.announce_status()  # every open page drops "Loaded: <key>" (QD-23 class sweep)
         if not self.registry.remove(key):
             raise StationError("not_found", f"no model {key}")
+
+    def pair_server(self, url: str, token: str, workspace_id: str | None = None) -> dict[str, Any]:
+        view = self.server.pair(url, token, workspace_id)
+        self.announce_status()
+        return view
+
+    def unpair_server(self) -> None:
+        self.server.unpair()
+        self.announce_status()
+
+    def announce_status(self) -> None:
+        """Send the status to every open page after a change made outside the owner's commands.
+
+        The UI never polls the status: it keeps the last ``state`` message, so a change without
+        one stays wrong on screen until a reload (QC 0.2.9 QD-23)."""
+        self.owner.emit("state", self.status())
 
 
 def demo_profile() -> RobotProfile:

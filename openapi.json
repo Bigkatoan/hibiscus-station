@@ -3641,6 +3641,16 @@
             "title": "Max Temp C",
             "type": "object"
           },
+          "state": {
+            "description": "saving: being encoded and written now; unreadable: counted by the dataset but its episode metadata was never written (the Station closed before the dataset was finalized)",
+            "enum": [
+              "saved",
+              "saving",
+              "unreadable"
+            ],
+            "title": "State",
+            "type": "string"
+          },
           "tasks": {
             "anyOf": [
               {
@@ -3662,6 +3672,7 @@
         },
         "required": [
           "index",
+          "state",
           "frames",
           "length_s",
           "tasks",
@@ -16164,7 +16175,7 @@
     },
     "/api/v1/programs/{program_id}/state": {
       "get": {
-        "description": "The running (or last ended) run of this program; 404 when it never ran this launch.",
+        "description": "The running (or last ended) run of this program; ``null`` when it has not run since\nthe Station started; 404 when there is no such program.",
         "operationId": "program_state_api_v1_programs__program_id__state_get",
         "parameters": [
           {
@@ -16183,7 +16194,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProgramState"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ProgramState"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Program State Api V1 Programs  Program Id  State Get"
                 }
               }
             },
@@ -16380,7 +16399,7 @@
     },
     "/api/v1/robots/rest": {
       "post": {
-        "description": "idle \u2192 playing (session kind ``rest``): move the follower to its rest pose, minimum jerk at\na capped peak speed, dead-man heartbeat on; ``POST /sessions/current/control {\"action\": \"stop\"}``\ncancels it. Offered after an interrupted motion (``Status.interrupted``).",
+        "description": "Return Home. idle \u2192 playing (session kind ``rest``): move the follower to its Home (the\nprofile's ``follower.rest_pose``), minimum jerk at a capped peak speed, dead-man heartbeat on;\n``POST /sessions/current/control {\"action\": \"stop\"}`` cancels it (the arm holds where it is).\nOffered after a Stop or an interrupted motion (``Status.interrupted``).",
         "operationId": "go_rest_api_v1_robots_rest_post",
         "responses": {
           "200": {
@@ -16412,6 +16431,7 @@
     },
     "/api/v1/robots/rest-pose": {
       "post": {
+        "description": "Set Home at current position: the follower's present pose becomes the profile's Home\n(stored as ``follower.rest_pose``). idle only, follower calibrated.",
         "operationId": "rest_pose_api_v1_robots_rest_pose_post",
         "responses": {
           "200": {

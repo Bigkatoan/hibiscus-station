@@ -83,7 +83,7 @@ def _table(lang: str) -> dict[str, str]:
 
 
 class UI:
-    """The UI strings of one language. ``t("calibrate.start")``; ``t("record.done", n=2)``."""
+    """The UI strings of one language. ``t("calibrate.start")``; ``t("record.done_other", count=2, name="d")``."""
 
     def __init__(self, lang: str) -> None:
         self.lang = lang
@@ -307,10 +307,46 @@ class Driver:
             bypass_csp=True,  # axe-core is injected as an inline script; the app's own CSP is unchanged
             storage_state=storage_state,
         )
-        self.page = self.ctx.new_page()
         self.errors: list[str] = []
-        self.page.on("pageerror", lambda e: self.errors.append(str(e)))
+        #: console errors and HTTP error answers the page did not expect (QC 0.2.9 QD-18: a 404
+        #: after a session that kept no episode); checked by ``no_errors``
+        self.problems: list[str] = []
+        #: HTTP refusals a test provokes on purpose: (url suffix, status)
+        self.expected: list[tuple[str, int]] = []
+        self.page = self.watch(self.ctx.new_page())
         station.bind_api(self.api)
+
+    # ------------------------------------------------------------------ console-error guard
+    def watch(self, page: Any) -> Any:
+        """Every page of the run reports into ``errors`` (uncaught) and ``problems`` (console, HTTP)."""
+        page.on("pageerror", lambda e: self.errors.append(str(e)))
+        page.on("console", self._on_console)
+        page.on("response", self._on_response)
+        return page
+
+    def _on_console(self, msg: Any) -> None:
+        # a refused request is judged by its response below (Chromium also logs it as "Failed to
+        # load resource"; other browsers do not)
+        if msg.type == "error" and not msg.text.startswith("Failed to load resource"):
+            url = str((msg.location or {}).get("url") or "")
+            self.problems.append(f"console error: {msg.text} ({url})")
+
+    def _on_response(self, r: Any) -> None:
+        if r.status >= 400 and not any(r.url.endswith(u) and r.status == st for u, st in self.expected):
+            self.problems.append(f"HTTP {r.status} {r.request.method} {r.url}")
+
+    def no_errors(self, where: str) -> None:
+        found = self.errors + self.problems
+        assert not found, f"{where}: " + "; ".join(found)
+
+    def new_page(self, lang: str | None = None) -> Any:
+        """Close the page and open a new one (watched), in ``lang`` when given (stored preference)."""
+        if not self.page.is_closed():
+            self.page.close()
+        self.page = self.watch(self.ctx.new_page())
+        if lang is not None:
+            self.page.add_init_script(f"window.localStorage.setItem('hibiscus.lang', '{lang}')")
+        return self.page
 
     def t(self, key: str, **values: object) -> str:
         return self.ui.t(key, **values)
@@ -387,6 +423,8 @@ class Driver:
         sweeps again afterwards, so the follower visibly follows it.
         """
         self.station.leader_follows()
+        refusal = (f"/api/v1{endpoint}", 409)  # leader_far: the console-error guard allows it
+        self.expected.append(refusal)
         try:
             for _ in range(20):
                 with self.page.expect_response(lambda r: r.url.endswith(endpoint)) as resp:
@@ -397,6 +435,7 @@ class Driver:
                 time.sleep(0.5)
             raise AssertionError(f"{key}: the leader never came close to the follower")
         finally:
+            self.expected.remove(refusal)
             self.station.leader_sweeps()
 
     # ------------------------------------------------------------------ API-only setup (screen matrix)

@@ -12,6 +12,7 @@ import { DEFAULT_THRESHOLDS, coolingEtaS, levelCss } from "../health";
 import { useStation } from "../ws/StationProvider";
 import { DeviceLostBanner } from "./DeviceLost";
 import { RestBanner } from "./RestBanner";
+import { ServerDetail } from "./ServerText";
 import type { StationSnapshot } from "../ws/store";
 
 const THERMAL_REASONS = ["thermal", "electrical"];
@@ -79,6 +80,8 @@ export function SafetyBanners() {
   if (critical?.motor && critical.arm) {
     const h = tempHist[critical.arm as "follower" | "leader"]?.[critical.motor];
     if (h) eta = coolingEtaS(h.t, h.v, DEFAULT_THRESHOLDS.temp_hot_c);
+    // Already cool (0) is no countdown: "about 0 s" read as wrong (QC 0.2.9 QD-23).
+    if (eta !== null && eta <= 0) eta = null;
   }
 
   return (
@@ -109,7 +112,7 @@ export function SafetyBanners() {
                   })}
             </p>
             <p className="mt-1 text-sm">
-              {status?.robot?.follower_torque === false ? t("banner.support_arm") : t("banner.stopped_hold")}
+              {status?.robot?.follower_torque === true ? t("banner.stopped_hold") : t("banner.support_arm")}
             </p>
             {eta !== null ? <p className="mt-1 text-sm">{t("banner.cooling_eta", { s: eta })}</p> : null}
           </div>
@@ -135,7 +138,7 @@ export function SafetyBanners() {
                 reason: t(`reasons.${status.reason ?? "internal"}`, { defaultValue: status.reason ?? "" }),
               })}
             </p>
-            {status.detail ? <p className="mt-1 break-words font-mono text-xs">{status.detail}</p> : null}
+            <ServerDetail line={status.detail} className="mt-1" />
           </div>
         </div>
       ) : null}

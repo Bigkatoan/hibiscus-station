@@ -9,7 +9,7 @@ Two things it adds over LeLab:
 * **Motor health.** Every motor's temperature, voltage, current, load and alarm flags are shown on
   every screen that moves the robot. A motor that gets warm is shown in yellow (50 °C), hot in orange
   (60 °C: no new session can start), critical in red (65 °C twice in a row, or an overheat/overload
-  alarm). On critical, Station holds the arm, parks it at your rest pose if you saved one, and turns
+  alarm). On critical, Station holds the arm, parks it at Home if you set one, and turns
   the torque off before the servo's own 70 °C cutoff would drop it.
 * **Cameras while a model runs.** The Run-model screen shows every camera live, with the exact
   frames the model receives, next to the joint positions, the commanded actions, the motor
@@ -58,9 +58,10 @@ Close LeLab and any `lerobot-*` command first: only one program can use a serial
    only that arm and its port goes into that slot. Station reads each port's motor voltage (read
    only) and hints which arm it is: leaders usually run at ~5 V, followers at 7.4 V or 12 V. If the
    arms look mixed up, press "Swap follower ⇄ leader" (Station never swaps by itself). Connect. You now see the joint
-   positions and motor temperatures. Use "Use current follower pose as rest pose" once the arm is in
-   a safe folded pose: Station parks there before turning the torque off.
-2. **Calibrate.** For each arm: move every joint to the middle of its range, press *Set home*, then
+   positions and motor temperatures. Put the follower in a safe folded pose and press **Set Home at
+   current position** (top bar, Robot 3D panel or Robot page; the Calibrate page asks for it):
+   **Return Home** moves there slowly, and Station parks there before a safe stop turns the torque off.
+2. **Calibrate.** For each arm: move every joint to the middle of its range, press *Set middle*, then
    move each joint through its whole range and press *Finish*. Calibration files are stored where
    lerobot keeps them, so LeLab and `lerobot-*` commands can use them too. Existing files can be
    reused with *Use this calibration*.
@@ -75,7 +76,11 @@ Close LeLab and any `lerobot-*` command first: only one program can use a serial
 5. **Record.** Choose a dataset name, the task sentence, the number of episodes and their length.
    Keys: **→** next (save and continue), **←** re-record, **Esc** stop. An episode that reaches its
    time limit is saved (unlike LeLab, which silently re-records it); you can change that to
-   *discard*.
+   *discard*. **Stop** ends the episode at once: the page shows "Saving episode…" while it is written
+   (cameras stay live, the arm holds its position), then the end card. The **e-stop** (Space)
+   is different: it drops the episode in progress, because its last frames were taken while the
+   arm was being stopped. If no episode was saved at all, the end card says so and why, and a new
+   dataset with no episode is not kept (there is nothing to upload).
 6. **Upload.** Pair Station with your Hibiscus server once (server URL and a personal access token
    with `datasets:write` and `models:read`; add `runs:read` to see runs). Then upload the dataset as
    a new dataset or a new version. Uploads resume after a network loss.
@@ -134,9 +139,14 @@ folder).
 
 ## Safety
 
+* **Stop:** the Stop button of a screen (or **Esc** while recording) stops the motion and the arm
+  **holds where it is** (torque on, it never falls). Then choose **Return Home** (a slow move,
+  Space stops it) or **Relax** (Station asks you to support the arm first).
 * **E-stop:** the big red button or the **Space** key. First press: the arm freezes and keeps its
-  torque. Second press within 2 s (or *Relax*): torque off, so hold the arm. *I'm clear, reset*
-  returns to idle.
+  torque. Second press within 2 s: torque off, so support the arm (the screen says so). *Relax* asks
+  to support the arm first. *I'm clear, reset* returns to idle; after your own e-stop *Return Home*
+  resets and moves the arm Home. After a temperature or electrical stop, reset only once the motors
+  are safe.
 * While a model runs, the browser must stay open: if Station stops hearing from it for 1 s, the
   robot freezes.
 * Movements are limited per step (`max relative target`, 5 degrees by default).

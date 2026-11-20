@@ -110,6 +110,12 @@ both cases without a fault; an e-stop, a fault or a timeout is no pass.
 * Calibration changed since a trajectory was recorded → the trajectory is marked "needs check"
   and must be replayed once at 25 % speed and confirmed before programs can use it.
 * Speed above 100 % and `relax arm` inside loops need explicit confirmation in the editor.
+* `relax arm` and `go Home` need the robot's Home (`no_rest_pose`, an error). Decision 0.2.9
+  (CR-2): a program never relaxes without a Home, because `relax arm` first parks at Home and only
+  then turns torque off, so the arm never drops from a raised pose with nobody holding it. The
+  editor's problem list offers "Set Home now" in place and re-checks the program. Outside programs
+  every Relax button asks the operator to support the arm first.
+* A Stop of a program run holds the arm where it is (CR-1); "Return Home" / "Relax" follow.
 * Every run writes a log: program version, block trace, condition values, timings, faults
   (`runs/programs/<ts>.jsonl`), visible in the UI.
 

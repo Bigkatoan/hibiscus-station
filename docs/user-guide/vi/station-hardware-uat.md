@@ -51,10 +51,12 @@ và `telemetry.jsonl.gz`).
 | # | Kiểm tra | Cách làm | Kỳ vọng | Kết quả |
 |---|---|---|---|---|
 | 3.1 | E-stop đóng băng | Đang teleop thì bấm Space (hoặc nút đỏ); quay bằng điện thoại ở tốc độ khung hình cao | Tay robot đứng yên trong dưới 100 ms, vẫn giữ torque, không rơi | |
-| 3.2 | E-stop thả lỏng | Bấm Space lần nữa trong vòng 2 giây | Tắt torque (đỡ tay robot) | |
+| 3.2 | E-stop thả lỏng | Bấm Space lần nữa trong vòng 2 giây | Tắt torque; màn hình nhắc "Hãy đỡ tay robot" | |
+| 3.2a | Dừng là giữ (CR-1) | Teleop, ghi, một chương trình và một quỹ đạo: bấm Dừng của màn hình (Esc khi đang ghi) | Tay đứng yên đúng chỗ (không rơi, không đi); băng rôn mời Về Home và Thả lỏng; Thả lỏng hỏi đã đỡ tay chưa | |
+| 3.2b | Dừng khi ghi (báo lỗi 0.2.8) | Ghi episode 30 giây với hai camera, bấm Dừng ở khoảng giây 10 | Ngay lập tức: "Đang lưu tập 1…", đồng hồ dừng, camera vẫn chạy; rồi thẻ kết thúc; dataset dài ~10 giây | |
 | 3.3 | Reset | "Đã an toàn, reset" | Về trạng thái chờ | |
-| 3.4 | Dừng vì nhiệt | Cài đặt: hạ `temp_critical_c` xuống (nhiệt độ hiện tại + 1), giữ đúng quy tắc (hot ≤ critical − 3, warn ≤ hot − 5); teleop đến khi kích hoạt | Băng rôn đỏ, giữ tay, về tư thế nghỉ (nếu đã lưu), tắt torque, trạng thái `estopped (thermal)`; không cho reset khi còn động cơ nóng | |
-| 3.5 | Tư thế nghỉ | Màn hình Robot: "Dùng tư thế hiện tại làm tư thế nghỉ", rồi làm lại 3.4 | Tay robot về tư thế nghỉ trước khi tắt torque | |
+| 3.4 | Dừng vì nhiệt | Cài đặt: hạ `temp_critical_c` xuống (nhiệt độ hiện tại + 1), giữ đúng quy tắc (hot ≤ critical − 3, warn ≤ hot − 5); teleop đến khi kích hoạt | Băng rôn đỏ, giữ tay, về Home (nếu đã đặt), tắt torque, trạng thái `estopped (thermal)`; không cho reset khi còn động cơ nóng | |
+| 3.5 | Home | Thanh trên cùng: "Đặt Home tại vị trí hiện tại", rồi làm lại 3.4 | Tay robot về Home trước khi tắt torque | |
 | 3.6 | Dead-man | Đang chạy model thì đóng tab trình duyệt | Robot dừng trong khoảng 1 giây (`ui_lost`) | |
 | 3.7 | Giới hạn bước | Chạy model hoặc phát lại với max relative target 2.0 | Chuyển động chậm lại; khớp bị cắt được đánh dấu trong bảng khớp | |
 | 3.8 | Rút USB | Rút USB follower khi đang teleop | Trạng thái `error (bus_lost)`, không treo; kết nối lại được | |
@@ -100,8 +102,8 @@ trình mẫu "đỏ → A, xanh → B" theo hướng dẫn sử dụng.
 | 7.2 | Độ lệch điểm 0 trên Robot 3D | Đặt tay ở tư thế giữa lúc hiệu chỉnh (mọi khớp ở giữa hành trình) | Tay 3D cùng tư thế, lệch dưới khoảng 5° mỗi khớp; ghi độ lệch từng khớp: ______ | |
 | 7.3 | E-stop khi đang về điểm đầu | Phát lại A khi tay đang cách điểm đầu xa (> 30°); bấm Space khi tay đang di chuyển về điểm đầu | Tay dừng trong một nhịp; không còn lệnh vị trí nào được gửi sau khi bấm (quay video: tay không chuyển động lại cho tới khi Reset); trạng thái `estopped` | |
 | 7.4 | E-stop khi đang phát lại | Phát lại A ở 100 %; bấm Space giữa chừng | Như 7.3; lần chạy chương trình kết thúc với kết quả `estopped` | |
-| 7.5 | Quá nhiệt giữa chương trình | Hạ `temp_critical_c` như 3.4 rồi chạy chương trình trên robot đến khi kích hoạt | Chương trình dừng trong một nhịp, tay về tư thế nghỉ, rồi tắt torque; trạng thái `estopped (thermal)`; lần chạy kết thúc với kết quả `estopped` | |
-| 7.6 | Thả lỏng khi có tư thế nghỉ | Đã lưu tư thế nghỉ; sau một phiên bấm *Thả lỏng* (hoặc hồ sơ đặt `on_session_end: relax`) | Tay về tư thế nghỉ trước, rồi mới tắt torque; tay không rơi | |
+| 7.5 | Quá nhiệt giữa chương trình | Hạ `temp_critical_c` như 3.4 rồi chạy chương trình trên robot đến khi kích hoạt | Chương trình dừng trong một nhịp, tay về Home, rồi tắt torque; trạng thái `estopped (thermal)`; lần chạy kết thúc với kết quả `estopped` | |
+| 7.6 | Thả lỏng khi có Home | Đã đặt Home; sau một phiên bấm *Thả lỏng* (hoặc hồ sơ đặt `on_session_end: relax`) | Tay về Home trước, rồi mới tắt torque; tay không rơi | |
 | 7.7 | Chạy model khi rút camera | Đang chạy model, rút một camera mà policy dùng | Có cảnh báo; tạm dừng; sau `camera_lost_stop_s` (3 giây) phiên dừng (`camera_lost`), tay vẫn được giữ | |
 | 7.8 | Ghi lại quỹ đạo sau khi hiệu chỉnh lại | Hiệu chỉnh lại follower | A, B, tư thế và chương trình bị đánh dấu "cần kiểm tra"; không cho chạy trên robot đến khi ghi lại A, B hoặc xác nhận bằng một lần phát lại chậm | |
 | 7.9 | Chạy thử lại sau khi cắt quỹ đạo | Cắt bớt đầu hoặc cuối của A rồi lưu | Phiên bản chương trình đổi; "Chạy trên robot" bị từ chối đến khi chạy thử mới thành công | |
@@ -117,7 +119,7 @@ trình mẫu "đỏ → A, xanh → B" theo hướng dẫn sử dụng.
 | 8.2 | Tên cổng cố định | `hibiscus-station-ctl ports` | Mỗi bộ chuyển đổi có đường dẫn `/dev/serial/by-id/...`, và `/dev/hibiscus/arm-...` khi đã cài luật udev | |
 | 8.3 | Khởi động khi chưa cắm tay robot | Khởi động lại máy khi chưa cắm tay, cắm sau | Container vẫn chạy và healthy; cắm vào thì kết nối được | |
 | 8.4 | Tự khởi động | Khởi động lại máy, không đăng nhập | `hibiscus-station-ctl status` báo `healthy` trong 3 phút | |
-| 8.5 | Dừng an toàn khi tắt | Đang teleop thì chạy `hibiscus-station-ctl down` | Tay giữ yên, về tư thế nghỉ, tắt torque trước khi container dừng | |
+| 8.5 | Dừng an toàn khi tắt | Đang teleop thì chạy `hibiscus-station-ctl down` | Tay giữ yên, về Home, tắt torque trước khi container dừng | |
 | 8.6 | Cập nhật và quay lại | `hibiscus-station-ctl update <tag mới>`, rồi `rollback` | Có file sao lưu; tag mới healthy; quay lại tag cũ mà hiệu chỉnh, quỹ đạo, chương trình còn nguyên | |
 | 8.7 | Chế độ LAN | Đặt `STATION_BIND`, token và tên máy cho phép; mở link từ laptop | Mở được bằng tên đã khai báo; tên hoặc IP khác bị `403 forbidden_host` | |
 | 8.8 | Tốc độ model trên thiết bị | Chạy model ACT mẫu ở 30 fps | Ghi p50/p95 suy luận: ______ / ______ ms (CPU Pi 5: model lớn hơn ACT sẽ bị trễ nhịp) | |

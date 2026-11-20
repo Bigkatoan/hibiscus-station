@@ -1,6 +1,6 @@
 # Hibiscus Station as a systemd *user* service (the Python wheel install, without Docker).
 #
-#   uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.1/hibiscus_station-0.2.1-py3-none-any.whl
+#   uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v1.0.0a1/hibiscus_station-1.0.0a1-py3-none-any.whl
 #   install -Dm644 deploy/systemd/hibiscus-station.service ~/.config/systemd/user/hibiscus-station.service
 #   systemctl --user daemon-reload && systemctl --user enable --now hibiscus-station
 #   sudo loginctl enable-linger "$USER"        # start at boot, without a desktop login

@@ -781,7 +781,8 @@ export interface paths {
     };
     /**
      * Program State
-     * @description The running (or last ended) run of this program; 404 when it never ran this launch.
+     * @description The running (or last ended) run of this program; ``null`` when it has not run since
+     *     the Station started; 404 when there is no such program.
      */
     get: operations["program_state_api_v1_programs__program_id__state_get"];
     put?: never;
@@ -879,9 +880,10 @@ export interface paths {
     put?: never;
     /**
      * Go Rest
-     * @description idle → playing (session kind ``rest``): move the follower to its rest pose, minimum jerk at
-     *     a capped peak speed, dead-man heartbeat on; ``POST /sessions/current/control {"action": "stop"}``
-     *     cancels it. Offered after an interrupted motion (``Status.interrupted``).
+     * @description Return Home. idle → playing (session kind ``rest``): move the follower to its Home (the
+     *     profile's ``follower.rest_pose``), minimum jerk at a capped peak speed, dead-man heartbeat on;
+     *     ``POST /sessions/current/control {"action": "stop"}`` cancels it (the arm holds where it is).
+     *     Offered after a Stop or an interrupted motion (``Status.interrupted``).
      */
     post: operations["go_rest_api_v1_robots_rest_post"];
     delete?: never;
@@ -899,7 +901,11 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Rest Pose */
+    /**
+     * Rest Pose
+     * @description Set Home at current position: the follower's present pose becomes the profile's Home
+     *     (stored as ``follower.rest_pose``). idle only, follower calibrated.
+     */
     post: operations["rest_pose_api_v1_robots_rest_pose_post"];
     delete?: never;
     options?: never;
@@ -2865,6 +2871,12 @@ export interface components {
           [key: string]: number;
         };
       };
+      /**
+       * State
+       * @description saving: being encoded and written now; unreadable: counted by the dataset but its episode metadata was never written (the Station closed before the dataset was finalized)
+       * @enum {string}
+       */
+      state: "saved" | "saving" | "unreadable";
       /** Tasks */
       tasks: string[] | null;
       /** Telemetry Lines */
@@ -8732,7 +8744,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["ProgramState"];
+          "application/json": components["schemas"]["ProgramState"] | null;
         };
       };
       /** @description RFC 9457 problem (spec §5.1) */

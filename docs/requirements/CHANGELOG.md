@@ -204,3 +204,21 @@ bỏ cách chặn theo danh sách, thay bằng bảo đảm theo thiết kế. K
 * **QD-43** (Low): kiểm danh tính theo trường và kiểu, nhận thêm ngôn ngữ.
 * **QD-45** (Low, bảo mật): `http://` chỉ trong mạng nội bộ; máy chủ công khai → `server_url_insecure`.
 * Tài liệu: [FEATURES-APPROVED.md](FEATURES-APPROVED.md), [REGRESSION.md](REGRESSION.md), `docs/spec/station.md` §4.8.
+
+## Hotfix 0.2.10 gộp vào release/v1: D-2 done, D-26 mới (done) · v1.0 (không đổi phạm vi) · 2026-11-20
+
+**Nguồn:** báo cáo hiện trường của khách trên 0.2.9 (Windows, SO-101, 2026-11-19): "Tôi không xem được video và các
+tập đã ghi" (lỗi đã biết D-2); báo cáo 2026-11-20: hồ sơ robot trùng không xoá được (F-8 đã duyệt "tạo / sửa / xoá").
+Phát hành là hotfix `v0.2.10` (main `d8c5356`), QC [QC-0210-r1](qc/QC-0210-r1.md) – [r4](qc/QC-0210-r4.md): r4 PASS.
+
+* **D-2** (Medium, F-38, F-40) **done**: tập hiện ngay khi đã lưu, tập đang lưu "Đang lưu…", không còn 500 / trang
+  trắng; dataset bỏ dở hoặc không nhất quán: 409 `dataset_not_finalized` / `dataset_unreadable`, lỗi tệp 409
+  `dataset_io_error`, không đổi tệp nào; một bộ kiểm `meta/info.json` chung (`hibiscus_station/data/info.py`).
+* **D-26** (Medium, F-8, mới) **done**: xoá hồ sơ robot có xác nhận; giữ tệp hiệu chỉnh và dataset.
+* Hồi quy mới: REG-23 (trang Bộ dữ liệu trong / sau khi ghi), REG-24 (dataset bỏ dở khi Station đóng giữa phiên),
+  REG-25 (ghi thêm vào dataset có số đếm không khớp, QH-9), REG-26 (xoá hồ sơ).
+* Việc còn lại, Low, M1: QH-6, M1-4, M1-5, O-1 (xem [FEATURES-APPROVED.md](FEATURES-APPROVED.md)).
+* Gộp vào `release/v1` (nhánh `m1/merge-0210`): giữ hành vi của cả hai phía; phiên bản vẫn 1.0.0a1. Kèm hotfix 0.2.9
+  (chưa có trên `release/v1`). `dataset_unreadable`, `dataset_io_error` vào danh sách `SELF_EXPLAINING` (QD-44).
+* Tài liệu: [FEATURES-APPROVED.md](FEATURES-APPROVED.md) (F-8, F-38, F-40, D-2, D-26), [FEATURES.md](FEATURES.md) (D-26),
+  [REGRESSION.md](REGRESSION.md) (REG-23 – REG-26).

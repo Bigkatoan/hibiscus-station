@@ -72,7 +72,7 @@ describe("EStopButton (§4.7, §6.0)", () => {
     await waitFor(() => {
       expect(h.sim.state).toBe("estopped");
     });
-    expect(await screen.findByRole("button", { name: "Relax (torque off)" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Relax" })).toBeInTheDocument();
     fireEvent.keyDown(document.body, { key: " ", code: "Space" });
     await waitFor(() => {
       expect(h.sim.torque).toBe(false);

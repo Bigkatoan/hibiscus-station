@@ -12,6 +12,7 @@ import type { TrajectoryDetail } from "../api/types";
 import { sampleSeries, toUrdfPose, type JointSeries } from "./mapping";
 import { RobotTwin } from "./RobotTwin";
 import { useMediaQuery } from "./registry";
+import { fmtFixed } from "../units";
 
 /** The kept window [start, end] of a take in series seconds (drafts use the suggested trim). */
 export function keptWindow(
@@ -99,7 +100,7 @@ export function GhostPreview({ tr, className }: { tr: TrajectoryDetail; classNam
           }}
         />
         <span className="shrink-0 text-xs tabular-nums" data-testid="ghost-time">
-          {t("twin.time", { t: shown.toFixed(1), total: length.toFixed(1) })}
+          {t("twin.time", { t: fmtFixed(shown), total: fmtFixed(length) })}
         </span>
       </div>
     </RobotTwin>

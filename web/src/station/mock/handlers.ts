@@ -145,7 +145,11 @@ export function stationHandlers(sim: MockStation, base = `${window.location.orig
     http.delete(
       u("/robots/:id"),
       guard(({ params }) => {
-        sim.profiles = sim.profiles.filter((x) => x.id !== String(params.id));
+        const id = String(params.id);
+        if (sim.activeId === id && sim.state !== "disconnected")
+          throw new MockProblem(409, "busy", { state: sim.state, robot: id });
+        if (!sim.profiles.some((x) => x.id === id)) throw new MockProblem(404, "not_found");
+        sim.profiles = sim.profiles.filter((x) => x.id !== id);
         return undefined;
       }),
     ),
@@ -211,6 +215,10 @@ export function stationHandlers(sim: MockStation, base = `${window.location.orig
           snapshot_jpeg_b64: null,
         };
       }),
+    ),
+    http.post(
+      u("/robots/rest-pose"),
+      guard(() => sim.setRestPose()),
     ),
     http.post(
       u("/robots/rest"),

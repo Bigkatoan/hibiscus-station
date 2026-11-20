@@ -127,9 +127,42 @@ def test_estop_during_recording_finalizes_dataset(connected: Station) -> None:
     st.owner.press_estop("user")
     wait_for(lambda: st.owner.state == "estopped", 6)
     root = st.paths.datasets / "halt"
-    assert check_recording(root).complete
+    # the buffered episode is saved and the dataset finalized off the control loop (0.2.9)
+    wait_for(lambda: check_recording(root).complete, 20)
     assert catalog.summary(st.paths.datasets, "halt")["episodes"] == 1  # type: ignore[index]
     st.owner.call("estop_reset")
+
+
+def test_a_session_that_keeps_no_episode_says_so(connected: Station) -> None:
+    """QC 0.2.9 QD-12. An e-stop in episode 1 drops the episode in progress: the summary counts it
+    as discarded and says the new, empty dataset was removed (there is nothing to upload). A Stop in
+    the countdown records nothing and also leaves no dataset behind."""
+    st = connected
+    _record(st, dataset="halt0", num_episodes=2, episode_time_s=5.0, reset_time_s=1.0)
+    wait_for(lambda: _phase(st) == "episode" and st.owner.session.recorder.frames_in_episode > 3, 6)  # type: ignore[union-attr]
+    st.owner.press_estop("user")
+    wait_for(lambda: st.owner.state == "estopped" and st.owner.last_session_summary is not None, 6)
+    end = st.owner.last_session_summary
+    assert end is not None and end["outcome"] == "user"
+    assert end["summary"]["saved"] == 0 and end["summary"]["discarded"] == 1, end["summary"]
+    assert end["summary"]["dropped_in_progress"] is True
+    assert end["summary"]["dataset_kept"] is False
+    assert not (st.paths.datasets / "halt0").exists()
+    st.owner.call("estop_reset")
+
+    _record(st, dataset="halt1", num_episodes=1, countdown_s=5.0)
+    wait_for(lambda: _phase(st) == "countdown", 3)
+    st.owner.call("control", action="stop")
+    wait_for(
+        lambda: (
+            st.owner.state == "idle" and st.owner.last_session_summary["summary"].get("dataset") == "halt1"
+        ),
+        6,
+    )  # type: ignore[index]
+    end = st.owner.last_session_summary
+    assert end["outcome"] == "stopped"
+    assert end["summary"]["saved"] == 0 and end["summary"]["discarded"] == 0
+    assert end["summary"]["dropped_in_progress"] is False and end["summary"]["dataset_kept"] is False
 
 
 def test_camera_stale_pauses_then_stops_recording(connected: Station, events: Events) -> None:

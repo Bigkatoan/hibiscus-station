@@ -382,7 +382,7 @@ class ThermalGuard:
                                 "temperature",
                                 temp,
                                 immediate_torque_off=temp >= self.t.temp_critical_c + 5,
-                                detail=f"{arm} {motor} {temp:.0f} C",
+                                detail=f"{arm} {motor} {temp:.0f} °C",
                             )
                         )
             elif read.group == "status":

@@ -21,6 +21,7 @@ import { CameraTile } from "../../components/CameraGrid";
 import { StationError } from "../../components/StationError";
 import { isItemId, slugify } from "../../programs/blockly/serialize";
 import { useStatus } from "../../ws/StationProvider";
+import { fmtFixed } from "../../units";
 
 const enc = encodeURIComponent;
 
@@ -216,15 +217,15 @@ function ResultPanel({ result }: { result: DetectorResult }) {
       <Progress value={result.confidence * 100} aria-label={t("programs.det.confidence")} />
       <p className="text-sm tabular-nums">
         {t("programs.det.confidence_value", {
-          pct: (result.confidence * 100).toFixed(0),
-          ms: result.ms.toFixed(1),
+          pct: fmtFixed(result.confidence * 100, 0),
+          ms: fmtFixed(result.ms),
         })}
       </p>
       <ul className="flex flex-wrap gap-2 text-xs tabular-nums">
         {Object.entries(result.scores).map(([k, v]) => (
           <li key={k}>
             <Badge variant={k === result.label ? "success" : "outline"}>
-              {k} {(v * 100).toFixed(0)}%
+              {k} {fmtFixed(v * 100, 0)}%
             </Badge>
           </li>
         ))}

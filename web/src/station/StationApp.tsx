@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/lib/theme";
 import { CalibratePage } from "./pages/CalibratePage";
 import { CamerasPage } from "./pages/CamerasPage";
-import { DatasetDetailPage, DatasetsPage } from "./pages/DatasetsPage";
+import { DatasetDetailPage, DatasetsPage, DatasetsPageError } from "./pages/DatasetsPage";
 import { ProgramsPage } from "./pages/programs/ProgramsPage";
 import { ModelsPage, SessionsPage, SettingsPage, TrainPage, WelcomePage } from "./pages/OtherPages";
 import { RecordPage } from "./pages/RecordPage";
@@ -13,6 +13,7 @@ import { RobotPage } from "./pages/RobotPage";
 import { RunModelPage } from "./pages/RunModelPage";
 import { ReplayPage, TeleopPage } from "./pages/TeleopPage";
 import { StationShell } from "./StationShell";
+import { StationApiError } from "./api/client";
 import { LockGate } from "./components/LockGate";
 import { StationProvider, type StationRuntime } from "./ws/StationProvider";
 
@@ -63,9 +64,10 @@ export const stationRoutes: RouteObject[] = [
             <DatasetsPage />
           </LockGate>
         ),
+        errorElement: <DatasetsPageError />,
       },
-      { path: "datasets", element: <DatasetsPage /> },
-      { path: "datasets/:name", element: <DatasetDetailPage /> },
+      { path: "datasets", element: <DatasetsPage />, errorElement: <DatasetsPageError /> },
+      { path: "datasets/:name", element: <DatasetDetailPage />, errorElement: <DatasetsPageError /> },
       {
         path: "train",
         element: (
@@ -111,11 +113,17 @@ export function StationProviders({
   );
 }
 
+/** One retry for network and server errors; a 4xx answer (not found, refused) never changes on a retry. */
+export function retryOnce(failures: number, error: unknown): boolean {
+  if (error instanceof StationApiError && error.status >= 400 && error.status < 500) return false;
+  return failures < 1;
+}
+
 export function StationApp({ runtime }: { runtime: StationRuntime }) {
   const [client] = useState(
     () =>
       new QueryClient({
-        defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false, staleTime: 2000 } },
+        defaultOptions: { queries: { retry: retryOnce, refetchOnWindowFocus: false, staleTime: 2000 } },
       }),
   );
   const [router] = useState(() =>

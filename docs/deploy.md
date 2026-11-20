@@ -102,7 +102,7 @@ pairing (`server.json`, `hibiscus-cli/` with the access token), and the lerobot 
 `--full` adds datasets, models and session logs. Files are mode 0600 in a 0700 folder; treat them
 like a password because of the access token.
 
-**Update** (`update 0.3.0-cpu`, or `update` alone to re-pull the current tag, e.g. a floating
+**Update** (`update 1.0.0a1-cpu`, or `update` alone to re-pull the current tag, e.g. a floating
 `0.2-cpu`):
 
 1. backup as above;

@@ -11,6 +11,7 @@ import { api } from "../api/client";
 import { qk, useStationMutation } from "../api/hooks";
 import type { ReconnectResult, Status } from "../api/types";
 import { levelCss } from "../health";
+import { TechDetails } from "./ServerText";
 import { StationError } from "./StationError";
 
 export function DeviceLostBanner({ status }: { status: Status }) {
@@ -68,11 +69,7 @@ export function DeviceLostBanner({ status }: { status: Status }) {
         </p>
       ) : null}
       <StationError error={reconnect.error} />
-      {lost?.error ? (
-        <p className="break-words font-mono text-xs opacity-80">
-          {t("lost.os_said")} {lost.error}
-        </p>
-      ) : null}
+      <TechDetails raw={lost?.error} />
     </div>
   );
 }

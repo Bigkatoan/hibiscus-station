@@ -3,7 +3,11 @@
 Drives Chromium (Playwright) through the novice flow: connect → guided calibration (follower,
 leader, pose check) → cameras → teleop → over-temperature safe stop → record 2 episodes with the
 keyboard → the LeRobotDataset loads → import the ACT checkpoint → run it with every camera, joints,
-temperatures → Space e-stop → reset → Programs. Controls are found by their UI string keys, so
+temperatures → Space e-stop → reset → Programs, with the 0.2.9 checks: motor health fits beside
+Robot 3D at 1280 / 1440 px (QD-6), the record end card at 390 px (QD-11), an e-stop in episode 1
+keeps nothing (QD-18), the critical banner goes with the reset (QD-23) and the dead-man stop during
+a replay reads in words in both languages (QD-19). A guard fails the run on any uncaught page error,
+console error or HTTP error answer the flow did not provoke (QD-18). Controls are found by their UI string keys, so
 one flow runs as ``mock-en`` (thermal safe stop), ``mock-vi`` and ``sts-vi`` (Space e-stop, relax,
 reset; ``sts`` = the real serial stack against two STS3215 chains on pseudo-terminals, POSIX only,
 also marked ``slow``). Screenshots go to ``screenshots/e2e/`` (git-ignored;
@@ -23,7 +27,7 @@ from typing import Any
 
 import pytest
 
-from .e2e_support import ARMS, Driver, launch_station, wait_for
+from .e2e_support import ARMS, UI, Driver, launch_station, wait_for
 
 pytestmark = [pytest.mark.e2e, pytest.mark.timeout(900)]
 
@@ -129,7 +133,112 @@ def thermal_safe_stop(d: Driver) -> None:
     d.api("POST", "/mock/inject", {"port": "mock://follower", "clear_temp": True})
     d.button("estop.reset").click()
     d.wait_state("idle")
+    # QC 0.2.9 QD-23: the same open page drops the critical banner as soon as the reset is
+    # accepted (no reload), and what it shows matches a fresh GET /status.
+    expect(banner).to_have_count(0, timeout=3000)
+    assert not [a for a in d.status()["alerts"] if a["level"] == "critical"], d.status()["alerts"]
+    expect(page.get_by_role("alert").filter(has_text=re.compile(r"\b6[67] °C"))).to_have_count(0)
+    d.no_errors("thermal stop → cool → reset")
     d.api("POST", "/robots/torque", {"arm": "follower", "enabled": True})
+
+
+def motor_health_fits(d: Driver) -> None:
+    """QC 0.2.9 QD-6: with Robot 3D shown (the default) the motor health tables fit at 1280 / 1440."""
+    from playwright.sync_api import expect
+
+    page = d.page
+    expect(page.get_by_test_id("motor-leader-gripper")).to_be_visible(timeout=15000)
+    size = page.viewport_size
+    for width in (1280, 1440):
+        page.set_viewport_size({"width": width, "height": 1000})
+        page.wait_for_timeout(300)
+        overflow = page.evaluate(
+            """() => [...document.querySelectorAll('[data-testid="motor-health"] table')]
+                .map((t) => [t.parentElement.scrollWidth, t.parentElement.clientWidth])
+                .filter(([s, c]) => s > c + 1)"""
+        )
+        assert overflow == [], f"motor health scrolls sideways at {width} px: {overflow}"
+    if size:
+        page.set_viewport_size(size)
+
+
+def record_done_at_390(d: Driver, dataset_path: Path) -> None:
+    """QC 0.2.9 QD-11: at 390 px the end card's text wraps above the buttons (never a one-word column
+    under "Upload"), and the local path only shows on request."""
+    from playwright.sync_api import expect
+
+    page = d.page
+    done = page.get_by_test_id("record-done")
+    size = page.viewport_size
+    page.set_viewport_size({"width": 390, "height": 844})
+    page.wait_for_timeout(300)
+    card_box = done.bounding_box()
+    text_box = page.get_by_test_id("record-done-text").bounding_box()
+    up_box = done.get_by_role("link", name=d.ui.exact("record.upload")).bounding_box()
+    assert card_box and text_box and up_box
+    assert text_box["width"] >= 0.75 * card_box["width"], (card_box, text_box)  # a line of its own
+    assert up_box["y"] >= text_box["y"] + text_box["height"] - 1, (text_box, up_box)
+    expect(done.get_by_text(str(dataset_path))).to_be_hidden()
+    d.shot("08-record-done-390")
+    if size:
+        page.set_viewport_size(size)
+
+
+def estop_in_episode_1_keeps_nothing(d: Driver, phase: Any) -> None:
+    """QC 0.2.9 QD-18: an e-stop in episode 1 keeps no episode, offers no Upload and never asks
+    for the removed dataset (the guard sees any 404)."""
+    from playwright.sync_api import expect
+
+    page = d.page
+    d.go("/record")
+    page.get_by_label(re.compile("^" + re.escape(d.t("record.dataset")))).fill("e2e_estop_ep1")
+    page.get_by_label(re.compile("^" + re.escape(d.t("record.task")))).fill("Pick the red cube")
+    d.start_with_leader("record.start", "/sessions/record")
+    d.wait_state("recording")
+    d.focus_body()
+    wait_for(lambda: phase() == "episode", 20, "episode 1 of the e-stop run")
+    time.sleep(1.0)
+    page.keyboard.press("Space")
+    st = d.wait_state("estopped", timeout=10)
+    assert st["reason"] == "user"
+    none = page.get_by_test_id("record-none")
+    expect(none).to_be_visible(timeout=20000)
+    expect(none).to_contain_text(d.t("record.none_title"))
+    expect(none.get_by_role("link", name=d.ui.exact("record.upload"))).to_have_count(0)
+    page.wait_for_timeout(1500)  # a late refetch of the removed dataset would show up here
+    d.shot("09b-record-estop-episode-1")
+    d.no_errors("e-stop in episode 1")
+    d.button("estop.reset").first.click()
+    d.wait_state("idle")
+
+
+def deadman_stop_in_words(d: Driver, base: str) -> None:
+    """QC 0.2.9 QD-19: the page goes away mid-replay, the Station stops the robot by itself; the stop
+    reads in words in Vietnamese and in English, never as the server's "heartbeat" line."""
+    from playwright.sync_api import expect
+
+    d.api("POST", "/sessions/replay", {"dataset": DATASET, "episode": 0})
+    d.wait_state("replaying", timeout=20)
+    d.page.close()  # no heartbeat from the UI
+    st = d.wait_state("estopped", timeout=15)
+    assert st["reason"] == "ui_lost", st
+    d.no_errors("dead-man stop")
+    for lang in ("vi", "en"):
+        ui = UI(lang)
+        page = d.new_page(lang)
+        page.goto(f"{base}/teleop")
+        banner = page.get_by_test_id("state-banner")
+        expect(banner).to_contain_text(ui.t("banner.estopped", reason=ui.t("reasons.ui_lost")), timeout=15000)
+        sign = ui.t("server_text.ui_lost", s=1)
+        expect(banner).to_contain_text(sign)
+        expect(page.get_by_test_id("lock-gate")).to_contain_text(sign)
+        assert "heartbeat" not in page.locator("body").inner_text().lower()
+        d.shot(f"09c-deadman-{lang}")
+    d.new_page(d.ui.lang)
+    d.go("/teleop")
+    d.button("estop.reset").first.click()
+    d.wait_state("idle")
+    d.no_errors("after the dead-man stop")
 
 
 def estop_relax_reset(d: Driver) -> None:
@@ -144,6 +253,8 @@ def estop_relax_reset(d: Driver) -> None:
     dock = page.get_by_test_id("estop-dock")
     expect(dock).to_contain_text(d.t("estop.latched", reason=d.t("reasons.user")))
     d.button("estop.relax", dock).click()
+    # 0.2.9 (CR-1): Relax asks to support the arm first
+    d.button("relax.confirm_ok").click()
     wait_for(lambda: d.status()["robot"]["follower_torque"] is False, 15, "follower torque off")
     d.shot("06-estop-relaxed")
     d.button("estop.reset", dock).click()
@@ -201,6 +312,7 @@ def test_station_ui_end_to_end(
         d.wait_state("idle", timeout=60)
         expect(page.get_by_text(d.t("robot.connected"), exact=True).first).to_be_visible()
         d.shot("01-robot-connected", dark=True)
+        motor_health_fits(d)
 
         # ------------------------------------------------------------ 2. calibrate both arms
         calibrate_both_arms(d)
@@ -274,8 +386,9 @@ def test_station_ui_end_to_end(
         d.wait_state("idle", timeout=60)
         done = page.get_by_test_id("record-done")
         expect(done).to_be_visible(timeout=20000)
-        expect(done).to_contain_text(d.t("record.done", n=2))
+        expect(done).to_contain_text(d.t("record.done_other", count=2, name=DATASET))  # 0.2.9: real plurals
         d.shot("08-record-done")
+        record_done_at_390(d, station.home / "datasets" / DATASET)
 
         # ------------------------------------------------------------ 7. the dataset is a valid LeRobotDataset
         detail = d.api("GET", f"/datasets/{DATASET}")
@@ -293,6 +406,14 @@ def test_station_ui_end_to_end(
         d.go(f"/datasets/{DATASET}")
         expect(page.get_by_text("#2").first).to_be_visible()
         d.shot("09-dataset")
+        d.no_errors("golden path up to the dataset")
+
+        # ------------------------------------------------------------ 7b. e-stop in episode 1: nothing kept
+        estop_in_episode_1_keeps_nothing(d, phase)
+
+        # ------------------------------------------------------------ 7c. dead-man stop during a replay
+        deadman_stop_in_words(d, station.base)
+        page = d.page
 
         # ------------------------------------------------------------ 8. import the ACT checkpoint
         d.go("/run")
@@ -340,5 +461,5 @@ def test_station_ui_end_to_end(
         d.go("/programs")
         expect(page.get_by_role("heading", level=1)).to_contain_text(d.t("nav.programs"))
 
-        assert not d.errors, d.errors
+        d.no_errors("end of the run")
         d.close()

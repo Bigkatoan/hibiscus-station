@@ -214,14 +214,18 @@ class RunSession(MotionSession):
         return v
 
     def end(self, owner: HardwareOwner, reason: str) -> None:
-        if self.recorder is not None:
-            try:
-                if self.recorder.saving is not None:
-                    self.recorder.wait_saving()
-                elif reason in ("stopped", "completed") and self.recorder.frames_in_episode > 0:
-                    self.recorder.save_async()
-                    self.recorder.wait_saving()
-            finally:
-                self.recorder.finalize()
-            self.summary["dataset"] = self.recorder.name
+        rec = self.recorder
+        if rec is not None:
+            pending = rec.saving is None and reason in ("stopped", "completed") and rec.frames_in_episode > 0
+            if rec.saving is not None or pending:
+                # never encode in the owner thread (field report 0.2.9): finish in the background
+
+                def failed(exc: BaseException) -> None:
+                    owner.raise_alert("dataset", "critical", "record.save_failed", {"error": str(exc)[:200]})
+
+                rec.close_async(save_pending=pending, on_error=failed)
+                self.summary["finalizing"] = True
+            else:
+                rec.finalize()
+            self.summary["dataset"] = rec.name
         self.summary.update({"inferences": self.inferences, "episodes": self.episode.saved})

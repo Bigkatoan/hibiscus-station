@@ -60,6 +60,10 @@ import { encodeFrame } from "../ws/video";
 import * as fx from "./fixtures";
 import { MockPrograms } from "./programs";
 
+/** Replay: the approach to the first recorded pose, then the episode (the Station's phases). */
+const REPLAY_APPROACH_S = 1.5;
+const REPLAY_S = 30;
+
 export class MockProblem extends Error {
   constructor(
     readonly status: number,
@@ -155,7 +159,12 @@ interface SessionRt {
   rec?: RecordRequest;
   run?: RunRequest;
   countdown: number;
+  /** The operator pressed Stop: the session ends once the episode is saved. */
+  stopping?: boolean;
 }
+
+/** Simulated seconds to encode one episode after Stop. */
+const SAVE_S = 1;
 
 const tinyJpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
 
@@ -422,9 +431,14 @@ export class MockStation {
   }
 
   requireCool(): void {
+    // the Station's shape: {arm, motor, temp_c} per motor at or above "hot"
     const hot = Object.entries(this.levels)
       .filter(([, l]) => l === "hot" || l === "critical")
-      .map(([k]) => k.split(".")[1]);
+      .map(([k]) => {
+        const [arm = "follower", motor = ""] = k.split(".");
+        const temp = this.temps[arm as Arm][motor];
+        return { arm, motor, temp_c: temp === undefined ? null : Math.round(temp) };
+      });
     if (hot.length) throw new MockProblem(409, "motor_hot", { motors: hot });
   }
 
@@ -518,7 +532,19 @@ export class MockStation {
       t: Date.now() / 1000,
       detail,
     };
+    // As the Station: the closed bus's motor alerts can never clear later, so they go now.
+    this.dropAlerts((a) => a.arm !== null || a.camera !== null);
+    this.levels = {};
     this.setState("error", { reason: "device_lost", detail });
+  }
+
+  /** Remove alerts like the Station does: each with an `active: false` event (QC 0.2.9 QD-23). */
+  private dropAlerts(which: (a: AlertMsg) => boolean): void {
+    for (const [id, a] of [...this.alerts]) {
+      if (!which(a)) continue;
+      this.alerts.delete(id);
+      this.broadcast({ ...a, active: false });
+    }
   }
 
   reconnect(): ReconnectResult {
@@ -550,10 +576,23 @@ export class MockStation {
     if (this.session) throw new MockProblem(409, "busy", { state: this.state });
     this.activeId = null;
     this.torque = false;
-    this.alerts.clear();
+    this.dropAlerts(() => true);
     this.levels = {};
     this.setState("disconnected");
     return this.status();
+  }
+
+  /** POST /robots/rest-pose: the follower's present pose becomes the robot's Home (CR-2). */
+  setRestPose(): { rest_pose: Record<string, number> } {
+    if (this.state !== "idle") throw new MockProblem(409, "busy", { state: this.state });
+    const p = this.profile;
+    if (!p) throw new MockProblem(409, "not_connected", { state: this.state });
+    if (!this.calibrated.follower) throw new MockProblem(409, "not_calibrated", { arm: "follower" });
+    const pose = Object.fromEntries(
+      fx.MOTORS.map((m, i) => [`${m}.pos`, Math.round(this.pos(i) * 100) / 100]),
+    );
+    p.follower.rest_pose = pose;
+    return { rest_pose: pose };
   }
 
   setTorque(enabled: boolean): Status {
@@ -684,9 +723,9 @@ export class MockStation {
         index: Number(body.episode),
         of: 1,
         saved: 0,
-        phase: "episode",
+        phase: "approach", // as the Station: approach (1.5 s), then replay
         elapsed_s: 0,
-        limit_s: 30,
+        limit_s: REPLAY_APPROACH_S,
       };
       state = "replaying";
     }
@@ -694,7 +733,6 @@ export class MockStation {
     this.torque = true;
     this.lastHeartbeat = this.t;
     if (kind !== "rest") this.interrupted = false;
-    if (kind === "replay") s.episode.phase = "episode";
     this.setState(state, { sub: s.episode.phase });
     if (kind === "teleop") rt.phaseT = 0;
     this.broadcast({ type: "session", ...s });
@@ -706,8 +744,20 @@ export class MockStation {
     if (!rt) throw new MockProblem(409, "busy", { state: this.state });
     const ep = rt.s.episode;
     if (action === "stop") {
-      if (rt.rec && ep.phase === "episode") this.saveEpisode(rt);
-      this.endSession("completed");
+      // Like the Station (field report 0.2.9): a recorded episode is saved inside the session
+      // (phase "saving", the loop keeps running), then the session ends "stopped".
+      if (rt.rec && ep.phase === "episode" && ep.elapsed_s > 0) {
+        this.saveEpisode(rt);
+        rt.stopping = true;
+        rt.s.episode = { ...ep, phase: "saving" }; // the timer stays where Stop was pressed
+        rt.phaseT = 0;
+        rt.s.controls = { next: false, rerecord: false, stop: true };
+        this.sub = "saving";
+        this.broadcast({ type: "state", ...this.status() });
+        this.broadcast({ type: "session", ...rt.s });
+        return rt.s;
+      }
+      if (ep.phase !== "saving") this.endSession("stopped");
       return rt.s;
     }
     if (action === "rerecord") {
@@ -751,6 +801,7 @@ export class MockStation {
     const idx = d.episode_list.length;
     d.episode_list.push({
       index: idx,
+      state: "saved",
       length_s: Math.round(ep.elapsed_s * 10) / 10,
       frames: Math.round(ep.elapsed_s * rt.s.fps),
       tasks: [rt.s.task],
@@ -781,9 +832,34 @@ export class MockStation {
     this.phase(rt, "episode", rt.rec?.episode_time_s ?? rt.run?.episode_time_s ?? 30);
   }
 
-  endSession(outcome: string, to: StationState = "idle", reason: string | null = null): void {
+  endSession(
+    outcome: string,
+    to: StationState = "idle",
+    reason: string | null = null,
+    detail: string | null = null,
+  ): void {
     const rt = this.session;
     if (!rt) return;
+    // CR-1: a user Stop holds the arm where it is; the UI offers Return Home / Relax.
+    if (outcome === "stopped") this.interrupted = true;
+    // Like RecordSession.end(): an e-stop (or a fault) mid-episode drops that episode; a new
+    // dataset that kept no episode is removed (QC 0.2.9 QD-12).
+    let summary: Record<string, unknown> = { episodes: rt.s.episode.saved };
+    if (rt.rec) {
+      const ep = rt.s.episode;
+      const dropped = ep.phase === "episode" && ep.elapsed_s > 0;
+      const d = this.datasets.find((x) => x.name === rt.s.dataset);
+      const kept = Boolean(d && d.episodes > 0);
+      if (d && !kept) this.datasets = this.datasets.filter((x) => x !== d);
+      summary = {
+        ...summary,
+        dataset: rt.s.dataset,
+        saved: ep.saved,
+        discarded: dropped ? 1 : 0,
+        dropped_in_progress: dropped,
+        dataset_kept: kept,
+      };
+    }
     // Like the backend teardown (§5.3): state "stopping", then the final `session` message
     // (`ended: true`, phase "done" with the saved count), then the new state.
     rt.s.episode = { ...rt.s.episode, phase: "done" };
@@ -796,7 +872,7 @@ export class MockStation {
     const end: SessionEnd = {
       ...rt.s,
       reason: reason ?? outcome,
-      summary: { episodes: rt.s.episode.saved },
+      summary,
       loop: { ticks: 0, overruns: 0, tick_ms_p95: 0, telemetry_reads: 0, telemetry_forced: 0 },
       max_temp_c: peaks,
     };
@@ -816,10 +892,11 @@ export class MockStation {
       episodes: rt.s.episode.saved,
       max_temp_c: Math.round(Math.max(...Object.values(this.temps.follower))),
     });
-    this.setState(to, { reason });
+    this.setState(to, { reason, detail });
   }
 
-  estop(reason: string): Status {
+  /** `detail` is the Station's own English line (the dead-man stop has one, like hw/owner.py). */
+  estop(reason: string, detail: string | null = null): Status {
     if (this.state === "estopped") {
       // Second press within 2 s: torque off (§4.7).
       if (this.t - this.lastEstopAt <= 2) this.torque = false;
@@ -833,8 +910,8 @@ export class MockStation {
     this.lastEstopAt = this.t;
     if (this.session) {
       this.interrupted = true;
-      this.endSession(`estop_${reason}`, "estopped", reason);
-    } else this.setState("estopped", { reason });
+      this.endSession(`estop_${reason}`, "estopped", reason, detail);
+    } else this.setState("estopped", { reason, detail });
     return this.status();
   }
 
@@ -969,7 +1046,7 @@ export class MockStation {
       ["inferring", "replaying", "playing", "programming"].includes(this.state) &&
       this.t - this.lastHeartbeat > 1.0
     ) {
-      this.estop("ui_lost");
+      this.estop("ui_lost", "no heartbeat from the UI for 1.0 s");
     }
     this.advanceSession(dt);
     this.programs.step(dt);
@@ -1036,6 +1113,10 @@ export class MockStation {
       }
       return;
     }
+    if (ep.phase === "saving") {
+      if (rt.phaseT >= SAVE_S) this.endSession(rt.stopping ? "stopped" : "completed");
+      return;
+    }
     ep.elapsed_s = rt.phaseT;
     if (ep.limit_s === null || rt.phaseT < ep.limit_s) return;
     if (rt.s.kind === "rest") {
@@ -1043,13 +1124,18 @@ export class MockStation {
       this.endSession("completed");
       return;
     }
+    if (rt.s.kind === "replay") {
+      // The Station announces this phase change with a session message only (no state message).
+      if (ep.phase === "approach") {
+        rt.s.episode = { ...ep, phase: "replay", elapsed_s: 0, limit_s: REPLAY_S };
+        rt.phaseT = 0;
+        this.broadcast({ type: "session", ...rt.s });
+      } else this.endSession("completed");
+      return;
+    }
     if (ep.phase === "countdown")
       this.phase(rt, "episode", rt.rec?.episode_time_s ?? rt.run?.episode_time_s ?? 30);
     else if (ep.phase === "episode") {
-      if (rt.s.kind === "replay") {
-        this.endSession("completed");
-        return;
-      }
       if (rt.rec?.on_timeout !== "discard" && rt.rec) this.saveEpisode(rt);
       this.afterEpisode(rt);
     } else if (ep.phase === "reset") this.nextEpisode(rt);
@@ -1115,10 +1201,12 @@ export class MockStation {
   sample(arm: Arm, motor: string): MotorSample {
     const temp = Math.round(this.temps[arm][motor] ?? 30);
     const level = this.levels[`${arm}.${motor}`] ?? "ok";
+    // Field report 0.2.8: the leader's 5 V servos answer no temperature and no current.
+    const leader = arm === "leader";
     return {
-      temp_c: temp,
-      voltage_v: arm === "follower" ? 12.1 : 5.0,
-      current_a: this.moving ? 0.42 : 0.05,
+      temp_c: leader ? null : temp,
+      voltage_v: leader ? 5.0 : 12.1,
+      current_a: leader ? null : this.moving ? 0.42 : 0.05,
       load_pct: this.moving ? -31.5 : 2,
       status: [],
       level,

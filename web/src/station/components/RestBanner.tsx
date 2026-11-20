@@ -1,30 +1,25 @@
 /**
- * "Return to rest pose" (field report 0.2.8). After an e-stop / safe stop ended a motion
- * (`Status.interrupted`) and the operator reset the latch, the arm stands where it froze: offer one
- * slow minimum-jerk move to the profile's rest pose (dead-man on, Space / Stop halts it). While that
- * move runs (session kind `rest`) the banner shows its progress and a Stop button.
+ * After a Stop (CR-1, 2026-11-17) or an e-stop / safe stop that ended a motion
+ * (`Status.interrupted`): the arm holds where it stopped. Offer "Return Home" (one slow
+ * minimum-jerk move, dead-man on, Space / Stop halts it) and "Relax" (support the arm first,
+ * D-6); without a Home, "Set Home at current position". While the move runs (session kind
+ * `rest`) the banner shows its progress and a Stop button.
  */
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
 import { PxIcon } from "@/hibiscus/PixelAnim";
 import { Button } from "@/components/ui/button";
-import { api } from "../api/client";
-import { useRobots, useStationMutation } from "../api/hooks";
-import type { Session, Status } from "../api/types";
+import type { Status } from "../api/types";
 import { levelCss } from "../health";
 import { AUTO_MOVE_SPEED_DEG_S, useSessionControl } from "./controls";
-import { StationError } from "./StationError";
+import { GoHomeButton, RelaxButton, SetHomeButton, useHomeState } from "./HomeControls";
 
 export function RestBanner({ status }: { status: Status }) {
   const { t } = useTranslation("station");
-  const robots = useRobots();
   const control = useSessionControl();
-  const go = useStationMutation(() => api.post<Session>("/robots/rest"));
+  const home = useHomeState();
   const resting = status.session?.kind === "rest";
   const offer = status.state === "idle" && status.interrupted === true && Boolean(status.robot?.connected);
   if (!resting && !offer) return null;
-  const profile = robots.data?.robots.find((r) => r.id === status.robot?.id) ?? null;
-  const hasRest = Boolean(profile?.follower.rest_pose && Object.keys(profile.follower.rest_pose).length);
   if (resting) {
     return (
       <div
@@ -47,38 +42,37 @@ export function RestBanner({ status }: { status: Status }) {
       </div>
     );
   }
+  // QC 0.2.9 QD-4: say what the arm really does, from the live torque state. Torque unknown reads
+  // as off (the safe assumption: support the arm). The hint names Relax only when it is offered.
+  const torqueOn = status.robot?.follower_torque === true;
   return (
     <div
       role="status"
       data-testid="rest-banner"
       data-phase="offer"
+      data-torque={torqueOn ? "on" : "off"}
       className="flex flex-col gap-2 border-4 border-frame bg-card px-3 py-3"
     >
-      <p className="font-extrabold">{t("banner.interrupted")}</p>
-      <p className="text-sm">{t("banner.interrupted_hint")}</p>
-      {hasRest ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            onClick={() => {
-              go.mutate(undefined);
-            }}
-            disabled={go.isPending}
-          >
-            <PxIcon name="undo" /> {t("banner.rest")}
-          </Button>
-          <p className="min-w-0 flex-1 text-xs text-muted-foreground">
-            {t("banner.rest_hint", { speed: AUTO_MOVE_SPEED_DEG_S })}
-          </p>
-        </div>
-      ) : (
-        <p className="text-sm">
-          {t("banner.rest_need_pose")}{" "}
-          <Link to="/robot" className="underline">
-            {t("nav.robot")}
-          </Link>
+      <p className="font-extrabold" data-testid="rest-headline">
+        {t(torqueOn ? "banner.interrupted" : "banner.interrupted_relaxed")}
+      </p>
+      <p className="text-sm">{t(torqueOn ? "banner.interrupted_hint" : "banner.interrupted_hint_relaxed")}</p>
+      <div className="flex flex-wrap items-start gap-2">
+        {home.hasHome ? <GoHomeButton /> : <SetHomeButton />}
+        {torqueOn ? <RelaxButton /> : null}
+      </div>
+      {home.hasHome ? (
+        <p className="text-xs text-muted-foreground">
+          {t("banner.rest_hint", { speed: AUTO_MOVE_SPEED_DEG_S })}
         </p>
+      ) : (
+        <p className="text-sm">{t("banner.rest_need_pose")}</p>
       )}
-      <StationError error={go.error} />
+      {!torqueOn ? (
+        <p className="text-sm font-bold" data-testid="support-arm">
+          {t("banner.support_arm")}
+        </p>
+      ) : null}
     </div>
   );
 }

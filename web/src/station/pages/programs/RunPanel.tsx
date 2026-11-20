@@ -35,9 +35,11 @@ import type {
 import { CameraGrid } from "../../components/CameraGrid";
 import { RobotTwin } from "../../twin/RobotTwin";
 import { isTextInput } from "../../components/EStopButton";
+import { TechDetails } from "../../components/ServerText";
 import { StationError } from "../../components/StationError";
 import { useRuntime, useStation, useStatus } from "../../ws/StationProvider";
 import { isLive, logLineText, programMood, useProgramInput } from "./shared";
+import { fmtFixed } from "../../units";
 
 const enc = encodeURIComponent;
 
@@ -465,8 +467,8 @@ export function RunPanel({
           >
             <p className="tabular-nums">
               {t("programs.run.now", {
-                t: mine.t.toFixed(1),
-                steps: mine.steps,
+                t: fmtFixed(mine.t),
+                steps: t("programs.run.steps", { count: mine.steps }),
                 block: mine.block_id ? blockLabel(mine.block_id) : "–",
               })}
             </p>
@@ -474,13 +476,13 @@ export function RunPanel({
               <p className="text-muted-foreground">
                 {t(`programs.run.waiting_${mine.waiting.kind}`)}
                 {mine.waiting.timeout_s !== null
-                  ? ` · ${t("programs.run.timeout_in", { s: Math.max(0, mine.waiting.since_s + mine.waiting.timeout_s - mine.t).toFixed(0) })}`
+                  ? ` · ${t("programs.run.timeout_in", { s: fmtFixed(Math.max(0, mine.waiting.since_s + mine.waiting.timeout_s - mine.t), 0) })}`
                   : ""}
               </p>
             ) : null}
             {/* Stopped and e-stopped are said by the badge; a fault or a timeout says what happened. */}
-            {mine.message && (mine.status === "failed" || mine.status === "timeout") ? (
-              <p className="font-bold">{mine.message}</p>
+            {mine.status === "failed" || mine.status === "timeout" ? (
+              <TechDetails raw={mine.message} />
             ) : null}
           </div>
         ) : null}
@@ -518,15 +520,17 @@ export function RunPanel({
             ) : (
               <ul className="flex flex-col text-sm tabular-nums">
                 {conds.map((c) => (
-                  <li key={c.block_id} className="flex justify-between gap-2">
+                  <li key={c.block_id} className="flex flex-wrap justify-between gap-x-2">
                     <span className="truncate">{blockLabel(c.block_id)}</span>
                     <span className={c.value === true ? "font-bold text-success" : ""}>
                       {c.value === null
-                        ? (c.message ?? "?")
+                        ? "?"
                         : typeof c.value === "boolean"
                           ? t(c.value ? "programs.run.value_true" : "programs.run.value_false")
                           : String(c.value)}
                     </span>
+                    {/* why it cannot be evaluated now: the Station's own line */}
+                    {c.value === null ? <TechDetails raw={c.message} className="basis-full" /> : null}
                   </li>
                 ))}
               </ul>
@@ -561,9 +565,7 @@ export function RunPanel({
                         : ""
                   }
                 >
-                  <span className="tabular-nums text-muted-foreground">
-                    {l.t.toFixed(1).padStart(6, " ")}
-                  </span>{" "}
+                  <span className="tabular-nums text-muted-foreground">{fmtFixed(l.t).padStart(6, " ")}</span>{" "}
                   {logLineText(l, t, blockLabel)}
                 </li>
               ))}
@@ -584,7 +586,7 @@ export function RunPanel({
                   <span className="font-bold">
                     {r.outcome ? t(`programs.status.${r.outcome}`) : t("programs.status.running")}
                   </span>
-                  <span>{t("programs.run.steps", { n: r.steps })}</span>
+                  <span>{t("programs.run.steps", { count: r.steps })}</span>
                 </li>
               ))}
             </ul>

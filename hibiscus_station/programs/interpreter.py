@@ -175,6 +175,7 @@ class Interpreter:
         self._abort_evt = threading.Event()
         self._thread: threading.Thread | None = None
         self._t0 = clock()
+        self._t_end: float | None = None  # the clock when the run ended: its time stops there
         self._status: ProgramStatus = "starting"
         self._block_id: str | None = None
         self._block_kind: str | None = None
@@ -307,7 +308,9 @@ class Interpreter:
 
     # ================================================================== helpers
     def elapsed(self) -> float:
-        return self._clock() - self._t0
+        """Seconds since the start; frozen at the end of the run (QC 0.2.9 QD-16)."""
+        end = self._t_end
+        return (end if end is not None else self._clock()) - self._t0
 
     def join(self, timeout: float | None = None) -> bool:
         t = self._thread
@@ -482,6 +485,7 @@ class Interpreter:
             if self._finished or self._finishing:
                 return
             self._finishing = True
+            self._t_end = self._clock()
         self.latches.cancel_ask()
         try:
             self.runlog.close(outcome, message)

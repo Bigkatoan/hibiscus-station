@@ -38,6 +38,10 @@ không đạt là một lỗi mở và chặn phát hành của tính năng liê
 | REG-20 | Camera chọn "0" trên giao diện mở như tệp tên `0`; dò camera mở lại camera đang dùng (Windows từ chối) | 0.2.0 → 0.2.1 | F-21 | AT-28 |
 | REG-21 | (check_ver_2.9, 2026-11-18) Cảnh báo "Chuyển động đầu tiên bắt đầu xa tư thế hiện tại của tay" vẫn hiện trên khối sau khi chương trình đã chạy; không cập nhật khi tay di chuyển (D-24; khách: "Đổi thành thông tin, tự cập nhật") | 0.2.9 → M1 | F-56, F-58 | AT-70, AT-72 |
 | REG-22 | (check_ver_2.9, 2026-11-18) Bước Huấn luyện "Bước này đang bị khoá — Hãy ghép nối với máy chủ Hibiscus trước" khi form ghép nối vẫn dùng được; khách dán một liên kết OneDrive dài vào ô địa chỉ máy chủ (D-25; khách: "Không cần robot, nói rõ hơn") | 0.2.9 → M1 | F-7, F-41 | AT-10, AT-52 |
+| REG-23 | (0.2.9, Windows, 2026-11-19) "Tôi không xem được video và các tập đã ghi": trang Bộ dữ liệu không có tập nào trong khi đang ghi; từ tập thứ 11 của một phiên trang chi tiết và trang Ghi báo "Internal error" (D-2) | 0.2.9 → 0.2.10 | F-38, F-40 | AT-48, AT-51 |
+| REG-24 | (0.2.9) Station đóng giữa phiên (đóng cửa sổ console, kill, mất điện) để lại dataset làm trang Bộ dữ liệu / chi tiết báo "Internal error" mãi; "Ghi thêm vào dataset có sẵn" trên dataset đó báo "Internal error" hoặc "A motor did not answer on the serial bus" (D-2, QH-2, QH-5) | 0.2.9 → 0.2.10 | F-38, F-40 | AT-49, AT-51 |
+| REG-25 | (QC 0.2.10 QH-9, có từ 0.2.9, mất dữ liệu) `meta/info.json` đếm ít tập / khung hơn những gì có trên đĩa → "Ghi thêm" được nhận và LeRobot ghi đè `data/chunk-000/file-000.parquet`, xoá mất tập cũ | 0.2.9 → 0.2.10 | F-38, F-40 | AT-49, AT-51 |
+| REG-26 | (2026-11-20) Hồ sơ robot trùng ("so-101-1" và "SO_101" trên COM8 / COM7) không xoá được (D-26) | 0.2.9 → 0.2.10 | F-8 | AT-11 |
 
 ## Chi tiết từng mục (tái hiện → kỳ vọng)
 
@@ -208,6 +212,62 @@ không đạt là một lỗi mở và chặn phát hành của tính năng liê
 * **Test tự động:** `web/src/station/field029.screens.test.tsx` (D-25), `field028.screens.test.tsx` (Huấn luyện),
   `station.unit.test.ts` (`wizardSteps`, `serverUrlProblem` trên `tests/server_urls.json`), `tests/test_field_029.py`
   (`server_url_problem` trên cùng bộ ca, `POST /server/pair`). **Nền tảng:** [Vendor].
+
+### REG-23 — Trang Bộ dữ liệu trong và sau khi ghi (D-2)
+* **Nguồn:** báo cáo hiện trường của khách trên 0.2.9 (Windows, SO-101, 2026-11-19): "Tôi không xem được video và các
+  tập đã ghi". Sửa trong hotfix 0.2.10 ([QC-0210-r1](qc/QC-0210-r1.md) – [r4](qc/QC-0210-r4.md)).
+* **Tái hiện:** ghi một phiên 12 tập trở lên (→ giữ từng tập); trong khi ghi mở trang Bộ dữ liệu, chi tiết dataset và
+  dải "các tập đã lưu" của trang Ghi; dừng phiên, mở lại trang chi tiết; phát lại một tập đang lưu và một tập đã lưu.
+* **Kỳ vọng:** mỗi tập hiện ngay khi đã lưu; tập đang lưu hiện "Đang lưu…" / "Saving…" và trang tự làm mới tới khi tập
+  được ghi xong; không bao giờ có "Internal error" hay trang trắng (kể cả từ tập thứ 11, khi kích thước dataset được
+  cộng trong lúc bộ mã hoá xoá khung tạm, khi `meta/info.json` đang được LeRobot ghi lại, khi tệp telemetry hỏng); một
+  trang dataset không hiển thị được vẫn giữ menu và có Tải lại / Mọi bộ dữ liệu; Phát lại tập đang lưu: "Station đang
+  bận (đang lưu)", nút Phát lại tắt tới khi lưu xong. Sau khi dừng: đủ mọi tập, dataset hoàn tất. API: mỗi dòng
+  `episode_list[]` có `state` = `saved` / `saving` / `unreadable`.
+* **Test tự động:** `tests/test_field_0210.py` (`test_saved_episodes_show_before_the_dataset_is_finalized`,
+  `test_the_episode_being_saved_reads_as_saving`, `test_more_than_ten_episodes_in_one_session`,
+  `test_record_session_detail_during_and_after`, `test_replay_of_an_episode_still_being_written_is_refused_not_a_500`…),
+  `web/src/station/field0210.screens.test.tsx`. **Nền tảng:** [Vendor] giả lập; [UAT-KH] Windows + tay thật.
+
+### REG-24 — Dataset bị bỏ dở khi Station đóng giữa phiên (D-2)
+* **Tái hiện:** ghi vài tập rồi giết tiến trình Station giữa phiên (kill -9, đóng cửa sổ console trên Windows); khởi
+  động lại; mở danh sách Bộ dữ liệu, chi tiết dataset đó, phát lại một tập của nó; trên trang Ghi chọn "Ghi thêm vào
+  dataset có sẵn" với dataset đó. Làm lại với `meta/info.json` rỗng / cắt ngắn / không phải object / features hỏng, một
+  tệp không có quyền đọc, thư mục datasets không ghi được.
+* **Kỳ vọng:** danh sách và trang chi tiết hiện dataset là chưa hoàn tất kèm lý do; mỗi tập không đọc được nói rõ trên
+  dòng của nó ("Không đọc được: Station đã đóng trước khi tập này được lưu xong…"), các tập khác vẫn dùng được; mọi
+  dataset khác không bị ảnh hưởng. Ghi thêm: 409 `dataset_not_finalized` (dataset bỏ dở) hoặc 409 `dataset_unreadable`
+  (tệp hỏng / không mở được), lỗi ghi tệp: 409 `dataset_io_error`; không bao giờ `500`, không bao giờ `bus_error`;
+  trang Ghi nói lý do bằng lời và đề nghị "Ghi vào bộ dữ liệu mới" với cùng nhiệm vụ và cài đặt; **không tệp nào của
+  dataset cũ bị đổi** (so sha256 trước / sau). Phát lại: `dataset_unreadable`, không phải "đang lưu".
+* **Test tự động:** `tests/test_field_0210.py` (`test_a_station_closed_mid_session_leaves_a_readable_page`,
+  `test_recording_more_into_a_dataset_a_crash_left_unfinalized`, `test_record_append_into_an_unfinalized_dataset_answers_409`,
+  `test_append_into_a_dataset_with_a_broken_info_json_is_a_clean_4xx`,
+  `test_an_unreadable_info_json_is_a_dataset_error_not_a_motor_error`,
+  `test_a_datasets_folder_that_cannot_be_written_is_not_a_motor_error`, `test_replay_of_a_crash_left_episode_says_unreadable_not_saving`),
+  `tests/test_info_fuzz.py::test_hostile_info_json_never_gives_a_5xx`, `web/src/station/field0210.screens.test.tsx`.
+  **Nền tảng:** [Vendor]; [UAT-KH] đóng cửa sổ console trên Windows.
+
+### REG-25 — Ghi thêm vào dataset có số đếm không khớp không được ghi đè tập cũ (QH-9)
+* **Tái hiện:** chép một dataset hoàn tất (ví dụ 6 tập) và đổi một thứ mỗi bản: `total_episodes` 0 / 1 / 3 / 8,
+  `total_frames` ±1, khoảng trống trong chỉ số tập của `meta/episodes`, xoá một tệp data, xoá một tệp video; với mỗi bản
+  đọc danh sách, chi tiết, rồi "Ghi thêm" 1 tập với robot đã kết nối.
+* **Kỳ vọng:** mọi bản không nhất quán hiện là chưa hoàn tất ("không nhất quán: meta/info.json đếm N tập, meta/episodes
+  có M" …) và Ghi thêm bị từ chối 409 `dataset_unreadable`, các tệp **giống hệt từng byte**; bản nhất quán vẫn ghi thêm
+  được (6 → 7 tập, vẫn hoàn tất).
+* **Test tự động:** `tests/test_info_fuzz.py::test_counts_that_disagree_with_the_rows_refuse_append`;
+  `hibiscus_station/data/info.py` (`info_problems`, `consistency_problems`) dùng chung cho danh sách, chi tiết, ghi thêm,
+  phát lại. **Nền tảng:** [Vendor].
+
+### REG-26 — Xoá hồ sơ robot (D-26)
+* **Tái hiện:** trang Robot có vài hồ sơ (một đang kết nối); bấm Xoá trên từng thẻ, Huỷ rồi Xoá; xoá hồ sơ đang active
+  trên tay thật; xoá tới khi không còn hồ sơ nào; khởi động lại có và không có `--mock`. Gửi `DELETE /robots/{id}` khi hồ
+  sơ đó đang kết nối, đang hiệu chỉnh, trong phiên, chờ adapter USB bị rút.
+* **Kỳ vọng:** hộp xác nhận nêu tên hồ sơ và nói tệp hiệu chỉnh, dataset không bị xoá (chỉ mục trong `robots.yaml`);
+  Huỷ không đổi gì; hồ sơ đang kết nối: nút tắt, "Ngắt kết nối trước khi xoá" / "Disconnect before deleting"; API
+  409 `busy`; xoá hồ sơ active trên tay thật làm hồ sơ khác thành active, không bao giờ hồ sơ demo; xoá hết: "Chưa có
+  robot nào…", mọi trang vẫn hiện; `--mock` chỉ tạo lại hồ sơ demo khi không còn hồ sơ nào; id lạ: 404 `not_found`.
+* **Test tự động:** `tests/test_robot_delete.py`, `web/src/station/robotdelete.screens.test.tsx`. **Nền tảng:** [Vendor].
 
 ### REG-14 … REG-20 (từ CHANGELOG)
 | REG | Tái hiện | Kỳ vọng | Test tự động | Nền tảng |

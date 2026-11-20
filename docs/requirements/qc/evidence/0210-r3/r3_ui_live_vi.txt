@@ -1,0 +1,1 @@
+{"start": 200, "nsamples": 28, "max_rows": 3, "saw_saving_badge": 0, "saw_strip_saving": 0, "rows_lag": [[2.0, 1, 0], [3.8, 2, 1], [5.7, 3, 2], [5.9, 3, 2], [7.3, 4, 3]], "shell_bad": [], "after": ["saved", "saved", "saved", "saved"], "errors": ["console:Failed to load resource: the server responded with a status of 404 (Not Found)"], "5xx": []}

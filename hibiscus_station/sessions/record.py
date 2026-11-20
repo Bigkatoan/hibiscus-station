@@ -39,6 +39,10 @@ class RecordSession(MotionSession):
     _after_saving: str = "episode"
     discarded: int = 0
     timeouts: int = 0
+    #: The operator pressed Stop: the episode being recorded (or buffered) is saved *inside* the
+    #: session (phase ``saving``, the loop keeps running: cameras, telemetry, e-stop), then the
+    #: session ends as ``stopped``. Field report 0.2.9: saving in the teardown froze the loop.
+    stop_requested: bool = False
 
     def __post_init__(self) -> None:
         self.uses_leader = True
@@ -151,7 +155,9 @@ class RecordSession(MotionSession):
                     return
                 self.episode.index = self.rec.next_episode_index
                 self.phase_changed = True
-                if self._after_saving == "done" or self.episode.saved >= self.num_episodes:
+                if self.stop_requested:
+                    self.finish("stopped")
+                elif self._after_saving == "done" or self.episode.saved >= self.num_episodes:
                     self.finish("completed")
                 else:
                     self._enter("episode", now)
@@ -160,9 +166,17 @@ class RecordSession(MotionSession):
         now = owner.session_now()
         phase = self.episode.phase
         if action == "stop":
-            if phase == "episode":
-                self.pending = self.rec.frames_in_episode > 0
-            self.finish("stopped")
+            self.stop_requested = True
+            if phase == "episode" and self.rec.frames_in_episode > 0:
+                self._start_saving(now, after="done")  # a recorded episode is kept
+            elif phase == "reset" and self.pending:
+                self._start_saving(now, after="done")
+            elif phase == "saving":
+                self._after_saving = "done"
+            else:
+                if phase == "episode":
+                    self.rec.discard()
+                self.finish("stopped")
         elif action == "next":
             if phase == "episode":
                 if self.rec.frames_in_episode == 0:
@@ -206,23 +220,39 @@ class RecordSession(MotionSession):
     def end(self, owner: HardwareOwner, reason: str) -> None:
         if self.recorder is None:
             return
-        try:
-            if self.rec.saving is not None:
-                self.rec.wait_saving()
-                self.episode.saved += 1
-            if self.pending:  # a fully recorded episode is kept, whatever ended the session
-                self.rec.save_async()
-                self.rec.wait_saving()
-                self.episode.saved += 1
-                self.pending = False
-        finally:
-            self.rec.finalize()
+        rec = self.rec
+        in_flight = rec.saving is not None
+        pending = self.pending  # a fully recorded episode is kept, whatever ended the session
+        self.pending = False
+        # An e-stop (or a fault) in the middle of an episode drops that episode: it is not saved,
+        # because its last frames were taken while the arm was being stopped. Count it, so the end
+        # card can say so (QC 0.2.9 QD-12). A Stop never gets here with frames: it saves them.
+        dropped = self.episode.phase == "episode" and rec.frames_in_episode > 0
+        if dropped:
+            self.discarded += 1
+        if in_flight or pending:
+            # e-stop / camera lost / error while an episode waits for the encoder: never in the
+            # owner thread (a second e-stop press must relax at once); the next session on this
+            # dataset waits for it (``wait_closed``).
+            def failed(exc: BaseException) -> None:
+                owner.raise_alert("dataset", "critical", "record.save_failed", {"error": str(exc)[:200]})
+
+            rec.close_async(save_pending=pending, on_error=failed)
+            self.episode.saved += int(in_flight) + int(pending)
+            self.summary["finalizing"] = True
+        else:
+            rec.finalize()
         self.summary.update(
             {
-                "dataset": self.rec.name,
+                "dataset": rec.name,
                 "saved": self.episode.saved,
                 "discarded": self.discarded,
                 "timeouts": self.timeouts,
-                "root": str(self.rec.root),
+                "root": str(rec.root),
+                "save_s": list(rec.save_s),
+                "dropped_in_progress": dropped,
+                # False when a new dataset ended with no episode: finalize() removed the empty
+                # folder, so there is nothing to open or upload (docs/spec/station.md §6.6).
+                "dataset_kept": rec.root.exists(),
             }
         )

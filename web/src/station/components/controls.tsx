@@ -5,6 +5,7 @@ import { api } from "../api/client";
 import type { Job } from "../api/types";
 import { useRuntime, useStation } from "../ws/StationProvider";
 import type { StationSnapshot } from "../ws/store";
+import { fmtFixed, fmtSize } from "../units";
 
 /** Peak joint speed of "Align follower to leader" and "Return to rest pose" (the Station's cap). */
 export const AUTO_MOVE_SPEED_DEG_S = 30;
@@ -36,17 +37,8 @@ export function scalar(v: unknown): string {
   return typeof v === "string" || typeof v === "number" || typeof v === "boolean" ? String(v) : "?";
 }
 
-export function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`;
-  const units = ["KiB", "MiB", "GiB", "TiB"];
-  let v = n / 1024;
-  let i = 0;
-  while (v >= 1024 && i < units.length - 1) {
-    v /= 1024;
-    i += 1;
-  }
-  return `${v.toFixed(v >= 100 ? 0 : 1)} ${units[i] ?? "GiB"}`;
-}
+/** Sizes read the same everywhere (QC 0.2.9 QD-21): see units.ts. */
+export const formatBytes = fmtSize;
 
 /** Progress of one job (upload / pull / import / load) with its phase. */
 export function JobProgress({ job }: { job: Job }) {
@@ -62,7 +54,7 @@ export function JobProgress({ job }: { job: Job }) {
         </span>
         <span className="tabular-nums text-xs">
           {p.unit === "bytes" ? `${formatBytes(p.done)} / ${formatBytes(p.total)}` : `${p.done} / ${p.total}`}{" "}
-          · {pct.toFixed(0)}%
+          · {fmtFixed(pct, 0)}%
         </span>
       </div>
       <Progress value={pct} aria-label={t(`jobs.kind_${job.kind}`)} />

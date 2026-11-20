@@ -65,6 +65,9 @@ class MotionSession:
     outcome: str = "running"
     phase_changed: bool = True
     recording_active: bool = False  # telemetry of this tick belongs to an episode being recorded
+    #: CR-1: the operator pressed Stop. The owner wrote Goal := Present once; no further goal is
+    #: sent while the session finishes (a record session still saves its episode).
+    holding: bool = False
     frame_index: int = 0
     summary: dict[str, Any] = field(default_factory=dict)
 

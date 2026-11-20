@@ -15,7 +15,7 @@ khách duyệt, danh sách lên v1.1, v1.2… Ý tưởng của nhóm dev gửi 
   thuộc nó** (cột Phụ thuộc trong [FEATURES.md](FEATURES.md)). Một Must FAIL chặn cả bản phát hành. Chỉ khách
   hàng miễn được một lỗi, bằng văn bản, theo mã lỗi.
 * Mô tả đầy đủ từng tính năng: [FEATURES.md](FEATURES.md) (F-n) và [SRS.md](SRS.md) (FR-n cùng số); bước kiểm:
-  [ACCEPTANCE.md](ACCEPTANCE.md); hồi quy: [REGRESSION.md](REGRESSION.md) (REG-1 – REG-22, chạy trên mọi bản ứng viên).
+  [ACCEPTANCE.md](ACCEPTANCE.md); hồi quy: [REGRESSION.md](REGRESSION.md) (REG-1 – REG-26, chạy trên mọi bản ứng viên).
 
 ## Quyết định đã chốt
 
@@ -37,7 +37,7 @@ khách duyệt, danh sách lên v1.1, v1.2… Ý tưởng của nhóm dev gửi 
 | F-5 | Chế độ demo `--mock` | Must | M1 | AT-7 | D-8 | not started | not tested | - |
 | F-6 | Truy cập cục bộ an toàn (chế độ LAN: Could) | Must (LAN: Could) | M1 (LAN: M3) | AT-8, AT-9 (LAN: mạng cô lập, FL-8), AT-98 | — | not started | not tested | - |
 | F-7 | Trang Chào mừng và thanh bước | Must | M1 | AT-10 | D-5, D-25 | in progress (D-25: mã + test xong trên `m1/field-029`, chờ QC) | not tested | - |
-| F-8 | Hồ sơ robot | Must | M1 | AT-11 | — | not started | not tested | - |
+| F-8 | Hồ sơ robot | Must | M1 | AT-11 | D-26 | in progress (D-26 xoá hồ sơ: done, hotfix 0.2.10; phần còn lại của F-8 not started) | not tested (D-26: PASS trên 0.2.10, [QC-0210-r4](qc/QC-0210-r4.md)) | - |
 | F-9 | Danh sách cổng USB serial | Must | M1 | AT-12 | — | not started | not tested | - |
 | F-10 | Tìm cổng theo vai trò | Must | M1 | AT-13, AT-14 | — | not started | not tested | - |
 | F-11 | Dò cổng chỉ-đọc | Must | M1 | AT-15 | — | not started | not tested | - |
@@ -67,9 +67,9 @@ khách duyệt, danh sách lên v1.1, v1.2… Ý tưởng của nhóm dev gửi 
 | F-35 | Phục hồi sau khi dừng giữa chừng ("Về tư thế nghỉ", chạy lại từ đầu) | Must | M1 | AT-45 | — | not started | not tested | - |
 | F-36 | Thông báo | Must | M1 | AT-46 | — | not started | not tested | - |
 | F-37 | Trang Phiên | Should | M2 | AT-47 | — | not started | not tested | - |
-| F-38 | Ghi dataset LeRobot v3 | Must | M1 | AT-48, AT-49 | D-2, D-19 (tập đang ghi khi đóng cửa sổ) | not started | not tested | - |
+| F-38 | Ghi dataset LeRobot v3 | Must | M1 | AT-48, AT-49 | D-2, D-19 (tập đang ghi khi đóng cửa sổ) | in progress (D-2: done, hotfix 0.2.10; D-19 not started) | not tested (D-2: PASS trên 0.2.10, [QC-0210-r1](qc/QC-0210-r1.md) – [r4](qc/QC-0210-r4.md)) | - |
 | F-39 | Ghi thêm vào dataset có sẵn | Should | M2 | AT-50 | — | not started | not tested | - |
-| F-40 | Trang Bộ dữ liệu | Must | M1 | AT-51 | D-2 | not started | not tested | - |
+| F-40 | Trang Bộ dữ liệu | Must | M1 | AT-51 | D-2 | in progress (D-2: done, hotfix 0.2.10) | not tested (D-2: PASS trên 0.2.10, [QC-0210-r1](qc/QC-0210-r1.md) – [r4](qc/QC-0210-r4.md); AT-51 đầy đủ chạy lại ở M1) | - |
 | F-41 | Ghép nối máy chủ Hibiscus | Should | M2 | AT-52 | D-25 (sửa ở M1) | in progress (D-25: mã + test xong trên `m1/field-029`, chờ QC) | not tested | - |
 | F-42 | Tải dataset lên | Should | M2 | AT-53, AT-54 | — | not started | not tested | - |
 | F-43 | Trang Huấn luyện | Should | M2 | AT-55 | — | not started | not tested | - |
@@ -126,11 +126,12 @@ bản mới và danh sách hồi quy vẫn đạt.
 | Mốc | Lỗi D-n | Khoảng trống K-n / REG |
 |---|---|---|
 | M0 | D-1 (High), D-15, D-21 | K-11 |
-| M1 | D-2 – D-11, D-12 (phần M1), D-13, D-14, D-16 – D-20, D-22, D-23 (D-9 sau số đo UAT-0), D-24, D-25 (báo cáo hiện trường của khách check_ver_2.9, 2026-11-18) | K-2, K-3 (= D-12), K-4 (= D-5), K-5, K-8 (P-1), K-10, REG-13 / K-9 (sau UAT-0, QĐ-1 = A) |
+| M1 | D-2 – D-11, D-12 (phần M1), D-13, D-14, D-16 – D-20, D-22, D-23 (D-9 sau số đo UAT-0), D-24, D-25 (báo cáo hiện trường của khách check_ver_2.9, 2026-11-18), D-26 (báo cáo của khách 2026-11-20; D-2 và D-26 đã sửa trong hotfix 0.2.10) | K-2, K-3 (= D-12), K-4 (= D-5), K-5, K-8 (P-1), K-10, REG-13 / K-9 (sau UAT-0, QĐ-1 = A) |
 | M2 | D-12 (phần F-53) | — |
 | M3 | — (D-18 của F-3 là tài liệu, đóng ở M1) | — |
 
-25 lỗi: 3 High (D-1, D-9, D-19) · 10 Medium · 12 Low · 0 Critical. K-1, K-6 = D-18; K-7 (spec dev lỗi thời) SA cập nhật cùng
+25 lỗi trong baseline: 3 High (D-1, D-9, D-19) · 10 Medium · 12 Low · 0 Critical; thêm D-24, D-25 (hiện trường 0.2.9) và
+D-26 (hotfix 0.2.10). K-1, K-6 = D-18; K-7 (spec dev lỗi thời) SA cập nhật cùng
 OI-3. Trạng thái mọi lỗi hôm nay: **mở**.
 
 **Dev status M0 (2026-11-17, nhánh `release/v1`):** D-1, D-15, D-21, K-11 có bản sửa kèm test fail-trước-pass-sau
@@ -199,6 +200,28 @@ lần 2 trên `m1/field-029` (test fail-trước-pass-sau, chờ QC lần 2):
   `*.local`, `*.lan` và tên một nhãn; máy chủ công khai qua `http://` → `server_url_insecure` ("Hãy dùng địa chỉ
   https:// …") ở form và ở Station, trước mọi request; cùng bảng ca `tests/server_urls.json`. (Chuyển hướng HTTP → HTTPS
   của máy chủ prod là việc hạ tầng, không thuộc nhánh này.)
+
+**Hotfix 0.2.10 (2026-11-20, `hotfix/0.2.10` → tag `v0.2.10`, main `d8c5356`; gộp vào `release/v1` qua nhánh
+`m1/merge-0210`).** Nguồn: báo cáo hiện trường của khách trên 0.2.9 (Windows, SO-101, 2026-11-19: "Tôi không xem được
+video và các tập đã ghi") và báo cáo 2026-11-20 (hồ sơ trùng "so-101-1" / "SO_101" trên COM8 / COM7 không xoá được).
+
+| D | Mức | Tính năng | Lỗi | Bản sửa | Dev status | QC | Hồi quy |
+|---|---|---|---|---|---|---|---|
+| D-2 | Medium | F-38, F-40 | Trang Ghi / chi tiết dataset gây `500 internal_error` khi đọc tập đang lưu dở; trang Bộ dữ liệu không hiện tập nào trong khi ghi; dataset bỏ dở khi Station tắt giữa phiên làm hỏng trang mãi | Mỗi dòng `episode_list[]` có `state` = `saved` / `saving` / `unreadable`; sổ đăng ký tập đang ghi của recorder; `meta/episodes` chỉ đọc khi tệp có footer; trang dataset có error element (không trang trắng); ghi thêm vào dataset bỏ dở hoặc không nhất quán → 409 `dataset_not_finalized` / `dataset_unreadable`, lỗi tệp → 409 `dataset_io_error`, không đổi tệp nào; một bộ kiểm `meta/info.json` chung (`hibiscus_station/data/info.py`: `info_problems`, `consistency_problems`) cho danh sách, chi tiết, ghi thêm, phát lại | **done** (hotfix 0.2.10) | **PASS** ([QC-0210-r1](qc/QC-0210-r1.md) FAIL QH-1, QH-2; [r2](qc/QC-0210-r2.md) FAIL QH-7, QH-8; [r3](qc/QC-0210-r3.md) FAIL QH-9; [r4](qc/QC-0210-r4.md) PASS) | REG-23, REG-24, REG-25 |
+| D-26 | Medium | F-8 | Không xoá được hồ sơ robot (F-8 đã duyệt "tạo / sửa / xoá") | Nút Xoá / Delete trên thẻ hồ sơ, hộp xác nhận nêu tên và nói tệp hiệu chỉnh, dataset không bị xoá; 409 `busy` khi robot đó đang kết nối / hiệu chỉnh / trong phiên / chờ USB; xoá hồ sơ đang dùng trên tay thật không làm hồ sơ demo thành active | **done** (hotfix 0.2.10) | **PASS** ([QC-0210-r1](qc/QC-0210-r1.md) – [r4](qc/QC-0210-r4.md)) | REG-26 |
+
+Test tự động: `tests/test_field_0210.py`, `tests/test_info_fuzz.py` (825 biến đổi `meta/info.json`, 0 lỗi 5xx),
+`tests/test_robot_delete.py`, `web/src/station/field0210.screens.test.tsx`, `web/src/station/robotdelete.screens.test.tsx`.
+Việc còn lại (Low, không chặn, vào M1): QH-6 (test dead-man trên Windows CI đôi khi quá 1,5 s), M1-4 (danh sách Bộ
+dữ liệu chậm hơn 0.2.9 khoảng 9 lần vì kiểm nhất quán: cache theo mtime hoặc chuyển khỏi danh sách), M1-5 (thẻ ghi thêm
+cho dataset không nhất quán dùng câu chung "tệp bị hỏng"; lý do chính xác chỉ có trong `reasons` của API), O-1 (tập của
+dataset bỏ dở do sập không xem lại được: 0.2.10 hiện rõ và an toàn nhưng không khôi phục; liên quan D-19).
+
+Khi gộp vào `release/v1`, hai mã mới `dataset_unreadable`, `dataset_io_error` vào danh sách `SELF_EXPLAINING`
+(QD-44: câu dịch đã nói đủ, chi tiết tiếng Anh vào "Chi tiết kỹ thuật"); `dataset_not_finalized` giữ chi tiết trong tầm
+mắt (câu chung không nói tệp nào còn mở). Gộp kèm cả hotfix 0.2.9 (QD-1 – QD-27 của 0.2.9, CR-1, CR-2), vốn chưa có trên
+`release/v1`; test của hotfix 0.2.9 đổi tên thành `tests/test_hotfix_029.py` và `web/src/station/hotfix029.screens.test.tsx`
+vì `test_field_029.py` trên `release/v1` là test của D-24, D-25.
 
 ## Số tính năng theo mốc
 

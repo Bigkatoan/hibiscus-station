@@ -18,7 +18,7 @@ import { PageHeader } from "@/components/common";
 import { Mascot } from "@/components/Mascot";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PxIcon, Sprite } from "@/hibiscus/PixelAnim";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -34,9 +34,12 @@ import type {
   RobotProfile,
   Status,
 } from "../api/types";
+import { SetHomeButton, useHomeState } from "../components/HomeControls";
+import { ServerDetail } from "../components/ServerText";
 import { StationError } from "../components/StationError";
 import { useStation, useStatus } from "../ws/StationProvider";
 import type { StationSnapshot } from "../ws/store";
+import { fmtFixed } from "../units";
 
 export const MIN_RANGE_STEPS = 100;
 const STEPS = 4096;
@@ -470,10 +473,10 @@ function ArmStep({
             </span>
           </p>
           {issue ? (
-            <p className="text-xs" data-testid={`cal-issue-${arm}`}>
-              <span className="font-bold">{t("calibrate.issue")}</span>{" "}
-              <span className="break-words font-mono">{issue}</span>
-            </p>
+            <div className="text-xs" data-testid={`cal-issue-${arm}`}>
+              <span className="font-bold">{t("calibrate.issue")}</span>
+              <ServerDetail line={issue} textClassName="text-xs" />
+            </div>
           ) : null}
           {files.length > 0 ? (
             <>
@@ -579,10 +582,10 @@ function PoseCheck({ onRecalibrate }: { onRecalibrate: (arm: Arm) => void }) {
                         {j.ok ? <PxIcon name="check" /> : <PxIcon name="warning" />} {j.joint}
                       </span>
                     </td>
-                    <td className="py-1 pr-2 text-right tabular-nums">{j.follower.toFixed(1)}</td>
-                    <td className="py-1 pr-2 text-right tabular-nums">{j.leader.toFixed(1)}</td>
+                    <td className="py-1 pr-2 text-right tabular-nums">{fmtFixed(j.follower)}</td>
+                    <td className="py-1 pr-2 text-right tabular-nums">{fmtFixed(j.leader)}</td>
                     <td className="py-1 text-right tabular-nums">
-                      {j.diff.toFixed(1)}
+                      {fmtFixed(j.diff)}
                       {unit(j.unit)}
                     </td>
                   </tr>
@@ -594,7 +597,7 @@ function PoseCheck({ onRecalibrate }: { onRecalibrate: (arm: Arm) => void }) {
             <Box
               tone="success"
               mood="happy"
-              title={t("calibrate.check_ok", { max: r.max_diff.toFixed(1) })}
+              title={t("calibrate.check_ok", { max: fmtFixed(r.max_diff) })}
               testid="pose-ok"
             >
               <Button asChild size="lg" className="self-start">
@@ -703,6 +706,7 @@ export function CalibratePage() {
   const check = useCalibrationCheck(canCheck);
   const fCal = Boolean(status?.robot?.arms.follower.calibrated);
   const lCal = Boolean(status?.robot?.arms.leader?.calibrated);
+  const home = useHomeState();
   const refetch = check.refetch;
   useEffect(() => {
     if (canCheck) void refetch();
@@ -792,6 +796,17 @@ export function CalibratePage() {
           </CardContent>
         </Card>
       )}
+      {connected && fCal && !home.hasHome && !calibrating ? (
+        <Card data-testid="home-prompt">
+          <CardHeader>
+            <CardTitle>{t("home.prompt_title")}</CardTitle>
+            <CardDescription>{t("home.prompt_text")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SetHomeButton />
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }

@@ -449,7 +449,8 @@ describe("QC F029 r2: QD-37, QD-38, QD-39, QD-41", { timeout: 40000 }, () => {
     expect(badge("error")).toHaveClass("bg-sev-error");
     expect(badge("warning")).toHaveClass("bg-sev-warning");
     expect(badge("confirm")).toHaveClass("bg-sev-confirm");
-    expect(within(problems).getByRole("img", { name: "Error" })).toBeInTheDocument();
+    // two errors since 0.2.10 merged in: the lonely "relax arm" also needs this robot's Home (CR-2)
+    expect(within(problems).getAllByRole("img", { name: "Error" }).length).toBeGreaterThan(0);
     expect(within(problems).getAllByRole("img", { name: "Warning" }).length).toBeGreaterThan(0);
     expect(within(problems).getByRole("img", { name: "Needs your confirmation" })).toBeInTheDocument();
   });

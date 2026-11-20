@@ -133,12 +133,18 @@ def test_thermal_critical_safe_stop_and_reset_refused(connected: Station, events
     wait_for(lambda: st.owner.state == "estopped", 4)
     assert time.monotonic() - t0 <= 2.5
     assert st.owner.reason == "thermal"
+    # QC 0.2.9 QD-3: the reason the UI shows reads "66 °C", not "66 C"
+    assert st.owner.detail == "follower elbow_flex 66 °C"
     assert not world.any_torque()
     crit = [a for a in events.of("alert") if a["level"] == "critical"]
     assert any(a["motor"] == "elbow_flex" for a in crit)
     with pytest.raises(StationError) as ei:
         st.owner.call("estop_reset")
     assert ei.value.code == "motor_hot"
+    # the refusal names the motor and its temperature (the UI words it)
+    hot = ei.value.params["motors"]
+    assert {"arm": "follower", "motor": "elbow_flex"}.items() <= hot[0].items()
+    assert hot[0]["temp_c"] >= 60
     with pytest.raises(StationError):
         st.start_teleop(TeleopRequest())
     world.inject("elbow_flex", temp_c=40.0)

@@ -1,0 +1,26 @@
+dmgi1      append 409 dataset_unreadable       identical=True | reasons=['meta/info.json is empty or not valid JSON'] | replay 409 dataset_unreadable
+dmgi2      append 409 dataset_unreadable       identical=True | reasons=['meta/info.json is empty or not valid JSON'] | replay 409 dataset_unreadable
+dmgi3      append 409 dataset_unreadable       identical=True | reasons=['meta/info.json is not a JSON object'] | replay 409 dataset_unreadable
+dmgi4      append 409 dataset_unreadable       identical=True | reasons=['meta/info.json: features is missing or malformed'] | replay 409 dataset_unreadable
+dmge9      append 409 dataset_unreadable       identical=True | reasons=['meta/info.json: total_episodes is missing or malformed'] | replay 200 None
+dmgebool   append 409 dataset_unreadable       identical=True | reasons=['meta/info.json: total_episodes is missing or malformed'] | replay 200 None
+dmgfinf    append 409 dataset_unreadable       identical=True | reasons=['meta/info.json: fps is missing or malformed'] | replay 500 internal_error
+dmgfnull   append 409 dataset_unreadable       identical=True | reasons=['meta/info.json: features is missing or malformed'] | replay 409 dataset_unreadable
+dmgflist   append 409 dataset_unreadable       identical=True | reasons=['meta/info.json: features is missing or malformed'] | replay 409 dataset_unreadable
+dmgshape   append 409 dataset_unreadable       identical=True | reasons=["meta/info.json: features are malformed (invalid literal for int() with base 10: 'x')"] | replay 200 None
+dmgx       append 409 dataset_unreadable       identical=True | reasons=["meta/info.json cannot be opened: [Errno 13] Permission denied: '/tmp/claude-1000/-home-bigkatoan-lelab/a1dcb981-a281-4451-90bf-5197e9a286c9/scratchpad/qc-0210/h3/datasets/dmgx/meta/info.json'"] | replay 409 dataset_unreadable
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-bigkatoan-lelab/a1dcb981-a281-4451-90bf-5197e9a286c9/scratchpad/qc-0210/s_r2dmg.py", line 22, in <module>
+    print(f"{n:10s} append {s} {code:24s} identical={th(n) == before} | reasons={(b.get('params') or {}).get('reasons') if isinstance(b, dict) else ''} | replay {s2} {r.get('code') if isinstance(r, dict) else r}", flush=True)
+TypeError: unsupported format string passed to NoneType.__format__
+dmgsc      append 200 None                     identical=False | reasons=None | replay 200 None
+dmgsj      append 200 None                     identical=False | reasons=None | replay 200 None
+dmgv       append 200 None                     identical=False | reasons=None | replay 200 None
+dmgm       append 409 dataset_not_finalized    identical=True | reasons=['meta/episodes missing'] | replay 200 None
+dmgp       append 409 dataset_not_finalized    identical=True | reasons=['meta/episodes/chunk-000/file-000.parquet'] | replay 200 None
+dmgd       append 200 None                     identical=False | reasons=None | replay 404 not_found
+dmgt       append 200 None                     identical=False | reasons=None | replay 200 None
+crasha     append 409 dataset_not_finalized    identical=True | reasons=['data/chunk-000/file-000.parquet', 'meta/episodes missing'] | replay 409 dataset_unreadable
+crashb     append 409 dataset_not_finalized    identical=True | reasons=['meta/episodes/chunk-000/file-000.parquet', 'data/chunk-000/file-000.parquet'] | replay 409 dataset_unreadable
+crashc     append 409 dataset_not_finalized    identical=True | reasons=['data/chunk-000/file-000.parquet', 'meta/episodes missing'] | replay 409 dataset_unreadable
+mixd       append 409 dataset_not_finalized    identical=True | reasons=['data/chunk-000/file-001.parquet'] | replay 200 None

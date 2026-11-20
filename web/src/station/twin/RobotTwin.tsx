@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { PxIcon } from "@/hibiscus/PixelAnim";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
+import { HomeControls } from "../components/HomeControls";
 import { useThresholds } from "../components/MotorHealthPanel";
 import { useStation } from "../ws/StationProvider";
 import type { StationSnapshot } from "../ws/store";
@@ -39,6 +40,8 @@ export interface RobotTwinProps {
   canvasClassName?: string | undefined;
   /** Extra controls under the canvas (ghost player). */
   children?: ReactNode;
+  /** "Set Home at current position" / "Return Home" under the canvas (CR-2); off for previews. */
+  home?: boolean;
 }
 
 export function RobotTwin({
@@ -50,6 +53,7 @@ export function RobotTwin({
   className,
   canvasClassName,
   children,
+  home = ghost === null,
 }: RobotTwinProps) {
   const { t } = useTranslation("station");
   const { resolved } = useTheme();
@@ -131,6 +135,7 @@ export function RobotTwin({
         </p>
       )}
       {children}
+      {home ? <HomeControls /> : null}
       {legend && webgl ? (
         <div className="flex flex-col gap-1">
           <p className="text-xs text-muted-foreground">{t("twin.legend")}</p>
