@@ -25,6 +25,14 @@ from hibiscus_station.station import Station
 
 PORT = 18210
 
+if sys.platform == "darwin":
+    # CI macOS has died with exit 133 (SIGTRAP) mid-run, with no Python trace: pytest's faulthandler
+    # does not watch SIGTRAP. Dump every thread's stack on it, then let the signal kill the run.
+    import faulthandler
+    import signal
+
+    faulthandler.register(signal.SIGTRAP, all_threads=True, chain=True)
+
 
 def deep_json(obj: Any) -> str:
     """``json.dumps`` without recursion, for documents nested deeper than the C encoder allows."""
