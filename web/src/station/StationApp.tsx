@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/lib/theme";
 import { CalibratePage } from "./pages/CalibratePage";
 import { CamerasPage } from "./pages/CamerasPage";
-import { DatasetDetailPage, DatasetsPage } from "./pages/DatasetsPage";
+import { DatasetDetailPage, DatasetsPage, DatasetsPageError } from "./pages/DatasetsPage";
 import { ProgramsPage } from "./pages/programs/ProgramsPage";
 import { ModelsPage, SessionsPage, SettingsPage, TrainPage, WelcomePage } from "./pages/OtherPages";
 import { RecordPage } from "./pages/RecordPage";
@@ -64,9 +64,10 @@ export const stationRoutes: RouteObject[] = [
             <DatasetsPage />
           </LockGate>
         ),
+        errorElement: <DatasetsPageError />,
       },
-      { path: "datasets", element: <DatasetsPage /> },
-      { path: "datasets/:name", element: <DatasetDetailPage /> },
+      { path: "datasets", element: <DatasetsPage />, errorElement: <DatasetsPageError /> },
+      { path: "datasets/:name", element: <DatasetDetailPage />, errorElement: <DatasetsPageError /> },
       {
         path: "train",
         element: (

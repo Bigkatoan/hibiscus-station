@@ -11,6 +11,7 @@ import io
 import json
 import shutil
 import time
+import zlib
 from pathlib import Path
 from typing import Any
 
@@ -74,17 +75,21 @@ class EpisodeBuffer:
 
 
 def read_lines(path: Path) -> list[dict[str, Any]]:
+    """The log's lines; a truncated or damaged file (crash while writing) keeps what was readable."""
     if not path.is_file():
         return []
     out = []
-    with gzip.open(path, "rt", encoding="utf-8") as fh:
-        try:
+    try:
+        with gzip.open(path, "rt", encoding="utf-8") as fh:
             for line in fh:
                 line = line.strip()
-                if line:
-                    out.append(json.loads(line))
-        except EOFError:  # truncated (crash while writing): keep what was readable
-            pass
+                if not line:
+                    continue
+                obj = json.loads(line)
+                if isinstance(obj, dict):
+                    out.append(obj)
+    except (OSError, EOFError, ValueError, zlib.error):  # BadGzipFile is an OSError
+        pass
     return out
 
 

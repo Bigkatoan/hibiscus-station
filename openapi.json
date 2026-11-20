@@ -3640,6 +3640,16 @@
             "title": "Max Temp C",
             "type": "object"
           },
+          "state": {
+            "description": "saving: being encoded and written now; unreadable: counted by the dataset but its episode metadata was never written (the Station closed before the dataset was finalized)",
+            "enum": [
+              "saved",
+              "saving",
+              "unreadable"
+            ],
+            "title": "State",
+            "type": "string"
+          },
           "tasks": {
             "anyOf": [
               {
@@ -3661,6 +3671,7 @@
         },
         "required": [
           "index",
+          "state",
           "frames",
           "length_s",
           "tasks",
@@ -14188,7 +14199,7 @@
   "info": {
     "description": "Local robot agent API (docs/spec/station.md \u00a75). Bound to 127.0.0.1 unless LAN mode is enabled with a fixed token and allowed host names (\u00a78.1).",
     "title": "Hibiscus Station",
-    "version": "0.2.9"
+    "version": "0.2.10"
   },
   "openapi": "3.1.0",
   "paths": {

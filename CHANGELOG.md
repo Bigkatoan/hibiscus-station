@@ -11,6 +11,104 @@ repository (`station/`); 0.2.0 is the first release of this standalone repositor
 
 ## [Unreleased]
 
+## [0.2.10] - 2026-11-20
+
+Hotfix for the field report on 0.2.9 (Windows, SO-101, 2026-11-19): "I cannot see the video and
+the episodes I recorded." Known defect D-2.
+
+### Fixed
+- **The dataset page lists every recorded episode, also while the dataset is still being written.**
+  Since 0.2.9 episodes are saved in the background, and LeRobot only writes the episode list
+  (`meta/episodes`) when the dataset is finalized at the end of the session. Until then the page
+  (and the Record page's saved-episode strip) showed no episode at all. From the 11th episode of a
+  session, LeRobot's half-written episode file made the page answer "Internal error", and a Station
+  closed in the middle of a session left a dataset whose page and the Datasets list answered
+  "Internal error" for good. Now every episode shows as soon as it is saved; the episode being
+  saved shows "Saving…" and the page refreshes by itself until it is written; an episode the
+  Station never finished writing says so on its own row ("Cannot be read: the Station closed before
+  this episode was fully saved. The other episodes are fine.") and the rest of the page works.
+- **No more "Internal error" on the Datasets pages while an episode is saved.** Reading the dataset
+  size while the encoder deleted its temporary frames, reading `meta/info.json` while LeRobot
+  rewrote it, and a damaged telemetry file each failed the whole page.
+- **Replay of an episode that is still being written** answers "Station is busy (saving)" instead
+  of "Internal error"; its Replay button stays disabled until the episode is saved.
+- A dataset page that fails to display keeps the menu and says so, with Reload and All datasets,
+  instead of a blank error page.
+
+- **Adding episodes to a dataset the Station left unfinished** (the console window closed in the
+  middle of a session, then "Append to an existing dataset") answered "Internal error" or, with
+  fewer than 10 episodes, "A motor did not answer on the serial bus" after LeRobot asked the
+  Hugging Face Hub for the dataset. Such a dataset cannot be repaired safely: LeRobot kept its
+  episode list in memory and its data file was never closed. Station now refuses with
+  `409 dataset_not_finalized` before LeRobot touches anything, says why on the Record page ("…was
+  not finished: the Station closed while it was being recorded… Its files are kept as they
+  are.") and offers "Record into a new dataset" with the same task and settings. Not one file of
+  the unfinished dataset is changed.
+- **QC 0.2.10 round 1.**
+  - A damaged episode count in a dataset's `meta/info.json` (e.g. 1 000 000 000) no longer makes
+    the dataset page use memory until the Station is killed (QH-1). Episode rows are listed from
+    what is on disk; an impossible count shows the dataset as not finalized with the reason.
+  - "Append to an existing dataset" whose `meta/info.json` is empty, cut short, not an object or
+    has malformed features answered "Internal error" (also in 0.2.9). It now answers
+    `409 dataset_unreadable` ("…cannot be read: its files are damaged or cannot be opened…"), offers
+    "Record into a new dataset" and changes no file (QH-2). Replay of such a dataset answers the
+    same.
+  - A dataset file that cannot be opened (no permission) or a datasets folder that cannot be
+    written was reported as "A motor did not answer on the serial bus" (`502 bus_error`). It is
+    now `dataset_unreadable` or `409 dataset_io_error`; `bus_error` stays for the serial bus (QH-5).
+  - When every episode of a dataset is unreadable, the page says once that the Station closed
+    while it was being recorded, without "The other episodes are fine"; their telemetry can be
+    opened (QH-3).
+  - Replay of an episode of a dataset the Station left unfinished answers `dataset_unreadable`,
+    not "still being saved; try again when the dataset is finalized" (QH-4).
+- **QC 0.2.10 round 2: one damaged dataset never breaks the Datasets page or Replay.**
+  - A single dataset whose `meta/info.json` had `features` that is not an object, a
+    `total_episodes` of `Infinity`, or a `robot_type` that is not text made the whole Datasets
+    list (and that dataset's page) answer "Internal error", and the Upload step locked (QH-7, also
+    in 0.2.9). Each dataset is now summarised on its own: one that cannot be read is listed as not
+    finalized with an "unreadable: …" reason, and every other dataset shows as usual.
+  - Replay answered "Internal error" for `fps` 0 or `Infinity` and for joint names that do not
+    match the actions, and started at absurd rates for `fps` 1e30 or -5 (QH-8, M1-2). It now
+    answers `409 dataset_unreadable`.
+  - One validator for `meta/info.json` is shared by the list, the dataset page, append and replay:
+    fps (a finite number from 1 to 1000), the counts, the codebase version, LeRobot's file
+    templates and chunk sizes, every feature (dtype, shape, names matching the shape) and the joint
+    names of the action. A dataset that fails it is unreadable, with the reasons (M1-2). A pytest
+    fuzz sets every key, feature and feature field to 14 hostile values (648 cases) and checks list,
+    detail, telemetry, append and replay: no 5xx, no file changed, other datasets unaffected.
+  - Appending to a dataset recorded with another robot setup (`422 dataset_incompatible`) also
+    offers "Record into a new dataset" (M1-1).
+- **QC 0.2.10 round 3 (QH-9, data loss, also in 0.2.9): appending never overwrites earlier
+  episodes.** When a dataset's `meta/info.json` counted fewer episodes than its episode list holds
+  (for example `total_episodes: 0` with 9 on disk), "Append to an existing dataset" was accepted
+  and LeRobot overwrote `data/chunk-000/file-000.parquet`, destroying episodes; the dataset also
+  read as finalized. Append now needs a complete and consistent dataset: the recording check
+  passes, `total_episodes` equals the rows in `meta/episodes`, `total_frames` equals the sum of
+  their lengths, the indexes are 0..N-1 with contiguous frame ranges, and every data and video
+  file the rows name exists. Otherwise it answers `409 dataset_unreadable` with the reason and no
+  file changes; the list and the dataset page use the same check and show such a dataset as not
+  finalized ("inconsistent: …").
+- **D-26: robot profiles can be deleted** (approved feature F-8, "create / edit / delete"; customer
+  report 2026-11-20: duplicate profiles such as "so-101-1" and "SO_101" on COM8/COM7 could not be
+  removed). Each profile card on the Robot page has Delete / Xoá, with a confirmation that names
+  the profile and says that calibration files and datasets are not deleted (only the entry in
+  robots.yaml is removed). The connected profile says "Disconnect before deleting" / "Ngắt kết nối
+  trước khi xoá"; the Station also refuses (409 `busy`) while that robot is connecting,
+  calibrating, in a session or waiting for a lost USB adapter. Deleting the active profile on real
+  arms never makes the demo profile active; `--mock` creates the demo profile again only when no
+  profile is left, as before.
+
+### Changed
+- API: each `episode_list` row of `GET /datasets/{name}` has a `state`: `saved`, `saving` or
+  `unreadable` (openapi.json regenerated). `POST /sessions/record` with `mode: "append"` on a
+  dataset that was never finalized answers `409 dataset_not_finalized` (`params.dataset`,
+  `params.reasons`). New error codes `dataset_unreadable` (409) and `dataset_io_error` (409).
+
+### Known test issues
+- `tests/test_programs_safety.py::test_deadman_loss_while_the_program_waits` can exceed its 1.5 s
+  margin on the Windows CI runner (1.61 s once, QC QH-6); a rerun passes. The product is not
+  affected.
+
 ## [0.2.9] - 2026-11-17
 
 Field report on 0.2.8 (Windows, real SO-101, 2026-11-17) and the customer's decisions CR-1 and CR-2.

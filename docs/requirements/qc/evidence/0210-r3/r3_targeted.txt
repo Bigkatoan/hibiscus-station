@@ -1,0 +1,32 @@
+LIST 200 count 49 healthy cnt15 listed: True
+dmgflist  list fin=False | detail 200 fin=False fps=30 rows=6 reasons=['unreadable: meta/info.json: features is missing or not an object']
+fstr      list fin=False | detail 200 fin=False fps=30 rows=9 reasons=['unreadable: meta/info.json: features is missing or not an object']
+ftrue     list fin=False | detail 200 fin=False fps=30 rows=9 reasons=['unreadable: meta/info.json: features is missing or not an object']
+einf      list fin=False | detail 200 fin=False fps=30 rows=9 reasons=['unreadable: meta/info.json: total_episodes is not a plausible count']
+rtint     list fin=True | detail 200 fin=True fps=30 rows=9 reasons=[]
+rtobj     list fin=True | detail 200 fin=True fps=30 rows=9 reasons=[]
+dmgfinf   list fin=False | detail 200 fin=False fps=None rows=6 reasons=['unreadable: meta/info.json: fps is missing or not a number from 1 to 1']
+rfnan     list fin=False | detail 200 fin=False fps=None rows=9 reasons=['unreadable: meta/info.json: fps is missing or not a number from 1 to 1']
+rf0       list fin=False | detail 200 fin=False fps=None rows=9 reasons=['unreadable: meta/info.json: fps is missing or not a number from 1 to 1']
+rfbig     list fin=False | detail 200 fin=False fps=None rows=9 reasons=['unreadable: meta/info.json: fps is missing or not a number from 1 to 1']
+rfneg     list fin=False | detail 200 fin=False fps=None rows=9 reasons=['unreadable: meta/info.json: fps is missing or not a number from 1 to 1']
+rfstr     list fin=False | detail 200 fin=False fps=None rows=9 reasons=['unreadable: meta/info.json: fps is missing or not a number from 1 to 1']
+rfbool    list fin=False | detail 200 fin=False fps=None rows=9 reasons=['unreadable: meta/info.json: fps is missing or not a number from 1 to 1']
+rnames    list fin=False | detail 200 fin=False fps=30 rows=9 reasons=['unreadable: meta/info.json: the action feature has no joint names']
+rnames2   list fin=False | detail 200 fin=False fps=30 rows=9 reasons=['unreadable: meta/info.json: feature action has 1 names for shape [6]']
+cnt3      list fin=True | detail 200 fin=True fps=30 rows=9 reasons=[]
+mixd      list fin=False | detail 200 fin=False fps=30 rows=5 reasons=[]
+replay dmgfinf   409 dataset_unreadable dataset dmgfinf cannot be read (meta/info.json: fps is missing or not a number from 1 to 1000), so it cannot b
+replay rfnan     409 dataset_unreadable dataset rfnan cannot be read (meta/info.json: fps is missing or not a number from 1 to 1000), so it cannot be 
+replay rf0       409 dataset_unreadable dataset rf0 cannot be read (meta/info.json: fps is missing or not a number from 1 to 1000), so it cannot be co
+replay rfbig     409 dataset_unreadable dataset rfbig cannot be read (meta/info.json: fps is missing or not a number from 1 to 1000), so it cannot be 
+replay rfneg     409 dataset_unreadable dataset rfneg cannot be read (meta/info.json: fps is missing or not a number from 1 to 1000), so it cannot be 
+replay rfstr     409 dataset_unreadable dataset rfstr cannot be read (meta/info.json: fps is missing or not a number from 1 to 1000), so it cannot be 
+replay rfbool    409 dataset_unreadable dataset rfbool cannot be read (meta/info.json: fps is missing or not a number from 1 to 1000), so it cannot be
+replay rnames    409 dataset_unreadable dataset rnames cannot be read (meta/info.json: the action feature has no joint names), so it cannot be continu
+replay rnames2   409 dataset_unreadable dataset rnames2 cannot be read (meta/info.json: feature action has 1 names for shape [6]), so it cannot be con
+replay dmgflist  409 dataset_unreadable dataset dmgflist cannot be read (meta/info.json: features is missing or not an object), so it cannot be contin
+replay einf      409 dataset_unreadable dataset einf cannot be read (meta/info.json: total_episodes is not a plausible count), so it cannot be continu
+replay rtint     200 None 
+replay cnt3      200 None 
+replay mixd      200 None 

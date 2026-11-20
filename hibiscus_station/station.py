@@ -28,7 +28,7 @@ from hibiscus_station.programs.hub import ProgramsHub
 from hibiscus_station.remote import ServerLink, pull_model, upload_dataset
 from hibiscus_station.sessions.base import MotionSession
 from hibiscus_station.sessions.record import RecordSession
-from hibiscus_station.sessions.recorder import DatasetRecorder, check_name, wait_closed
+from hibiscus_station.sessions.recorder import DatasetRecorder, check_name, unreadable_error, wait_closed
 from hibiscus_station.sessions.replay import ReplaySession, load_episode_actions
 from hibiscus_station.sessions.rest import RestSession
 from hibiscus_station.sessions.run import RunSession
@@ -210,14 +210,27 @@ class Station:
         return self.profiles.put(profile)
 
     def delete_robot(self, robot_id: str) -> None:
+        """Remove the profile from robots.yaml only: calibration files, datasets, models and
+        sessions stay (D-26). Refused while the robot is in use: connected, connecting, in a
+        session or waiting for a lost USB adapter (its profile is what reconnect uses)."""
+        o = self.owner
         if (
-            self.owner.profile is not None
-            and self.owner.profile.id == robot_id
-            and self.owner.follower is not None
+            o.profile is not None
+            and o.profile.id == robot_id
+            and (
+                o.follower is not None
+                or o.session is not None
+                or o.lost is not None
+                or o.state in ("connecting", "calibrating")
+            )
         ):
-            raise StationError("busy", "disconnect this robot first", params={"state": self.owner.state})
+            raise StationError(
+                "busy", "disconnect this robot first", params={"state": o.state, "robot": robot_id}
+            )
         if not self.profiles.delete(robot_id):
             raise StationError("not_found", f"no robot {robot_id}")
+        if not self.mock:
+            self._retire_demo_active()  # the next active profile is never a demo one on real arms
 
     def reconnect(
         self, timeout_s: float = 30.0, lister: Callable[[], list[dict[str, Any]]] | None = None
@@ -376,7 +389,13 @@ class Station:
     def start_replay(self, req: ReplayRequest) -> dict[str, Any]:
         self._profile()
         check_name(req.dataset)
-        fps, actions = load_episode_actions(self.paths.datasets / req.dataset, req.episode)
+        try:
+            fps, actions = load_episode_actions(self.paths.datasets / req.dataset, req.episode)
+        except StationError:
+            raise
+        except Exception as exc:  # any damage the checks missed: a dataset error, never a 500 (QH-8)
+            log.exception("replay of %s episode %d", req.dataset, req.episode)
+            raise unreadable_error(req.dataset, f"{type(exc).__name__}: {exc}"[:300]) from exc
 
         def build(owner: HardwareOwner) -> MotionSession:
             s = ReplaySession(

@@ -1,0 +1,13 @@
+list 200 0.01
+e1e9 200 0.19s eps 0 frames 180 fps 30 fin False rows 6 ['saved'] reasons ['meta/info.json: total_episodes is not a plausible count'] | list fin False
+e2p62 200 0.01s eps 0 frames 180 fps 30 fin False rows 6 ['saved'] reasons ['meta/info.json: total_episodes is not a plausible count'] | list fin False
+eneg 200 0.01s eps 0 frames 180 fps 30 fin False rows 6 ['saved'] reasons ['meta/info.json: total_episodes is not a plausible count'] | list fin False
+etext 200 0.01s eps 0 frames 180 fps 30 fin False rows 6 ['saved'] reasons ['meta/info.json: total_episodes is not a plausible count'] | list fin False
+ebool 200 0.01s eps 0 frames 180 fps 30 fin False rows 6 ['saved'] reasons ['meta/info.json: total_episodes is not a plausible count'] | list fin False
+efloat 200 0.01s eps 0 frames 180 fps 30 fin False rows 6 ['saved'] reasons ['meta/info.json: total_episodes is not a plausible count'] | list fin False
+enull 200 0.01s eps 0 frames 180 fps 30 fin False rows 6 ['saved'] reasons ['meta/info.json: total_episodes is not a plausible count'] | list fin False
+e1e9f 200 0.01s eps 0 frames 180 fps 30 fin False rows 6 ['saved'] reasons ['meta/info.json: total_episodes is not a plausible count'] | list fin False
+fpsinf 200 0.01s eps 6 frames 180 fps None fin True rows 6 ['saved'] reasons [] | list fin True
+fpsnan 200 0.01s eps 6 frames 180 fps None fin True rows 6 ['saved'] reasons [] | list fin True
+frbig 200 0.01s eps 6 frames 0 fps 30 fin False rows 6 ['saved'] reasons ['meta/info.json: total_frames is not a plausible count'] | list fin False
+peak RSS MB 178 now 178

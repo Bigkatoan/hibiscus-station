@@ -14,7 +14,7 @@ import { Mascot } from "@/components/Mascot";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox, Input, NativeSelect } from "@/components/ui/input";
-import { api } from "../api/client";
+import { api, StationApiError } from "../api/client";
 import { qk, useDataset, useDatasets, useStationMutation } from "../api/hooks";
 import type { CameraStatus, RecordRequest, Session } from "../api/types";
 
@@ -90,7 +90,11 @@ function EpisodeStrip({ dataset, saved }: { dataset: string; saved: number }) {
               className="flex shrink-0 flex-col items-center border-2 border-frame bg-card px-2 py-1 text-xs"
             >
               <span className="font-extrabold text-base">#{e.index + 1}</span>
-              <span className="tabular-nums">{e.length_s !== null ? fmtFixed(e.length_s) : "–"} s</span>
+              {e.state === "saving" ? (
+                <span>{t("datasets.saving")}</span>
+              ) : (
+                <span className="tabular-nums">{e.length_s !== null ? fmtFixed(e.length_s) : "–"} s</span>
+              )}
               {max !== null ? (
                 <span
                   className="mt-0.5 inline-flex items-center gap-0.5 border px-0.5 tabular-nums"
@@ -230,6 +234,32 @@ function RecordSetup() {
         ? t("record.name_exists")
         : undefined;
   const can = nameOk && !nameError && form.task.trim() !== "" && status?.state === "idle";
+  // Field report 0.2.10: a dataset the Station left unfinalized (closed mid-session) cannot be
+  // continued; offer a new dataset with the same task and settings.
+  // M1-1: a dataset recorded with another robot setup gets the same offer
+  const offerKey: Record<string, string> = {
+    dataset_not_finalized: "record.unfinalized",
+    dataset_unreadable: "record.unreadable",
+    dataset_incompatible: "record.incompatible",
+  };
+  const offer =
+    start.error instanceof StationApiError && start.error.code in offerKey
+      ? offerKey[start.error.code]
+      : undefined;
+  const unfinished =
+    offer !== undefined && start.error instanceof StationApiError
+      ? typeof start.error.params.dataset === "string"
+        ? start.error.params.dataset
+        : form.dataset
+      : null;
+  const recordNew = (base: string) => {
+    const names = new Set((datasets.data?.datasets ?? []).map((d) => d.name));
+    let i = 2;
+    const stem = base.slice(0, 60);
+    while (names.has(`${stem}_${String(i)}`)) i += 1;
+    start.reset();
+    setForm((f) => ({ ...f, mode: "new", dataset: `${stem}_${String(i)}` }));
+  };
 
   return (
     <Card>
@@ -377,7 +407,28 @@ function RecordSetup() {
               count: cams.length,
             })}
           </p>
-          <StationError error={start.error} className="sm:col-span-2" />
+          {unfinished !== null ? (
+            <div
+              className="flex flex-wrap items-center gap-3 border-2 border-destructive p-3 text-sm sm:col-span-2"
+              role="alert"
+              data-testid="record-unfinalized"
+            >
+              <p className="min-w-[min(14rem,100%)] flex-1">
+                {t(offer ?? "record.unfinalized", { dataset: unfinished })}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  recordNew(unfinished);
+                }}
+              >
+                {t("record.new_instead")}
+              </Button>
+            </div>
+          ) : (
+            <StationError error={start.error} className="sm:col-span-2" />
+          )}
           <div className="sm:col-span-2">
             <Button type="submit" size="lg" disabled={!can || start.isPending}>
               {t("record.start")}

@@ -7,6 +7,7 @@ cameras as every other session. A smooth approach to the first action comes firs
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -26,21 +27,56 @@ def load_episode_actions(root: Path, episode: int) -> tuple[int, list[dict[str, 
     info_path = root / "meta" / "info.json"
     if not info_path.is_file():
         raise StationError("not_found", f"no dataset at {root}")
-    info = json.loads(info_path.read_text(encoding="utf-8"))
-    names = list(info["features"]["action"]["names"])
+    from hibiscus.recording import parquet_closed
+
+    from hibiscus_station.data.info import info_problems
+    from hibiscus_station.sessions.recorder import is_being_written, unreadable_error
+
+    try:
+        info = json.loads(info_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:  # damaged meta/info.json: never a 500
+        raise unreadable_error(root.name, f"meta/info.json: {type(exc).__name__}") from exc
+    problems = info_problems(info)  # fps finite 1..1000, action names match their shape (QH-8)
+    if problems:
+        raise unreadable_error(root.name, "; ".join(problems[:3]))
+    names: list[str] = list(info["features"]["action"]["names"])
+    fps = round(info["fps"])
+
     rows: list[tuple[int, list[float]]] = []
+    being_written = False
     for f in sorted((root / "data").rglob("*.parquet")):
-        table = pq.read_table(f, columns=["episode_index", "frame_index", "action"])
-        eps = table.column("episode_index").to_pylist()
-        fis = table.column("frame_index").to_pylist()
-        acts = table.column("action").to_pylist()
-        for e, fi, a in zip(eps, fis, acts, strict=True):
-            if int(e) == episode:
-                rows.append((int(fi), [float(x) for x in a]))
+        if not parquet_closed(f):  # lerobot's writer is still open (dataset not finalized)
+            being_written = True
+            continue
+        try:
+            table = pq.read_table(f, columns=["episode_index", "frame_index", "action"])
+        except (OSError, ValueError, KeyError) as exc:  # pyarrow errors: OSError / ValueError
+            raise unreadable_error(root.name, f"{f.relative_to(root)}: {type(exc).__name__}") from exc
+        try:
+            eps = table.column("episode_index").to_pylist()
+            fis = table.column("frame_index").to_pylist()
+            acts = table.column("action").to_pylist()
+            for e, fi, a in zip(eps, fis, acts, strict=True):
+                if int(e) == episode:
+                    act = [float(x) for x in a]
+                    if len(act) != len(names) or not all(math.isfinite(x) for x in act):
+                        raise ValueError(f"action of frame {fi} does not match the {len(names)} joint names")
+                    rows.append((int(fi), act))
+        except (KeyError, TypeError, ValueError) as exc:
+            raise unreadable_error(root.name, f"{f.relative_to(root)}: {exc}"[:300]) from exc
+    if not rows and being_written:
+        if is_being_written(root):
+            raise StationError(
+                "busy",
+                "this episode is still being saved; try again when the dataset is finalized",
+                params={"dataset": root.name, "state": "saving"},
+            )
+        # nothing writes it: the Station closed mid-session and it will never be finalized (QH-4)
+        raise unreadable_error(root.name, "the Station closed while this dataset was being recorded")
     if not rows:
         raise StationError("not_found", f"episode {episode} not found", params={"episode": episode})
     rows.sort(key=lambda r: r[0])
-    return int(info["fps"]), [dict(zip(names, a, strict=True)) for _, a in rows]
+    return fps, [dict(zip(names, a, strict=True)) for _, a in rows]
 
 
 @dataclass

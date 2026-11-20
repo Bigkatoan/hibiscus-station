@@ -16,7 +16,7 @@ name: hibiscus-station
 
 services:
   station:
-    image: ${STATION_IMAGE:-ghcr.io/bigkatoan/hibiscus-station}:${STATION_TAG:?set STATION_TAG in .env, e.g. 0.2.9-cpu}
+    image: ${STATION_IMAGE:-ghcr.io/bigkatoan/hibiscus-station}:${STATION_TAG:?set STATION_TAG in .env, e.g. 0.2.10-cpu}
     container_name: ${STATION_CONTAINER:-hibiscus-station}
     restart: unless-stopped
     network_mode: host

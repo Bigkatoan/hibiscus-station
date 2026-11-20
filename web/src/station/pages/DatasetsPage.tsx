@@ -255,13 +255,39 @@ function UploadCard({ detail }: { detail: LocalDatasetDetail }) {
   );
 }
 
+/** Route error element of the dataset pages: a page that fails to render keeps the Station shell
+ * and says so (field report 0.2.10: the dataset page went blank). */
+export function DatasetsPageError() {
+  const { t } = useTranslation("station");
+  return (
+    <Card data-testid="page-error">
+      <CardContent className="flex flex-wrap items-center gap-4 pt-3 sm:pt-4">
+        <Mascot mood="idle" />
+        <p className="min-w-[min(14rem,100%)] flex-1" role="alert">
+          {t("datasets.page_error")}
+        </p>
+        <Button
+          onClick={() => {
+            window.location.reload();
+          }}
+        >
+          {t("datasets.reload")}
+        </Button>
+        <Button variant="outline" asChild>
+          <Link to="/datasets">{t("datasets.to_list")}</Link>
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function DatasetDetailPage() {
   const { t } = useTranslation("station");
   const { name = "" } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const status = useStatus();
-  const detail = useDataset(name);
+  const detail = useDataset(name, true, true);
   const [episode, setEpisode] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const replay = useStationMutation((i: number) =>
@@ -269,6 +295,8 @@ export function DatasetDetailPage() {
   );
   const del = useStationMutation(() => api.del(`/datasets/${encodeURIComponent(name)}`), [qk.datasets]);
   const d = detail.data;
+  const allUnreadable =
+    (d?.episode_list.length ?? 0) > 0 && (d?.episode_list ?? []).every((e) => e.state === "unreadable");
   if (detail.error instanceof StationApiError && detail.error.status === 404) {
     // QC 0.2.9 QD-12: a dataset that is gone (deleted, or a record session that kept no episode)
     // shows no stale numbers, no Delete / Upload and no raw server text.
@@ -362,27 +390,51 @@ export function DatasetDetailPage() {
                 <CardTitle>{t("datasets.episodes")}</CardTitle>
               </CardHeader>
               <CardContent>
+                {allUnreadable ? (
+                  <p
+                    className="mb-2 border-2 border-destructive p-2 text-sm"
+                    role="status"
+                    data-testid="dataset-unreadable"
+                  >
+                    {t("datasets.unreadable_all")}
+                  </p>
+                ) : null}
                 <ul className="flex flex-col gap-1">
                   {d.episode_list.map((e) => {
                     const max = peakTemp(e.max_temp_c);
+                    const saved = e.state === "saved";
+                    // QC QH-3: the telemetry of an unreadable episode still opens when it exists
+                    const viewable = saved || (e.state === "unreadable" && e.telemetry_lines > 0);
                     return (
                       <li
                         key={e.index}
+                        data-state={e.state}
                         className="flex flex-wrap items-center gap-2 border-b border-frame/30 py-1 text-sm"
                       >
                         <button
                           type="button"
-                          className="font-extrabold text-base underline"
+                          className="font-extrabold text-base underline disabled:no-underline"
                           aria-pressed={episode === e.index}
+                          disabled={!viewable}
                           onClick={() => {
                             setEpisode(e.index);
                           }}
                         >
                           #{e.index + 1}
                         </button>
-                        <span className="tabular-nums">
-                          {e.length_s !== null ? fmtFixed(e.length_s) : "–"} s
-                        </span>
+                        {e.state === "saving" ? (
+                          <Badge variant="info" role="status">
+                            {t("datasets.saving")}
+                          </Badge>
+                        ) : e.state === "unreadable" ? (
+                          <span className="basis-full text-xs text-destructive sm:basis-auto">
+                            {t(allUnreadable ? "datasets.unreadable_short" : "datasets.unreadable")}
+                          </span>
+                        ) : (
+                          <span className="tabular-nums">
+                            {e.length_s !== null ? fmtFixed(e.length_s) : "–"} s
+                          </span>
+                        )}
                         {max !== null ? (
                           <span
                             className="border px-1 tabular-nums text-xs"
@@ -395,7 +447,7 @@ export function DatasetDetailPage() {
                           size="sm"
                           variant="ghost"
                           className="ml-auto"
-                          disabled={status?.state !== "idle" || replay.isPending}
+                          disabled={!saved || status?.state !== "idle" || replay.isPending}
                           onClick={() => {
                             replay.mutate(e.index, {
                               onSuccess: () => {

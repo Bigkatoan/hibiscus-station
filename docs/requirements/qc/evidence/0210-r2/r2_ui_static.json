@@ -1,0 +1,394 @@
+{
+ "en-1280-light": {
+  "/datasets": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 0,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 0
+  },
+  "/datasets/cnt15": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 15,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 0
+  },
+  "/datasets/crasha": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 3,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 3
+  },
+  "/datasets/crashb": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 12,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 12
+  },
+  "/datasets/dmgi1": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 6,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 0
+  },
+  "/datasets/dmgsc": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 6,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 0
+  },
+  "/datasets/dmgp": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 6,
+   "unreadable_msgs": 3,
+   "saving": 0,
+   "disabled_btns": 3
+  },
+  "/datasets/nonexist": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 0,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 0,
+   "missing_msg": true
+  },
+  "tel_open": {
+   "svg_or_canvas": 2
+  },
+  "errors": [
+   "console:Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "5xx": []
+ },
+ "vi-390-dark": {
+  "/datasets": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 0,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 0
+  },
+  "/datasets/cnt15": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 15,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 0
+  },
+  "/datasets/crasha": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 3,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 3
+  },
+  "/datasets/crashb": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 12,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 12
+  },
+  "/datasets/dmgi1": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 6,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 0
+  },
+  "/datasets/dmgsc": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 6,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 0
+  },
+  "/datasets/dmgp": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 6,
+   "unreadable_msgs": 3,
+   "saving": 0,
+   "disabled_btns": 3
+  },
+  "/datasets/nonexist": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 0,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 0,
+   "missing_msg": true
+  },
+  "tel_open": {
+   "svg_or_canvas": 4
+  },
+  "errors": [
+   "console:Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "5xx": []
+ },
+ "en-390-dark": {
+  "/datasets": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 0,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 0
+  },
+  "/datasets/cnt15": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 15,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 0
+  },
+  "/datasets/crasha": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 3,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 3
+  },
+  "/datasets/crashb": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 12,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 12
+  },
+  "/datasets/dmgi1": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 6,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 0
+  },
+  "/datasets/dmgsc": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 6,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 0
+  },
+  "/datasets/dmgp": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 6,
+   "unreadable_msgs": 3,
+   "saving": 0,
+   "disabled_btns": 3
+  },
+  "/datasets/nonexist": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 0,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 0,
+   "missing_msg": true
+  },
+  "tel_open": {
+   "svg_or_canvas": 4
+  },
+  "errors": [
+   "console:Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "5xx": []
+ },
+ "vi-1280-light": {
+  "/datasets": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 0,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 0
+  },
+  "/datasets/cnt15": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 15,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 0
+  },
+  "/datasets/crasha": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 3,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 3
+  },
+  "/datasets/crashb": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 12,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 12
+  },
+  "/datasets/dmgi1": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 6,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 0
+  },
+  "/datasets/dmgsc": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 6,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 0
+  },
+  "/datasets/dmgp": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 6,
+   "unreadable_msgs": 3,
+   "saving": 0,
+   "disabled_btns": 3
+  },
+  "/datasets/nonexist": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 0,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 0,
+   "missing_msg": true
+  },
+  "tel_open": {
+   "svg_or_canvas": 2
+  },
+  "errors": [
+   "console:Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "5xx": []
+ }
+}
