@@ -90,7 +90,11 @@ function EpisodeStrip({ dataset, saved }: { dataset: string; saved: number }) {
               className="flex shrink-0 flex-col items-center border-2 border-frame bg-card px-2 py-1 text-xs"
             >
               <span className="font-extrabold text-base">#{e.index + 1}</span>
-              <span className="tabular-nums">{e.length_s !== null ? fmtFixed(e.length_s) : "–"} s</span>
+              {e.state === "saving" ? (
+                <span>{t("datasets.saving")}</span>
+              ) : (
+                <span className="tabular-nums">{e.length_s !== null ? fmtFixed(e.length_s) : "–"} s</span>
+              )}
               {max !== null ? (
                 <span
                   className="mt-0.5 inline-flex items-center gap-0.5 border px-0.5 tabular-nums"

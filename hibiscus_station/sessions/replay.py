@@ -28,8 +28,14 @@ def load_episode_actions(root: Path, episode: int) -> tuple[int, list[dict[str, 
         raise StationError("not_found", f"no dataset at {root}")
     info = json.loads(info_path.read_text(encoding="utf-8"))
     names = list(info["features"]["action"]["names"])
+    from hibiscus.recording import parquet_closed
+
     rows: list[tuple[int, list[float]]] = []
+    being_written = False
     for f in sorted((root / "data").rglob("*.parquet")):
+        if not parquet_closed(f):  # lerobot's writer is still open (dataset not finalized)
+            being_written = True
+            continue
         table = pq.read_table(f, columns=["episode_index", "frame_index", "action"])
         eps = table.column("episode_index").to_pylist()
         fis = table.column("frame_index").to_pylist()
@@ -37,6 +43,12 @@ def load_episode_actions(root: Path, episode: int) -> tuple[int, list[dict[str, 
         for e, fi, a in zip(eps, fis, acts, strict=True):
             if int(e) == episode:
                 rows.append((int(fi), [float(x) for x in a]))
+    if not rows and being_written:
+        raise StationError(
+            "busy",
+            "this episode is still being saved; try again when the dataset is finalized",
+            params={"dataset": root.name, "state": "saving"},
+        )
     if not rows:
         raise StationError("not_found", f"episode {episode} not found", params={"episode": episode})
     rows.sort(key=lambda r: r[0])

@@ -146,6 +146,7 @@ export function dataset(name = "picknplace_red", episodes = 3): LocalDatasetDeta
     task: "Pick the red cube and place it in the bowl",
     episode_list: Array.from({ length: episodes }, (_, i) => ({
       index: i,
+      state: "saved" as const,
       length_s: 30,
       frames: 900,
       tasks: ["Pick the red cube and place it in the bowl"],

@@ -126,11 +126,19 @@ export const useDiscoverCameras = (enabled = true) =>
 export const useDatasets = () =>
   useQuery({ queryKey: qk.datasets, queryFn: () => api.get<{ datasets: LocalDataset[] }>("/datasets") });
 
-export const useDataset = (name: string, enabled = true) =>
+export const useDataset = (name: string, enabled = true, follow = false) =>
   useQuery({
     queryKey: qk.dataset(name),
     queryFn: () => api.get<LocalDatasetDetail>(`/datasets/${encodeURIComponent(name)}`),
     enabled,
+    // `follow` (the dataset page): an episode being saved, or a dataset not finalized yet, is
+    // read again until it is written (field report 0.2.10: episodes saved in the background).
+    refetchInterval: (q) => {
+      const d = q.state.data;
+      if (!follow || !d) return false;
+      if (d.episode_list.some((e) => e.state === "saving")) return 1000;
+      return d.finalized ? false : 2000;
+    },
   });
 
 export const useEpisodeTelemetry = (name: string, index: number | null) =>

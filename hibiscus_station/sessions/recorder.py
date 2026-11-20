@@ -10,6 +10,7 @@ import shutil
 import threading
 import time
 from concurrent.futures import Future, ThreadPoolExecutor
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +25,25 @@ NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 #: (field report 0.2.9: never in the control loop). Keyed by dataset root.
 _CLOSING: dict[Path, Future[None]] = {}
 _CLOSING_LOCK = threading.Lock()
+
+
+@dataclass
+class LiveEpisode:
+    """An episode a live recorder saved (or is saving) whose ``meta/episodes`` row is not on disk
+    yet: lerobot keeps those rows in memory until ``finalize()`` (field report 0.2.10)."""
+
+    frames: int
+    saving: bool
+
+
+#: dataset root -> episode index -> LiveEpisode, until the recorder of that root is finalized
+_LIVE: dict[Path, dict[int, LiveEpisode]] = {}
+
+
+def live_episodes(root: Path) -> dict[int, LiveEpisode]:
+    """The episodes of ``root`` that a recorder of this process saved or is saving, not finalized."""
+    with _CLOSING_LOCK:
+        return {i: LiveEpisode(e.frames, e.saving) for i, e in _LIVE.get(root, {}).items()}
 
 
 def wait_closed(root: Path, timeout: float) -> None:
@@ -182,12 +202,23 @@ class DatasetRecorder:
         frames = self.frames_in_episode
         self.frames_in_episode = 0
 
+        live = LiveEpisode(frames, saving=True)
+        with _CLOSING_LOCK:
+            _LIVE.setdefault(self.root, {})[index] = live
+
         def work() -> int:
             t0 = time.monotonic()
-            self.dataset.save_episode(parallel_encoding=False)
-            eb = EpisodeBuffer()
-            eb.lines = buffer_lines
-            eb.save(episode_file(self.datasets_root, self.name, index))
+            try:
+                self.dataset.save_episode(parallel_encoding=False)
+                eb = EpisodeBuffer()
+                eb.lines = buffer_lines
+                eb.save(episode_file(self.datasets_root, self.name, index))
+            except BaseException:
+                with _CLOSING_LOCK:
+                    _LIVE.get(self.root, {}).pop(index, None)
+                raise
+            with _CLOSING_LOCK:
+                live.saving = False
             self.saved_episodes.append(index)
             took = time.monotonic() - t0
             self.save_s.append(round(took, 2))
@@ -249,8 +280,12 @@ class DatasetRecorder:
             self.wait_saving()
         finally:
             self.discard()
-            if self.dataset is not None:
-                self.dataset.finalize()
+            try:
+                if self.dataset is not None:
+                    self.dataset.finalize()
+            finally:
+                with _CLOSING_LOCK:  # the rows are on disk now (or never will be)
+                    _LIVE.pop(self.root, None)
             self._pool.shutdown(wait=True)
             self.finalized = True
             if self.dataset is not None and int(self.dataset.meta.total_episodes) == 0 and self.mode == "new":

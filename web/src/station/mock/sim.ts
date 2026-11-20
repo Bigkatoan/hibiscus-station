@@ -801,6 +801,7 @@ export class MockStation {
     const idx = d.episode_list.length;
     d.episode_list.push({
       index: idx,
+      state: "saved",
       length_s: Math.round(ep.elapsed_s * 10) / 10,
       frames: Math.round(ep.elapsed_s * rt.s.fps),
       tasks: [rt.s.task],

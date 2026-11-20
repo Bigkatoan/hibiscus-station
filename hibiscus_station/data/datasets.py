@@ -3,18 +3,45 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
+import time
 from pathlib import Path
 from typing import Any
 
 from hibiscus_station.data.sidecar import episode_file, max_temps, read_lines, sidecar_dir, to_series
 from hibiscus_station.errors import StationError
-from hibiscus_station.sessions.recorder import check_name
+from hibiscus_station.sessions.recorder import check_name, live_episodes
 from hibiscus_station.settings import write_private
 
 
 def _dir_size(p: Path) -> int:
-    return sum(f.stat().st_size for f in p.rglob("*") if f.is_file())
+    """Bytes under ``p``. The encoder deletes ``images/`` frames meanwhile (a file listed by the
+    walk may be gone, or on Windows pending deletion, by the time it is stat'ed): skipped."""
+    total = 0
+    for dirpath, _dirs, files in os.walk(p):
+        for f in files:
+            try:
+                total += os.stat(os.path.join(dirpath, f)).st_size
+            except OSError:
+                pass
+    return total
+
+
+def _read_info(path: Path, attempts: int = 5) -> dict[str, Any] | None:
+    """``meta/info.json``, or None when it is unreadable. lerobot rewrites it in place (truncate,
+    then write) on every saved episode, so a read in between sees an empty or half file: retried."""
+    for i in range(attempts):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            return None
+        except (OSError, ValueError):
+            if i < attempts - 1:
+                time.sleep(0.05)
+            continue
+        return data if isinstance(data, dict) else None
+    return None
 
 
 def _meta(datasets_root: Path, name: str) -> dict[str, Any]:
@@ -23,9 +50,13 @@ def _meta(datasets_root: Path, name: str) -> dict[str, Any]:
         try:
             data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
             return data
-        except ValueError:
+        except (OSError, ValueError):
             return {}
     return {}
+
+
+def _count(v: Any) -> int:
+    return int(v) if isinstance(v, (int, float)) and v >= 0 else 0
 
 
 def summary(datasets_root: Path, name: str) -> dict[str, Any] | None:
@@ -35,8 +66,8 @@ def summary(datasets_root: Path, name: str) -> dict[str, Any] | None:
     info_path = root / "meta" / "info.json"
     if not info_path.is_file():
         return None
-    info = json.loads(info_path.read_text(encoding="utf-8"))
-    features = info.get("features", {})
+    info = _read_info(info_path) or {}
+    features: dict[str, Any] = info["features"] if isinstance(info.get("features"), dict) else {}
     cams = [k.removeprefix("observation.images.") for k in features if k.startswith("observation.images.")]
     meta = _meta(datasets_root, name)
     st = check_recording(root)
@@ -45,8 +76,8 @@ def summary(datasets_root: Path, name: str) -> dict[str, Any] | None:
     return {
         "name": name,
         "root": str(root),
-        "episodes": int(info.get("total_episodes", 0)),
-        "frames": int(info.get("total_frames", 0)),
+        "episodes": _count(info.get("total_episodes")),
+        "frames": _count(info.get("total_frames")),
         "fps": int(fps) if isinstance(fps, (int, float)) else None,
         "robot_type": info.get("robot_type"),
         "cameras": cams,
@@ -77,32 +108,65 @@ def list_datasets(datasets_root: Path) -> list[dict[str, Any]]:
     return out
 
 
-def episodes(datasets_root: Path, name: str, fps: int | None = None) -> list[dict[str, Any]]:
+def _written_rows(root: Path) -> dict[int, tuple[int | None, list[str] | None]]:
+    """episode index -> (frames, tasks) from the ``meta/episodes`` files that are complete. A file
+    without its parquet footer is lerobot's open writer (it flushes 10 rows at a time and closes
+    the file in ``finalize()``) or what a Station closed mid-session left: skipped, never a 500."""
+    import pyarrow as pa
     import pyarrow.parquet as pq
+    from hibiscus.recording import parquet_closed
 
-    root = datasets_root / name
-    rows: list[dict[str, Any]] = []
+    rows: dict[int, tuple[int | None, list[str] | None]] = {}
     for f in sorted((root / "meta" / "episodes").rglob("*.parquet")):
-        cols = pq.read_schema(f).names
-        want = [c for c in ("episode_index", "length", "tasks") if c in cols]
-        t = pq.read_table(f, columns=want).to_pydict()
+        if not parquet_closed(f):
+            continue
+        try:
+            cols = pq.read_schema(f).names
+            want = [c for c in ("episode_index", "length", "tasks") if c in cols]
+            t = pq.read_table(f, columns=want).to_pydict()
+        except (OSError, ValueError, pa.ArrowException):
+            continue
         for i in range(len(t.get("episode_index", []))):
-            idx = int(t["episode_index"][i])
-            lines = read_lines(episode_file(datasets_root, name, idx))
-            frames = int(t["length"][i]) if "length" in t else None
             tasks = t["tasks"][i] if "tasks" in t else None
-            rows.append(
-                {
-                    "index": idx,
-                    "frames": frames,
-                    "length_s": round(frames / fps, 3) if frames is not None and fps else None,
-                    "tasks": [str(x) for x in tasks] if isinstance(tasks, list) else None,
-                    "telemetry_lines": len(lines),
-                    "max_temp_c": max_temps(lines),
-                }
+            rows[int(t["episode_index"][i])] = (
+                int(t["length"][i]) if "length" in t and t["length"][i] is not None else None,
+                [str(x) for x in tasks] if isinstance(tasks, list) else None,
             )
-    rows.sort(key=lambda r: r["index"])
     return rows
+
+
+def episodes(datasets_root: Path, name: str, fps: int | None = None, total: int = 0) -> list[dict[str, Any]]:
+    """One row per episode the dataset counts (``total``, from ``meta/info.json``) or a recorder
+    is saving. ``state``: ``saved``; ``saving`` (being encoded and written now); ``unreadable``
+    (counted, but lerobot never wrote its row: the Station closed before the dataset was
+    finalized)."""
+    root = datasets_root / name
+    live = live_episodes(root)  # before the files: a finalize in between leaves its rows on disk
+    written = _written_rows(root)
+    out: list[dict[str, Any]] = []
+    for idx in sorted(set(range(total)) | set(written) | set(live)):
+        tasks: list[str] | None = None
+        if idx in written:
+            frames, tasks = written[idx]
+            state = "saved"
+        elif idx in live:
+            frames = live[idx].frames
+            state = "saving" if live[idx].saving else "saved"
+        else:
+            frames, state = None, "unreadable"
+        lines = read_lines(episode_file(datasets_root, name, idx)) if state != "saving" else []
+        out.append(
+            {
+                "index": idx,
+                "state": state,
+                "frames": frames,
+                "length_s": round(frames / fps, 3) if frames is not None and fps else None,
+                "tasks": tasks,
+                "telemetry_lines": len(lines),
+                "max_temp_c": max_temps(lines),
+            }
+        )
+    return out
 
 
 def detail(datasets_root: Path, name: str) -> dict[str, Any]:
@@ -110,7 +174,7 @@ def detail(datasets_root: Path, name: str) -> dict[str, Any]:
     s = summary(datasets_root, name)
     if s is None:
         raise StationError("not_found", f"no dataset {name}")
-    return {**s, "episode_list": episodes(datasets_root, name, s["fps"])}
+    return {**s, "episode_list": episodes(datasets_root, name, s["fps"], s["episodes"])}
 
 
 def episode_series(datasets_root: Path, name: str, index: int) -> dict[str, Any]:

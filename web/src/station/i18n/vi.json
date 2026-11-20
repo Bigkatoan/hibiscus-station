@@ -569,6 +569,10 @@
     "confirm_delete": "Xoá vĩnh viễn",
     "missing": "Không có bộ dữ liệu {{name}} trên máy này. Bộ dữ liệu đã bị xoá, hoặc lần ghi đó không lưu được tập nào.",
     "to_list": "Tất cả bộ dữ liệu",
+    "saving": "Đang lưu…",
+    "unreadable": "Không đọc được: Station đã đóng trước khi lưu xong tập này. Các tập khác vẫn dùng được.",
+    "page_error": "Không hiển thị được trang này. Các bộ dữ liệu trên máy không bị ảnh hưởng.",
+    "reload": "Tải lại trang",
     "frames_one": "{{count}} khung hình",
     "frames_other": "{{count}} khung hình"
   },

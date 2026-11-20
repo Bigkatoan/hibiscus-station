@@ -2871,6 +2871,12 @@ export interface components {
           [key: string]: number;
         };
       };
+      /**
+       * State
+       * @description saving: being encoded and written now; unreadable: counted by the dataset but its episode metadata was never written (the Station closed before the dataset was finalized)
+       * @enum {string}
+       */
+      state: "saved" | "saving" | "unreadable";
       /** Tasks */
       tasks: string[] | null;
       /** Telemetry Lines */

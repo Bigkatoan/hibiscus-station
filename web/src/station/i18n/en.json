@@ -569,6 +569,10 @@
     "confirm_delete": "Delete for good",
     "missing": "There is no dataset {{name}} on this computer. It was deleted, or its recording kept no episode.",
     "to_list": "All datasets",
+    "saving": "Saving…",
+    "unreadable": "Cannot be read: the Station closed before this episode was fully saved. The other episodes are fine.",
+    "page_error": "This page could not be shown. Your datasets on this computer are not affected.",
+    "reload": "Reload the page",
     "frames_one": "{{count}} frame",
     "frames_other": "{{count}} frames"
   },
