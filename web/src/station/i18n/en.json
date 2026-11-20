@@ -1198,7 +1198,7 @@
     "source_live": "Live arm",
     "reset_view": "Reset view",
     "loading": "Loading the 3D model…",
-    "no_webgl": "This browser cannot draw 3D (WebGL is off), so the 3D view is hidden.",
+    "no_webgl": "This computer cannot show the 3D model (the browser does not support WebGL). Everything else still works.",
     "error": "The 3D model could not be loaded.",
     "rest_pose": "No joint data yet: showing the default pose.",
     "canvas_label": "3D view of the follower arm. Drag to turn it, scroll or pinch to zoom.",

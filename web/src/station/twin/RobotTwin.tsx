@@ -14,7 +14,8 @@ import { useThresholds } from "../components/MotorHealthPanel";
 import { useStation } from "../ws/StationProvider";
 import type { StationSnapshot } from "../ws/store";
 import { levelColor, motorLevels, TWIN_JOINTS, type UrdfPose } from "./mapping";
-import { hasWebGL, useRegisterInlineTwin } from "./registry";
+import { useRegisterInlineTwin } from "./registry";
+import { hasWebGL } from "./webgl";
 import licenseUrl from "./so101/LICENSE.txt?url";
 import noticeUrl from "./so101/NOTICE.txt?url";
 
@@ -62,9 +63,12 @@ export function RobotTwin({
   const mock = useStation(selMock);
   const th = useThresholds();
   const levels = useMemo(() => motorLevels(follower, th), [follower, th]);
-  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  const [state, setState] = useState<"loading" | "ready" | "error" | "no-webgl">("loading");
   const [resetKey, setResetKey] = useState(0);
-  const webgl = hasWebGL();
+  // Probed once (a throwaway canvas, no three.js); a context that still fails later lands in
+  // state "no-webgl" from the canvas, and the same note shows.
+  const [probe] = useState(hasWebGL);
+  const webgl = probe && state !== "no-webgl";
   useRegisterInlineTwin(inline);
 
   return (
@@ -130,9 +134,14 @@ export function RobotTwin({
           ) : null}
         </div>
       ) : (
-        <p className="border-2 border-frame/40 p-2 text-sm text-muted-foreground" role="note">
-          {t("twin.no_webgl")}
-        </p>
+        <div
+          className="px-panel-sm flex items-start gap-3 p-3 text-sm text-muted-foreground"
+          role="note"
+          data-testid="twin-no-webgl"
+        >
+          <PxIcon name="robot" className="mt-0.5 shrink-0 text-foreground" />
+          <p className="min-w-0">{t("twin.no_webgl")}</p>
+        </div>
       )}
       {children}
       {home ? <HomeControls /> : null}

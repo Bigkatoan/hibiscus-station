@@ -8,6 +8,7 @@ import type { Level } from "../api/types";
 import { useRuntime } from "../ws/StationProvider";
 import { REST_POSE, toUrdfPose, type TwinJoint, type UrdfPose } from "./mapping";
 import { TwinScene, type TwinTheme } from "./scene";
+import { WebGLUnavailableError } from "./webgl";
 
 export interface TwinCanvasProps {
   ghost: UrdfPose | null;
@@ -16,7 +17,8 @@ export interface TwinCanvasProps {
   /** Changing it puts the camera back to the default view. */
   resetKey: number;
   label: string;
-  onState: (state: "ready" | "error") => void;
+  /** "no-webgl": the browser could not give a WebGL 2 context (the probe passed, the real one failed). */
+  onState: (state: "ready" | "error" | "no-webgl") => void;
 }
 
 export default function TwinCanvas({ ghost, levels, theme, resetKey, label, onState }: TwinCanvasProps) {
@@ -32,8 +34,9 @@ export default function TwinCanvas({ ghost, levels, theme, resetKey, label, onSt
     let s: TwinScene;
     try {
       s = new TwinScene(el);
-    } catch {
-      onStateRef.current("error");
+    } catch (e) {
+      // Not logged: a PC without WebGL is a normal customer setup, not a fault.
+      onStateRef.current(e instanceof WebGLUnavailableError ? "no-webgl" : "error");
       return undefined;
     }
     scene.current = s;

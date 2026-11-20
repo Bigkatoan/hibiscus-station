@@ -48,8 +48,3 @@ export function useMediaQuery(query: string): boolean {
     () => typeof window.matchMedia === "function" && window.matchMedia(query).matches,
   );
 }
-
-/** True when the browser exposes WebGL at all (jsdom and WebGL-off browsers do not). */
-export function hasWebGL(): boolean {
-  return typeof window !== "undefined" && typeof window.WebGLRenderingContext !== "undefined";
-}

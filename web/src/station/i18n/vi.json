@@ -1198,7 +1198,7 @@
     "source_live": "Tay thật",
     "reset_view": "Đặt lại góc nhìn",
     "loading": "Đang tải mô hình 3D…",
-    "no_webgl": "Trình duyệt này không vẽ được 3D (WebGL đang tắt) nên phần Robot 3D bị ẩn.",
+    "no_webgl": "Máy này không hiển thị được mô hình 3D (trình duyệt không hỗ trợ WebGL). Mọi chức năng khác vẫn dùng được.",
     "error": "Không tải được mô hình 3D.",
     "rest_pose": "Chưa có dữ liệu khớp: đang hiện tư thế mặc định.",
     "canvas_label": "Mô hình 3D của tay follower. Kéo để xoay, cuộn hoặc chụm hai ngón để phóng to.",

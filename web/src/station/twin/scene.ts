@@ -10,6 +10,7 @@ import URDFLoader, { type URDFRobot } from "urdf-loader";
 import { PALETTE } from "@/hibiscus/sprites.gen";
 import type { Level } from "../api/types";
 import { levelColor, TWIN_JOINTS, type TwinJoint, type UrdfPose } from "./mapping";
+import { createWebGL2Context, TWIN_CONTEXT, WebGLUnavailableError } from "./webgl";
 import urdfText from "./so101/so101_new_calib.urdf?raw";
 
 const meshUrls = import.meta.glob<string>("./so101/assets/*.stl", {
@@ -168,7 +169,23 @@ export class TwinScene {
   frames = 0;
 
   constructor(private readonly host: HTMLElement) {
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "low-power" });
+    // The context is made here, not by three.js: when the browser refuses (no WebGL 2, the GPU
+    // blocklisted, lost since the probe) three.js would log at error level before throwing. The
+    // caller shows the "no 3D on this machine" note for WebGLUnavailableError.
+    const canvas = document.createElement("canvas");
+    const context = createWebGL2Context(canvas, TWIN_CONTEXT);
+    if (!context) throw new WebGLUnavailableError();
+    try {
+      this.renderer = new THREE.WebGLRenderer({
+        canvas,
+        context,
+        antialias: true,
+        powerPreference: "low-power",
+      });
+    } catch (e) {
+      context.getExtension("WEBGL_lose_context")?.loseContext();
+      throw new WebGLUnavailableError(e);
+    }
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.domElement.style.display = "block";

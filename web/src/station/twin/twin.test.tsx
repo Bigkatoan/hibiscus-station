@@ -20,9 +20,12 @@ import {
 import { RobotTwin } from "./RobotTwin";
 import { TwinDock, TwinSection } from "./TwinDock";
 import type { TwinCanvasProps } from "./TwinCanvas";
+import { resetWebGLProbe } from "./webgl";
 
 // The WebGL canvas is replaced by a recorder: jsdom has no WebGL. The props it receives are real.
 const canvasProps: TwinCanvasProps[] = [];
+/** What the fake canvas reports once mounted (a real one reports "no-webgl" when the context fails). */
+let canvasOutcome: "ready" | "no-webgl" = "ready";
 vi.mock("./TwinCanvas", async () => {
   const { useEffect } = await import("react");
   return {
@@ -30,7 +33,7 @@ vi.mock("./TwinCanvas", async () => {
       canvasProps.push(props);
       const { onState } = props;
       useEffect(() => {
-        onState("ready");
+        onState(canvasOutcome);
       }, [onState]);
       return <div data-testid="twin-canvas" data-ghost={props.ghost ? JSON.stringify(props.ghost) : ""} />;
     },
@@ -159,14 +162,33 @@ describe("ghost playback sampling", () => {
   });
 });
 
+/** jsdom has no WebGL: give it the WebGL 2 API, and a context or none from getContext. */
+const hadWebGL2 = "WebGL2RenderingContext" in window;
+function fakeWebGL(context: boolean) {
+  Object.assign(window, { WebGL2RenderingContext: Object });
+  const spy = vi
+    .spyOn(HTMLCanvasElement.prototype, "getContext")
+    .mockImplementation(((type: string) =>
+      type === "webgl2" && context
+        ? { getExtension: () => ({ loseContext: vi.fn() }) }
+        : null) as unknown as HTMLCanvasElement["getContext"]);
+  resetWebGLProbe();
+  return spy;
+}
+function noWebGLApi(): void {
+  delete (window as { WebGL2RenderingContext?: unknown }).WebGL2RenderingContext;
+  resetWebGLProbe();
+}
+
 describe("RobotTwin component", () => {
-  const hadWebGL = "WebGLRenderingContext" in window;
   beforeEach(() => {
     canvasProps.length = 0;
-    Object.assign(window, { WebGLRenderingContext: Object });
+    canvasOutcome = "ready";
+    fakeWebGL(true);
   });
   afterEach(() => {
-    if (!hadWebGL) delete (window as { WebGLRenderingContext?: unknown }).WebGLRenderingContext;
+    vi.restoreAllMocks();
+    if (!hadWebGL2) noWebGLApi();
   });
 
   it("feeds motor levels from live telemetry and shows them in the legend", async () => {
@@ -202,13 +224,43 @@ describe("RobotTwin component", () => {
   });
 
   it("explains instead of crashing when the browser has no WebGL", async () => {
-    delete (window as { WebGLRenderingContext?: unknown }).WebGLRenderingContext;
+    noWebGLApi();
     const h = setupStation();
     renderWithStation(<RobotTwin />, h);
     await settle();
     expect(screen.getByTestId("robot-twin")).toHaveAttribute("data-state", "no-webgl");
     expect(screen.getByRole("note")).toHaveTextContent("WebGL");
     expect(screen.queryByTestId("twin-canvas")).toBeNull();
+  });
+
+  it("shows the note, without loading three.js, when getContext gives no WebGL 2 context", async () => {
+    const getContext = fakeWebGL(false);
+    const error = vi.spyOn(console, "error");
+    const h = setupStation();
+    renderWithStation(<RobotTwin />, h);
+    await settle();
+    expect(getContext).toHaveBeenCalledWith("webgl2", expect.anything());
+    expect(screen.getByTestId("robot-twin")).toHaveAttribute("data-state", "no-webgl");
+    expect(screen.getByTestId("twin-no-webgl")).toHaveTextContent(
+      "This computer cannot show the 3D model (the browser does not support WebGL). Everything else still works.",
+    );
+    expect(canvasProps).toHaveLength(0); // the three.js chunk is never mounted
+    expect(screen.queryByRole("button", { name: "Reset view" })).toBeNull();
+    expect(screen.queryByTestId("twin-legend")).toBeNull();
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  it("falls back the same way when the probe passed but the renderer's context fails", async () => {
+    canvasOutcome = "no-webgl";
+    const h = setupStation();
+    renderWithStation(<RobotTwin />, h);
+    await settle();
+    await waitFor(() => {
+      expect(screen.getByTestId("robot-twin")).toHaveAttribute("data-state", "no-webgl");
+    });
+    expect(screen.getByTestId("twin-no-webgl")).toHaveTextContent("3D model");
+    expect(screen.queryByTestId("twin-canvas")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull(); // calm note, not the "could not be loaded" error
   });
 });
 
@@ -224,10 +276,12 @@ describe("twin placement (dock / section)", () => {
       }) as unknown as MediaQueryList;
   }
   beforeEach(() => {
-    Object.assign(window, { WebGLRenderingContext: Object });
+    fakeWebGL(true);
   });
   afterEach(() => {
     window.matchMedia = realMatchMedia;
+    vi.restoreAllMocks();
+    if (!hadWebGL2) noWebGLApi();
   });
 
   it("docks on desktop, collapses and remembers it, and hides while a page shows one inline", async () => {
