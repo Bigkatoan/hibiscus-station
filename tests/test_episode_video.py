@@ -35,6 +35,15 @@ def _decode(data: bytes) -> list[np.ndarray]:
         return [f.to_ndarray(format="gray") for f in c.decode(c.streams.video[0])]
 
 
+def _times(data: bytes) -> tuple[list[float], float]:
+    """Each frame's time in seconds and the container's duration."""
+    import av
+
+    with av.open(io.BytesIO(data)) as c:
+        ts = [float(f.pts * f.time_base) for f in c.decode(c.streams.video[0]) if f.pts is not None]
+        return ts, (c.duration or 0) / 1e6
+
+
 def _codec(data: bytes) -> str:
     import av
 
@@ -130,6 +139,10 @@ def test_each_episode_is_cut_from_the_shared_file(client: Any, multi: Path) -> N
             assert _codec(v.content).startswith(codec[:3]) or codec in _codec(v.content)
             pics = _decode(v.content)
             assert len(pics) == FRAMES[ep], (ep, fmt)
+            # the browser's clock: frame k at k / fps from 0, and the file lasts the whole episode
+            ts, duration = _times(v.content)
+            assert ts == pytest.approx([k / 10 for k in range(FRAMES[ep])], abs=0.002), (ep, fmt, ts)
+            assert duration == pytest.approx(FRAMES[ep] / 10, abs=0.06), (ep, fmt, duration)
             # the first and the last frame are this episode's picture, not a neighbour's
             assert abs(float(pics[0].mean()) - LEVEL[ep]) < 12, (ep, fmt, pics[0].mean())
             assert abs(float(pics[-1].mean()) - LEVEL[ep]) < 12, (ep, fmt, pics[-1].mean())

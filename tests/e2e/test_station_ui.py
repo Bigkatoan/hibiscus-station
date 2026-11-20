@@ -336,6 +336,51 @@ def test_station_ui_end_to_end(
             assert all(f in ("h264", "vp9") for f in formats.values()), formats
         d.shot("09b-episode-video")
 
+        # The converted cuts in this very browser: what a stock Windows 11 Edge (no AV1 Video Extension)
+        # and a Windows "N" edition (no Media Foundation: no H.264 either) are offered (REG-23).
+        fallbacks: dict[str, dict[str, str | None]] = {}
+        for case, refuse, episode in (("no-av1", ["av01"], "#2"), ("no-av1-no-h264", ["av01", "avc1"], "#1")):
+            page.evaluate(
+                """(refuse) => {
+                  const proto = HTMLMediaElement.prototype;
+                  proto.__canPlayType = proto.__canPlayType || proto.canPlayType;
+                  proto.canPlayType = function (t) {
+                    return refuse.some((r) => t.includes(r)) ? "" : proto.__canPlayType.call(this, t);
+                  };
+                }""",
+                refuse,
+            )
+            page.get_by_role("button", name=episode, exact=True).click()
+            for name, _ in wanted:
+                expect(page.get_by_test_id(f"episode-video-{name}")).to_have_attribute(
+                    "data-state", "ready", timeout=180000
+                )
+            page.get_by_test_id("episode-play").click()
+            try:
+                wait_for(lambda: float(page.evaluate(played)) > 0.3, 30, f"every camera to play ({case})")
+            except AssertionError:
+                state = "[...document.querySelectorAll('video')].map((v) => [v.src, v.currentTime, v.paused, v.readyState, v.error && v.error.code, v.duration])"
+                raise AssertionError(f"{case}: {page.evaluate(state)}") from None
+            fallbacks[case] = {
+                n: page.get_by_test_id(f"episode-video-{n}").get_attribute("data-format") for n, _ in wanted
+            }
+            assert all(f in ("h264", "vp9") for f in fallbacks[case].values()), (case, fallbacks)
+            d.shot(f"09c-episode-video-{case}")
+        assert all(f == "vp9" for f in fallbacks["no-av1-no-h264"].values()), fallbacks
+        (d.shots / f"f72-video-{d.ui.lang}.json").write_text(
+            json.dumps(
+                {
+                    "browser": browser.browser_type.name,
+                    "version": browser.version,
+                    "canPlayType": probe,
+                    "formats": formats,
+                    "fallbacks": fallbacks,
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+
         # ------------------------------------------------------------ 8. import the ACT checkpoint
         d.go("/run")
         page.get_by_label(re.compile(re.escape(d.t("run.import_path").lstrip("…")))).fill(str(checkpoint))

@@ -302,17 +302,22 @@ def _transcode(src: Path, dst: Path, start: float, end: float, fps: int, fmt: Vi
             ost.codec_context.max_b_frames = 0
             n = 0
             written = 0
+            out.start_encoding()  # the muxer picks the stream's real time base (mp4: 1/15360, WebM: 1/1000)
+            stb = ost.time_base
+            if stb is None:
+                raise ValueError("output stream without a time base")
+            step = 1 / (fps * stb)
 
             def mux(packets: Any) -> None:
                 # No B-frames (zerolatency / VP9 superframes): packets come in frame order, so
-                # frame k is shown at k / fps. Numbering them here keeps every encoder and muxer honest.
+                # frame k is shown at k / fps. Stamping them here keeps every encoder and muxer honest.
                 nonlocal written
                 for pkt in packets:
                     if pkt.size == 0:
                         continue
-                    pkt.pts = pkt.dts = written
-                    pkt.duration = 1
-                    pkt.time_base = ost.time_base
+                    pkt.pts = pkt.dts = round(written * step)
+                    pkt.duration = max(1, round(step))
+                    pkt.time_base = stb
                     written += 1
                     out.mux(pkt)
 
