@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import itertools
+import random
 import time
+import types
 from typing import Any
 
 import pytest
@@ -19,6 +21,7 @@ from conftest import (
 
 from hibiscus_station.errors import StationError
 from hibiscus_station.hw.loop import percentile
+from hibiscus_station.hw.owner import HardwareOwner
 from hibiscus_station.mock import get_world
 from hibiscus_station.station import Station, TeleopRequest
 
@@ -112,12 +115,11 @@ def test_teleop_timing_ownership_and_telemetry(connected: Station, events: Event
     period = 1 / 30
     # NFR-2 (b): p95 tick time <= 36 ms
     assert percentile([d * 1000 for d in durations], 95) <= 36.0, durations
-    # the ticks run on the 30 Hz grid: the OS waking the loop late does not add up (28.8 Hz under
-    # load before); a gap of more than 1.5 periods is the host stalling the process, left out
-    gaps = [b - a for a, b in itertools.pairwise(starts)]
-    on_grid = [g for g in gaps if g < 1.5 * period]
-    assert len(on_grid) >= 0.8 * len(gaps), gaps
-    assert sum(on_grid) / len(on_grid) == pytest.approx(period, rel=0.02), gaps
+    # ~30 Hz by the loop's own tick timestamps: the median gap ignores the few long gaps of a
+    # host that stalled the process (the grid itself is checked exactly in
+    # test_fixed_rate_ticks_end_on_the_session_grid, on made-up times)
+    gaps = sorted(b - a for a, b in itertools.pairwise(starts))
+    assert gaps[len(gaps) // 2] == pytest.approx(period, rel=0.05), gaps
     # 2 arms x (2 hot groups x 2 Hz + 3 cool groups x 1 Hz) = 14 reads/s over the loop's own time,
     # never more than one per tick
     assert 0.5 * 14 * span <= reads <= 14 * span + 8, (reads, span)
@@ -126,6 +128,39 @@ def test_teleop_timing_ownership_and_telemetry(connected: Station, events: Event
         assert not get_world(port).owner_violations
     joints = [j for j in events.of("joints") if "action" in j]
     assert joints and "fps" in joints[-1]["loop"]
+
+
+def test_fixed_rate_ticks_end_on_the_session_grid() -> None:
+    """NFR-2: a tick ends on the session's grid t0 + k * T, however late the OS woke the loop, so
+    the delays do not add up (30 Hz ran at 28.8 Hz under load when each tick was measured from its
+    late start). A tick a whole period behind (an overrun, a stalled host) starts a new grid: no
+    catch-up ticks back to back. A new session or fps starts a new grid. Made-up times: exact."""
+    owner = types.SimpleNamespace(_grid=None)
+    session, period = object(), 1 / 30
+    rng = random.Random(7)
+    t = 100.0
+    starts = []
+    for _ in range(300):  # every tick wakes 0 - 15 ms late
+        starts.append(t)
+        deadline = HardwareOwner._tick_deadline(owner, session, t, period)  # type: ignore[arg-type]
+        t = deadline + rng.uniform(0.0, 0.015)
+    # tick k starts on grid point k plus only its own wake-up delay: nothing adds up
+    assert all(0.0 <= t - (100.0 + k * period) <= 0.015 + 1e-9 for k, t in enumerate(starts))
+    assert deadline == pytest.approx(100.0 + 300 * period)
+    # a tick that starts 2.5 periods behind: a new grid from its start, not three ticks at once
+    late = deadline + 2.5 * period
+    assert HardwareOwner._tick_deadline(owner, session, late, period) == pytest.approx(late + period)  # type: ignore[arg-type]
+    # a tick 0.9 period late keeps the grid (a short tick catches it up)
+    grid = owner._grid[2]
+    assert HardwareOwner._tick_deadline(owner, session, grid + 0.9 * period, period) == pytest.approx(
+        grid + period
+    )  # type: ignore[arg-type]
+    # another session (or fps) starts its own grid
+    other = object()
+    assert HardwareOwner._tick_deadline(owner, other, 500.0, period) == pytest.approx(500.0 + period)  # type: ignore[arg-type]
+    assert HardwareOwner._tick_deadline(owner, other, 500.0 + period, 1 / 15) == pytest.approx(
+        500.0 + period + 1 / 15
+    )  # type: ignore[arg-type]
 
 
 def test_foreign_thread_bus_access_is_detected(connected: Station) -> None:
