@@ -12,10 +12,12 @@ from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import APIRouter, Query, Request, Response, UploadFile
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from hibiscus_station.api import schemas as wire
 from hibiscus_station.data import datasets as ds_catalog
+from hibiscus_station.data import video as ds_video
 from hibiscus_station.data.sessions import list_sessions, session_series
 from hibiscus_station.errors import StationError
 from hibiscus_station.hw import ports as hwports
@@ -361,6 +363,44 @@ def build_router() -> APIRouter:
         return _out(
             wire.TelemetrySeries, ds_catalog.episode_series(station(request).paths.datasets, name, index)
         )
+
+    @r.get("/datasets/{name}/episodes/{index}/videos", tags=["datasets"])
+    def episode_videos(request: Request, name: str, index: int) -> wire.EpisodeVideos:
+        """F-72: every camera of an episode, with the formats the viewer can ask for."""
+        st = station(request)
+        st.check_dataset_readable(name, index)
+        return _out(wire.EpisodeVideos, ds_video.describe(st.paths.datasets, name, index))
+
+    @r.get(
+        "/datasets/{name}/episodes/{index}/videos/{camera}",
+        tags=["datasets"],
+        response_class=FileResponse,
+        responses={
+            200: {
+                "content": {"video/mp4": {}, "video/webm": {}},
+                "description": "the episode's video of this camera, t = 0 at its first frame",
+            },
+            206: {"description": "the byte range asked for with `Range: bytes=a-b`"},
+            416: {"description": "the range is outside the file"},
+        },
+    )
+    def episode_video(
+        request: Request,
+        name: str,
+        index: int,
+        camera: str,
+        format: ds_video.VideoFormat = Query(
+            "source",
+            description="source = recorded codec, cut to the episode (no re-encode); vp9 = WebM / VP9, "
+            "h264 = mp4 / H.264 (re-encoded once, cached in the sidecar)",
+        ),
+    ) -> FileResponse:
+        """F-72: one camera of one episode, with HTTP Range support (409 ``episode_saving`` while
+        the dataset is being recorded)."""
+        st = station(request)
+        st.check_dataset_readable(name, index)
+        path, media_type = ds_video.clip_file(st.paths.datasets, name, index, camera, format)
+        return FileResponse(path, media_type=media_type, headers={"Cache-Control": "private, no-cache"})
 
     @r.post("/datasets/{name}/upload", tags=["datasets"])
     def upload(request: Request, name: str, body: UploadRequest) -> wire.Job:

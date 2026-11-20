@@ -81,7 +81,8 @@ describe("Robot 3D on a PC without WebGL", () => {
     const h = setupStation();
     renderStation("/programs?tab=programs", h);
     await settle();
-    await screen.findByTestId("blockly-editor");
+    // the Blockly chunk loads lazily: the first test to open it waits for the import (as field029)
+    await screen.findByTestId("blockly-editor", {}, { timeout: 15000 });
     const twin = await screen.findByTestId("robot-twin");
     expect(twin).toHaveAttribute("data-state", "no-webgl");
     expect(within(twin).getByTestId("twin-no-webgl")).toHaveTextContent(TEXT[lang]);

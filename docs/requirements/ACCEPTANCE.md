@@ -1,4 +1,4 @@
-# Hibiscus Station: tài liệu nghiệm thu v1.0 (2026-11-17) · trạng thái: **đã duyệt** (khách hàng duyệt ngày 2026-11-17, đường cơ sở)
+# Hibiscus Station: tài liệu nghiệm thu v1.1 (2026-11-19) · trạng thái: **đã duyệt** (khách hàng duyệt ngày 2026-11-17, đường cơ sở; CR-1 duyệt ngày 2026-11-19)
 
 BA viết; QC rà soát trước khi duyệt ("kiểm được như đã viết không?"); QC chạy sau khi xây. v0.2: mỗi AT
 ghi rõ công cụ và lệnh để chạy đúng như viết (test tự động có tên, lệnh chèn lỗi `POST /api/v1/mock/inject`
@@ -11,6 +11,8 @@ một tính năng F-n trong [FEATURES.md](FEATURES.md) hoặc một NFR trong [S
 
 v1.0: khách hàng chọn QĐ-1 – QĐ-4 = A và duyệt bộ tài liệu (2026-11-17). AT-1, AT-4, AT-84, AT-93, AT-98 và Kế
 hoạch UAT viết theo các quyết định đã chốt; mọi bước "phương án B" đã bỏ.
+
+v1.1 (2026-11-19): CR-1 ("Có, thêm vào M1") thêm **AT-99** (F-72, xem video từng tập) và bước 16 của UAT-1.
 
 ## Môi trường
 
@@ -438,6 +440,35 @@ Kỳ vọng: số tập, khung hình, fps, dung lượng đúng; biểu đồ nh
 thiếu; xoá cần xác nhận; (3) trang chi tiết mở không lỗi (tập đang lưu hiện "Đang lưu…", 0 phản hồi 5xx, D-2), Xoá
 bị từ chối.
 
+**AT-99 (F-72, FR-77, NFR-10, NFR-11, REG-27, CR-1) Xem video từng tập** · [Vendor] + [UAT-KH]
+Tiền điều kiện: dataset `thu_nghiem` của AT-48 (3 tập, ≥ 2 camera; LeRobot gộp các tập vào **một** tệp mp4 mỗi camera).
+1. [Vendor] Bộ dữ liệu → `thu_nghiem` → bấm **#2**. Bấm **Phát**; để chạy hết tập. Bấm **Phát** lần nữa; giữa tập bấm
+   **Tạm dừng**; kéo thanh "Thời điểm trong tập" tới khoảng giữa; bấm vào biểu đồ nhiệt độ gần cuối tập.
+2. [Vendor] Bấm #1 rồi #3; so khung đầu / cuối của mỗi camera với tập đó (`LeRobotDataset('local/thu_nghiem', root=…)[i]`
+   ở khung đầu và cuối của tập, hoặc nhìn cảnh).
+3. [Vendor] Đổi trình duyệt: Chromium, Firefox (Linux, Playwright) và **Microsoft Edge trên CI `windows-latest`** (e2e
+   `tests/e2e/test_station_ui.py`, bước 7): mỗi camera ở trạng thái "đã phát" và thời gian video tăng khi Phát; ghi lại
+   định dạng được dùng (`data-format` = `source` / `h264` / `vp9`) và kết quả `canPlayType` của AV1.
+4. [Vendor] Xoá tệp mp4 của một camera (bản sao của dataset), mở lại tập; ghi đè tệp mp4 của camera kia bằng vài byte rác.
+5. [Vendor] Bắt đầu ghi một dataset mới (`--mock`); trong lúc đang ghi, mở chi tiết dataset đó và bấm một tập; gọi
+   `GET /api/v1/datasets/<tên>/episodes/0/videos/<camera>`.
+6. [Vendor] API: `Range: bytes=0-99`, `Range: bytes=-50`, một khoảng ngoài tệp; tên dataset / camera có `..`, `%2F`, chữ
+   hoa; `format=../../x`; không cookie / token; `meta/info.json` sửa `video_path` trỏ ra ngoài thư mục dataset.
+7. [Vendor] Lặp bước 1 ở 1280 px và 390 px, sáng và tối, tiếng Việt và English (ma trận ảnh Playwright + axe).
+8. **[UAT-KH] PC Windows 11 của khách, Edge cài sẵn (chưa cài "AV1 Video Extension"; kiểm ở Cài đặt → Ứng dụng):**
+   Bộ dữ liệu → một dataset ghi bằng tay thật (≥ 2 camera) → bấm một tập → Phát hết tập; Tạm dừng; kéo thanh thời gian;
+   bấm vào biểu đồ. Lặp lại với Chrome và Firefox trên cùng PC.
+Kỳ vọng: (1) mọi camera phát cùng lúc, lệch nhau ≤ 0,25 s; "t / d giây" và con trỏ đỏ trên biểu đồ chạy theo video;
+hết tập thì dừng ở cuối, Phát lại từ đầu; Tạm dừng dừng mọi camera; kéo thanh / bấm biểu đồ → mọi camera và con trỏ tới
+đúng thời điểm đó. (2) Mỗi tập chỉ có khung của chính nó (không lẫn tập bên cạnh), số khung = số khung của tập. (3) Cả ba
+trình duyệt phát được; Edge không có AV1 dùng `h264` hoặc `vp9`. (4) Camera thiếu tệp: "Camera này không có tệp video cho
+tập này."; tệp hỏng: "Không đọc được video của camera này."; camera còn lại vẫn phát. (5) Trang không lỗi; khung video
+báo "Bộ dữ liệu này đang được ghi. Video mở được khi phiên ghi kết thúc."; API 409 `episode_saving`; sau khi dừng ghi, video
+mở được; 0 phản hồi 5xx. (6) 206 với `Content-Range` đúng; 416 ngoài tệp; tên lạ / `..` → 404 hoặc 422, không đọc tệp
+ngoài dataset (`video_unavailable`); không xác thực → 401. (7) Không cuộn ngang, chữ đúng ngôn ngữ, 0 vi phạm axe
+serious / critical. (8) Như (1) trên cả Edge, Chrome, Firefox của khách; không phải cài thêm gì. Thư mục LeRobot không đổi
+(AT-49).
+
 ## H. Liên kết máy chủ Hibiscus
 
 **AT-52 (F-41) Ghép nối** · [Vendor] (máy chủ thử, token tạo sẵn với từng bộ quyền) + [UAT-KH] nếu khách có tài khoản
@@ -778,7 +809,7 @@ chạm phần chung). Khách đã duyệt kế hoạch ba buổi (2026-11-17); n
 của một servo follower. Mục đích: đóng REG-13 / SP-1 (servo có báo nhiệt thật không; nếu không thì áp QĐ-1 A, AT-93), lấy số đo bus của PC khách cho D-9 / NFR-2.
 Không thử tính năng.
 
-**UAT-1 · khoảng 60 – 90 phút · sau M1 (các tính năng Must).** Mười lăm bước; trong suốt buổi khách để ý số liệu
+**UAT-1 · khoảng 60 – 90 phút · sau M1 (các tính năng Must).** Mười sáu bước (bước 16: CR-1); trong suốt buổi khách để ý số liệu
 và chữ trên màn hình (AT-92).
 
 | # | Khách làm | AT |
@@ -798,11 +829,12 @@ và chữ trên màn hình (AT-92).
 | 13 | So nhiệt độ / điện áp / dòng với Feetech FD; nếu không đọc được nhiệt độ: hộp xác nhận, banner, dừng sau 10 phút khi không cầm leader (QĐ-1 A); nếu đọc được: dừng nhiệt với ngưỡng hạ | AT-40, AT-42 hoặc AT-93 |
 | 14 | Đóng cửa sổ PowerShell khi đang teleop, rồi khi đang ghi; mở lại | AT-95 |
 | 15 | Teleop 10 phút + ghi 10 tập (có thể chạy trong lúc làm bước 11); cập nhật / quay lại bằng lệnh một dòng; xem `station.log` | AT-78, AT-84, AT-89 |
+| 16 | (CR-1) Bộ dữ liệu → dataset của bước 11 → bấm một tập: video mọi camera trên **Edge cài sẵn** (không cài AV1 Video Extension), rồi Chrome, Firefox; Phát / Tạm dừng / kéo / bấm biểu đồ | AT-99 |
 
 **UAT-2 · khoảng 45 phút · sau M2 (Should).** Phát lại tập (AT-35); ghép nối máy chủ nếu có tài khoản (AT-52); ghi
 và phát quỹ đạo (AT-65, AT-66); nhận diện màu (AT-69); tạo chương trình, chạy thử, chạy trên robot, e-stop, chạy
 lại (AT-70, AT-72); Robot 3D và xem trước tay mờ (AT-75, AT-76). Có thể gộp vào cùng buổi với UAT-1 nếu M2 xong kịp.
 
 **AT chỉ khách chứng minh được** (NOT VERIFIED ở QC nội bộ cho tới UAT): AT-1, AT-14, AT-17, AT-18, AT-23, AT-27
-(phần LeLab), AT-40, AT-84, AT-93 (phần tay của khách), AT-94 (phần công tắc), AT-95. Các AT còn lại trong bảng trên:
+(phần LeLab), AT-40, AT-84, AT-93 (phần tay của khách), AT-94 (phần công tắc), AT-95, AT-99 (bước 8: Edge cài sẵn của khách). Các AT còn lại trong bảng trên:
 QC chạy phần [Vendor] trước, khách chạy lại trên PC của mình.

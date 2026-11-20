@@ -25,6 +25,19 @@ from hibiscus_station.station import Station
 
 PORT = 18210
 
+if sys.platform == "darwin":
+    # A native trap (EXC_BREAKPOINT, e.g. libdispatch, ADR-15) kills the run with exit 133 and no
+    # Python trace: pytest's faulthandler does not watch SIGTRAP, and it captures fd 2 during each
+    # test, so the stacks go to a file of their own (HIBISCUS_TRAP_LOG), then the signal kills the run.
+    import faulthandler
+    import os
+    import signal
+
+    _trap_log = open(  # open for the whole session; written only on a crash
+        os.environ.get("HIBISCUS_TRAP_LOG", os.devnull), "w", encoding="utf-8"
+    )
+    faulthandler.register(signal.SIGTRAP, file=_trap_log, all_threads=True, chain=True)
+
 
 def deep_json(obj: Any) -> str:
     """``json.dumps`` without recursion, for documents nested deeper than the C encoder allows."""

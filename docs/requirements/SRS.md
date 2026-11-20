@@ -1,4 +1,4 @@
-# Hibiscus Station: SRS v1.0 (2026-11-17) · trạng thái: **đã duyệt** (khách hàng duyệt ngày 2026-11-17, đường cơ sở)
+# Hibiscus Station: SRS v1.1 (2026-11-19) · trạng thái: **đã duyệt** (khách hàng duyệt ngày 2026-11-17, đường cơ sở; CR-1 duyệt ngày 2026-11-19)
 
 Đặc tả yêu cầu phần mềm (Software Requirements Specification). BA soạn; SA và Tech Lead đã rà soát vòng 1
 ([REVIEW-SA.md](REVIEW-SA.md), [REVIEW-TECHLEAD.md](REVIEW-TECHLEAD.md)); QC kiểm tính kiểm-được. Chỗ v0.2
@@ -8,6 +8,9 @@ lỗi đã biết D-n: [FEATURES.md](FEATURES.md#lỗi-đã-biết-d-n).
 v1.0 (2026-11-17): khách hàng duyệt bộ tài liệu với QĐ-1 – QĐ-4 = phương án A ("1. A, 2. A, 3. A, 4. A";
 "Duyệt, bắt đầu làm"). Các yêu cầu viết theo phương án A ở v0.2 nay là yêu cầu đã chốt; mọi đoạn "phương án B /
 nếu khách chọn khác" đã bỏ. Nhãn "(v0.2: …)" giữ lại để truy vết.
+
+v1.1 (2026-11-19): CR-1, khách chọn "Có, thêm vào M1" → **FR-77** (F-72, xem video từng tập). Số FR-72 đã dùng cho yêu
+cầu chung, nên F-72 được mô tả ở FR-77.
 
 ## 1. Tổng quan
 
@@ -376,6 +379,39 @@ fps) → `dataset_incompatible` nếu khác. Traces BR-7.
 (`<tên>.hibiscus/telemetry/`, nằm cạnh thư mục LeRobot), "Tập này không có telemetry" khi thiếu, Phát
 lại, Xoá (hộp "Xoá vĩnh viễn"; từ chối khi đang ghi / tải lên). Traces BR-7.
 
+**FR-77 (F-72) Xem video từng tập (v1.1, CR-1).** Trong chi tiết bộ dữ liệu, bấm một tập (#N) → khung "Tập N: camera" /
+"Episode N: cameras" hiện video của **mọi camera** của tập (lưới 1 cột ở 390 px, 2 cột từ 640 px), cùng một đồng hồ:
+nút Phát / Tạm dừng (biểu tượng PxIcon), thanh kéo "Thời điểm trong tập" (bước 1 khung), "t / d giây"; biểu đồ "Tập N: nhiệt
+độ tay follower (°C)" có con trỏ thời gian chạy theo video, trục hoành là giây trong tập (số khung đã ghi / fps, cùng gốc
+với video); bấm vào biểu đồ → mọi video nhảy tới thời điểm đó. Các camera lệch nhau ≤ 0,25 s khi phát. Hết tập → dừng ở
+cuối; Phát lần nữa → từ đầu.
+* **Định dạng (ADR-14):** mỗi camera được cắt đúng tập từ tệp mp4 chung của LeRobot v3 (`from_timestamp` /
+  `to_timestamp` trong `meta/episodes`), thời điểm 0 = khung đầu của tập: `source` = gói AV1 như lúc ghi (không mã hoá
+  lại), `h264` = mp4 H.264, `vp9` = WebM VP9 (mã hoá lại một lần, lưu trong `<tên>.hibiscus/video-cache/`, làm lại khi tệp
+  gốc đổi). Giao diện chọn định dạng đầu tiên trình duyệt nói phát được (`canPlayType`: source → H.264 → VP9); định dạng
+  lỗi thì thử định dạng sau. Phải phát được trên **Edge của Windows 11 cài sẵn** (không có "AV1 Video Extension"),
+  Chrome và Firefox trên Windows.
+* **API:** `GET /api/v1/datasets/{tên}/episodes/{i}/videos` (danh sách camera: codec, `mime`, thời lượng, lỗi, định
+  dạng) và `GET …/videos/{camera}?format=source|h264|vp9` (HTTP Range: 206 / 416). Cùng xác thực với mọi API (cookie
+  phiên hoặc Bearer); tên bộ dữ liệu, camera, định dạng được kiểm, đường dẫn không ra ngoài thư mục bộ dữ liệu.
+* **Lỗi từng camera** (các camera khác vẫn phát; câu VI / EN, không chữ máy): không có tệp → "Camera này không có tệp video
+  cho tập này." (`video_missing`, 404); đọc không được → "Không đọc được video của camera này." (`video_unavailable`,
+  422); `meta/info.json` hỏng → 409 `dataset_unreadable` như danh sách / chi tiết / ghi thêm / phát lại (một bộ kiểm
+  chung, hotfix 0.2.10), không bao giờ 500; trình duyệt không phát được định dạng nào → "Trình duyệt này không phát được video của camera này."; đang chuẩn
+  bị → "Đang chuẩn bị video…".
+* **Đang ghi:** khi bộ dữ liệu đang được ghi (phiên ghi / chạy model có ghi đang mở nó) → 409 `episode_saving`, câu "Bộ dữ
+  liệu này đang được ghi. Video mở được khi phiên ghi kết thúc." (LeRobot chỉ ghi chỉ mục tập khi `finalize`); không
+  bao giờ 5xx (D-2). Phiên **phát lại** chỉ đọc dataset: video vẫn phát (QV-1). Với các mã lỗi của F-72 chỉ hiện câu
+  dịch; dòng của Station nằm trong "Chi tiết kỹ thuật" thu gọn (FR-73, QD-39, QV-6).
+* **Không có video:** dataset ghi với "Mã hoá video" tắt (lưu ảnh) → "Bộ dữ liệu này không có video (đã ghi với "Mã hoá
+  video" tắt)." một lần, không có ô camera trống (`no_video`, 404; QV-5).
+* **Bộ đệm:** mỗi bản cắt có tệp dấu (kích thước, SHA-256) ghi sau bản cắt; bản cắt bị cụt / rỗng / ghi đè / mất dấu
+  được cắt lại, không bao giờ phục vụ (QV-2). Ghi nguyên tử (tệp tạm rồi đổi tên).
+* **Biểu đồ:** trục hoành từ 0 tới hết tập; bấm ở bất cứ đâu trên trục (không bám vào mẫu telemetry) → video tới đúng
+  thời điểm đó, kể cả khung đầu và khung cuối (QV-9).
+* Thư mục LeRobot không bị đổi (AT-49). Giao diện 1280 / 390 px, sáng / tối, không cuộn ngang (NFR-11), hai ngôn ngữ
+  (NFR-10). Traces BR-7, BR-14.
+
 ### H. Liên kết máy chủ Hibiscus
 
 **FR-41 (F-41) Ghép nối.** Địa chỉ + token; "Tạo token với đúng quyền" mở trang token của máy chủ
@@ -633,7 +669,7 @@ Thành phần chung: thanh trên (logo, chip robot, chip sức khoẻ, chip máy
 LẬP, ngôn ngữ, chủ đề), thanh bước, nút e-stop, banner, Hibi, ngăn sức khoẻ, Robot 3D.
 
 ### 5.2 API
-REST `/api/v1` (86 thao tác trong `openapi.json`, cộng `POST /mock/inject` chỉ với `--mock`), WebSocket điều khiển `/api/v1/ws`, video `/api/v1/ws/video`.
+REST `/api/v1` (88 thao tác trong `openapi.json`; v1.1: hai thao tác video của F-72, cộng `POST /mock/inject` chỉ với `--mock`), WebSocket điều khiển `/api/v1/ws`, video `/api/v1/ws/video`.
 Chi tiết hợp đồng thuộc ARCHITECTURE.md / `docs/spec/station.md` §5.
 
 ### 5.3 Phần cứng
@@ -654,7 +690,7 @@ MQTT broker (tuỳ chọn); webhook (tuỳ chọn); lerobot / LeLab qua tệp hi
 | Cài đặt | `~/.hibiscus/station/settings.yaml` | Windows: `%USERPROFILE%\.hibiscus\station` |
 | Hồ sơ robot | `robots.yaml` (+ hồ sơ hoạt động) | demo: `~/.hibiscus/station-demo` |
 | Hiệu chỉnh | `<HF_LEROBOT_CALIBRATION>/robots/so_follower/<id>.json`, `.../teleoperators/so_leader/<id>.json` | Dùng chung với lerobot / LeLab; cũng đọc thư mục cũ |
-| Dataset | `datasets/<tên>/` (LeRobot v3) + `datasets/<tên>.hibiscus/` (dataset.json, telemetry/episode_*.jsonl.gz) | Telemetry không tải lên |
+| Dataset | `datasets/<tên>/` (LeRobot v3) + `datasets/<tên>.hibiscus/` (dataset.json, telemetry/episode_*.jsonl.gz, video-cache/ của F-72) | Telemetry và bộ đệm video không tải lên; bộ đệm là dữ liệu dẫn xuất, xoá được bất cứ lúc nào |
 | Model | `models/index.json` + `models/<key>/` | |
 | Phiên | `sessions/<id>/{session.json, telemetry.jsonl.gz}` | 30 ngày / 2 GiB |
 | Quỹ đạo, tư thế, bộ nhận diện, chương trình, lần chạy | `robots/<id>/…` | Theo hồ sơ |
@@ -662,7 +698,7 @@ MQTT broker (tuỳ chọn); webhook (tuỳ chọn); lerobot / LeLab qua tệp hi
 | Token máy chủ | keyring hệ thống (Docker: `hibiscus-cli/credentials.json` 0600) | Không bao giờ tới trình duyệt |
 | Nhật ký | `logs/station.log` | 10 MiB × 5 |
 
-Di chuyển dữ liệu: v1.0 phải đọc được mọi dữ liệu của 0.2.x (FR-69); không có định dạng mới trong v1.0.
+Di chuyển dữ liệu: v1.0 phải đọc được mọi dữ liệu của 0.2.x (FR-69); không có định dạng mới trong v1.0 (v1.1: bộ đệm video của F-72 chỉ là bản cắt dẫn xuất, dataset 0.2.x xem được video như dataset mới).
 
 ## 7. Trạng thái và luồng (gồm dừng / lỗi / phục hồi)
 

@@ -1,4 +1,7 @@
-# Hibiscus Station: danh sách tính năng v1.0 (2026-11-17) · trạng thái: **đã duyệt** (khách hàng duyệt ngày 2026-11-17, đường cơ sở)
+# Hibiscus Station: danh sách tính năng v1.1 (2026-11-19) · trạng thái: **đã duyệt** (khách hàng duyệt ngày 2026-11-17, đường cơ sở; CR-1 duyệt ngày 2026-11-19)
+
+**v1.1 (2026-11-19, CR-1):** khách hàng thêm một tính năng mới vào M1: **F-72** xem video từng tập trong Bộ dữ liệu
+("Có, thêm vào M1"). Nhật ký: [CHANGELOG.md](CHANGELOG.md#cr-1-xem-video-từng-tập-trong-bộ-dữ-liệu--v11--2026-11-19).
 
 Đường cơ sở "như đã xây" của Station **0.2.8** (`main` `12f36da`). Mọi dòng có trạng thái
 **hiện có** (existing): tính năng đã có trong sản phẩm, v1.0 phải đưa nó lên chuẩn chất lượng
@@ -101,6 +104,7 @@ là kết quả kiểm sơ bộ vòng 1, giữ để tham khảo.
 | F-38 | Ghi dataset LeRobot v3: tên, nhiệm vụ (một câu), số tập, độ dài tập, thời gian đặt lại, fps, mã hoá video, khi hết giờ: lưu / bỏ; ước lượng dung lượng; khởi động → tập → đặt lại → lưu; nút và phím **→** (tiếp, lưu), **←** (ghi lại), **Esc** (dừng); dải các tập đã lưu; kết thúc: "Đã lưu N tập trong …" + Tải lên / Ghi thêm | Thu dữ liệu huấn luyện | UI | BR-7, FR-38, NFR-8, NFR-15 | Must | F-17, F-22, F-24 | M | M1 | AT-48, AT-49 | — | D-2, D-19 (tập đang ghi khi đóng cửa sổ) | hiện có · LỖI |
 | F-39 | Ghi thêm vào dataset có sẵn (kiểm tra tương thích động cơ / camera; báo tên trùng) | Thu tiếp nhiều buổi | UI | BR-7, FR-39 | Should | F-38 | S | M2 | AT-50 | — | — | hiện có · ĐẠT\* |
 | F-40 | Trang Bộ dữ liệu: danh sách (tập, khung hình, fps, dung lượng, đã hoàn tất, đã tải lên v…); chi tiết: các tập, biểu đồ nhiệt độ follower từng tập (tệp telemetry đi kèm, nằm cạnh, không nằm trong thư mục LeRobot), Phát lại, Xoá (xác nhận, bị từ chối khi đang ghi / tải lên) | Xem lại dữ liệu | UI | BR-7, FR-40 | Must | F-38 | S | M1 | AT-51 | — | D-2 | hiện có · LỖI |
+| F-72 | Xem video từng tập (CR-1): trong chi tiết bộ dữ liệu, bấm một tập → video của mọi camera phát cùng lúc, Phát / Tạm dừng, thanh kéo thời gian, con trỏ thời gian chung với biểu đồ nhiệt độ từng khớp (bấm biểu đồ để nhảy tới đó); lỗi riêng từng camera (VI / EN); phát được trên Edge (Windows 11 cài sẵn, không cần AV1 Video Extension), Chrome, Firefox; 1280 / 390 px, sáng / tối | Xem lại tập đã ghi trước khi huấn luyện | UI, API | BR-7, FR-77, NFR-10, NFR-11 | Must | F-38, F-40 | M | M1 | AT-99 | REG-27 | — | mới (CR-1, 2026-11-19) |
 
 ## H. Tải lên và liên kết máy chủ Hibiscus
 
@@ -248,7 +252,7 @@ thúc bằng QC trên đúng bản cài của mốc.
 | Mốc | Nội dung | Effort dev (Tech Lead) | Kết thúc khi |
 |---|---|---|---|
 | **M0 · Nền kiểm** (tuần 1) | D-1 (e2e xanh); CI xanh Linux / Windows / macOS; ma trận ảnh Playwright × sáng / tối × 1280 / 390 + axe tự động (FL-7); `doctor` đọc dòng / tải + dump thô (K-11, D-15, ✚ D-21, ✚ SP-1); chạy thử phát hành nháp (FL-12); ✚ SP-2 (cổng COM ảo trên CI Windows); ✚ SP-3 + P-1 (cài trên Windows sạch không git) | 10 ngày (+ ✚ chưa ước) | Khách nhận bản `doctor` mới → **UAT-0** |
-| **M1 · Must** | 43 tính năng Must (F-63 ở M0) cùng 3 Should có mốc M1 (F-2, F-18, F-26): D-2 – D-14, D-16 – D-18, K-2 – K-5, K-8, D-9 (sau số đo UAT-0), REG-13 + QĐ-1; ✚ D-19 / P-6, D-20 / P-2, D-22 / P-7, D-23, P-3, P-8 | 48 ngày (+ ✚ chưa ước) | QC nội bộ PASS mọi phần [Vendor] của Must → **UAT-1** |
+| **M1 · Must** | 44 tính năng Must (F-63 ở M0; F-72 thêm ở v1.1, CR-1, +2 – 3 ngày) cùng 3 Should có mốc M1 (F-2, F-18, F-26): D-2 – D-14, D-16 – D-18, K-2 – K-5, K-8, D-9 (sau số đo UAT-0), REG-13 + QĐ-1; ✚ D-19 / P-6, D-20 / P-2, D-22 / P-7, D-23, P-3, P-8 | 48 ngày (+ ✚ chưa ước) | QC nội bộ PASS mọi phần [Vendor] của Must → **UAT-1** |
 | **M2 · Should** | 19 tính năng Should: máy chủ Hibiscus (F-41 – F-44), Chương trình (F-52 – F-58, F-61, F-62), Phiên (F-37), Bộ dữ liệu nâng cao (F-39), phát lại (F-27), model nâng cao (F-49 – F-51) | 17 ngày | QC PASS → **UAT-2** |
 | **M3 · Could** | Docker x86_64 `-cpu` (F-3, F-70), LAN (phần LAN của F-6), tín hiệu ngoài (F-59), model trong chương trình (F-60), `health` (F-65) | 7 ngày | Đạt thì vào v1.0; không đạt thì ra khỏi v1.0, không chặn |
 
@@ -259,7 +263,7 @@ khách ở UAT-0 (REG-13, F-31, F-33, QĐ-1) và số đo adapter (D-9, F-24).
 
 ## Ma trận truy vết
 
-Mỗi BR → yêu cầu SRS → tính năng → AT. FR-n mô tả F-n cùng số; FR-72 – FR-76 là yêu cầu chung. Kết quả
+Mỗi BR → yêu cầu SRS → tính năng → AT. FR-n mô tả F-n cùng số; FR-72 – FR-76 là yêu cầu chung; FR-77 mô tả F-72 (CR-1, số FR-72 đã dùng). Kết quả
 QC điền ở `FEATURES-APPROVED.md` sau khi duyệt.
 
 | BR | FR | NFR | F | AT |
@@ -270,13 +274,13 @@ QC điền ở `FEATURES-APPROVED.md` sau khi duyệt.
 | BR-4 Teleop không trễ hơn LeLab | FR-24 – FR-26 | NFR-1a – NFR-1c, NFR-2, NFR-8 | F-24 – F-26 | AT-31 – AT-34, AT-89, AT-90 |
 | BR-5 An toàn và phục hồi | FR-13, FR-14, FR-25, FR-28 – FR-30, FR-32 – FR-36, FR-57, FR-58, FR-72, FR-74, FR-75 | NFR-3a – NFR-3c, NFR-4, NFR-6, NFR-7 | F-4, F-13, F-14, F-25, F-28 – F-30, F-32 – F-36, F-57, F-58 | AT-18 – AT-20, AT-33, AT-36 – AT-39, AT-42, AT-44 – AT-46, AT-71, AT-72, AT-88, AT-93 – AT-95, AT-97 |
 | BR-6 Số liệu đúng, không báo động giả | FR-31 – FR-34, FR-37, FR-61 | NFR-12, NFR-13 | F-31 – F-34, F-37, F-61 | AT-40 – AT-44, AT-47, AT-75, AT-92 |
-| BR-7 Thu dữ liệu LeRobot có camera | FR-21 – FR-23, FR-27, FR-38 – FR-40 | NFR-8, NFR-15 | F-21 – F-23, F-27, F-38 – F-40 | AT-28 – AT-30, AT-35, AT-48 – AT-51 |
+| BR-7 Thu dữ liệu LeRobot có camera | FR-21 – FR-23, FR-27, FR-38 – FR-40, FR-77 | NFR-8, NFR-15 | F-21 – F-23, F-27, F-38 – F-40, F-72 | AT-28 – AT-30, AT-35, AT-48 – AT-51, AT-99 |
 | BR-8 Máy chủ Hibiscus (Should) | FR-41 – FR-44 | NFR-17 | F-41 – F-44 | AT-52 – AT-56 |
 | BR-9 Chạy model, thấy camera và sức khoẻ động cơ | FR-22, FR-45 – FR-51 | NFR-3a, NFR-4, NFR-16 | F-45 – F-51 | AT-57 – AT-64, AT-97 |
 | BR-10 Lập trình không cần huấn luyện (Should) | FR-52 – FR-60, FR-62 | — | F-52 – F-60, F-62 | AT-65 – AT-74, AT-76 |
 | BR-11 Tuỳ chọn nâng cao cho kỹ sư | FR-18, FR-30, FR-48, FR-59, FR-66 | — | F-18, F-30, F-48, F-59, F-66 | AT-25, AT-39, AT-60, AT-73, AT-80 |
 | BR-12 Báo cáo chẩn đoán | FR-63 – FR-65 | — | F-63 – F-65 | AT-77 – AT-79 |
-| BR-13 Không lỗi hiện trường tái diễn | FR-76; REG-1 – REG-20 | NFR-18 | mọi F có cột REG | AT-2 + AT ghi ở từng REG ([REGRESSION.md](REGRESSION.md)) |
+| BR-13 Không lỗi hiện trường tái diễn | FR-76; REG-1 – REG-27 | NFR-18 | mọi F có cột REG | AT-2 + AT ghi ở từng REG ([REGRESSION.md](REGRESSION.md)) |
 | BR-14 Song ngữ, sáng / tối, máy tính và điện thoại | FR-67, FR-68 | NFR-10, NFR-11 | F-67, F-68 | AT-81 – AT-83, AT-91 |
 | BR-15 Cập nhật không mất dữ liệu | FR-69 – FR-71, FR-75 | NFR-15, NFR-16 | F-69 – F-71 | AT-84 – AT-86, AT-95 |
 | BR-16 Chỉ cục bộ, trừ chế độ LAN | FR-6 | NFR-14 | F-6 | AT-8, AT-9, AT-98 |
@@ -285,11 +289,11 @@ QC điền ở `FEATURES-APPROVED.md` sau khi duyệt.
 
 **NFR → AT (mỗi NFR được đo, không giả định):** NFR-1a / 1b / 1c → AT-31 · NFR-2 → AT-31, AT-89 · NFR-3a / 3b /
 3c → AT-36, AT-88 · NFR-4 → AT-38, AT-97 · NFR-5 → AT-87 · NFR-6 → AT-42, AT-93 · NFR-7 → AT-19, AT-37, AT-45,
-AT-54, AT-72, AT-94, AT-95 · NFR-8 → AT-90 · NFR-9 → AT-1 – AT-4 · NFR-10 → AT-81, AT-91 · NFR-11 → AT-82, AT-83 ·
+AT-54, AT-72, AT-94, AT-95 · NFR-8 → AT-90 · NFR-9 → AT-1 – AT-4 · NFR-10 → AT-81, AT-91, AT-99 · NFR-11 → AT-82, AT-83, AT-99 ·
 NFR-12 → AT-43, AT-92 · NFR-13 → AT-40 · NFR-14 → AT-8, AT-57, AT-98 · NFR-15 → AT-27, AT-47, AT-49, AT-86 ·
 NFR-16 → AT-86 · NFR-17 → AT-54 · NFR-18 → AT-2.
 
-Kiểm tra: 71 / 71 tính năng có ≥ 1 AT; 16 / 16 BR trong phạm vi có ≥ 1 F; BR-17, BR-18 là Won't theo quyết
+Kiểm tra: 72 / 72 tính năng có ≥ 1 AT (F-72 → AT-99, v1.1); 16 / 16 BR trong phạm vi có ≥ 1 F; BR-17, BR-18 là Won't theo quyết
 định của khách ngày 2026-11-17.
 
 ## Không làm trong v1.0 (Won't)
@@ -325,7 +329,7 @@ Kiểm tra: 71 / 71 tính năng có ≥ 1 AT; 16 / 16 BR trong phạm vi có ≥
 | D. Camera | 3 | 3 / 0 / 0 |
 | E. Teleop và phát lại | 4 | 2 / 2 / 0 |
 | F. An toàn, nhiệt, telemetry | 10 | 9 / 1 / 0 |
-| G. Ghi bộ dữ liệu | 3 | 2 / 1 / 0 |
+| G. Ghi bộ dữ liệu | 4 | 3 / 1 / 0 (F-72 thêm ở v1.1, CR-1) |
 | H. Máy chủ Hibiscus | 4 | 0 / 4 / 0 |
 | I. Chạy model | 7 | 4 / 3 / 0 |
 | J. Chương trình | 9 | 0 / 7 / 2 |
@@ -333,7 +337,7 @@ Kiểm tra: 71 / 71 tính năng có ≥ 1 AT; 16 / 16 BR trong phạm vi có ≥
 | L. Chẩn đoán | 3 | 2 / 0 / 1 |
 | M. Cài đặt, ngôn ngữ, giao diện | 3 | 3 / 0 / 0 |
 | N. Cập nhật và dữ liệu | 3 | 2 / 0 / 1 |
-| **Tổng** | **71** | **44 / 22 / 5** |
+| **Tổng** | **72** | **45 / 22 / 5** |
 
 | Trạng thái vòng 1 | Số F | |
 |---|---|---|

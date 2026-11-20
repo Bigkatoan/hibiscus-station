@@ -205,6 +205,57 @@ bỏ cách chặn theo danh sách, thay bằng bảo đảm theo thiết kế. K
 * **QD-45** (Low, bảo mật): `http://` chỉ trong mạng nội bộ; máy chủ công khai → `server_url_insecure`.
 * Tài liệu: [FEATURES-APPROVED.md](FEATURES-APPROVED.md), [REGRESSION.md](REGRESSION.md), `docs/spec/station.md` §4.8.
 
+## CR-1: xem video từng tập trong Bộ dữ liệu · v1.1 · 2026-11-19
+
+**Nguồn:** yêu cầu của khách hàng (2026-11-19): xem được video camera của từng tập đã ghi ngay trong Station. Đây là
+**tính năng mới** (không phải lỗi so với đường cơ sở v1.0), nên đi theo quy trình CR của
+[FEATURES-APPROVED.md](FEATURES-APPROVED.md): BA viết, Tech Lead / SA đánh giá, khách duyệt, danh sách lên v1.1.
+
+**Đề xuất gửi khách (BA + Tech Lead):** trong chi tiết bộ dữ liệu, bấm một tập → video của **mọi camera** phát cùng
+lúc, đồng bộ với biểu đồ theo khớp của tập (biểu đồ nhiệt độ từng khớp hiện có; con trỏ thời gian chung, bấm vào biểu đồ để nhảy tới đó); phát được trên
+Edge, Chrome và Firefox trên Windows. Ước lượng **khoảng 2 – 3 ngày công dev**, làm trong M1. Hai lựa chọn: thêm vào M1
+(Must) hoặc để sau v1.0 (Won't).
+
+**Lời của khách hàng (2026-11-19):** **"Có, thêm vào M1"**.
+
+**Quyết định đã chốt:**
+* **CR-1 → F-72** (Must, M1, effort M ≈ 2 – 3 ngày), FR-77, AT-99, REG-23 (đánh lại thành REG-27 khi gộp với hotfix 0.2.10), ADR-14. Phụ thuộc F-38, F-40.
+* Phát được trên Edge **của Windows 11 cài sẵn** (không cài thêm gì): Station ghi bằng AV1 (mặc định của LeRobot 0.7.1,
+  `libsvtav1`); Edge chỉ giải mã AV1 khi có "AV1 Video Extension" của Microsoft Store. Station không đổi cách ghi; khi
+  trình duyệt không phát được AV1, Station cắt tập đó và chuyển sang H.264 hoặc VP9 một lần, lưu tạm trong thư mục đi
+  kèm `<tên>.hibiscus/video-cache/` (ADR-14). Thư mục LeRobot giữ nguyên từng byte.
+* Trong lúc bộ dữ liệu đang được ghi, video của nó chưa mở (LeRobot chỉ ghi chỉ mục tập khi `finalize`): mã lỗi
+  `episode_saving` (409), câu "Bộ dữ liệu này đang được ghi. Video mở được khi phiên ghi kết thúc."
+
+**Chồng lấn đã biết:** nhóm hotfix 0.2.10 (`hotfix/0.2.10`) sửa lỗi "trang bộ dữ liệu báo lỗi / trống" của 0.2.9 và sẽ
+gộp vào `release/v1` sau. CR-1 không sửa lỗi đó: nó thêm hai endpoint riêng (`GET …/episodes/{i}/videos`,
+`GET …/episodes/{i}/videos/{camera}`), một trường tuỳ chọn `frame_index` của `TelemetrySeries`, và thay khung bên phải của
+trang chi tiết (`DatasetsPage.tsx`: `TelemetryChart`, `EpisodeReview` mới). Khi gộp, giữ cả hai: phần sửa của hotfix ở
+danh sách / tải trang chi tiết, phần CR-1 ở khung xem tập.
+
+**BA đã làm:**
+* [FEATURES.md](FEATURES.md), [FEATURES-APPROVED.md](FEATURES-APPROVED.md) lên **v1.1**: F-72 (Must, M1) trong nhóm G;
+  tổng 72 tính năng (45 Must / 22 Should / 5 Could); M1 = 47 tính năng (44 Must + 3 Should); ma trận truy vết BR-7.
+* [SRS.md](SRS.md): FR-77 (F-72) ở §3 G; §5.2 88 thao tác; §6 bộ đệm video.
+* [ACCEPTANCE.md](ACCEPTANCE.md): AT-99 (có bước Windows 11 Edge cài sẵn); Kế hoạch UAT-1 thêm bước 16.
+* [REGRESSION.md](REGRESSION.md): REG-23, nay REG-27 (video AV1 không phát trên Edge Windows cài sẵn).
+* [ARCHITECTURE.md](ARCHITECTURE.md): ADR-14, §4.1 (bộ đệm video), §4.2 (88 thao tác).
+* Spec `docs/spec/station.md` §5.2 (hai endpoint, mã lỗi). Nhánh dev `m1/episode-video` (từ `release/v1` `b2ed862`).
+
+## QC F072 lần 1 → bản sửa lần 2: QV-1, QV-2, QV-5, QV-6, QV-9 · v1.1 (không đổi phạm vi) · 2026-11-20
+
+**Nguồn:** [QC-F072-r1](qc/QC-F072-r1.md) trên `ccee707`: F-72 FAIL vì QV-1 (Trung bình, chặn); Lead nâng QV-2, QV-5,
+QV-6, QV-9 lên sửa cùng vòng. Không đổi quyết định của khách (CR-1).
+
+* **QV-1** (chặn): phiên phát lại không còn chặn video (chỉ phiên ghi / chạy model có ghi mới trả 409 `episode_saving`).
+* **QV-2**: bản cắt trong bộ đệm có tệp dấu (kích thước, SHA-256); bản cắt hỏng được cắt lại.
+* **QV-5**: dataset ghi không mã hoá video → mã `no_video` (404) và câu "Bộ dữ liệu này không có video…".
+* **QV-6**: `episode_saving`, `video_missing`, `video_unavailable`, `no_video` vào danh sách tự giải thích (QD-39): chỉ
+  câu dịch, chi tiết thu gọn.
+* **QV-9**: trục biểu đồ 0 → hết tập; cú bấm lấy đúng thời điểm dưới con trỏ.
+* **Backlog M1** (không chặn): QV-3, QV-4, QV-7, QV-8 ([FEATURES-APPROVED.md](FEATURES-APPROVED.md), dòng F-72).
+* Tài liệu: [SRS.md](SRS.md) FR-77, [FEATURES-APPROVED.md](FEATURES-APPROVED.md), spec `docs/spec/station.md` §5.2.
+
 ## Hotfix 0.2.10 gộp vào release/v1: D-2 done, D-26 mới (done) · v1.0 (không đổi phạm vi) · 2026-11-20
 
 **Nguồn:** báo cáo hiện trường của khách trên 0.2.9 (Windows, SO-101, 2026-11-19): "Tôi không xem được video và các
@@ -222,3 +273,21 @@ Phát hành là hotfix `v0.2.10` (main `d8c5356`), QC [QC-0210-r1](qc/QC-0210-r1
   (chưa có trên `release/v1`). `dataset_unreadable`, `dataset_io_error` vào danh sách `SELF_EXPLAINING` (QD-44).
 * Tài liệu: [FEATURES-APPROVED.md](FEATURES-APPROVED.md) (F-8, F-38, F-40, D-2, D-26), [FEATURES.md](FEATURES.md) (D-26),
   [REGRESSION.md](REGRESSION.md) (REG-23 – REG-26).
+
+## Gộp F-72 (CR-1) vào `m1/merge-0210` · v1.1 (không đổi phạm vi) · 2026-11-20
+
+**Nguồn:** F-72 đạt QC ([QC-F072-r1](qc/QC-F072-r1.md), [QC-F072-r2](qc/QC-F072-r2.md)) trên nhánh `m1/episode-video`;
+gộp vào nhánh đã có hotfix 0.2.9 + 0.2.10. Không đổi quyết định của khách.
+
+* **Số hồi quy:** F-72 và hotfix 0.2.10 cùng thêm REG-23. Hồi quy của F-72 (video AV1 trên Edge Windows cài sẵn) được
+  đánh lại thành **REG-27**; REG-23 – REG-26 giữ nghĩa của hotfix. Các báo cáo QC-F072 giữ nguyên chữ "REG-23" (văn bản
+  lịch sử) kèm ghi chú.
+* **Một bộ kiểm `meta/info.json`:** hai endpoint video đọc `meta/info.json` qua `hibiscus_station/data/info.py` như danh
+  sách, chi tiết, ghi thêm và phát lại: dataset không đọc được → 409 `dataset_unreadable` kèm lý do (trước đó 422
+  `video_unavailable`), không bao giờ 500 (`tests/test_episode_video.py`).
+* **Trang chi tiết:** khung xem tập (video + biểu đồ) chỉ mở cho tập `saved` (hoặc không có `state`, Station cũ); tập
+  không đọc được nhưng có telemetry vẫn mở biểu đồ (QC 0.2.10 QH-3), không có video.
+* **macOS:** mã hoá SVT-AV1 của LeRobot chạy trong tiến trình con trên macOS (ADR-15,
+  `hibiscus_station/sessions/video_encoder.py`): lỗi SIGTRAP khi SVT-AV1 dọn dẹp không còn giết Station (CI macOS exit 133).
+* `SELF_EXPLAINING`: hợp của hai danh sách (`dataset_unreadable`, `dataset_io_error`, `episode_saving`,
+  `video_missing`, `video_unavailable`, `no_video`).

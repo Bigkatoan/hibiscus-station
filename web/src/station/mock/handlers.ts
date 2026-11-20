@@ -330,6 +330,32 @@ export function stationHandlers(sim: MockStation, base = `${window.location.orig
         };
       }),
     ),
+    http.get(
+      u("/datasets/:name/episodes/:i/videos"),
+      guard(({ params }) => {
+        const d = sim.datasets.find((x) => x.name === String(params.name));
+        if (!d) throw new MockProblem(404, "not_found");
+        if (sim.session?.s.dataset === d.name)
+          throw new MockProblem(409, "episode_saving", { dataset: d.name, state: sim.state });
+        const i = Number(params.i);
+        const ep = d.episode_list.find((e) => e.index === i);
+        if (!ep) throw new MockProblem(404, "not_found");
+        return {
+          dataset: d.name,
+          episode: i,
+          fps: d.fps,
+          length_s: ep.length_s,
+          cameras: d.cameras.map((camera) => ({
+            camera,
+            codec: "av1",
+            mime: 'video/mp4; codecs="av01.0.05M.08"',
+            duration_s: ep.length_s ?? 0,
+            error: null,
+            formats: ["source", "vp9", "h264"],
+          })),
+        };
+      }),
+    ),
     http.post(
       u("/datasets/:name/upload"),
       guard(({ params }) => {

@@ -1,4 +1,4 @@
-# Hibiscus Station: danh sách hồi quy v1.0 (2026-11-17) · trạng thái: **đã duyệt** (khách hàng duyệt ngày 2026-11-17, đường cơ sở)
+# Hibiscus Station: danh sách hồi quy v1.1 (2026-11-19) · trạng thái: **đã duyệt** (khách hàng duyệt ngày 2026-11-17, đường cơ sở; CR-1 duyệt ngày 2026-11-19)
 
 Mỗi mục REG-n là một lỗi hiện trường đã xảy ra (người dùng Windows của khách hàng với tay SO-101
 thật, bản 0.2.1 – 0.2.8) hoặc một lỗi đã sửa ghi trong `CHANGELOG.md` của sản phẩm. Theo chuẩn
@@ -42,6 +42,7 @@ không đạt là một lỗi mở và chặn phát hành của tính năng liê
 | REG-24 | (0.2.9) Station đóng giữa phiên (đóng cửa sổ console, kill, mất điện) để lại dataset làm trang Bộ dữ liệu / chi tiết báo "Internal error" mãi; "Ghi thêm vào dataset có sẵn" trên dataset đó báo "Internal error" hoặc "A motor did not answer on the serial bus" (D-2, QH-2, QH-5) | 0.2.9 → 0.2.10 | F-38, F-40 | AT-49, AT-51 |
 | REG-25 | (QC 0.2.10 QH-9, có từ 0.2.9, mất dữ liệu) `meta/info.json` đếm ít tập / khung hơn những gì có trên đĩa → "Ghi thêm" được nhận và LeRobot ghi đè `data/chunk-000/file-000.parquet`, xoá mất tập cũ | 0.2.9 → 0.2.10 | F-38, F-40 | AT-49, AT-51 |
 | REG-26 | (2026-11-20) Hồ sơ robot trùng ("so-101-1" và "SO_101" trên COM8 / COM7) không xoá được (D-26) | 0.2.9 → 0.2.10 | F-8 | AT-11 |
+| REG-27 | (CR-1, 2026-11-19; rủi ro biết trước, chưa phải báo cáo hiện trường) Video tập ghi bằng AV1 (mặc định LeRobot 0.7.1) không phát trên Edge của Windows 11 cài sẵn (không có "AV1 Video Extension"); khách: "phát được trên Edge, Chrome và Firefox trên Windows" | M1 (F-72 mới) | F-72 | AT-99 |
 
 ## Chi tiết từng mục (tái hiện → kỳ vọng)
 
@@ -268,6 +269,22 @@ không đạt là một lỗi mở và chặn phát hành của tính năng liê
   409 `busy`; xoá hồ sơ active trên tay thật làm hồ sơ khác thành active, không bao giờ hồ sơ demo; xoá hết: "Chưa có
   robot nào…", mọi trang vẫn hiện; `--mock` chỉ tạo lại hồ sơ demo khi không còn hồ sơ nào; id lạ: 404 `not_found`.
 * **Test tự động:** `tests/test_robot_delete.py`, `web/src/station/robotdelete.screens.test.tsx`. **Nền tảng:** [Vendor].
+
+### REG-27 — Video AV1 không phát trên Edge Windows cài sẵn (F-72, CR-1)
+* **Số hiệu:** khi soạn F-72 mục này mang số REG-23; khi gộp F-72 với hotfix 0.2.10 (cũng dùng REG-23 – REG-26) nó
+  được đánh lại thành REG-27. Báo cáo QC-F072-r1 / r2 ghi "REG-23" là chỉ mục này.
+* **Nguồn:** CR-1 (2026-11-19), yêu cầu của khách "phát được trên Edge, Chrome và Firefox trên Windows". Station ghi AV1
+  (`libsvtav1`, mặc định của LeRobot 0.7.1); Edge chỉ giải mã AV1 khi cài "AV1 Video Extension" từ Microsoft Store.
+  Windows bản "N" không có Media Foundation nên cũng không có H.264.
+* **Tái hiện:** Windows 11, Edge cài sẵn, kiểm ở Cài đặt → Ứng dụng rằng **không** có "AV1 Video Extension"; mở một tập
+  trong Bộ dữ liệu, Phát. Lặp lại trên Windows 11 N (nếu có) và với tiện ích đã cài.
+* **Kỳ vọng:** video phát mà không phải cài gì; ô camera ghi "đã chuyển sang H.264" (hoặc "đã chuyển sang VP9" trên bản N);
+  có tiện ích AV1 thì ghi "AV1, như lúc ghi". Không bao giờ chỉ là ô đen hoặc lỗi chung.
+* **Test tự động:** `web/src/station/episodeVideo.screens.test.tsx` (chọn định dạng theo `canPlayType`: Edge không AV1 →
+  H.264 → VP9; Windows N → VP9; định dạng lỗi → định dạng sau), `tests/test_episode_video.py` (ba định dạng giải mã ra
+  đúng khung của từng tập, Range, lỗi), e2e `tests/e2e/test_station_ui.py` bước 7 trên Microsoft Edge của CI
+  `windows-latest`. **Nền tảng:** [Vendor] CI Windows Edge; [UAT-KH] Edge cài sẵn trên PC Windows 11 của khách (AT-99
+  bước 8).
 
 ### REG-14 … REG-20 (từ CHANGELOG)
 | REG | Tái hiện | Kỳ vọng | Test tự động | Nền tảng |

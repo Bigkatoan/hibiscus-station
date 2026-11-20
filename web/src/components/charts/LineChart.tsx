@@ -14,8 +14,11 @@ export interface LineChartProps {
   logY?: boolean;
   /** Optional vertical cursor sync key across charts (e.g. episode viewer). */
   syncKey?: string;
-  /** Called with the x value under the cursor (for video sync). */
+  /** Called with the x value under the pointer, anywhere on the x scale, not only at a data
+   * point (for video sync: a click reaches the first and the last frame). */
   onCursorX?: (x: number | null) => void;
+  /** Fixed x scale (e.g. 0 to the episode's duration) instead of the data's extent. */
+  xRange?: readonly [number, number];
   /** Draw a vertical marker at this x (e.g. current video time). */
   markerX?: number | null;
 }
@@ -48,6 +51,16 @@ export function showPoints(u: { data: ArrayLike<ArrayLike<unknown>> }, seriesIdx
   return n > 0 && n <= SPARSE_POINTS;
 }
 
+/** x scale: the data's extent, or a fixed range (QV-9: 0 to the episode's duration). */
+export function xScale(xRange?: readonly [number, number]): uPlot.Scale {
+  return xRange ? { time: false, range: [xRange[0], xRange[1]] } : { time: false };
+}
+
+/** The x value under the pointer, anywhere on the scale (not snapped to a data point). */
+export function pointerX(left: number | undefined | null, posToVal: (pos: number) => number): number | null {
+  return left !== undefined && left !== null && left >= 0 ? posToVal(left) : null;
+}
+
 function cssColor(name: string): string {
   const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   return v ? `rgb(${v})` : "#2f6f9f";
@@ -63,6 +76,7 @@ export function LineChart({
   syncKey,
   onCursorX,
   markerX,
+  xRange,
 }: LineChartProps) {
   const { t, i18n } = useTranslation();
   const { resolved } = useTheme();
@@ -90,9 +104,12 @@ export function LineChart({
         ...(syncKey ? { sync: { key: syncKey } } : {}),
         drag: { x: true, y: false },
       },
-      // distr 3 = logarithmic (uPlot.Scale.Distr is a const enum, not importable as a value here).
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-assignment
-      scales: { x: { time: false }, y: logY ? { distr: 3 } : { auto: true } },
+      scales: {
+        x: xScale(xRange),
+        // distr 3 = logarithmic (uPlot.Scale.Distr is a const enum, not importable as a value here).
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-assignment
+        y: logY ? { distr: 3 } : { auto: true },
+      },
       axes: [
         {
           stroke: fg,
@@ -127,9 +144,7 @@ export function LineChart({
       hooks: {
         setCursor: [
           (u) => {
-            const idx = u.cursor.idx;
-            const xs = u.data[0];
-            cursorCb.current?.(idx !== null && idx !== undefined ? (xs[idx] ?? null) : null);
+            cursorCb.current?.(pointerX(u.cursor.left, (pos) => u.posToVal(pos, "x")));
           },
         ],
         draw: [
@@ -168,7 +183,7 @@ export function LineChart({
     };
     // Recreate only when the series set, size, scale or theme changes; data updates use setData.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [labels, height, logY, resolved, syncKey, xLabel, i18n.language]);
+  }, [labels, height, logY, resolved, syncKey, xLabel, i18n.language, xRange?.[0], xRange?.[1]]);
 
   useEffect(() => {
     plot.current?.setData(data);

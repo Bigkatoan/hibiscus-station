@@ -6,7 +6,8 @@ keyboard → the LeRobotDataset loads → import the ACT checkpoint → run it w
 temperatures → Space e-stop → reset → Programs, with the 0.2.9 checks: motor health fits beside
 Robot 3D at 1280 / 1440 px (QD-6), the record end card at 390 px (QD-11), an e-stop in episode 1
 keeps nothing (QD-18), the critical banner goes with the reset (QD-23) and the dead-man stop during
-a replay reads in words in both languages (QD-19). A guard fails the run on any uncaught page error,
+a replay reads in words in both languages (QD-19), and every camera of a recorded episode plays in the
+dataset viewer, also when the browser refuses AV1 / H.264 (F-72, AT-99). A guard fails the run on any uncaught page error,
 console error or HTTP error answer the flow did not provoke (QD-18). Controls are found by their UI string keys, so
 one flow runs as ``mock-en`` (thermal safe stop), ``mock-vi`` and ``sts-vi`` (Space e-stop, relax,
 reset; ``sts`` = the real serial stack against two STS3215 chains on pseudo-terminals, POSIX only,
@@ -414,6 +415,96 @@ def test_station_ui_end_to_end(
         # ------------------------------------------------------------ 7c. dead-man stop during a replay
         deadman_stop_in_words(d, station.base)
         page = d.page
+
+        # ------------------------------------------------------------ 7d. F-72 / AT-99: every camera's video plays here
+        # (CI: Chromium and Firefox on Linux, Microsoft Edge on windows-latest). The browser picks the
+        # first format it says it plays (AV1 as recorded, else H.264, else VP9, ADR-14).
+        d.go(f"/datasets/{DATASET}")
+        expect(page.get_by_text("#2").first).to_be_visible()
+        page.get_by_role("button", name="#1", exact=True).click()
+        for name, _ in wanted:
+            expect(page.get_by_test_id(f"episode-video-{name}")).to_have_attribute(
+                "data-state", "ready", timeout=120000
+            )
+        page.get_by_test_id("episode-play").click()
+        played = (
+            "Math.min(...[...document.querySelectorAll('[data-testid^=\"episode-video-\"] video')]"
+            ".map((v) => v.currentTime))"
+        )
+        wait_for(lambda: float(page.evaluate(played)) > 0.3, 30, "every camera to play")
+        probe = {
+            m: page.evaluate(f"document.createElement('video').canPlayType({json.dumps(t)})")
+            for m, t in {
+                "av1": 'video/mp4; codecs="av01.0.05M.08"',
+                "h264": 'video/mp4; codecs="avc1.42E01E"',
+                "vp9": 'video/webm; codecs="vp9"',
+            }.items()
+        }
+        formats = {
+            n: page.get_by_test_id(f"episode-video-{n}").get_attribute("data-format") for n, _ in wanted
+        }
+        d.shots.mkdir(parents=True, exist_ok=True)
+        (d.shots / f"f72-video-{d.ui.lang}.json").write_text(
+            json.dumps(
+                {
+                    "browser": browser.browser_type.name,
+                    "version": browser.version,
+                    "canPlayType": probe,
+                    "formats": formats,
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        if probe["av1"] == "":  # Edge without the AV1 Video Extension: a converted cut plays
+            assert all(f in ("h264", "vp9") for f in formats.values()), formats
+        d.shot("09b-episode-video")
+
+        # The converted cuts in this very browser: what a stock Windows 11 Edge (no AV1 Video Extension)
+        # and a Windows "N" edition (no Media Foundation: no H.264 either) are offered (REG-27).
+        fallbacks: dict[str, dict[str, str | None]] = {}
+        for case, refuse, episode in (("no-av1", ["av01"], "#2"), ("no-av1-no-h264", ["av01", "avc1"], "#1")):
+            page.evaluate(
+                """(refuse) => {
+                  const proto = HTMLMediaElement.prototype;
+                  proto.__canPlayType = proto.__canPlayType || proto.canPlayType;
+                  proto.canPlayType = function (t) {
+                    return refuse.some((r) => t.includes(r)) ? "" : proto.__canPlayType.call(this, t);
+                  };
+                }""",
+                refuse,
+            )
+            page.get_by_role("button", name=episode, exact=True).click()
+            for name, _ in wanted:
+                expect(page.get_by_test_id(f"episode-video-{name}")).to_have_attribute(
+                    "data-state", "ready", timeout=180000
+                )
+            page.get_by_test_id("episode-play").click()
+            try:
+                wait_for(lambda: float(page.evaluate(played)) > 0.3, 30, f"every camera to play ({case})")
+            except AssertionError:
+                state = "[...document.querySelectorAll('video')].map((v) => [v.src, v.currentTime, v.paused, v.readyState, v.error && v.error.code, v.duration])"
+                raise AssertionError(f"{case}: {page.evaluate(state)}") from None
+            fallbacks[case] = {
+                n: page.get_by_test_id(f"episode-video-{n}").get_attribute("data-format") for n, _ in wanted
+            }
+            assert all(f in ("h264", "vp9") for f in fallbacks[case].values()), (case, fallbacks)
+            d.shot(f"09c-episode-video-{case}")
+        assert all(f == "vp9" for f in fallbacks["no-av1-no-h264"].values()), fallbacks
+        (d.shots / f"f72-video-{d.ui.lang}.json").write_text(
+            json.dumps(
+                {
+                    "browser": browser.browser_type.name,
+                    "version": browser.version,
+                    "canPlayType": probe,
+                    "formats": formats,
+                    "fallbacks": fallbacks,
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        d.no_errors("episode video viewer (F-72)")
 
         # ------------------------------------------------------------ 8. import the ACT checkpoint
         d.go("/run")

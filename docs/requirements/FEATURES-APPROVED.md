@@ -1,7 +1,11 @@
-# Hibiscus Station: danh sách tính năng đã duyệt v1.0 · khách hàng duyệt ngày 2026-11-17 · baseline: BRD v1.0, SRS v1.0, Architecture v1.0, Features v1.0, Acceptance v1.0, Regression v1.0
+# Hibiscus Station: danh sách tính năng đã duyệt v1.1 · khách hàng duyệt ngày 2026-11-17 (v1.0) và 2026-11-19 (CR-1) · baseline: BRD v1.0, SRS v1.1, Architecture v1.1, Features v1.1, Acceptance v1.1, Regression v1.1
 
 **Lời duyệt của khách hàng (2026-11-17):** quyết định **"1. A, 2. A, 3. A, 4. A"**; khi được hỏi có duyệt toàn bộ
 bộ tài liệu v0.2 không: **"Duyệt, bắt đầu làm"**. Nhật ký: [CHANGELOG.md](CHANGELOG.md).
+
+**CR-1 (2026-11-19) → v1.1:** khách hỏi xem được video camera của từng tập đã ghi; BA đề xuất "bấm một tập → video mọi
+camera, đồng bộ với biểu đồ theo khớp; phát được trên Edge, Chrome, Firefox trên Windows; khoảng 2 – 3 ngày công, trong
+M1". **Lời của khách hàng: "Có, thêm vào M1"** → **F-72** (Must, M1).
 
 Danh sách này **đóng băng** từ ngày duyệt. Nhóm dev chỉ xây những mục ở đây (tính năng F-n, đề xuất thay đổi
 P-n, lỗi D-n, khoảng trống K-n). Mọi thêm / đổi / bỏ là **yêu cầu thay đổi (CR)**: BA viết, Tech Lead / SA đánh giá,
@@ -15,7 +19,7 @@ khách duyệt, danh sách lên v1.1, v1.2… Ý tưởng của nhóm dev gửi 
   thuộc nó** (cột Phụ thuộc trong [FEATURES.md](FEATURES.md)). Một Must FAIL chặn cả bản phát hành. Chỉ khách
   hàng miễn được một lỗi, bằng văn bản, theo mã lỗi.
 * Mô tả đầy đủ từng tính năng: [FEATURES.md](FEATURES.md) (F-n) và [SRS.md](SRS.md) (FR-n cùng số); bước kiểm:
-  [ACCEPTANCE.md](ACCEPTANCE.md); hồi quy: [REGRESSION.md](REGRESSION.md) (REG-1 – REG-26, chạy trên mọi bản ứng viên).
+  [ACCEPTANCE.md](ACCEPTANCE.md); hồi quy: [REGRESSION.md](REGRESSION.md) (REG-1 – REG-27, chạy trên mọi bản ứng viên).
 
 ## Quyết định đã chốt
 
@@ -26,7 +30,7 @@ khách duyệt, danh sách lên v1.1, v1.2… Ý tưởng của nhóm dev gửi 
 | QĐ-3 | A | Windows: một lệnh chép-dán, không cần git, cài đúng bộ thư viện đã kiểm; cùng lệnh để cập nhật hoặc quay lại | P-1, ADR-13, FR-1, FR-69, AT-1, AT-84 |
 | QĐ-4 | A | Hibiscus CLI phát hành v0.1.2 với giấy phép Apache-2.0; Station ghim lại v0.1.2 | EXT-1, NFR-14, ADR-12, AT-98 |
 
-## Tính năng đã duyệt (71)
+## Tính năng đã duyệt (72)
 
 | ID | Tính năng | Ưu tiên | Milestone | Acceptance tests | Lỗi / khoảng trống phải đóng | Dev status | QC result | In release |
 |---|---|---|---|---|---|---|---|---|
@@ -101,6 +105,7 @@ khách duyệt, danh sách lên v1.1, v1.2… Ý tưởng của nhóm dev gửi 
 | F-69 | Cập nhật bản wheel | Must | M1 | AT-84 | K-8, D-18 (= K-6), P-1 | not started | not tested | - |
 | F-70 | Docker: backup / restore / update / rollback | Could | M3 | AT-85 | — | not started | not tested | - |
 | F-71 | Dữ liệu tách bạch và bền | Must | M1 | AT-86 | — | not started | not tested | - |
+| F-72 | Xem video từng tập trong Bộ dữ liệu (CR-1, v1.1) | Must | M1 | AT-99 | REG-27 (AV1 không phát trên Edge Windows cài sẵn); QC F072 r1: QV-1 (chặn), QV-2, QV-5, QV-6, QV-9 (Lead nâng lên, sửa cùng vòng); **backlog M1:** QV-3 (`video_path` sai mẫu → 500), QV-4 (mp4 gốc cụt: `source` thiếu khung vẫn 200), QV-7 (Range sai cú pháp → 400), QV-8 (chuyển đổi lỗi không được ghi nhớ) | in progress (bản sửa QC r1: QV-1, QV-2, QV-5, QV-6, QV-9 trên `m1/episode-video`, chờ QC r2; Edge thật trên Windows 11 cài sẵn: NOT VERIFIED tới UAT-1) | FAIL r1 ([QC-F072-r1](qc/QC-F072-r1.md): QV-1) | - |
 
 ## Đề xuất thay đổi đã duyệt (P-1 – P-8)
 
@@ -228,10 +233,10 @@ vì `test_field_029.py` trên `release/v1` là test của D-24, D-25.
 | Mốc | Số F (mốc chính) | Theo ưu tiên | Phần của tính năng khác làm ở mốc này | Kết thúc khi |
 |---|---|---|---|---|
 | M0 · Nền kiểm (tuần 1) | 1 (F-63) | 1 Must | F-1 (P-1: lệnh cài một dòng), F-17 (D-1: e2e của repo) | xem mục M0 bên dưới → **UAT-0** |
-| M1 · Must | 46 | 43 Must + 3 Should (F-2, F-18, F-26) | — | QC nội bộ PASS mọi phần [Vendor] của Must → **UAT-1** |
+| M1 · Must | 47 | 44 Must (gồm F-72, CR-1) + 3 Should (F-2, F-18, F-26) | — | QC nội bộ PASS mọi phần [Vendor] của Must → **UAT-1** |
 | M2 · Should | 19 | 19 Should | — | QC PASS → **UAT-2** |
 | M3 · Could | 5 (F-3, F-59, F-60, F-65, F-70) | 5 Could | F-6 (chế độ LAN) | Đạt thì vào v1.0; không đạt thì ra khỏi v1.0, không chặn |
-| **Tổng** | **71** | **44 Must / 22 Should / 5 Could** | | Phát hành v1.0 = M0 + M1 + M2 đạt (M3 nếu đạt) |
+| **Tổng** | **72** | **45 Must / 22 Should / 5 Could** | | Phát hành v1.0 = M0 + M1 + M2 đạt (M3 nếu đạt) |
 
 ## Phạm vi M0 (đã duyệt)
 
@@ -271,7 +276,7 @@ ngày công dev (F-17, F-63 + 6 ngày nền kiểm), cộng các mục ✚ Tech 
 
 ## Ma trận truy vết
 
-QC kiểm trước khi phát hành. FR-n mô tả F-n cùng số; FR-72 – FR-76 là yêu cầu chung.
+QC kiểm trước khi phát hành. FR-n mô tả F-n cùng số; FR-72 – FR-76 là yêu cầu chung; FR-77 mô tả F-72 (CR-1).
 
 | BR | FR / NFR | F | AT | QC result |
 |---|---|---|---|---|
@@ -281,13 +286,13 @@ QC kiểm trước khi phát hành. FR-n mô tả F-n cùng số; FR-72 – FR-7
 | BR-4 Teleop không trễ hơn LeLab | FR-24 – FR-26; NFR-1a – NFR-1c, NFR-2, NFR-8 | F-24 – F-26 | AT-31 – AT-34, AT-89, AT-90 | not tested |
 | BR-5 An toàn và phục hồi | FR-13, FR-14, FR-25, FR-28 – FR-30, FR-32 – FR-36, FR-57, FR-58, FR-72, FR-74, FR-75; NFR-3a – NFR-3c, NFR-4, NFR-6, NFR-7 | F-4, F-13, F-14, F-25, F-28 – F-30, F-32 – F-36, F-57, F-58 | AT-18 – AT-20, AT-33, AT-36 – AT-39, AT-42, AT-44 – AT-46, AT-71, AT-72, AT-88, AT-93 – AT-95, AT-97 | not tested |
 | BR-6 Số liệu đúng, không báo động giả | FR-31 – FR-34, FR-37, FR-61; NFR-12, NFR-13 | F-31 – F-34, F-37, F-61 | AT-40 – AT-44, AT-47, AT-75, AT-92 | not tested |
-| BR-7 Thu dữ liệu LeRobot có camera | FR-21 – FR-23, FR-27, FR-38 – FR-40; NFR-8, NFR-15 | F-21 – F-23, F-27, F-38 – F-40 | AT-28 – AT-30, AT-35, AT-48 – AT-51 | not tested |
+| BR-7 Thu dữ liệu LeRobot có camera | FR-21 – FR-23, FR-27, FR-38 – FR-40, FR-77; NFR-8, NFR-15 | F-21 – F-23, F-27, F-38 – F-40, F-72 | AT-28 – AT-30, AT-35, AT-48 – AT-51, AT-99 | not tested |
 | BR-8 Máy chủ Hibiscus (Should) | FR-41 – FR-44; NFR-17 | F-41 – F-44 | AT-52 – AT-56 | not tested |
 | BR-9 Chạy model, thấy camera và sức khoẻ động cơ | FR-22, FR-45 – FR-51; NFR-3a, NFR-4, NFR-16 | F-45 – F-51 | AT-57 – AT-64, AT-97 | not tested |
 | BR-10 Lập trình không cần huấn luyện (Should) | FR-52 – FR-60, FR-62 | F-52 – F-60, F-62 | AT-65 – AT-74, AT-76 | not tested |
 | BR-11 Tuỳ chọn nâng cao cho kỹ sư | FR-18, FR-30, FR-48, FR-59, FR-66 | F-18, F-30, F-48, F-59, F-66 | AT-25, AT-39, AT-60, AT-73, AT-80 | not tested |
 | BR-12 Báo cáo chẩn đoán | FR-63 – FR-65 | F-63 – F-65 | AT-77 – AT-79 | not tested |
-| BR-13 Không lỗi hiện trường tái diễn | FR-76; REG-1 – REG-20; NFR-18 | mọi F có cột REG | AT-2 + AT ghi ở từng REG ([REGRESSION.md](REGRESSION.md)) | not tested |
+| BR-13 Không lỗi hiện trường tái diễn | FR-76; REG-1 – REG-27; NFR-18 | mọi F có cột REG | AT-2 + AT ghi ở từng REG ([REGRESSION.md](REGRESSION.md)) | not tested |
 | BR-14 Song ngữ, sáng / tối, máy tính và điện thoại | FR-67, FR-68; NFR-10, NFR-11 | F-67, F-68 | AT-81 – AT-83, AT-91 | not tested |
 | BR-15 Cập nhật không mất dữ liệu | FR-69 – FR-71, FR-75; NFR-15, NFR-16 | F-69 – F-71 | AT-84 – AT-86, AT-95 | not tested |
 | BR-16 Chỉ cục bộ, trừ chế độ LAN | FR-6; NFR-14 | F-6 | AT-8, AT-9, AT-98 | not tested |
@@ -307,8 +312,8 @@ QC kiểm trước khi phát hành. FR-n mô tả F-n cùng số; FR-72 – FR-7
 | NFR-7 | AT-19, AT-37, AT-45, AT-54, AT-72, AT-94, AT-95 | not tested |
 | NFR-8 | AT-90 | not tested |
 | NFR-9 | AT-1 – AT-4 | not tested |
-| NFR-10 | AT-81, AT-91 | not tested |
-| NFR-11 | AT-82, AT-83 | not tested |
+| NFR-10 | AT-81, AT-91, AT-99 | not tested |
+| NFR-11 | AT-82, AT-83, AT-99 | not tested |
 | NFR-12 | AT-43, AT-92 | not tested |
 | NFR-13 | AT-40 | not tested |
 | NFR-14 | AT-8, AT-57, AT-98 | not tested |
@@ -317,14 +322,15 @@ QC kiểm trước khi phát hành. FR-n mô tả F-n cùng số; FR-72 – FR-7
 | NFR-17 | AT-54 | not tested |
 | NFR-18 | AT-2 | not tested |
 
-Kiểm: 71 / 71 tính năng có ≥ 1 AT; 16 / 16 BR trong phạm vi có ≥ 1 F; BR-17 (Automation), BR-18 (nền tảng web) là
+Kiểm: 72 / 72 tính năng có ≥ 1 AT (F-72 → AT-99, CR-1); 16 / 16 BR trong phạm vi có ≥ 1 F; BR-17 (Automation), BR-18 (nền tảng web) là
 Won't v1.0 theo quyết định của khách ngày 2026-11-17; 18 / 18 NFR (tính NFR-1, NFR-3 theo phần a / b / c) có AT.
-98 AT (AT-1 – AT-98). Danh sách Won't W-1 – W-12: [FEATURES.md](FEATURES.md#không-làm-trong-v10-wont).
+99 AT (AT-1 – AT-99). Danh sách Won't W-1 – W-12: [FEATURES.md](FEATURES.md#không-làm-trong-v10-wont).
 
 ## Ký xác nhận
 
 | | Người | Ngày | Ghi chú |
 |---|---|---|---|
 | Khách hàng duyệt danh sách | Khách hàng | 2026-11-17 | "1. A, 2. A, 3. A, 4. A" · "Duyệt, bắt đầu làm" |
+| Khách hàng duyệt CR-1 (F-72 vào M1) | Khách hàng | 2026-11-19 | "Có, thêm vào M1" |
 | QC (trước phát hành) | | | |
 | Khách hàng nghiệm thu (biên bản) | | | |

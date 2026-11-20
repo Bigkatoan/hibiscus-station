@@ -210,6 +210,11 @@ class DatasetRecorder:
     def _open(self) -> None:
         from lerobot.datasets import LeRobotDataset
 
+        from hibiscus_station.sessions import video_encoder
+
+        if video_encoder.isolate_video_encoding():  # macOS: SVT-AV1 runs in a worker process (ADR-15)
+            video_encoder.warm_up()
+
         repo_id = f"local/{self.name}"
         threads = 4 * max(1, len(self.cam_shapes))
         if self.mode == "append":

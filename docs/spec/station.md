@@ -529,7 +529,11 @@ Defaults (all configurable globally in `settings.yaml`, and per robot profile):
   `validation_failed` 422, `not_found` 404, `busy` 409 (`params.state`), `port_busy` 409
   (`params.port`, `params.holder`), `motor_hot` 409 (`params.motors`), `not_connected` 409,
   `not_calibrated` 409 (`params.arm`), `camera_unavailable` 409, `estopped` 409,
-  `model_incompatible` 422 (`errors[]`), `dataset_not_finalized` 409, `not_paired` 409,
+  `model_incompatible` 422 (`errors[]`), `dataset_not_finalized` 409, `episode_saving` 409
+  (`params.dataset`, `params.episode`), `video_missing` 404 / `no_video` 404 (recorded without video) / `video_unavailable` 422 (`params.camera`,
+  `params.episode`), `dataset_unreadable` 409 (`params.reasons`: `meta/info.json` fails the shared validator of
+  `hibiscus_station/data/info.py`; list, detail, append, replay and the episode video endpoints), `dataset_io_error`
+  409, `not_paired` 409,
   `server_error` 502 (`params.upstream_code`), `hardware_timeout` 504, `internal_error` 500.
 * Hardware commands answer once the owner has accepted the transition (state already changed). The
   progress after that comes over the WebSocket.
@@ -588,7 +592,9 @@ Defaults (all configurable globally in `settings.yaml`, and per robot profile):
 | `GET /datasets` | → `{datasets: LocalDataset[]}` | |
 | `GET /datasets/{name}` | → `LocalDatasetDetail` | episodes with length, task, sidecar summary (max temp per joint) |
 | `DELETE /datasets/{name}` | → 204 | deletes the root and sidecars; refused while recording or uploading |
-| `GET /datasets/{name}/episodes/{i}/telemetry` | → `TelemetrySeries` | |
+| `GET /datasets/{name}/episodes/{i}/telemetry` | → `TelemetrySeries` | `frame_index[]` aligned with `t` (video time = frame_index / fps, F-72) |
+| `GET /datasets/{name}/episodes/{i}/videos` | → `EpisodeVideos` | F-72: every camera of the episode (recorded codec, RFC 6381 `mime` for `canPlayType`, duration, per-camera `error`, `formats`); 409 `episode_saving` while a session writes to the dataset (record, run with recording; a replay does not block) |
+| `GET /datasets/{name}/episodes/{i}/videos/{camera}?format=source\|h264\|vp9` | → `video/mp4` / `video/webm` | F-72, ADR-14: the episode cut out of LeRobot's shared mp4, t = 0 at its first frame; `source` copies the recorded packets, `h264` / `vp9` re-encode once (PyAV), cached in `<name>.hibiscus/video-cache/` with a size + SHA-256 stamp (a damaged cut is cut again); HTTP `Range` (206 / 416); `video_missing` 404, `video_unavailable` 422, `episode_saving` 409 |
 | `POST /datasets/{name}/upload` | `{new_dataset_name?: string, dataset_id?: string}` → `Job` | exactly one of the two |
 | **Models** | | |
 | `GET /models` | → `{models: ModelEntry[], loaded: string\|null, loaded_detail: {key, device, policy_type, load_s, warmup_ms}\|null}` | |

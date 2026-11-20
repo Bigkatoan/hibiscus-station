@@ -478,6 +478,11 @@ class TelemetrySeries(Out):
 
     arm_motors: dict[str, list[str]]
     t: list[float]
+    frame_index: list[int | None] = Field(
+        default_factory=list,
+        description="dataset episodes: frames recorded in the episode when the line was sampled "
+        "(video time = frame_index / fps); null for lines outside an episode",
+    )
     temp_c: dict[str, dict[str, list[float | None]]]
     voltage_v: dict[str, dict[str, list[float | None]]]
     current_a: dict[str, dict[str, list[float | None]]]
@@ -534,6 +539,33 @@ class LocalDatasetDetail(LocalDataset):
 
 class LocalDatasets(Out):
     datasets: list[LocalDataset]
+
+
+class EpisodeCamera(Out):
+    camera: str
+    codec: str | None = Field(description="codec the camera was recorded with (meta/info.json; LeRobot: av1)")
+    mime: str | None = Field(
+        description="type + RFC 6381 codecs string of the recorded codec, for canPlayType (null: unknown)"
+    )
+    duration_s: float
+    error: Literal["video_missing", "video_unavailable", "no_video"] | None = Field(
+        description="no_video: recorded as images (video encoding off); video_missing: no file; "
+        "video_unavailable: the file or the dataset metadata cannot be read"
+    )
+    formats: list[Literal["source", "vp9", "h264"]] = Field(
+        description="formats GET .../videos/{camera}?format= serves: source = the recorded packets cut "
+        "to the episode, vp9 = WebM / VP9, h264 = mp4 / H.264 (made on first request, cached)"
+    )
+
+
+class EpisodeVideos(Out):
+    """F-72: the cameras of one episode. Every format starts at the episode's first frame (t = 0)."""
+
+    dataset: str
+    episode: int
+    fps: int | None
+    length_s: float | None
+    cameras: list[EpisodeCamera]
 
 
 # --------------------------------------------------------------------------- jobs

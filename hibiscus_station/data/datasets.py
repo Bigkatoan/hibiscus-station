@@ -38,7 +38,7 @@ def _dir_size(p: Path) -> int:
     return total
 
 
-def _read_info(path: Path, attempts: int = 5) -> Any:
+def read_info(path: Path, attempts: int = 5) -> Any:
     """``meta/info.json`` parsed (any JSON value), or None when it is unreadable. lerobot rewrites
     it in place (truncate, then write) on every saved episode, so a read in between sees an empty
     or half file: retried."""
@@ -121,7 +121,7 @@ def _unreadable_summary(datasets_root: Path, name: str, root: Path, reason: str)
 def _summary(datasets_root: Path, name: str, root: Path, info_path: Path) -> dict[str, Any]:
     from hibiscus.recording import check_recording
 
-    raw = _read_info(info_path)
+    raw = read_info(info_path)
     problems = info_problems(raw) if raw is not None else ["meta/info.json is empty or not valid JSON"]
     info: dict[str, Any] = raw if isinstance(raw, dict) else {}
     features: dict[str, Any] = info["features"] if isinstance(info.get("features"), dict) else {}

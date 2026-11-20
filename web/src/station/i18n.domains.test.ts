@@ -156,6 +156,9 @@ const DOMAINS: Record<string, string[] | "ui"> = {
   "programs.editor.severity_": wire("CheckIssue", "severity"),
   "pair.url_": ["not_url", "file_share", "insecure"], // ServerUrlProblem (PairForm.tsx)
   "step_hint.": ["pair_server"], // the wizard rail's hint (StationShell.tsx)
+  // F-72 episode viewer (EpisodeViewer.tsx): a camera's error, or the browser plays no format
+  "datasets.video_err_": [...wire("EpisodeCamera", "error"), "unplayable"],
+  "datasets.video_fmt_": wire("EpisodeCamera", "formats"),
 };
 
 function sources(dir: string): string[] {

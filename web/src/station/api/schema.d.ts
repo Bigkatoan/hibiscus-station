@@ -181,6 +181,47 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/datasets/{name}/episodes/{index}/videos": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Episode Videos
+     * @description F-72: every camera of an episode, with the formats the viewer can ask for.
+     */
+    get: operations["episode_videos_api_v1_datasets__name__episodes__index__videos_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/datasets/{name}/episodes/{index}/videos/{camera}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Episode Video
+     * @description F-72: one camera of one episode, with HTTP Range support (409 ``episode_saving`` while
+     *     the dataset is being recorded).
+     */
+    get: operations["episode_video_api_v1_datasets__name__episodes__index__videos__camera__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/datasets/{name}/upload": {
     parameters: {
       query?: never;
@@ -2820,6 +2861,33 @@ export interface components {
       /** Cameras */
       cameras: components["schemas"]["DiscoveredCamera"][];
     };
+    /** EpisodeCamera */
+    EpisodeCamera: {
+      /** Camera */
+      camera: string;
+      /**
+       * Codec
+       * @description codec the camera was recorded with (meta/info.json; LeRobot: av1)
+       */
+      codec: string | null;
+      /** Duration S */
+      duration_s: number;
+      /**
+       * Error
+       * @description no_video: recorded as images (video encoding off); video_missing: no file; video_unavailable: the file or the dataset metadata cannot be read
+       */
+      error: ("video_missing" | "video_unavailable" | "no_video") | null;
+      /**
+       * Formats
+       * @description formats GET .../videos/{camera}?format= serves: source = the recorded packets cut to the episode, vp9 = WebM / VP9, h264 = mp4 / H.264 (made on first request, cached)
+       */
+      formats: ("source" | "vp9" | "h264")[];
+      /**
+       * Mime
+       * @description type + RFC 6381 codecs string of the recorded codec, for canPlayType (null: unknown)
+       */
+      mime: string | null;
+    };
     /** EpisodeInfo */
     EpisodeInfo: {
       /** Elapsed S */
@@ -2881,6 +2949,22 @@ export interface components {
       tasks: string[] | null;
       /** Telemetry Lines */
       telemetry_lines: number;
+    };
+    /**
+     * EpisodeVideos
+     * @description F-72: the cameras of one episode. Every format starts at the episode's first frame (t = 0).
+     */
+    EpisodeVideos: {
+      /** Cameras */
+      cameras: components["schemas"]["EpisodeCamera"][];
+      /** Dataset */
+      dataset: string;
+      /** Episode */
+      episode: number;
+      /** Fps */
+      fps: number | null;
+      /** Length S */
+      length_s: number | null;
     };
     /** ErrorMsg */
     ErrorMsg: {
@@ -6378,6 +6462,11 @@ export interface components {
           [key: string]: (number | null)[];
         };
       };
+      /**
+       * Frame Index
+       * @description dataset episodes: frames recorded in the episode when the line was sampled (video time = frame_index / fps); null for lines outside an episode
+       */
+      frame_index?: (number | null)[];
       /** Load Pct */
       load_pct: {
         [key: string]: {
@@ -7545,6 +7634,89 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["TelemetrySeries"];
         };
+      };
+      /** @description RFC 9457 problem (spec §5.1) */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Problem"];
+        };
+      };
+    };
+  };
+  episode_videos_api_v1_datasets__name__episodes__index__videos_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+        index: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EpisodeVideos"];
+        };
+      };
+      /** @description RFC 9457 problem (spec §5.1) */
+      default: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Problem"];
+        };
+      };
+    };
+  };
+  episode_video_api_v1_datasets__name__episodes__index__videos__camera__get: {
+    parameters: {
+      query?: {
+        /** @description source = recorded codec, cut to the episode (no re-encode); vp9 = WebM / VP9, h264 = mp4 / H.264 (re-encoded once, cached in the sidecar) */
+        format?: "source" | "vp9" | "h264";
+      };
+      header?: never;
+      path: {
+        name: string;
+        index: number;
+        camera: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description the episode's video of this camera, t = 0 at its first frame */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "video/mp4": unknown;
+          "video/webm": unknown;
+        };
+      };
+      /** @description the byte range asked for with `Range: bytes=a-b` */
+      206: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description the range is outside the file */
+      416: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       /** @description RFC 9457 problem (spec §5.1) */
       default: {

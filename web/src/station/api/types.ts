@@ -64,6 +64,8 @@ export type UploadRecord = S["UploadRecord"];
 export type EpisodeSummary = S["EpisodeSummary"];
 export type LocalDatasetDetail = S["LocalDatasetDetail"];
 export type TelemetrySeries = S["TelemetrySeries"];
+export type EpisodeVideos = S["EpisodeVideos"];
+export type EpisodeCamera = S["EpisodeCamera"];
 export type SessionSummary = S["SessionSummary"];
 
 export type ServerLink = S["ServerLinkView"];
