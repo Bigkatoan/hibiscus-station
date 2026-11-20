@@ -1,0 +1,24 @@
+{
+ "en-1280-light": {
+  "cards": [],
+  "empty_msg": true,
+  "shell": {
+   "nav": true,
+   "unexpected": false,
+   "blank": false
+  },
+  "errors": [],
+  "5xx": []
+ },
+ "vi-390-dark": {
+  "cards": [],
+  "empty_msg": true,
+  "shell": {
+   "nav": true,
+   "unexpected": false,
+   "blank": false
+  },
+  "errors": [],
+  "5xx": []
+ }
+}

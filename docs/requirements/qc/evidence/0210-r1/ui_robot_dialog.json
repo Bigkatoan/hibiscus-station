@@ -1,0 +1,74 @@
+{
+ "en-1280-light": {
+  "cards": [
+   {
+    "text": "Demo SO-101 (mock) | SO-101 | DEMO |  | Follower: mock://follower | Le",
+    "delete_btns": 1,
+    "enabled": true,
+    "hint": false
+   },
+   {
+    "text": "so-101-1 | SO-101 |  | Follower: /dev/pts/4 | Leader: /dev/pts/5 |  | Co",
+    "delete_btns": 1,
+    "enabled": true,
+    "hint": false
+   },
+   {
+    "text": "SO_101 | SO-101 |  | Follower: /dev/ttyQC_NONE1 | Leader: /dev/ttyQC",
+    "delete_btns": 1,
+    "enabled": true,
+    "hint": false
+   }
+  ],
+  "empty_msg": false,
+  "shell": {
+   "nav": true,
+   "unexpected": false,
+   "blank": false
+  },
+  "dialog": {
+   "visible": true,
+   "text": "Delete robot profile Demo SO-101 (mock)?\n\nCalibration files and datasets are not deleted. You can create the profile again at any time.\n\nCancel\nDelete profile\nClose",
+   "desc_ok": true
+  },
+  "after_cancel_dialog": 0,
+  "errors": [],
+  "5xx": []
+ },
+ "vi-390-dark": {
+  "cards": [
+   {
+    "text": "Demo SO-101 (mock) | SO-101 | TAY GIẢ LẬP |  | Tay follower: mock://",
+    "delete_btns": 1,
+    "enabled": true,
+    "hint": false
+   },
+   {
+    "text": "so-101-1 | SO-101 |  | Tay follower: /dev/pts/4 | Tay leader: /dev/p",
+    "delete_btns": 1,
+    "enabled": true,
+    "hint": false
+   },
+   {
+    "text": "SO_101 | SO-101 |  | Tay follower: /dev/ttyQC_NONE1 | Tay leader: /d",
+    "delete_btns": 1,
+    "enabled": true,
+    "hint": false
+   }
+  ],
+  "empty_msg": false,
+  "shell": {
+   "nav": true,
+   "unexpected": false,
+   "blank": false
+  },
+  "dialog": {
+   "visible": true,
+   "text": "Xoá hồ sơ robot Demo SO-101 (mock)?\n\nTệp hiệu chỉnh và bộ dữ liệu không bị xoá. Bạn có thể tạo lại hồ sơ này bất cứ lúc nào.\n\nHuỷ\nXoá hồ sơ\nĐóng",
+   "desc_ok": true
+  },
+  "after_cancel_dialog": 0,
+  "errors": [],
+  "5xx": []
+ }
+}

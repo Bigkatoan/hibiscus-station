@@ -1,0 +1,11 @@
+QH-1 reproduction (installed wheels, mock Station, home with one dataset copied from a normal 6-episode
+dataset; only meta/info.json changed: "total_episodes": 1000000000). One GET /datasets then one
+GET /datasets/big; Station RSS sampled every 100 ms; QC kills the Station at 4 GB to protect the host.
+
+0.2.9 (published wheel, sha256 f12cf5bc...):  list 200, detail 200 in 0.19 s, peak RSS 154 MB
+0.2.10 (b200544 wheel, sha256 c2614713...):   list 200, detail never answers, RSS 4163 MB after 2.5 s -> killed
+
+Cause: hibiscus_station/data/datasets.py episodes(): `sorted(set(range(total)) | set(written) | set(live))`
+with `total` taken from info.json without an upper bound (`_count` accepts any non-negative number).
+Earlier, on 59e0f37, the same request made the Station process disappear without a log line
+(OOM kill) while QC's browser and API client waited.
