@@ -165,6 +165,51 @@ def wait_for(pred: Callable[[], Any], timeout: float = 10.0, interval: float = 0
     raise AssertionError(f"condition not met within {timeout}s")
 
 
+class ManualClock:
+    """A clock only the test moves (e.g. the dead-man watchdog's, NFR-4)."""
+
+    def __init__(self) -> None:
+        self.t = time.monotonic()
+
+    def __call__(self) -> float:
+        return self.t
+
+
+def estop_ticks(st: Station) -> list[int]:
+    """The loop tick at which the owner enters ``estopped``, recorded by the owner thread itself."""
+    ticks: list[int] = []
+
+    def on_event(kind: str, payload: dict[str, Any]) -> None:
+        if kind == "state" and payload["state"] == "estopped":
+            ticks.append(st.owner.tick)
+
+    st.owner.add_listener(on_event)
+    return ticks
+
+
+def ticks_pass(st: Station, n: int) -> None:
+    """Wait until the owner loop has run ``n`` more ticks."""
+    t0 = st.owner.tick
+    wait_for(lambda: st.owner.tick >= t0 + n, 10)
+
+
+def press_estop_frozen_within_one_tick(st: Station, world: Any) -> None:
+    """NFR-3a: from the press to no new position goal <= 1 tick (+ the inference in flight when a
+    model runs), measured as NFR-3a says: by counting the goals written to the bus after the press
+    (the hold write + at most the tick in flight) and the loop ticks until the owner is estopped
+    (by the owner thread's own count), never with this thread's clock. A loaded CI runner wakes the
+    test thread late: "one tick + 50 ms" failed there while the loop had stopped on time."""
+    at = estop_ticks(st)
+    world.record_calls = True
+    t_press = time.monotonic()
+    st.owner.press_estop("user")
+    tick = st.owner.tick  # the tick in flight at the press is at most this one
+    wait_for(lambda: st.owner.state == "estopped", 10)
+    writes = [t for t, _ in world.goal_writes() if t > t_press]
+    assert len(writes) <= 2, writes  # the hold write (+ at most the tick in flight)
+    assert at and at[0] <= tick + 1, (at, tick)
+
+
 STATION_DIR = Path(__file__).resolve().parents[1]
 
 

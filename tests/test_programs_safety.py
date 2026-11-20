@@ -32,7 +32,17 @@ from blocks_dsl import (
     wait,
     wait_until,
 )
-from conftest import Heartbeat, connect_calibrated, deep_json, mock_profile, wait_for
+from conftest import (
+    Heartbeat,
+    ManualClock,
+    connect_calibrated,
+    deep_json,
+    estop_ticks,
+    mock_profile,
+    press_estop_frozen_within_one_tick,
+    ticks_pass,
+    wait_for,
+)
 
 from hibiscus_station.mock import get_world
 from hibiscus_station.mock.policy import make_dummy_act
@@ -111,12 +121,6 @@ def real(connected: Station) -> Station:
     return connected
 
 
-def _frozen_within_one_tick(world: Any, t_press: float, fps: int = 30) -> None:
-    writes = [t for t, _ in world.goal_writes() if t > t_press]
-    assert len(writes) <= 2, writes  # the hold write (+ at most the tick in flight)
-    assert all(t - t_press < 1 / fps + 0.05 for t in writes), writes
-
-
 # =========================================================================== e-stop
 def test_estop_during_the_approach_aborts_the_program(real: Station, client: Any) -> None:
     st = real
@@ -128,12 +132,8 @@ def test_estop_during_the_approach_aborts_the_program(real: Station, client: Any
         rt = _rt(st)
         wait_for(lambda: _phase(st) == "approach", 3)
         time.sleep(0.2)
-        world.record_calls = True
-        t_press = time.monotonic()
-        st.owner.press_estop("user")
-        wait_for(lambda: st.owner.state == "estopped", 2)
+        press_estop_frozen_within_one_tick(st, world)
         assert rt.join(2) and rt.outcome == "estopped"
-    _frozen_within_one_tick(world, t_press)
     assert world.any_torque()
     assert client.post(f"{API}/estop/reset").status_code == 200
     time.sleep(0.3)
@@ -172,23 +172,33 @@ def test_estop_during_run_model(tmp_path: Path, station: Station, client: Any) -
         rt = _rt(st)
         wait_for(lambda: _phase(st) == "episode", 5)
         time.sleep(0.5)
-        world.record_calls = True
-        t_press = time.monotonic()
-        st.owner.press_estop("user")
-        wait_for(lambda: st.owner.state == "estopped", 2)
+        press_estop_frozen_within_one_tick(st, world)
         assert rt.join(2) and rt.outcome == "estopped"
-    _frozen_within_one_tick(world, t_press)
     st.owner.call("estop_reset")
 
 
 def test_deadman_loss_while_the_program_waits(real: Station, client: Any) -> None:
+    """NFR-4 (QH-6): no heartbeat while a program waits -> e-stop "ui_lost" after the dead-man
+    timeout (1.0 s) + at most 1 tick. The watchdog runs on a clock the test steps, the bound is
+    counted in loop ticks: this thread's wall clock measured 1.61 s on a loaded Windows runner (the
+    test thread woke late), which says nothing about the loop."""
     st = real
+    clock = ManualClock()
+    st.owner.watchdog.clock = clock
+    timeout = st.settings.safety.deadman_timeout_s
+    estop_at = estop_ticks(st)
     _put(client, program(wait_until(key("1"), timeout=60, id_="wu")))
     assert _run(client).status_code == 200  # no heartbeat at all
     rt = _rt(st)
-    t0 = time.monotonic()
-    wait_for(lambda: st.owner.state == "estopped", 3)
-    assert time.monotonic() - t0 < st.settings.safety.deadman_timeout_s + 0.5
+    armed = clock.t  # the session start armed the watchdog on this clock
+    ticks_pass(st, 10)
+    clock.t = armed + timeout - 0.001  # just inside the timeout: the program keeps waiting
+    ticks_pass(st, 10)
+    assert st.owner.state == "programming" and not estop_at, st.owner.state
+    clock.t = armed + timeout + 0.001  # just past it
+    tick = st.owner.tick  # the tick in flight when the timeout passed is at most this one
+    wait_for(lambda: st.owner.state == "estopped", 10)
+    assert estop_at and estop_at[0] <= tick + 1, (estop_at, tick)
     assert st.owner.reason == "ui_lost"
     assert rt.join(2) and rt.outcome == "estopped"
     st.owner.call("estop_reset")

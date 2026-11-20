@@ -13,7 +13,7 @@ from typing import Any
 
 import numpy as np
 import pytest
-from conftest import Events, Heartbeat, fast_hand, wait_for
+from conftest import Events, Heartbeat, fast_hand, press_estop_frozen_within_one_tick, wait_for
 
 from hibiscus_station.mock import get_world
 from hibiscus_station.programs.calibration_ref import calibration_file
@@ -36,7 +36,10 @@ def _record(client: Any, st: Station, *, name: str, seconds: float, **kw: Any) -
     assert r.json()["kind"] == "traj_record" and st.owner.state == "recording_traj"
     get_world("mock://leader").hand = fast_hand(amplitude=120.0, hz=0.7)
     wait_for(lambda: _phase(st) == "capture", 6)
-    time.sleep(seconds)
+    # ``seconds`` of the take's own time (samples at its 30 fps), not of this thread's clock: a
+    # runner that stalls the process would otherwise record a shorter or longer take
+    session = st.owner.session
+    wait_for(lambda: len(session.t) >= round(seconds * 30) + 1, 6 + 4 * seconds)  # type: ignore[union-attr]
     r = client.post(f"{API}/trajectories/record/stop")
     assert r.status_code == 200, r.text
     assert st.owner.state == "idle"
@@ -89,7 +92,12 @@ def test_record_a_and_b_with_the_leader(connected: Station, client: Any, events:
     a = _record(client, st, name="A", seconds=1.5, keyframe_hz=4)
     assert a.status == "draft" and a.name == "A" and a.fps == 30
     assert a.joints == [f"{m}.pos" for m in st.owner.follower.bus.motors]
-    assert a.samples >= 30 and a.raw_duration_s == pytest.approx(1.5, abs=0.3)
+    # the take: the samples captured at 30 fps, its duration their span on the loop's own clock
+    raw_a = st.programs.trajectories().samples(a.id, trimmed=False)
+    assert a.samples == len(raw_a.t) >= 46 and a.raw_duration_s == pytest.approx(
+        raw_a.t[-1] - raw_a.t[0], abs=1e-5
+    )
+    assert a.raw_duration_s >= (a.samples - 1) / 30 * 0.98  # never sampled faster than its fps
     assert a.keyframe_cameras == ["wrist"] and len(a.keyframe_times) >= 5
     assert len(a.series.t) == a.samples
     # every stored row is a goal the owner actually sent (after the SafetyFilter)
@@ -110,7 +118,7 @@ def test_record_a_and_b_with_the_leader(connected: Station, client: Any, events:
     assert phases[0] == "countdown" and "capture" in phases and phases[-2:] == ["saving", "done"]
     assert msgs[-1]["ended"] and msgs[-1]["trajectory_id"] == a.id and msgs[-1]["samples"] == a.samples
     captures = [m for m in msgs if m["phase"] == "capture"]
-    assert len(captures) <= 5 * 1.5 + 3
+    assert len(captures) <= 5 * a.raw_duration_s + 3
     # keyframes are small JPEGs of the take
     import cv2
 
@@ -125,10 +133,18 @@ def test_record_a_and_b_with_the_leader(connected: Station, client: Any, events:
     assert r.status_code == 200
     wait_for(lambda: st.owner.state == "idle", 8)
     assert st.owner.last_session_summary["outcome"] == "completed"  # type: ignore[index]
+    b_id = st.owner.last_session_summary["id"]  # type: ignore[index]
     r = client.post(f"{API}/trajectories/record/stop")
     assert r.status_code == 200, r.text
     b = TrajectoryDetail.model_validate(r.json())
-    assert b.name == "B" and b.raw_duration_s == pytest.approx(0.8, abs=0.15)
+    # the limit ends the take at the first tick whose capture clock reached 0.8 s (the session's
+    # own clock, in its "saving" message), and no tick after it is in the take (a sample is
+    # stamped at the start of its tick, before that tick checks the limit)
+    raw_b = st.programs.trajectories().samples(b.id, trimmed=False)
+    saving = [m for m in events.of("trajectory_record") if m["session_id"] == b_id and m["phase"] == "saving"]
+    assert b.name == "B" and saving and saving[0]["elapsed_s"] >= 0.8, saving
+    assert raw_b.t[-2] < 0.8, raw_b.t[-3:]
+    assert b.raw_duration_s == pytest.approx(raw_b.t[-1] - raw_b.t[0], abs=1e-5)
     listed = Trajectories.model_validate(client.get(f"{API}/trajectories").json()).trajectories
     assert {t.id for t in listed} == {a.id, b.id}
     assert all(len(v) == 64 for v in listed[0].preview.values())
@@ -259,13 +275,7 @@ def test_estop_mid_replay_stops_within_one_tick(connected: Station, client: Any)
         time.sleep(0.5)
         session = st.owner.session
         assert isinstance(session, TrajPlaySession) and session.player is not None
-        world.record_calls = True
-        t_press = time.monotonic()
-        st.owner.press_estop("user")
-        wait_for(lambda: st.owner.state == "estopped", 2)
-    writes = [t for t, _ in world.goal_writes() if t > t_press]
-    assert len(writes) <= 2, writes  # the freeze write and at most one in-flight tick
-    assert all(t - t_press < 1 / a.fps + 0.05 for t in writes)
+        press_estop_frozen_within_one_tick(st, world)  # the freeze write and at most one in-flight tick
     assert world.any_torque()  # frozen, not dropped
     assert session.player.done and session.player.progress < 1.0  # the player was dropped
     summary = st.owner.last_session_summary
@@ -348,11 +358,14 @@ def test_trim_rename_delete_through_the_api(connected: Station, client: Any) -> 
     )
     assert r.status_code == 200, r.text
     d = TrajectoryDetail.model_validate(r.json())
-    assert (
-        d.name == "Pick"
-        and d.status == "draft"
-        and d.duration_s == pytest.approx(a.raw_duration_s - 0.3, abs=0.05)
-    )
+    # the trim keeps the samples from 0.2 s after the first to 0.1 s before the last: the duration
+    # is the span of those samples (on the loop's clock; a stalled tick next to a cut moves it by
+    # that gap, macOS run: 0.601 against 0.957 - 0.3)
+    t = st.programs.trajectories().samples(a.id, trimmed=False).t
+    kept = [x for x in t if t[0] + 0.2 - 1e-6 <= x <= t[-1] - 0.1 + 1e-6]
+    assert d.name == "Pick" and d.status == "draft", d
+    assert d.duration_s == pytest.approx(kept[-1] - kept[0], abs=1e-5), (d.duration_s, t)
+    assert d.duration_s <= a.raw_duration_s - 0.3 + 1e-5
     r = client.put(f"{API}/trajectories/{a.id}", json={"trim": {"start_s": 5, "end_s": 5}})
     assert r.status_code == 422
     assert client.put(f"{API}/trajectories/{a.id}", json={"bogus": 1}).status_code == 422

@@ -89,15 +89,18 @@ def test_record_next_rerecord_timeout(connected: Station) -> None:
 def test_record_timeout_discard_and_sidecar_line_count(connected: Station) -> None:
     st = connected
     _record(st, dataset="disc", num_episodes=1, episode_time_s=0.8, reset_time_s=0.2, on_timeout="discard")
+    # the first episode times out -> discarded, re-recorded (the counter, not the 0.2 s reset phase,
+    # which a slow runner's polling can miss)
+    wait_for(lambda: st.owner.session is not None and st.owner.session.discarded == 1, 8)  # type: ignore[attr-defined]
     wait_for(lambda: _phase(st) == "episode", 4)
-    wait_for(lambda: _phase(st) == "reset", 4)  # timeout -> discarded, re-record
-    assert st.owner.session.discarded == 1  # type: ignore[union-attr]
-    wait_for(lambda: _phase(st) == "episode", 4)
-    time.sleep(0.3)
+    # end the episode once telemetry was read during it (the product's own buffer, not a 0.3 s
+    # sleep: a slow runner made no read in 0.3 s and the sidecar was rightly empty)
+    rec = st.owner.session.rec  # type: ignore[union-attr]
+    wait_for(lambda: len(rec.buffer.lines) >= 2, 6)
     st.owner.call("control", action="next")
     wait_for(lambda: st.owner.state == "idle", 10)
     lines = read_lines(episode_file(st.paths.datasets, "disc", 0))
-    assert lines
+    assert len(lines) >= 2
     # every telemetry read logged during the episode is in the sidecar (one line per read)
     reads_in_episode = {(ln["tick"], ln["arm"], ln["group"]) for ln in lines}
     assert len(reads_in_episode) == len(lines)

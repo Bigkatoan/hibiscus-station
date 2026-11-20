@@ -16,7 +16,15 @@ from typing import Any, ClassVar
 
 import pytest
 from blocks_dsl import blk, play, program
-from conftest import Events, Heartbeat, connect_calibrated, fast_hand, gentle_hand, wait_for
+from conftest import (
+    Events,
+    Heartbeat,
+    connect_calibrated,
+    fast_hand,
+    gentle_hand,
+    press_estop_frozen_within_one_tick,
+    wait_for,
+)
 from test_programs_safety import _phase, _put, _rt, _run, _traj
 
 from hibiscus_station.errors import StationError
@@ -373,12 +381,7 @@ def test_align_honours_the_estop(wide: Station, client: Any) -> None:
     with Heartbeat(st):
         assert client.post(f"{API}/sessions/teleop", json={"align": True}).status_code == 200
         time.sleep(0.6)
-        world.record_calls = True
-        t_press = time.monotonic()
-        st.owner.press_estop("user")
-        wait_for(lambda: st.owner.state == "estopped", 2)
-    writes = [t for t, _ in world.goal_writes() if t > t_press]
-    assert len(writes) <= 2 and all(t - t_press < 0.1 for t in writes), writes
+        press_estop_frozen_within_one_tick(st, world)
     st.owner.call("estop_reset")
 
 

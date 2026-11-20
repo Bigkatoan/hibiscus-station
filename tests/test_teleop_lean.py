@@ -12,7 +12,7 @@ import time
 from typing import Any
 
 import pytest
-from conftest import Events, wait_for
+from conftest import Events, press_estop_frozen_within_one_tick, wait_for
 
 from hibiscus_station.hw.loop import TELEOP_FPS, LoopStats
 from hibiscus_station.hw.owner import LEAN_OBS_HZ
@@ -96,13 +96,7 @@ def test_estop_in_the_lean_loop_freezes_within_one_tick(connected: Station) -> N
     world = get_world("mock://follower")
     st.start_teleop(TeleopRequest())
     time.sleep(0.5)
-    world.record_calls = True
-    t_press = time.monotonic()
-    st.owner.press_estop("user")
-    wait_for(lambda: st.owner.state == "estopped", 2)
-    writes = [t for t, _ in world.goal_writes() if t > t_press]
-    assert len(writes) <= 2, writes
-    assert all(t - t_press < 0.05 for t in writes)
+    press_estop_frozen_within_one_tick(st, world)
     assert world.any_torque()
 
 

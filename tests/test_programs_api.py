@@ -17,7 +17,7 @@ from typing import Any
 
 import pytest
 from blocks_dsl import ab_program, keys_program, num, program, relax, repeat, wait
-from conftest import Events, Heartbeat, fast_hand, mock_profile, wait_for
+from conftest import Events, Heartbeat, fast_hand, mock_profile, press_estop_frozen_within_one_tick, wait_for
 
 from hibiscus_station.mock import get_world
 from hibiscus_station.programs import schemas as ps
@@ -317,14 +317,8 @@ def test_red_blue_cube_program_end_to_end(connected: Station, client: Any, event
         # e-stop while B moves: frozen within one tick, the program is aborted and never resumes
         wait_for(lambda: st.owner.session is not None and _phase(st) in ("approach", "replay"), 5)
         time.sleep(0.3)
-        world.record_calls = True
-        t_press = time.monotonic()
-        st.owner.press_estop("user")
-        wait_for(lambda: st.owner.state == "estopped", 2)
+        press_estop_frozen_within_one_tick(st, world)
         assert rt.join(3) and rt.outcome == "estopped"
-    writes = [t for t, _ in world.goal_writes() if t > t_press]
-    assert len(writes) <= 2, writes
-    assert all(t - t_press < 1 / 30 + 0.05 for t in writes)
     assert world.any_torque()  # frozen, not dropped
     played = list(rt.played)
     time.sleep(0.5)

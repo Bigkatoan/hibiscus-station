@@ -14,7 +14,14 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from conftest import Heartbeat, connect_calibrated, fast_hand, mock_profile, wait_for
+from conftest import (
+    Heartbeat,
+    connect_calibrated,
+    fast_hand,
+    mock_profile,
+    press_estop_frozen_within_one_tick,
+    wait_for,
+)
 
 from hibiscus_station.errors import StationError
 from hibiscus_station.mock import get_world
@@ -39,6 +46,7 @@ from hibiscus_station.programs.schemas import (
 from hibiscus_station.programs.sim_port import sim_port_for_station
 from hibiscus_station.programs.traj_service import start_program_session, start_record, stop_record
 from hibiscus_station.sessions.program import ProgramSession
+from hibiscus_station.sessions.run import RunSession
 from hibiscus_station.station import Station
 
 RUN_ID = "r_20261116_120000_abcd"
@@ -231,12 +239,7 @@ def test_estop_aborts_the_program_within_one_tick(ready: Station) -> None:
         started.wait(5)
         wait_for(lambda: st.owner.session is not None and st.owner.session.episode.phase == "replay", 10)
         time.sleep(0.3)
-        world.record_calls = True
-        t_press = time.monotonic()
-        st.owner.press_estop("user")
-        wait_for(lambda: st.owner.state == "estopped", 3)
-    writes = [t for t, _ in world.goal_writes() if t > t_press]
-    assert len(writes) <= 2 and all(t - t_press < 1 / 30 + 0.05 for t in writes), writes
+        press_estop_frozen_within_one_tick(st, world)
     assert rt.aborted_with == "estopped"
     wait_for(lambda: len(rt.results) == 2, 3)
     assert rt.results[0] == MotionResult("aborted", "estopped")
@@ -389,8 +392,22 @@ def test_dry_run_port_does_not_touch_the_owner(ready: Station) -> None:
         st.owner.call("estop_reset")
 
 
-def test_run_model_block_uses_the_inferring_path(tmp_path: Path, station: Station) -> None:
+def test_run_model_block_uses_the_inferring_path(
+    tmp_path: Path, station: Station, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``run model for 0.6 s`` runs the inferring path (a ``RunSession`` episode) for 0.6 s of loop
+    ticks at the session fps, as every episode does (a recorded episode is its frames). Its length
+    is counted in those ticks, not in this thread's seconds: a loaded runner made the CPU inference
+    overrun its ticks and the run took 1.686 s of wall time, the right 18 ticks."""
     st = station
+    runs: list[RunSession] = []
+    begin = RunSession.begin
+
+    def tracked(self: RunSession, owner: Any, obs: Any) -> None:
+        runs.append(self)
+        begin(self, owner, obs)
+
+    monkeypatch.setattr(RunSession, "begin", tracked)
     connect_calibrated(st, mock_profile())
     src = make_dummy_act(tmp_path / "act" / "pretrained_model", {"wrist": (96, 128)})
     entry = import_dir(st.registry, src, st.paths.staging, [tmp_path])
@@ -418,5 +435,8 @@ def test_run_model_block_uses_the_inferring_path(tmp_path: Path, station: Statio
     assert not rt.errors, rt.errors
     assert [r.outcome if r else None for r in rt.results] == ["completed", "cancelled"]
     res = rt.results[0]
-    assert res is not None and res.elapsed_s == pytest.approx(0.6, abs=0.3)
+    run = runs[0]
+    assert run._episode_ticks == round(0.6 * run.fps), (run._episode_ticks, run.fps)
+    # never shorter than its ticks at the session fps (the loop never runs faster than its fps)
+    assert res is not None and res.elapsed_s >= (run._episode_ticks - 1) / run.fps * 0.98, res
     assert isinstance(sessions[0], ProgramSession)
