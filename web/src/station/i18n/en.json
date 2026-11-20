@@ -548,7 +548,8 @@
     "video_fmt_vp9": "converted to VP9",
     "video_err_video_missing": "No video file for this camera.",
     "video_err_video_unavailable": "This camera's video cannot be read.",
-    "video_err_unplayable": "This browser cannot play this camera's video."
+    "video_err_unplayable": "This browser cannot play this camera's video.",
+    "video_err_no_video": "This dataset has no video (it was recorded with video encoding off)."
   },
   "upload": {
     "title": "Upload to Hibiscus",
@@ -711,6 +712,7 @@
     "episode_saving": "This dataset is still being recorded. Its videos open when the recording ends.",
     "video_missing": "This camera has no video for this episode.",
     "video_unavailable": "This camera's video cannot be read.",
+    "no_video": "This dataset has no video.",
     "not_paired": "Pair with a Hibiscus server first.",
     "server_error": "The Hibiscus server answered with an error ({{upstream_code}}).",
     "server_unauthorized": "The server rejected this token.",

@@ -3558,7 +3558,8 @@
               {
                 "enum": [
                   "video_missing",
-                  "video_unavailable"
+                  "video_unavailable",
+                  "no_video"
                 ],
                 "type": "string"
               },
@@ -3566,6 +3567,7 @@
                 "type": "null"
               }
             ],
+            "description": "no_video: recorded as images (video encoding off); video_missing: no file; video_unavailable: the file or the dataset metadata cannot be read",
             "title": "Error"
           },
           "formats": {

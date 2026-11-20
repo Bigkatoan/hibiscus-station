@@ -46,6 +46,11 @@ export const SELF_EXPLAINING = new Set([
   "token_format_invalid",
   "token_missing_scope",
   "workspace_required",
+  // F-72 (QV-6): the episode viewer's sentences say all there is
+  "episode_saving",
+  "video_missing",
+  "video_unavailable",
+  "no_video",
 ]);
 
 /** True when the UI's sentence for this error says all there is to say. */

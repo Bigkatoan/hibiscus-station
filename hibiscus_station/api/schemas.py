@@ -544,7 +544,10 @@ class EpisodeCamera(Out):
         description="type + RFC 6381 codecs string of the recorded codec, for canPlayType (null: unknown)"
     )
     duration_s: float
-    error: Literal["video_missing", "video_unavailable"] | None
+    error: Literal["video_missing", "video_unavailable", "no_video"] | None = Field(
+        description="no_video: recorded as images (video encoding off); video_missing: no file; "
+        "video_unavailable: the file or the dataset metadata cannot be read"
+    )
     formats: list[Literal["source", "vp9", "h264"]] = Field(
         description="formats GET .../videos/{camera}?format= serves: source = the recorded packets cut "
         "to the episode, vp9 = WebM / VP9, h264 = mp4 / H.264 (made on first request, cached)"

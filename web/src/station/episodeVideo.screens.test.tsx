@@ -12,6 +12,7 @@ import type { EpisodeCamera } from "./api/types";
 import { formatOrder, videoUrl } from "./components/EpisodeViewer";
 import { i18n } from "@/lib/i18n";
 import { episodeReviewable, episodeSeconds } from "./pages/DatasetsPage";
+import { pointerX, xScale } from "@/components/charts/LineChart";
 import { renderStation, settle, setupStation } from "./test/utils";
 
 let play: MockInstance<() => Promise<void>>;
@@ -66,6 +67,16 @@ describe("format choice (ADR-14)", () => {
     expect(episodeReviewable({ index: 0, state: "saving" })).toBe(false);
     expect(episodeReviewable({ index: 0, state: "unreadable" })).toBe(false);
     expect(episodeReviewable(undefined)).toBe(false);
+  });
+
+  it("QV-9: the chart spans the whole episode and a click is not snapped to a sample", () => {
+    expect(xScale([0, 3])).toEqual({ time: false, range: [0, 3] });
+    expect(xScale()).toEqual({ time: false });
+    // a pointer left of the first telemetry sample still maps to its own time (here 0.0 s)
+    expect(pointerX(0, (p) => p / 100)).toBe(0);
+    expect(pointerX(299, (p) => p / 100)).toBeCloseTo(2.99);
+    expect(pointerX(-10, (p) => p)).toBeNull();
+    expect(pointerX(undefined, (p) => p)).toBeNull();
   });
 
   it("puts the chart on the video's clock: frame index / fps", () => {
@@ -243,5 +254,72 @@ describe("Dataset detail: episode video (F-72)", () => {
         "This dataset is still being recorded. Its videos open when the recording ends.",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("QV-6: a 409 while recording shows only the Vietnamese sentence; the server's line is folded away", async () => {
+    const h = setupStation();
+    server.use(
+      http.get(`${stationBase()}/datasets/:name/episodes/:i/videos`, () =>
+        HttpResponse.json(
+          {
+            code: "episode_saving",
+            status: 409,
+            title: "This dataset is still being recorded and saved",
+            detail: "this dataset is being recorded: its videos open when the session ends",
+            type: "x",
+            request_id: "",
+            params: { dataset: "picknplace_red" },
+          },
+          { status: 409 },
+        ),
+      ),
+    );
+    await act(async () => {
+      await i18n.changeLanguage("vi");
+    });
+    try {
+      renderStation("/datasets/picknplace_red", h);
+      await settle();
+      const user = userEvent.setup();
+      await user.click(await screen.findByRole("button", { name: "#1" }));
+      const alert = (
+        await screen.findByText("Bộ dữ liệu này đang được ghi. Video mở được khi phiên ghi kết thúc.")
+      ).closest<HTMLElement>("[role=alert]");
+      if (!alert) throw new Error("no alert around the sentence");
+      // the English machine line is only inside the closed "Technical details" (QD-39 rule)
+      const details = within(alert).getByTestId("error-details");
+      expect(details).not.toHaveAttribute("open");
+      expect(details).toHaveTextContent("this dataset is being recorded");
+    } finally {
+      await act(async () => {
+        await i18n.changeLanguage("en");
+      });
+    }
+  });
+
+  it("QV-5: a dataset recorded without video says so, once, without empty tiles", async () => {
+    const h = setupStation();
+    server.use(
+      http.get(`${stationBase()}/datasets/:name/episodes/:i/videos`, () =>
+        HttpResponse.json({
+          dataset: "picknplace_red",
+          episode: 0,
+          fps: 30,
+          length_s: 30,
+          cameras: [
+            cam({ camera: "wrist", codec: null, mime: null, error: "no_video", formats: [] }),
+            cam({ camera: "front", codec: null, mime: null, error: "no_video", formats: [] }),
+          ],
+        }),
+      ),
+    );
+    renderStation("/datasets/picknplace_red", h);
+    await settle();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "#1" }));
+    expect(await screen.findByTestId("episode-no-video")).toHaveTextContent(
+      "This dataset has no video (it was recorded with video encoding off).",
+    );
+    expect(screen.queryByTestId("episode-video-front")).toBeNull();
   });
 });

@@ -548,7 +548,8 @@
     "video_fmt_vp9": "đã chuyển sang VP9",
     "video_err_video_missing": "Camera này không có tệp video cho tập này.",
     "video_err_video_unavailable": "Không đọc được video của camera này.",
-    "video_err_unplayable": "Trình duyệt này không phát được video của camera này."
+    "video_err_unplayable": "Trình duyệt này không phát được video của camera này.",
+    "video_err_no_video": "Bộ dữ liệu này không có video (đã ghi với \"Mã hoá video\" tắt)."
   },
   "upload": {
     "title": "Tải lên Hibiscus",
@@ -711,6 +712,7 @@
     "episode_saving": "Bộ dữ liệu này đang được ghi. Video mở được khi phiên ghi kết thúc.",
     "video_missing": "Camera này không có video cho tập này.",
     "video_unavailable": "Không đọc được video của camera này.",
+    "no_video": "Bộ dữ liệu này không có video.",
     "not_paired": "Hãy ghép nối với máy chủ Hibiscus trước.",
     "server_error": "Máy chủ Hibiscus trả về lỗi ({{upstream_code}}).",
     "server_unauthorized": "Máy chủ từ chối token này.",

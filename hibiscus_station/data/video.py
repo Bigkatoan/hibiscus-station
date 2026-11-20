@@ -35,6 +35,7 @@ from hibiscus_station.data.sidecar import sidecar_dir
 from hibiscus_station.errors import StationError
 from hibiscus_station.oscompat import replace_file
 from hibiscus_station.sessions.recorder import check_name
+from hibiscus_station.settings import write_private
 
 log = logging.getLogger(__name__)
 
@@ -125,7 +126,8 @@ def episode_clips(datasets_root: Path, name: str, index: int) -> dict[str, Any]:
             continue
         cam = key.removeprefix("observation.images.")
         if ft.get("dtype") != "video":
-            clips.append(EpisodeClip(cam, None, None, 0.0, 0.0, "video_unavailable"))
+            # recorded as images ("Mã hoá video" off): there is no video to show (QV-5)
+            clips.append(EpisodeClip(cam, None, None, 0.0, 0.0, "no_video"))
             continue
         codec = (ft.get("info") or {}).get("video.codec")
         prefix = f"videos/{key}/"
@@ -205,6 +207,11 @@ def clip_file(datasets_root: Path, name: str, index: int, camera: str, fmt: Vide
     folder = cache_dir(datasets_root, name) / camera
     out = folder / f"episode_{index:06d}.{fmt}.{key}.{_SUFFIX[fmt]}"
     with _lock(out):
+        if out.is_file() and not _cut_ok(out):
+            log.warning("video cut %s is damaged: cutting it again", out.name)
+            for broken in (out, _stamp(out)):
+                with contextlib.suppress(OSError):
+                    broken.unlink()
         if not out.is_file():
             folder.mkdir(parents=True, exist_ok=True)
             for old in folder.glob(f"episode_{index:06d}.{fmt}.*"):
@@ -219,7 +226,11 @@ def clip_file(datasets_root: Path, name: str, index: int, camera: str, fmt: Vide
                     _remux(clip.path, tmp, clip.from_s, clip.to_s, fps)
                 else:
                     _transcode(clip.path, tmp, clip.from_s, clip.to_s, fps, fmt)
+                stamp = {"size": tmp.stat().st_size, "sha256": _sha256(tmp)}
                 replace_file(tmp, out)
+                # written after the cut: a cut without its stamp (crash in between) is cut again
+                write_private(_stamp(out), json.dumps(stamp))
+                _remember(out)
             except StationError:
                 raise
             except Exception as exc:
@@ -232,6 +243,47 @@ def clip_file(datasets_root: Path, name: str, index: int, camera: str, fmt: Vide
             finally:
                 tmp.unlink(missing_ok=True)
     return out, _MEDIA_TYPE[fmt]
+
+
+def _stamp(cut: Path) -> Path:
+    return cut.with_name(cut.name + ".json")
+
+
+def _sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for block in iter(lambda: fh.read(1 << 20), b""):
+            h.update(block)
+    return h.hexdigest()
+
+
+#: cuts whose bytes matched their stamp, by (path, size, mtime): Range requests do not re-hash
+_validated: set[tuple[str, int, int]] = set()
+
+
+def _remember(cut: Path) -> None:
+    st = cut.stat()
+    _validated.add((str(cut), st.st_size, st.st_mtime_ns))
+
+
+def _cut_ok(cut: Path) -> bool:
+    """QV-2: a cached cut is served only while it is the file that was cut (size and SHA-256 of
+    its stamp); a truncated, emptied or overwritten cut is cut again."""
+    try:
+        st = cut.stat()
+        if (str(cut), st.st_size, st.st_mtime_ns) in _validated:
+            return True
+        stamp = json.loads(_stamp(cut).read_text(encoding="utf-8"))
+        ok = (
+            isinstance(stamp, dict)
+            and stamp.get("size") == st.st_size > 0
+            and stamp.get("sha256") == _sha256(cut)
+        )
+    except (OSError, ValueError):
+        return False
+    if ok:
+        _validated.add((str(cut), st.st_size, st.st_mtime_ns))
+    return bool(ok)
 
 
 def _remux(src: Path, dst: Path, start: float, end: float, fps: int) -> None:

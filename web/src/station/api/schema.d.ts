@@ -2866,8 +2866,11 @@ export interface components {
       codec: string | null;
       /** Duration S */
       duration_s: number;
-      /** Error */
-      error: ("video_missing" | "video_unavailable") | null;
+      /**
+       * Error
+       * @description no_video: recorded as images (video encoding off); video_missing: no file; video_unavailable: the file or the dataset metadata cannot be read
+       */
+      error: ("video_missing" | "video_unavailable" | "no_video") | null;
       /**
        * Formats
        * @description formats GET .../videos/{camera}?format= serves: source = the recorded packets cut to the episode, vp9 = WebM / VP9, h264 = mp4 / H.264 (made on first request, cached)

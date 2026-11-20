@@ -306,3 +306,78 @@ def test_an_episode_whose_metadata_was_never_written_is_404_never_500(client: An
     (multi / "meta" / "info.json").write_text("", encoding="utf-8")
     r = client.get(f"{API}/datasets/multi/episodes/1/videos")
     assert r.status_code == 422 and r.json()["code"] == "video_unavailable"
+
+
+def test_a_replay_of_the_dataset_does_not_block_its_videos(client: Any, recorded: Station) -> None:
+    """QV-1 (QC F072 r1): a replay only reads the dataset, so its videos play; only a session that
+    writes to the dataset (record, run-with-recording) answers 409 ``episode_saving``."""
+    from hibiscus_station.station import ReplayRequest
+
+    st = recorded
+    st.start_replay(ReplayRequest(dataset="flow", episode=0))
+    try:
+        wait_for(lambda: st.owner.state == "replaying", 10)
+        assert st.owner.session is not None and st.owner.session.dataset == "flow"
+        assert client.get(f"{API}/datasets/flow/episodes/1/videos").status_code == 200
+        r = client.get(f"{API}/datasets/flow/episodes/1/videos/front?format=source")
+        assert r.status_code == 200, r.text
+    finally:
+        st.owner.call("control", action="stop")
+        wait_for(lambda: st.owner.state == "idle", 20)
+
+
+@pytest.mark.parametrize("damage", ["truncated", "empty", "garbage_same_size", "no_stamp"])
+@pytest.mark.parametrize("fmt", ["source", "vp9", "h264"])
+def test_a_damaged_cut_in_the_cache_is_cut_again(
+    client: Any, multi: Path, station: Station, fmt: str, damage: str
+) -> None:
+    """QV-2 (QC F072 r1): a cut damaged on disk is never served; it is cut again (all frames)."""
+    url = f"{API}/datasets/multi/episodes/2/videos/front?format={fmt}"
+    good = client.get(url)
+    assert good.status_code == 200 and len(_decode(good.content)) == FRAMES[2]
+    cache = station.paths.datasets / "multi.hibiscus" / "video-cache" / "front"
+    [cut] = [p for p in cache.glob(f"episode_000002.{fmt}.*") if not p.name.endswith(".json")]
+    data = cut.read_bytes()
+    if damage == "truncated":
+        cut.write_bytes(data[: len(data) // 3])
+    elif damage == "empty":
+        cut.write_bytes(b"")
+    elif damage == "garbage_same_size":
+        cut.write_bytes(bytes(len(data)))
+    else:
+        cut.with_name(cut.name + ".json").unlink()
+    again = client.get(url)
+    assert again.status_code == 200
+    assert len(_decode(again.content)) == FRAMES[2], (fmt, damage)
+    # ranged reads of the healthy cut keep working
+    part = client.get(url, headers={"Range": "bytes=0-99"})
+    assert part.status_code == 206 and part.content == again.content[:100]
+
+
+def test_a_dataset_recorded_without_video_says_so(client: Any, station: Station) -> None:
+    """QV-5 (QC F072 r1): "Mã hoá video" off stores images, not video: the reason is ``no_video``
+    ("This dataset has no video"), not "cannot be read"."""
+    from hibiscus_station.sessions.recorder import DatasetRecorder
+
+    motors = ["shoulder_pan.pos"]
+    rec = DatasetRecorder(
+        station.paths.datasets,
+        "imgs",
+        fps=10,
+        motor_keys=motors,
+        cam_shapes={"front": (48, 64, 3)},
+        use_video=False,
+    )
+    rec.open()
+    for _ in range(5):
+        rec.add(
+            {"shoulder_pan.pos": 0.0, "front": np.zeros((48, 64, 3), np.uint8)},
+            {"shoulder_pan.pos": 0.0},
+            "t",
+        )
+    rec.save_async().result()
+    rec.finalize()
+    body = client.get(f"{API}/datasets/imgs/episodes/0/videos").json()
+    assert [(c["camera"], c["error"], c["formats"]) for c in body["cameras"]] == [("front", "no_video", [])]
+    r = client.get(f"{API}/datasets/imgs/episodes/0/videos/front")
+    assert r.status_code == 404 and r.json()["code"] == "no_video"

@@ -20,7 +20,7 @@ export type VideoFormat = EpisodeCamera["formats"][number];
 const H264 = 'video/mp4; codecs="avc1.42E01E"';
 const VP9 = 'video/webm; codecs="vp9"';
 /** Server answers that no other format can fix. */
-const FINAL = new Set(["video_missing", "episode_saving", "not_found", "unauthenticated"]);
+const FINAL = new Set(["video_missing", "no_video", "episode_saving", "not_found", "unauthenticated"]);
 
 /**
  * Formats to try, best first: those the browser says it plays (source, then H.264, then VP9), then
@@ -328,6 +328,14 @@ export function EpisodePlayer({
 
   if (videos.cameras.length === 0) {
     return <p className="text-sm text-muted-foreground">{t("datasets.video_none")}</p>;
+  }
+  if (videos.cameras.every((c) => c.error === "no_video")) {
+    // recorded with video encoding off (QV-5): one sentence, no empty tiles
+    return (
+      <p className="text-sm text-muted-foreground" data-testid="episode-no-video">
+        {t("datasets.video_err_no_video")}
+      </p>
+    );
   }
   return (
     <section

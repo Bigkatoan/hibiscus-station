@@ -123,12 +123,15 @@ function TelemetryChart({
   fps,
   time,
   onSeek,
+  duration,
 }: {
   name: string;
   index: number;
   fps: number | null;
   time: number | null;
   onSeek: (t: number) => void;
+  /** The episode's length: the x axis spans 0 – duration so a click reaches every frame (QV-9). */
+  duration: number | null;
 }) {
   const { t } = useTranslation("station");
   const tel = useEpisodeTelemetry(name, index);
@@ -150,7 +153,7 @@ function TelemetryChart({
         <div
           className="cursor-crosshair"
           onClick={() => {
-            if (hover.current !== null) onSeek(hover.current);
+            if (hover.current !== null) onSeek(Math.max(0, hover.current));
           }}
         >
           <LineChart
@@ -159,6 +162,7 @@ function TelemetryChart({
             height={200}
             xLabel={t("joints.seconds")}
             markerX={time ?? (alerts[0] ? alerts[0].t - t0 : null)}
+            {...(duration ? { xRange: [0, duration] as const } : {})}
             onCursorX={(x) => {
               hover.current = x;
             }}
@@ -229,6 +233,7 @@ function EpisodeReview({ name, index, fps }: { name: string; index: number; fps:
             fps={fps}
             time={videos.data && clock ? clock.time : null}
             onSeek={onSeek}
+            duration={clock?.duration ?? videos.data?.length_s ?? null}
           />
         </CardContent>
       </Card>
