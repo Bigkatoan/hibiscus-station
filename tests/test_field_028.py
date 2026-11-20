@@ -398,25 +398,29 @@ def test_status_carries_interrupted_in_the_ws_contract(real: Station, events: Ev
 # =========================================================================== 4. programs list
 def test_programs_list_never_waits_for_the_hardware_owner(connected: Station, client: Any) -> None:
     """``GET /programs`` (the "New program" screen) answers from the store, never through the owner
-    thread: it stays fast while the owner is busy, e-stopped or in error."""
+    thread: it answers while the owner is busy, e-stopped or in error. The owner is held busy until
+    both requests have answered (not for a fixed 3 s against a stopwatch: a loaded macOS runner
+    took 1.14 s for a request that never touched the owner); a request that needed the owner
+    could only answer after the owner is released."""
     import threading
 
     st = connected
-    busy = threading.Event()
+    busy, release, done = threading.Event(), threading.Event(), threading.Event()
 
     def block(_owner: Any) -> None:
         busy.set()
-        time.sleep(3.0)
+        release.wait(30.0)
+        done.set()
 
-    t = threading.Thread(target=lambda: st.owner.call("run", fn=block, timeout=10.0), daemon=True)
+    t = threading.Thread(target=lambda: st.owner.call("run", fn=block, timeout=40.0), daemon=True)
     t.start()
-    assert busy.wait(2)
-    t0 = time.monotonic()
+    assert busy.wait(10)
     r = client.get(f"{API}/programs")
-    assert r.status_code == 200 and time.monotonic() - t0 < 1.0
+    assert r.status_code == 200 and not done.is_set(), r.text
     r = client.put(f"{API}/programs/new_one", json={"name": "New one", "editor": program(), "buttons": []})
-    assert r.status_code == 200 and time.monotonic() - t0 < 1.5
-    t.join(5)
+    assert r.status_code == 200 and not done.is_set(), r.text
+    release.set()
+    t.join(10)
     st.owner.press_estop("user")
     wait_for(lambda: st.owner.state == "estopped", 2)
     assert [p["id"] for p in client.get(f"{API}/programs").json()["programs"]] == ["new_one"]
