@@ -1,0 +1,140 @@
+=== qv1_replay.py chromium en
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-bigkatoan-lelab/a1dcb981-a281-4451-90bf-5197e9a286c9/scratchpad/qc-int/v/scripts/qv1_replay.py", line 9, in <module>
+    import ui_matrix_helpers as H
+  File "/tmp/claude-1000/-home-bigkatoan-lelab/a1dcb981-a281-4451-90bf-5197e9a286c9/scratchpad/qc-int/v/scripts/ui_matrix_helpers.py", line 5, in <module>
+    TRUTH = json.loads((S / "truth.json").read_text())
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bigkatoan/.local/share/uv/python/cpython-3.12.16-linux-x86_64-gnu/lib/python3.12/pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bigkatoan/.local/share/uv/python/cpython-3.12.16-linux-x86_64-gnu/lib/python3.12/pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/claude-1000/-home-bigkatoan-lelab/a1dcb981-a281-4451-90bf-5197e9a286c9/scratchpad/qc-int/v/truth.json'
+=== qv1_phases.py
+recording countdown (409, 'episode_saving', 409, 'other dataset', 200)
+recording episode (409, 'episode_saving', 409, 'other dataset', 200)
+recording reset (409, 'episode_saving', 409, 'other dataset', 200)
+recording saving (409, 'episode_saving', 409, 'other dataset', 200)
+after 200
+=== saving409.py
+fresh-recording-ep0 /datasets/fresh/episodes/0/videos -> (409, 'application/problem+json', '{"type":"https://hibiscus.dev/problems/station/episode_saving","title":"This dataset is still being recorded and saved","status":409,"code":"episode_saving","detail":"this dataset is being recorded: its videos open when the session ends","request_id"')
+fresh-recording-ep0 /datasets/fresh/episodes/0/videos/front?format=source -> (409, 'application/problem+json', '{"type":"https://hibiscus.dev/problems/station/episode_saving","title":"This dataset is still being recorded and saved","status":409,"code":"episode_saving","detail":"this dataset is being recorded: its videos open when the session ends","request_id"')
+fresh-recording-ep0 /datasets/fresh/episodes/0/videos/front?format=h264 -> (409, 'application/problem+json', '{"type":"https://hibiscus.dev/problems/station/episode_saving","title":"This dataset is still being recorded and saved","status":409,"code":"episode_saving","detail":"this dataset is being recorded: its videos open when the session ends","request_id"')
+fresh-recording-ep0 /datasets/twelve/episodes/0/videos/front?format=source -> (200, 'video/mp4', 2593409)
+fresh-recording-ep1 /datasets/fresh/episodes/0/videos -> (409, 'application/problem+json', '{"type":"https://hibiscus.dev/problems/station/episode_saving","title":"This dataset is still being recorded and saved","status":409,"code":"episode_saving","detail":"this dataset is being recorded: its videos open when the session ends","request_id"')
+fresh-recording-ep1 /datasets/fresh/episodes/0/videos/front?format=source -> (409, 'application/problem+json', '{"type":"https://hibiscus.dev/problems/station/episode_saving","title":"This dataset is still being recorded and saved","status":409,"code":"episode_saving","detail":"this dataset is being recorded: its videos open when the session ends","request_id"')
+fresh-recording-ep1 /datasets/fresh/episodes/0/videos/front?format=h264 -> (409, 'application/problem+json', '{"type":"https://hibiscus.dev/problems/station/episode_saving","title":"This dataset is still being recorded and saved","status":409,"code":"episode_saving","detail":"this dataset is being recorded: its videos open when the session ends","request_id"')
+fresh-recording-ep1 /datasets/twelve/episodes/0/videos/front?format=source -> (200, 'video/mp4', 2593409)
+fresh stop->idle s -> 4.65
+fresh-after /datasets/fresh/episodes/0/videos -> (200, 'application/json', 351)
+fresh-after /datasets/fresh/episodes/0/videos/front?format=source -> (200, 'video/mp4', 5190691)
+fresh-after /datasets/fresh/episodes/0/videos/front?format=h264 -> (200, 'video/mp4', 4378635)
+fresh-after /datasets/twelve/episodes/0/videos/front?format=source -> (200, 'video/mp4', 2593409)
+fresh detail -> {'episodes': 1, 'frames': 120, 'finalized': True}
+twelve-recording-ep0 /datasets/twelve/episodes/0/videos -> (409, 'application/problem+json', '{"type":"https://hibiscus.dev/problems/station/episode_saving","title":"This dataset is still being recorded and saved","status":409,"code":"episode_saving","detail":"this dataset is being recorded: its videos open when the session ends","request_id"')
+twelve-recording-ep0 /datasets/twelve/episodes/0/videos/front?format=source -> (409, 'application/problem+json', '{"type":"https://hibiscus.dev/problems/station/episode_saving","title":"This dataset is still being recorded and saved","status":409,"code":"episode_saving","detail":"this dataset is being recorded: its videos open when the session ends","request_id"')
+twelve-recording-ep0 /datasets/twelve/episodes/0/videos/front?format=h264 -> (409, 'application/problem+json', '{"type":"https://hibiscus.dev/problems/station/episode_saving","title":"This dataset is still being recorded and saved","status":409,"code":"episode_saving","detail":"this dataset is being recorded: its videos open when the session ends","request_id"')
+twelve-recording-ep1 /datasets/twelve/episodes/0/videos -> (409, 'application/problem+json', '{"type":"https://hibiscus.dev/problems/station/episode_saving","title":"This dataset is still being recorded and saved","status":409,"code":"episode_saving","detail":"this dataset is being recorded: its videos open when the session ends","request_id"')
+twelve-recording-ep1 /datasets/twelve/episodes/0/videos/front?format=source -> (409, 'application/problem+json', '{"type":"https://hibiscus.dev/problems/station/episode_saving","title":"This dataset is still being recorded and saved","status":409,"code":"episode_saving","detail":"this dataset is being recorded: its videos open when the session ends","request_id"')
+twelve-recording-ep1 /datasets/twelve/episodes/0/videos/front?format=h264 -> (409, 'application/problem+json', '{"type":"https://hibiscus.dev/problems/station/episode_saving","title":"This dataset is still being recorded and saved","status":409,"code":"episode_saving","detail":"this dataset is being recorded: its videos open when the session ends","request_id"')
+twelve stop->idle s -> 4.04
+twelve-after /datasets/twelve/episodes/0/videos -> (200, 'application/json', 352)
+twelve-after /datasets/twelve/episodes/0/videos/front?format=source -> (200, 'video/mp4', 2593409)
+twelve-after /datasets/twelve/episodes/0/videos/front?format=h264 -> (200, 'video/mp4', 2231499)
+twelve detail -> {'episodes': 13, 'frames': 840, 'finalized': True}
+=== qv_ui.py chromium vi
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-bigkatoan-lelab/a1dcb981-a281-4451-90bf-5197e9a286c9/scratchpad/qc-int/v/scripts/qv_ui.py", line 9, in <module>
+    import ui_matrix_helpers as H
+  File "/tmp/claude-1000/-home-bigkatoan-lelab/a1dcb981-a281-4451-90bf-5197e9a286c9/scratchpad/qc-int/v/scripts/ui_matrix_helpers.py", line 5, in <module>
+    TRUTH = json.loads((S / "truth.json").read_text())
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bigkatoan/.local/share/uv/python/cpython-3.12.16-linux-x86_64-gnu/lib/python3.12/pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bigkatoan/.local/share/uv/python/cpython-3.12.16-linux-x86_64-gnu/lib/python3.12/pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/claude-1000/-home-bigkatoan-lelab/a1dcb981-a281-4451-90bf-5197e9a286c9/scratchpad/qc-int/v/truth.json'
+=== qv_ui.py firefox en
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-bigkatoan-lelab/a1dcb981-a281-4451-90bf-5197e9a286c9/scratchpad/qc-int/v/scripts/qv_ui.py", line 9, in <module>
+    import ui_matrix_helpers as H
+  File "/tmp/claude-1000/-home-bigkatoan-lelab/a1dcb981-a281-4451-90bf-5197e9a286c9/scratchpad/qc-int/v/scripts/ui_matrix_helpers.py", line 5, in <module>
+    TRUTH = json.loads((S / "truth.json").read_text())
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bigkatoan/.local/share/uv/python/cpython-3.12.16-linux-x86_64-gnu/lib/python3.12/pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bigkatoan/.local/share/uv/python/cpython-3.12.16-linux-x86_64-gnu/lib/python3.12/pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/claude-1000/-home-bigkatoan-lelab/a1dcb981-a281-4451-90bf-5197e9a286c9/scratchpad/qc-int/v/truth.json'
+=== ui_matrix.py chromium en light 1280
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-bigkatoan-lelab/a1dcb981-a281-4451-90bf-5197e9a286c9/scratchpad/qc-int/v/scripts/ui_matrix.py", line 23, in <module>
+    TRUTH = json.loads((S / "truth.json").read_text())
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bigkatoan/.local/share/uv/python/cpython-3.12.16-linux-x86_64-gnu/lib/python3.12/pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bigkatoan/.local/share/uv/python/cpython-3.12.16-linux-x86_64-gnu/lib/python3.12/pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/claude-1000/-home-bigkatoan-lelab/a1dcb981-a281-4451-90bf-5197e9a286c9/scratchpad/qc-int/v/truth.json'
+=== ui_matrix.py firefox vi dark 390
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-bigkatoan-lelab/a1dcb981-a281-4451-90bf-5197e9a286c9/scratchpad/qc-int/v/scripts/ui_matrix.py", line 23, in <module>
+    TRUTH = json.loads((S / "truth.json").read_text())
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bigkatoan/.local/share/uv/python/cpython-3.12.16-linux-x86_64-gnu/lib/python3.12/pathlib.py", line 1027, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bigkatoan/.local/share/uv/python/cpython-3.12.16-linux-x86_64-gnu/lib/python3.12/pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/claude-1000/-home-bigkatoan-lelab/a1dcb981-a281-4451-90bf-5197e9a286c9/scratchpad/qc-int/v/truth.json'
+=== security.py
+PASS auth badbearer /datasets/five/episodes/0/videos/front?format=source 
+PASS auth badbearer /datasets/five/episodes/0/videos/front?format=vp9 
+PASS traversal /datasets/../five/episodes/0/videos 
+PASS traversal /datasets/..%2Ffive/episodes/0/videos 
+PASS traversal /datasets/%2e%2e/episodes/0/videos 
+PASS traversal /datasets/FIVE/episodes/0/videos 
+PASS traversal /datasets/five.hibiscus/episodes/0/videos 
+PASS traversal /datasets/five.hibiscus%2Fvideo-cache/episodes/0/videos 
+PASS traversal /datasets/five/episodes/0/videos/..%2F..%2Fmeta%2Finfo.json?format=source 
+PASS traversal /datasets/five/episodes/0/videos/%2e%2e?format=source 
+PASS traversal /datasets/five/episodes/0/videos/FRONT?format=source 
+PASS traversal /datasets/five/episodes/0/videos/front%00?format=source 
+PASS traversal /datasets/five/episodes/0/videos/front.json?format=source 
+PASS traversal /datasets/five/episodes/0/videos/front?format=../../x 
+PASS traversal /datasets/five/episodes/0/videos/front?format=SOURCE 
+PASS traversal /datasets/five/episodes/0/videos/front?format=source.json 
+PASS traversal /datasets/five/episodes/0/videos/front?format=json 
+PASS traversal /datasets/five/episodes/0/videos/front?format=source&format=../x 
+PASS traversal /datasets/five/episodes/0/videos/front?format=mp4 
+PASS traversal /datasets/five/episodes/-1/videos 
+PASS traversal /datasets/five/episodes/99/videos/front?format=h264 
+PASS traversal /datasets/five/episodes/abc/videos 
+PASS traversal /datasets/five/episodes/99999999999999999999999/videos 
+PASS traversal /datasets/five/episodes/0/videos/nocam?format=source 
+PASS traversal /datasets/nope/episodes/0/videos/front?format=source 
+FAIL tamper ../slow15/videos/{video_key}/chunk-{chunk_index:03d}/file-{file_index:03d}.mp4 {'list': 409, 'get': 409}
+FAIL tamper /etc/passwd {'list': 409, 'get': 409}
+FAIL tamper ../../../../../../etc/passwd {'list': 409, 'get': 409}
+FAIL tamper videos/../../five/videos/{video_key}/chunk-000/file-000.mp4 {'list': 409, 'get': 409}
+PASS symlink source mp4 -> /etc/passwd 
+PASS symlink cache cut -> secret file 
+PASS range full 200 + accept-ranges + etag + no-cache 
+PASS range 0-99 
+PASS range -50 
+PASS range last10 open 
+PASS range beyond -> 416 
+INFO range bytes=50-10 400
+INFO range bytes=abc 400
+INFO multi (206, 'multipart/byteranges; boundary') INM 200
+FAILS 4
+VRUN-DONE

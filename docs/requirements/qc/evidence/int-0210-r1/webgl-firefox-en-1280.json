@@ -1,0 +1,115 @@
+{
+ "mode": "firefox",
+ "lang": "en",
+ "width": 1280,
+ "webgl2_probe": false,
+ "/teleop": {
+  "how": "inline",
+  "twins": [
+   {
+    "state": "no-webgl",
+    "note": "This computer cannot show the 3D model (the browser does not support WebGL). Everything else still works."
+   }
+  ],
+  "fallback_ok": true,
+  "nav": true,
+  "errors": [
+   "console.warning:[JavaScript Warning: \"Failed to create WebGL context: WebGL creation failed: \n* AllowWebgl2:false restricts context creation on this system. ()\" {file: \"http://127.0.0.1:18641/assets/index-Dwdo_R6V.js"
+  ],
+  "ghost_card": null,
+  "ghost_player": null
+ },
+ "/record": {
+  "how": "inline",
+  "twins": [
+   {
+    "state": "no-webgl",
+    "note": "This computer cannot show the 3D model (the browser does not support WebGL). Everything else still works."
+   }
+  ],
+  "fallback_ok": true,
+  "nav": true,
+  "errors": [
+   "console.warning:[JavaScript Warning: \"Failed to create WebGL context: WebGL creation failed: \n* AllowWebgl2:false restricts context creation on this system. ()\" {file: \"http://127.0.0.1:18641/assets/index-Dwdo_R6V.js"
+  ],
+  "ghost_card": null,
+  "ghost_player": null
+ },
+ "/run": {
+  "how": "inline",
+  "twins": [
+   {
+    "state": "no-webgl",
+    "note": "This computer cannot show the 3D model (the browser does not support WebGL). Everything else still works."
+   }
+  ],
+  "fallback_ok": true,
+  "nav": true,
+  "errors": [
+   "console.warning:[JavaScript Warning: \"Failed to create WebGL context: WebGL creation failed: \n* AllowWebgl2:false restricts context creation on this system. ()\" {file: \"http://127.0.0.1:18641/assets/index-Dwdo_R6V.js"
+  ],
+  "ghost_card": null,
+  "ghost_player": null
+ },
+ "/programs?tab=programs": {
+  "how": "inline",
+  "twins": [
+   {
+    "state": "no-webgl",
+    "note": "This computer cannot show the 3D model (the browser does not support WebGL). Everything else still works."
+   }
+  ],
+  "fallback_ok": true,
+  "nav": true,
+  "errors": [
+   "console.warning:[JavaScript Warning: \"Failed to create WebGL context: WebGL creation failed: \n* AllowWebgl2:false restricts context creation on this system. ()\" {file: \"http://127.0.0.1:18641/assets/index-Dwdo_R6V.js",
+   "console.warning:[JavaScript Warning: \"An AudioContext was prevented from starting automatically. It must be created or resumed after a user gesture on the page.\" {file: \"http://127.0.0.1:18641/assets/BlocklyEditor-Cy",
+   "console.warning:[JavaScript Warning: \"An AudioContext was prevented from starting automatically. It must be created or resumed after a user gesture on the page.\" {file: \"http://127.0.0.1:18641/assets/BlocklyEditor-Cy",
+   "console.warning:[JavaScript Warning: \"An AudioContext was prevented from starting automatically. It must be created or resumed after a user gesture on the page.\" {file: \"http://127.0.0.1:18641/assets/BlocklyEditor-Cy"
+  ],
+  "ghost_card": null,
+  "ghost_player": null
+ },
+ "/programs?tab=trajectories": {
+  "how": "inline",
+  "twins": [
+   {
+    "state": "no-webgl",
+    "note": "This computer cannot show the 3D model (the browser does not support WebGL). Everything else still works."
+   }
+  ],
+  "fallback_ok": true,
+  "nav": true,
+  "errors": [
+   "console.warning:[JavaScript Warning: \"Failed to create WebGL context: WebGL creation failed: \n* AllowWebgl2:false restricts context creation on this system. ()\" {file: \"http://127.0.0.1:18641/assets/index-Dwdo_R6V.js"
+  ],
+  "ghost_card": 1,
+  "ghost_player": 1
+ },
+ "teleop_ui": {
+  "clicked": true,
+  "running": true,
+  "twins_live": [
+   {
+    "state": "no-webgl",
+    "note": "This computer cannot show the 3D model (the browser does not support WebGL). Everything else still works."
+   }
+  ],
+  "idle_after_stop": "idle"
+ },
+ "errors_total": [
+  "console.warning:[JavaScript Warning: \"Failed to create WebGL context: WebGL creation failed: \n* AllowWebgl2:false restricts context creation on this system. ()\" {file: \"http://127.0.0.1:18641/assets/index-Dwdo_R6V.js",
+  "console.error:[JavaScript Error: \"Image corrupt or truncated.\" {file: \"http://127.0.0.1:18641/pixel/anim/hibi_mini_sleep.png\" line: 0}]",
+  "console.warning:[JavaScript Warning: \"Failed to create WebGL context: WebGL creation failed: \n* AllowWebgl2:false restricts context creation on this system. ()\" {file: \"debugger eval code line 311 > eval\" line: 1}]",
+  "console.warning:[JavaScript Warning: \"Failed to create WebGL context: WebGL creation failed: \n* AllowWebgl2:false restricts context creation on this system. ()\" {file: \"http://127.0.0.1:18641/assets/index-Dwdo_R6V.js",
+  "console.warning:[JavaScript Warning: \"Failed to create WebGL context: WebGL creation failed: \n* AllowWebgl2:false restricts context creation on this system. ()\" {file: \"http://127.0.0.1:18641/assets/index-Dwdo_R6V.js",
+  "console.warning:[JavaScript Warning: \"Failed to create WebGL context: WebGL creation failed: \n* AllowWebgl2:false restricts context creation on this system. ()\" {file: \"http://127.0.0.1:18641/assets/index-Dwdo_R6V.js",
+  "console.warning:[JavaScript Warning: \"Failed to create WebGL context: WebGL creation failed: \n* AllowWebgl2:false restricts context creation on this system. ()\" {file: \"http://127.0.0.1:18641/assets/index-Dwdo_R6V.js",
+  "console.warning:[JavaScript Warning: \"An AudioContext was prevented from starting automatically. It must be created or resumed after a user gesture on the page.\" {file: \"http://127.0.0.1:18641/assets/BlocklyEditor-Cy",
+  "console.warning:[JavaScript Warning: \"An AudioContext was prevented from starting automatically. It must be created or resumed after a user gesture on the page.\" {file: \"http://127.0.0.1:18641/assets/BlocklyEditor-Cy",
+  "console.warning:[JavaScript Warning: \"An AudioContext was prevented from starting automatically. It must be created or resumed after a user gesture on the page.\" {file: \"http://127.0.0.1:18641/assets/BlocklyEditor-Cy",
+  "console.warning:[JavaScript Warning: \"Failed to create WebGL context: WebGL creation failed: \n* AllowWebgl2:false restricts context creation on this system. ()\" {file: \"http://127.0.0.1:18641/assets/index-Dwdo_R6V.js",
+  "console.warning:[JavaScript Warning: \"Failed to create WebGL context: WebGL creation failed: \n* AllowWebgl2:false restricts context creation on this system. ()\" {file: \"http://127.0.0.1:18641/assets/index-Dwdo_R6V.js"
+ ],
+ "5xx": []
+}

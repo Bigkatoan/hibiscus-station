@@ -1,0 +1,281 @@
+{
+  "tag": "firefox-en",
+  "checks": [
+    {
+      "name": "QV-5 novid: one sentence 'This dataset has no video (it was recorded with video encoding off).'",
+      "ok": true,
+      "detail": "This dataset has no video (it was recorded with video encoding off)."
+    },
+    {
+      "name": "QV-5 novid: no camera tiles",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "name": "QV-5 API: camera GET -> 404 no_video",
+      "ok": true,
+      "detail": [
+        404,
+        "no_video",
+        "no video of camera front"
+      ]
+    },
+    {
+      "name": "QV-6 no_video: Station detail not in sight, Technical details closed",
+      "ok": true,
+      "detail": {
+        "visible_details": [],
+        "open_details": 0,
+        "n_details": 0
+      }
+    },
+    {
+      "name": "QV-6 video_missing + video_unavailable: Station detail not in sight, Technical details closed",
+      "ok": true,
+      "detail": {
+        "visible_details": [],
+        "open_details": 0,
+        "n_details": 0
+      }
+    },
+    {
+      "name": "QV-9 chart click at start: front t=0.030 frame 625 (want 625)",
+      "ok": true,
+      "detail": {
+        "cam": "front",
+        "counter": 625,
+        "t": 0.03015075376884422,
+        "paused": true,
+        "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/front?format=source",
+        "w": 640,
+        "h": 480,
+        "dur": 3
+      }
+    },
+    {
+      "name": "QV-9 chart click at start: wrist t=0.030 frame 625 (want 625)",
+      "ok": true,
+      "detail": {
+        "cam": "wrist",
+        "counter": 625,
+        "t": 0.03015075376884422,
+        "paused": true,
+        "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/wrist?format=source",
+        "w": 320,
+        "h": 240,
+        "dur": 3
+      }
+    },
+    {
+      "name": "QV-9 cursor at start (frac 0.01)",
+      "ok": true,
+      "detail": {
+        "px": 50,
+        "n": 109,
+        "frac": 0.010050251256281407,
+        "color": "rgb(140, 28, 58)"
+      }
+    },
+    {
+      "name": "QV-9 chart click at end: front t=2.970 frame 715 (want 715)",
+      "ok": true,
+      "detail": {
+        "cam": "front",
+        "counter": 715,
+        "t": 2.9698492462311554,
+        "paused": true,
+        "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/front?format=source",
+        "w": 640,
+        "h": 480,
+        "dur": 3
+      }
+    },
+    {
+      "name": "QV-9 chart click at end: wrist t=2.970 frame 715 (want 715)",
+      "ok": true,
+      "detail": {
+        "cam": "wrist",
+        "counter": 715,
+        "t": 2.9698492462311554,
+        "paused": true,
+        "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/wrist?format=source",
+        "w": 320,
+        "h": 240,
+        "dur": 3
+      }
+    },
+    {
+      "name": "QV-9 cursor at end (frac 0.985)",
+      "ok": true,
+      "detail": {
+        "px": 244,
+        "n": 104,
+        "frac": 0.9849246231155779,
+        "color": "rgb(140, 28, 58)"
+      }
+    },
+    {
+      "name": "QV-9 chart click at middle: front t=1.492 frame 670 (want 671)",
+      "ok": true,
+      "detail": {
+        "cam": "front",
+        "counter": 670,
+        "t": 1.4924623115577889,
+        "paused": true,
+        "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/front?format=source",
+        "w": 640,
+        "h": 480,
+        "dur": 3
+      }
+    },
+    {
+      "name": "QV-9 chart click at middle: wrist t=1.492 frame 670 (want 671)",
+      "ok": true,
+      "detail": {
+        "cam": "wrist",
+        "counter": 670,
+        "t": 1.4924623115577889,
+        "paused": true,
+        "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/wrist?format=source",
+        "w": 320,
+        "h": 240,
+        "dur": 3
+      }
+    },
+    {
+      "name": "QV-9 cursor at middle (frac 0.492)",
+      "ok": true,
+      "detail": {
+        "px": 146,
+        "n": 109,
+        "frac": 0.49246231155778897,
+        "color": "rgb(140, 28, 58)"
+      }
+    },
+    {
+      "name": "QV-9 at the end of playback the cursor is at the right edge (frac 0.995)",
+      "ok": true,
+      "detail": {
+        "px": 246,
+        "n": 109,
+        "frac": 0.9949748743718593,
+        "color": "rgb(140, 28, 58)"
+      }
+    },
+    {
+      "name": "QV-2 UI: truncated source cut is recut (source -> source, size 1297509 == 3892528), plays to the last frame",
+      "ok": false,
+      "detail": {
+        "end": {
+          "cam": "front",
+          "counter": 1363,
+          "t": 3,
+          "paused": true,
+          "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/4/videos/front?format=source",
+          "w": 640,
+          "h": 480,
+          "dur": 3
+        },
+        "last": 1363
+      }
+    },
+    {
+      "name": "QV-1 API while recording: 409 episode_saving",
+      "ok": true,
+      "detail": [
+        409,
+        "episode_saving",
+        "this dataset is being recorded: its videos open when the session ends"
+      ]
+    },
+    {
+      "name": "QV-6 episode_saving: Station detail not in sight, Technical details closed",
+      "ok": false,
+      "detail": {
+        "visible_details": [
+          "being recorded"
+        ],
+        "open_details": 0,
+        "n_details": 1
+      }
+    },
+    {
+      "name": "QV-6 episode_saving: 'Technical details' present and closed",
+      "ok": true,
+      "detail": {
+        "count": 1,
+        "text": "Technical details"
+      }
+    },
+    {
+      "name": "QV-6: opening Technical details shows the Station line",
+      "ok": true,
+      "detail": "Technical details\n\nthis dataset is being recorded: its videos open when the session ends"
+    },
+    {
+      "name": "no page errors / 5xx",
+      "ok": true,
+      "detail": [
+        [],
+        []
+      ]
+    }
+  ],
+  "miss_details": [
+    [
+      404,
+      "video_missing",
+      "no video of camera front"
+    ],
+    [
+      404,
+      "video_missing",
+      "no video of camera front"
+    ],
+    [
+      404,
+      "video_missing",
+      "no video of camera front"
+    ],
+    [
+      422,
+      "video_unavailable",
+      "could not read the video of camera wrist: InvalidDataError"
+    ],
+    [
+      422,
+      "video_unavailable",
+      "could not read the video of camera wrist: InvalidDataError"
+    ],
+    [
+      422,
+      "video_unavailable",
+      "could not read the video of camera wrist: InvalidDataError"
+    ]
+  ],
+  "miss_tile_text": [
+    "No video file for this camera.\nfront",
+    "This camera's video cannot be read.\nwrist"
+  ],
+  "x_ticks": [],
+  "cursor": {
+    "start": {
+      "px": 50,
+      "n": 109,
+      "frac": 0.010050251256281407,
+      "color": "rgb(140, 28, 58)"
+    },
+    "end": {
+      "px": 244,
+      "n": 104,
+      "frac": 0.9849246231155779,
+      "color": "rgb(140, 28, 58)"
+    },
+    "middle": {
+      "px": 146,
+      "n": 109,
+      "frac": 0.49246231155778897,
+      "color": "rgb(140, 28, 58)"
+    }
+  }
+}

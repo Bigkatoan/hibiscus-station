@@ -1,0 +1,27 @@
+files 11 bytes 34478080
+  five
+  five/data
+  five/data/chunk-000
+  five/data/chunk-000/file-000.parquet
+  five/data/chunk-000/file-001.parquet
+  five/images
+  five/images/observation.images.front
+  five/images/observation.images.wrist
+  five/meta
+  five/meta/episodes
+  five/meta/episodes/chunk-000
+  five/meta/episodes/chunk-000/file-000.parquet
+  five/meta/episodes/chunk-000/file-001.parquet
+  five/meta/info.json
+  five/meta/stats.json
+  five/meta/tasks.parquet
+  five/videos
+  five/videos/observation.images.front
+  five/videos/observation.images.front/chunk-000
+  five/videos/observation.images.front/chunk-000/file-000.mp4
+  five/videos/observation.images.front/chunk-000/file-001.mp4
+  five/videos/observation.images.wrist
+  five/videos/observation.images.wrist/chunk-000
+  five/videos/observation.images.wrist/chunk-000/file-000.mp4
+  five/videos/observation.images.wrist/chunk-000/file-001.mp4
+members with video-cache or .hibiscus: 0

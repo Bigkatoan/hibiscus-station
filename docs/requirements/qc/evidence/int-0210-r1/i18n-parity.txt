@@ -1,0 +1,16 @@
+en keys 1120 vi keys 1120 missing in vi [] missing in en []
+placeholder mismatches 0 []
+vi identical to en (possible untranslated): 18 ['app.station', 'nav.robot', 'chip.robot', 'estop.key', 'joints.leader', 'joints.follower', 'welcome.title', 'robot.title', 'cameras.type_realsense', 'run.running_model', 'run.summary_line', 'device.mps', 'programs.det.camera', 'programs.run.now', 'twin.title', 'twin.motor_temp', 'server_text.motor_temp', 'server_text.motor_voltage']
+vi strings with no diacritics but Vietnamese words: 7 [('arm.follower', 'Tay follower'), ('arm.leader', 'Tay leader'), ('robot.role_follower', 'tay follower'), ('robot.role_leader', 'tay leader'), ('calibrate.step_follower', 'Tay follower'), ('calibrate.step_leader', 'Tay leader'), ('programs.traj.record', 'Ghi')]
+empty vi []
+twin.no_webgl | Máy này không hiển thị được mô hình 3D (trình duyệt không hỗ trợ WebGL). Mọi chức năng khác vẫn dùng được.
+datasets.video_err_no_video | Bộ dữ liệu này không có video (đã ghi với "Mã hoá video" tắt).
+errors.dataset_unreadable | Không đọc được bộ dữ liệu này: nó chưa hoàn tất hoặc tệp bị hỏng. Các tệp vẫn được giữ nguyên.
+v0.2.10 en keys 1083 lost in merge ['lock.pair_first'] changed 2 ['programs.issues.first_motion_far', 'twin.no_webgl']
+v0.2.10 vi keys 1083 lost in merge ['lock.pair_first'] changed 2 ['programs.issues.first_motion_far', 'twin.no_webgl']
+0043635 en keys 1018 lost in merge ['compat.code_missing_extra', 'datasets.summary', 'health.bit_angle', 'lost.os_said', 'programs.run.steps', 'record.done', 'record.estimate'] changed 25 ['estop.relax', 'banner.interrupted', 'banner.interrupted_hint', 'banner.rest', 'banner.rest_hint', 'banner.rest_need_pose']
+0043635 vi keys 1018 lost in merge ['compat.code_missing_extra', 'datasets.summary', 'health.bit_angle', 'lost.os_said', 'programs.run.steps', 'record.done', 'record.estimate'] changed 40 ['lock.estopped', 'estop.relax', 'banner.interrupted', 'banner.interrupted_hint', 'banner.rest', 'banner.rest_hint']
+b2ed862 en keys 997 lost in merge ['compat.code_missing_extra', 'datasets.summary', 'health.bit_angle', 'lost.os_said', 'programs.run.steps', 'record.done', 'record.estimate'] changed 25 ['estop.relax', 'banner.interrupted', 'banner.interrupted_hint', 'banner.rest', 'banner.rest_hint', 'banner.rest_need_pose']
+b2ed862 vi keys 997 lost in merge ['compat.code_missing_extra', 'datasets.summary', 'health.bit_angle', 'lost.os_said', 'programs.run.steps', 'record.done', 'record.estimate'] changed 40 ['lock.estopped', 'estop.relax', 'banner.interrupted', 'banner.interrupted_hint', 'banner.rest', 'banner.rest_hint']
+0848468 en keys 1099 lost in merge [] changed 0 []
+0848468 vi keys 1099 lost in merge [] changed 0 []

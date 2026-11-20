@@ -1,0 +1,778 @@
+{
+  "tag": "firefox-vi-dark-390",
+  "checks": [
+    {
+      "name": "format picked = source",
+      "ok": true,
+      "detail": {
+        "front": "source",
+        "wrist": "source"
+      }
+    },
+    {
+      "name": "t=0 first frame: front shows ep1 frame ~0 (t=0.000)",
+      "ok": true,
+      "detail": {
+        "counter": 625,
+        "want_window": [
+          625,
+          626
+        ],
+        "ep_range": [
+          625,
+          715
+        ]
+      }
+    },
+    {
+      "name": "t=0 first frame: wrist shows ep1 frame ~0 (t=0.000)",
+      "ok": true,
+      "detail": {
+        "counter": 625,
+        "want_window": [
+          625,
+          626
+        ],
+        "ep_range": [
+          625,
+          715
+        ]
+      }
+    },
+    {
+      "name": "time label t / d",
+      "ok": false,
+      "detail": "0,0 / 3,0 gi\u00e2y"
+    },
+    {
+      "name": "episode view: no horizontal scroll [390, 390]",
+      "ok": true,
+      "detail": [
+        390,
+        390
+      ]
+    },
+    {
+      "name": "episode view: axe serious/critical in the F-72 cards = 0",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "playing: every camera time increases",
+      "ok": true,
+      "detail": [
+        [
+          {
+            "cam": "front",
+            "counter": 655,
+            "t": 1.00737,
+            "paused": false,
+            "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/front?format=source",
+            "w": 640,
+            "h": 480,
+            "dur": 3
+          },
+          {
+            "cam": "wrist",
+            "counter": 656,
+            "t": 1.007384,
+            "paused": false,
+            "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/wrist?format=source",
+            "w": 320,
+            "h": 240,
+            "dur": 3
+          }
+        ],
+        [
+          {
+            "cam": "front",
+            "counter": 679,
+            "t": 1.740219,
+            "paused": false,
+            "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/front?format=source",
+            "w": 640,
+            "h": 480,
+            "dur": 3
+          },
+          {
+            "cam": "wrist",
+            "counter": 679,
+            "t": 1.740274,
+            "paused": false,
+            "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/wrist?format=source",
+            "w": 320,
+            "h": 240,
+            "dur": 3
+          }
+        ]
+      ]
+    },
+    {
+      "name": "cameras in step (drift 0.000 s <= 0.25)",
+      "ok": true,
+      "detail": [
+        {
+          "cam": "front",
+          "counter": 679,
+          "t": 1.740219,
+          "paused": false,
+          "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/front?format=source",
+          "w": 640,
+          "h": 480,
+          "dur": 3
+        },
+        {
+          "cam": "wrist",
+          "counter": 679,
+          "t": 1.740274,
+          "paused": false,
+          "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/wrist?format=source",
+          "w": 320,
+          "h": 240,
+          "dur": 3
+        }
+      ]
+    },
+    {
+      "name": "chart cursor moves with playback",
+      "ok": true,
+      "detail": [
+        {
+          "px": 47,
+          "n": 50,
+          "frac": -0.004081632653061225,
+          "color": "rgb(255, 158, 181)"
+        },
+        {
+          "px": 127,
+          "n": 103,
+          "frac": 0.3224489795918367,
+          "color": "rgb(255, 158, 181)"
+        },
+        {
+          "px": 189,
+          "n": 103,
+          "frac": 0.5755102040816327,
+          "color": "rgb(255, 158, 181)"
+        }
+      ]
+    },
+    {
+      "name": "cursor position matches video time (frac 0.576 vs 0.580)",
+      "ok": true,
+      "detail": {
+        "px": 189,
+        "n": 103,
+        "frac": 0.5755102040816327,
+        "color": "rgb(255, 158, 181)"
+      }
+    },
+    {
+      "name": "time label advances",
+      "ok": true,
+      "detail": "1,0 / 3,0 gi\u00e2y"
+    },
+    {
+      "name": "stops at the end (all paused)",
+      "ok": true,
+      "detail": [
+        {
+          "cam": "front",
+          "counter": 715,
+          "t": 2.950984,
+          "paused": true,
+          "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/front?format=source",
+          "w": 640,
+          "h": 480,
+          "dur": 3
+        },
+        {
+          "cam": "wrist",
+          "counter": 715,
+          "t": 2.950993,
+          "paused": true,
+          "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/wrist?format=source",
+          "w": 320,
+          "h": 240,
+          "dur": 3
+        }
+      ]
+    },
+    {
+      "name": "end frame: front shows ep1 frame ~89 (t=2.951)",
+      "ok": true,
+      "detail": {
+        "counter": 715,
+        "want_window": [
+          714,
+          715
+        ],
+        "ep_range": [
+          625,
+          715
+        ]
+      }
+    },
+    {
+      "name": "end frame: wrist shows ep1 frame ~89 (t=2.951)",
+      "ok": true,
+      "detail": {
+        "counter": 715,
+        "want_window": [
+          714,
+          715
+        ],
+        "ep_range": [
+          625,
+          715
+        ]
+      }
+    },
+    {
+      "name": "end: front last frame is episode's last (715 == 715)",
+      "ok": true,
+      "detail": {
+        "cam": "front",
+        "counter": 715,
+        "t": 2.950984,
+        "paused": true,
+        "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/front?format=source",
+        "w": 640,
+        "h": 480,
+        "dur": 3
+      }
+    },
+    {
+      "name": "end: wrist last frame is episode's last (715 == 715)",
+      "ok": true,
+      "detail": {
+        "cam": "wrist",
+        "counter": 715,
+        "t": 2.950993,
+        "paused": true,
+        "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/wrist?format=source",
+        "w": 320,
+        "h": 240,
+        "dur": 3
+      }
+    },
+    {
+      "name": "end label 3.0 / 3.0",
+      "ok": false,
+      "detail": "3,0 / 3,0 gi\u00e2y"
+    },
+    {
+      "name": "play again restarts from start",
+      "ok": true,
+      "detail": [
+        {
+          "cam": "front",
+          "counter": 637,
+          "t": 0.379272,
+          "paused": false,
+          "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/front?format=source",
+          "w": 640,
+          "h": 480,
+          "dur": 3
+        },
+        {
+          "cam": "wrist",
+          "counter": 637,
+          "t": 0.388663,
+          "paused": false,
+          "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/wrist?format=source",
+          "w": 320,
+          "h": 240,
+          "dur": 3
+        }
+      ]
+    },
+    {
+      "name": "pause: all paused and time frozen",
+      "ok": true,
+      "detail": [
+        [
+          {
+            "cam": "front",
+            "counter": 654,
+            "t": 0.967747,
+            "paused": true,
+            "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/front?format=source",
+            "w": 640,
+            "h": 480,
+            "dur": 3
+          },
+          {
+            "cam": "wrist",
+            "counter": 655,
+            "t": 0.977143,
+            "paused": true,
+            "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/wrist?format=source",
+            "w": 320,
+            "h": 240,
+            "dur": 3
+          }
+        ],
+        [
+          {
+            "cam": "front",
+            "counter": 654,
+            "t": 0.967747,
+            "paused": true,
+            "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/front?format=source",
+            "w": 640,
+            "h": 480,
+            "dur": 3
+          },
+          {
+            "cam": "wrist",
+            "counter": 655,
+            "t": 0.977143,
+            "paused": true,
+            "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/wrist?format=source",
+            "w": 320,
+            "h": 240,
+            "dur": 3
+          }
+        ]
+      ]
+    },
+    {
+      "name": "scrubber seeks every camera to 1.5 s",
+      "ok": true,
+      "detail": [
+        {
+          "cam": "front",
+          "counter": 671,
+          "t": 1.5,
+          "paused": true,
+          "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/front?format=source",
+          "w": 640,
+          "h": 480,
+          "dur": 3
+        },
+        {
+          "cam": "wrist",
+          "counter": 671,
+          "t": 1.5,
+          "paused": true,
+          "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/wrist?format=source",
+          "w": 320,
+          "h": 240,
+          "dur": 3
+        }
+      ]
+    },
+    {
+      "name": "after scrub: front shows ep1 frame ~45 (t=1.500)",
+      "ok": true,
+      "detail": {
+        "counter": 671,
+        "want_window": [
+          670,
+          671,
+          672
+        ],
+        "ep_range": [
+          625,
+          715
+        ]
+      }
+    },
+    {
+      "name": "after scrub: wrist shows ep1 frame ~45 (t=1.500)",
+      "ok": true,
+      "detail": {
+        "counter": 671,
+        "want_window": [
+          670,
+          671,
+          672
+        ],
+        "ep_range": [
+          625,
+          715
+        ]
+      }
+    },
+    {
+      "name": "cursor follows the scrubber",
+      "ok": true,
+      "detail": {
+        "px": 170,
+        "n": 103,
+        "frac": 0.49795918367346936,
+        "color": "rgb(255, 158, 181)"
+      }
+    },
+    {
+      "name": "scrub while playing pauses at 0.5 s",
+      "ok": true,
+      "detail": [
+        {
+          "cam": "front",
+          "counter": 640,
+          "t": 0.5,
+          "paused": true,
+          "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/front?format=source",
+          "w": 640,
+          "h": 480,
+          "dur": 3
+        },
+        {
+          "cam": "wrist",
+          "counter": 640,
+          "t": 0.5,
+          "paused": true,
+          "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/wrist?format=source",
+          "w": 320,
+          "h": 240,
+          "dur": 3
+        }
+      ]
+    },
+    {
+      "name": "chart click seeks every camera to ~2.70 s",
+      "ok": true,
+      "detail": [
+        {
+          "cam": "front",
+          "counter": 706,
+          "t": 2.693877551020408,
+          "paused": true,
+          "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/front?format=source",
+          "w": 640,
+          "h": 480,
+          "dur": 3
+        },
+        {
+          "cam": "wrist",
+          "counter": 706,
+          "t": 2.693877551020408,
+          "paused": true,
+          "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/wrist?format=source",
+          "w": 320,
+          "h": 240,
+          "dur": 3
+        }
+      ]
+    },
+    {
+      "name": "after chart click: front shows ep1 frame ~81 (t=2.694)",
+      "ok": true,
+      "detail": {
+        "counter": 706,
+        "want_window": [
+          706,
+          707,
+          708
+        ],
+        "ep_range": [
+          625,
+          715
+        ]
+      }
+    },
+    {
+      "name": "after chart click: wrist shows ep1 frame ~81 (t=2.694)",
+      "ok": true,
+      "detail": {
+        "counter": 706,
+        "want_window": [
+          706,
+          707,
+          708
+        ],
+        "ep_range": [
+          625,
+          715
+        ]
+      }
+    },
+    {
+      "name": "chart click while playing seeks (~0.6 s)",
+      "ok": true,
+      "detail": [
+        {
+          "cam": "front",
+          "counter": 651,
+          "t": 0.85254,
+          "paused": false,
+          "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/front?format=source",
+          "w": 640,
+          "h": 480,
+          "dur": 3
+        },
+        {
+          "cam": "wrist",
+          "counter": 651,
+          "t": 0.847624,
+          "paused": false,
+          "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/wrist?format=source",
+          "w": 320,
+          "h": 240,
+          "dur": 3
+        }
+      ]
+    },
+    {
+      "name": "switch episode: every video is episode 3's",
+      "ok": true,
+      "detail": [
+        "http://127.0.0.1:18621/api/v1/datasets/five/episodes/2/videos/front?format=source",
+        "http://127.0.0.1:18621/api/v1/datasets/five/episodes/2/videos/wrist?format=source"
+      ]
+    },
+    {
+      "name": "switch episode: player reset (paused at 0)",
+      "ok": true,
+      "detail": [
+        {
+          "cam": "front",
+          "counter": 835,
+          "t": 0,
+          "paused": true,
+          "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/2/videos/front?format=source",
+          "w": 640,
+          "h": 480,
+          "dur": 3
+        },
+        {
+          "cam": "wrist",
+          "counter": 835,
+          "t": 0,
+          "paused": true,
+          "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/2/videos/wrist?format=source",
+          "w": 320,
+          "h": 240,
+          "dur": 3
+        }
+      ]
+    },
+    {
+      "name": "ep3 first frame: front shows ep2 frame ~0 (t=0.000)",
+      "ok": true,
+      "detail": {
+        "counter": 835,
+        "want_window": [
+          835,
+          836
+        ],
+        "ep_range": [
+          835,
+          926
+        ]
+      }
+    },
+    {
+      "name": "ep3 first frame: wrist shows ep2 frame ~0 (t=0.000)",
+      "ok": true,
+      "detail": {
+        "counter": 835,
+        "want_window": [
+          835,
+          836
+        ],
+        "ep_range": [
+          835,
+          926
+        ]
+      }
+    },
+    {
+      "name": "switch dataset: videos are twelve/11",
+      "ok": true,
+      "detail": [
+        "http://127.0.0.1:18621/api/v1/datasets/twelve/episodes/11/videos/front?format=source",
+        "http://127.0.0.1:18621/api/v1/datasets/twelve/episodes/11/videos/wrist?format=source"
+      ]
+    },
+    {
+      "name": "twelve ep12 first frame: front shows ep11 frame ~0 (t=0.000)",
+      "ok": true,
+      "detail": {
+        "counter": 3155,
+        "want_window": [
+          3155,
+          3156
+        ],
+        "ep_range": [
+          3155,
+          3215
+        ]
+      }
+    },
+    {
+      "name": "twelve ep12 first frame: wrist shows ep11 frame ~0 (t=0.000)",
+      "ok": true,
+      "detail": {
+        "counter": 3155,
+        "want_window": [
+          3155,
+          3156
+        ],
+        "ep_range": [
+          3155,
+          3215
+        ]
+      }
+    },
+    {
+      "name": "twelve ep12 end: front last frame 3215 == 3215 (next ep starts 32274)",
+      "ok": true,
+      "detail": {
+        "cam": "front",
+        "counter": 3215,
+        "t": 2,
+        "paused": true,
+        "src": "http://127.0.0.1:18621/api/v1/datasets/twelve/episodes/11/videos/front?format=source",
+        "w": 640,
+        "h": 480,
+        "dur": 2
+      }
+    },
+    {
+      "name": "twelve ep12 end: wrist last frame 3215 == 3215 (next ep starts 32275)",
+      "ok": true,
+      "detail": {
+        "cam": "wrist",
+        "counter": 3215,
+        "t": 2,
+        "paused": true,
+        "src": "http://127.0.0.1:18621/api/v1/datasets/twelve/episodes/11/videos/wrist?format=source",
+        "w": 320,
+        "h": 240,
+        "dur": 2
+      }
+    },
+    {
+      "name": "slow15 ep2 first frame: front shows ep1 frame ~0 (t=0.000)",
+      "ok": true,
+      "detail": {
+        "counter": 4060,
+        "want_window": [
+          4060,
+          4062
+        ],
+        "ep_range": [
+          4060,
+          4148
+        ]
+      }
+    },
+    {
+      "name": "slow15 ep2 first frame: wrist shows ep1 frame ~0 (t=0.000)",
+      "ok": true,
+      "detail": {
+        "counter": 4060,
+        "want_window": [
+          4060,
+          4062
+        ],
+        "ep_range": [
+          4060,
+          4148
+        ]
+      }
+    },
+    {
+      "name": "slow15 duration 3.0",
+      "ok": false,
+      "detail": "0,0 / 3,0 gi\u00e2y"
+    },
+    {
+      "name": "slow15 scrub 2 s: front shows ep1 frame ~30 (t=2.000)",
+      "ok": true,
+      "detail": {
+        "counter": 4120,
+        "want_window": [
+          4118,
+          4120,
+          4122
+        ],
+        "ep_range": [
+          4060,
+          4148
+        ]
+      }
+    },
+    {
+      "name": "slow15 scrub 2 s: wrist shows ep1 frame ~30 (t=2.000)",
+      "ok": true,
+      "detail": {
+        "counter": 4120,
+        "want_window": [
+          4118,
+          4120,
+          4122
+        ],
+        "ep_range": [
+          4060,
+          4148
+        ]
+      }
+    },
+    {
+      "name": "slow15 view: no horizontal scroll [390, 390]",
+      "ok": true,
+      "detail": [
+        390,
+        390
+      ]
+    },
+    {
+      "name": "datasets list: no horizontal scroll [390, 390]",
+      "ok": true,
+      "detail": [
+        390,
+        390
+      ]
+    },
+    {
+      "name": "no page errors",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "name": "no 5xx responses",
+      "ok": true,
+      "detail": []
+    }
+  ],
+  "fails": [
+    {
+      "name": "time label t / d",
+      "detail": "0,0 / 3,0 gi\u00e2y"
+    },
+    {
+      "name": "end label 3.0 / 3.0",
+      "detail": "3,0 / 3,0 gi\u00e2y"
+    },
+    {
+      "name": "slow15 duration 3.0",
+      "detail": "0,0 / 3,0 gi\u00e2y"
+    }
+  ],
+  "browser_version": "155.0",
+  "canPlayType": {
+    "av1": "probably",
+    "h264": "probably",
+    "vp9": "probably"
+  },
+  "formats": {
+    "front": "source",
+    "wrist": "source"
+  },
+  "axe": {
+    "episode view": {
+      "page": [],
+      "episode_cards": []
+    }
+  },
+  "chart_x_range": [
+    0.03333333333333333,
+    3.0
+  ],
+  "page_errors": [],
+  "http_5xx": []
+}

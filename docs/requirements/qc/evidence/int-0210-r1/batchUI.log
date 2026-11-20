@@ -1,0 +1,166 @@
+=== ui_static.py
+datasets/cnt15": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 15,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 0
+  },
+  "/datasets/crasha": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 3,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 3
+  },
+  "/datasets/crashb": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 12,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 12
+  },
+  "/datasets/dmgi1": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 6,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 0
+  },
+  "/datasets/dmgsc": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 6,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 0
+  },
+  "/datasets/dmgp": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 6,
+   "unreadable_msgs": 3,
+   "saving": 0,
+   "disabled_btns": 3
+  },
+  "/datasets/nonexist": {
+   "shell": {
+    "nav": true,
+    "unexpected": false,
+    "blank": false
+   },
+   "rows": 0,
+   "unreadable_msgs": 0,
+   "saving": 0,
+   "disabled_btns": 0,
+   "missing_msg": true
+  },
+  "tel_open": {
+   "svg_or_canvas": 3
+  },
+  "errors": [
+   "console:Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "5xx": []
+ }
+}
+
+=== ui_live.py en 1280 light live12 12
+{"start": 200, "nsamples": 57, "max_rows": 11, "saw_saving_badge": 11, "saw_strip_saving": 0, "rows_lag": [[5.7, 2, 1], [18.2, 7, 6], [25.2, 10, 9]], "shell_bad": [], "after": ["saved", "saved", "saved", "saved", "saved", "saved", "saved", "saved", "saved", "saved", "saved", "saved"], "errors": ["console:Failed to load resource: the server responded with a status of 404 (Not Found)"], "5xx": []}
+
+=== ui_live.py vi 390 dark live4 4
+{"start": 200, "nsamples": 34, "max_rows": 3, "saw_saving_badge": 6, "saw_strip_saving": 0, "rows_lag": [], "shell_bad": [], "after": ["saved", "saved", "saved", "saved"], "errors": ["console:Failed to load resource: the server responded with a status of 404 (Not Found)"], "5xx": []}
+
+=== ui_flow.py en 1280 light
+0.0.1:18611/assets/react-zSD67rZb.js:24:39760)\n    at Da (http://127.0.0.1:18611/assets/react-zSD67rZb.js:24:36089)\n    at gc (http://127.0.0.1:18611/assets/react-zSD67rZb.js:24:36901)\n    at Dn (http://127.0.0.1:18611/assets/react-zSD67rZb.js:22:3273)",
+  "console:React Router caught the following error during render TypeError: Cannot read properties of undefined (reading 'length')\n    at bb (http://127.0.0.1:18611/assets/index-Dwdo_R6V.js:47:82479)\n    at ia (http://127.0.0.1:18611/assets/react-zSD67rZb.js:22:17194)\n    at ma (http://127.0.0.1:18611/assets/react-zSD67rZb.js:24:3159)\n    at Cc (http://127.0.0.1:18611/assets/react-zSD67rZb.js:24:45086)\n    at Sc (http://127.0.0.1:18611/assets/react-zSD67rZb.js:24:39979)\n    at Hd (http://127.0.0.1:18611/assets/react-zSD67rZb.js:24:39907)\n    at Qi (http://127.0.0.1:18611/assets/react-zSD67rZb.js:24:39760)\n    at Da (http://127.0.0.1:18611/assets/react-zSD67rZb.js:24:36089)\n    at gc (http://127.0.0.1:18611/assets/react-zSD67rZb.js:24:36901)\n    at Dn (http://127.0.0.1:18611/assets/react-zSD67rZb.js:22:3273) {componentStack: \n    at bb (http://127.0.0.1:18611/assets/index-Dw…7.0.0.1:18611/assets/index-Dwdo_R6V.js:47:256918)}",
+  "console:Failed to load resource: the server responded with a status of 409 (Conflict)",
+  "console:Failed to load resource: the server responded with a status of 409 (Conflict)",
+  "console:Failed to load resource: the server responded with a status of 409 (Conflict)"
+ ],
+ "5xx": []
+}
+
+=== ui_flow.py vi 390 dark
+0.0.1:18611/assets/react-zSD67rZb.js:24:39760)\n    at Da (http://127.0.0.1:18611/assets/react-zSD67rZb.js:24:36089)\n    at gc (http://127.0.0.1:18611/assets/react-zSD67rZb.js:24:36901)\n    at Dn (http://127.0.0.1:18611/assets/react-zSD67rZb.js:22:3273)",
+  "console:React Router caught the following error during render TypeError: Cannot read properties of undefined (reading 'length')\n    at bb (http://127.0.0.1:18611/assets/index-Dwdo_R6V.js:47:82479)\n    at ia (http://127.0.0.1:18611/assets/react-zSD67rZb.js:22:17194)\n    at ma (http://127.0.0.1:18611/assets/react-zSD67rZb.js:24:3159)\n    at Cc (http://127.0.0.1:18611/assets/react-zSD67rZb.js:24:45086)\n    at Sc (http://127.0.0.1:18611/assets/react-zSD67rZb.js:24:39979)\n    at Hd (http://127.0.0.1:18611/assets/react-zSD67rZb.js:24:39907)\n    at Qi (http://127.0.0.1:18611/assets/react-zSD67rZb.js:24:39760)\n    at Da (http://127.0.0.1:18611/assets/react-zSD67rZb.js:24:36089)\n    at gc (http://127.0.0.1:18611/assets/react-zSD67rZb.js:24:36901)\n    at Dn (http://127.0.0.1:18611/assets/react-zSD67rZb.js:22:3273) {componentStack: \n    at bb (http://127.0.0.1:18611/assets/index-Dw…7.0.0.1:18611/assets/index-Dwdo_R6V.js:47:256918)}",
+  "console:Failed to load resource: the server responded with a status of 409 (Conflict)",
+  "console:Failed to load resource: the server responded with a status of 409 (Conflict)",
+  "console:Failed to load resource: the server responded with a status of 409 (Conflict)"
+ ],
+ "5xx": []
+}
+
+=== ui_robot.py connected
+{
+ "en-1280-light": {
+  "cards": [
+   {
+    "text": "Demo SO-101 (mock) | SO-101 | DEMO | connected |  | Follower: mock://f",
+    "delete_btns": 1,
+    "enabled": false,
+    "hint": true
+   }
+  ],
+  "empty_msg": false,
+  "shell": {
+   "nav": true,
+   "unexpected": false,
+   "blank": false
+  },
+  "errors": [],
+  "5xx": []
+ },
+ "vi-390-dark": {
+  "cards": [
+   {
+    "text": "Demo SO-101 (mock) | SO-101 | TAY GIẢ LẬP | đã kết nối |  | Tay follow",
+    "delete_btns": 1,
+    "enabled": false,
+    "hint": true
+   }
+  ],
+  "empty_msg": false,
+  "shell": {
+   "nav": true,
+   "unexpected": false,
+   "blank": false
+  },
+  "errors": [],
+  "5xx": []
+ }
+}
+
+=== ui_sweep8.py
+en-1280-light {"pages": 19, "bad_pages": {}, "hscroll": [], "errors": [], "n_errors": 0, "5xx": []}
+en-390-light {"pages": 19, "bad_pages": {}, "hscroll": [], "errors": [], "n_errors": 0, "5xx": []}
+en-1280-dark {"pages": 19, "bad_pages": {}, "hscroll": [], "errors": [], "n_errors": 0, "5xx": []}
+en-390-dark {"pages": 19, "bad_pages": {}, "hscroll": [], "errors": [], "n_errors": 0, "5xx": []}
+vi-1280-light {"pages": 19, "bad_pages": {}, "hscroll": [], "errors": [], "n_errors": 0, "5xx": []}
+vi-390-light {"pages": 19, "bad_pages": {}, "hscroll": [], "errors": [], "n_errors": 0, "5xx": []}
+vi-1280-dark {"pages": 19, "bad_pages": {}, "hscroll": [], "errors": [], "n_errors": 0, "5xx": []}
+vi-390-dark {"pages": 19, "bad_pages": {}, "hscroll": [], "errors": [], "n_errors": 0, "5xx": []}
+
+UI-DONE

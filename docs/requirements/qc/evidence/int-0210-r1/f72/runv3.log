@@ -1,0 +1,15 @@
+=== qv_ui.py chromium vi
+chromium-vi: 0 fails / 21 checks
+=== qv_ui.py firefox en
+FAIL QV-2 UI: truncated source cut is recut (source -> source, size 1297509 == 3892528), plays to the last frame {'end': {'cam': 'front', 'counter': 1363, 't': 3, 'paused': True, 'src': 'http://127.0.0.1:18621/api/v1/datasets/five/episodes/4/videos/front?format=source', 'w': 640, 'h': 480, 'dur': 3}, 'last': 1363}
+FAIL QV-6 episode_saving: Station detail not in sight, Technical details closed {'visible_details': ['being recorded'], 'open_details': 0, 'n_details': 1}
+firefox-en: 2 fails / 21 checks
+=== ui_matrix.py chromium en light 1280
+FAIL play again restarts from start [{'cam': 'front', 'counter': 654, 't': 0.980753, 'paused': False, 'src': 'http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/front?format=source', 'w': 640, 'h': 480, 'dur': 3}, {'cam': 'wrist', 'counter': 655, 't': 1.003675, 'paused': False, 'src': 'http://127.0.0.1:18621/api/v1/datasets/five/episodes/1/videos/wrist?format=source', 'w': 320, 'h': 240, 'dur': 3}]
+chromium-en-light-1280: 1 fails / 46 checks
+=== ui_matrix.py firefox vi dark 390
+FAIL time label t / d 0,0 / 3,0 giây
+FAIL end label 3.0 / 3.0 3,0 / 3,0 giây
+FAIL slow15 duration 3.0 0,0 / 3,0 giây
+firefox-vi-dark-390: 3 fails / 46 checks
+VRUN3-DONE

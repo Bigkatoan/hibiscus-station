@@ -1,0 +1,83 @@
+== counts
+1 {"dur": 2.2, "final_status": 200, "episodes": 1, "finalized": true, "rows": 1, "states": ["saved"], "frames": [30], "hammer": {"codes": {"list|200": 114, "detail|404": 85, "detail|200": 29, "tel|saving|404": 5, "tel|saved|200": 13}, "bad": [], "nbad": 0}, "rows_lt_total_while_live": [], "snaps": 29}
+3 {"dur": 4.5, "final_status": 200, "episodes": 3, "finalized": true, "rows": 3, "states": ["saved"], "frames": [30], "hammer": {"codes": {"list|200": 44, "detail|200": 44, "tel|saving|404": 9, "tel|saved|200": 63}, "bad": [], "nbad": 0}, "rows_lt_total_while_live": [], "snaps": 44}
+10 {"dur": 16.6, "final_status": 200, "episodes": 10, "finalized": true, "rows": 10, "states": ["saved"], "frames": [30], "hammer": {"codes": {"list|200": 116, "detail|200": 116, "tel|saving|404": 34, "tel|saved|200": 256, "tel|saving|200": 2}, "bad": [], "nbad": 0}, "rows_lt_total_while_live": [], "snaps": 116}
+11 {"dur": 18.7, "final_status": 200, "episodes": 11, "finalized": true, "rows": 11, "states": ["saved"], "frames": [30], "hammer": {"codes": {"list|200": 114, "detail|200": 114, "tel|saving|404": 34, "tel|saved|200": 255, "tel|saving|200": 1}, "bad": [], "nbad": 0}, "rows_lt_total_while_live": [], "snaps": 114}
+15 {"dur": 25.7, "final_status": 200, "episodes": 15, "finalized": true, "rows": 15, "states": ["saved"], "frames": [30], "hammer": {"codes": {"list|200": 140, "detail|200": 140, "tel|saving|404": 45, "tel|saved|200": 328}, "bad": [], "nbad": 0}, "rows_lt_total_while_live": [], "snaps": 140}
+== stress
+{"codes": {"list|200": 463, "detail|200": 463, "tel|saving|404": 172, "tel|saved|200": 931, "tel|saving|200": 3}, "bad": [], "nbad": 0}
+{"codes": {"list|200": 462, "detail|200": 462, "tel|saving|404": 173, "tel|saved|200": 938}, "bad": [], "nbad": 0}
+200 12 True ['saved', 'saved', 'saved', 'saved', 'saved', 'saved', 'saved', 'saved', 'saved', 'saved', 'saved', 'saved'] 4142869
+== ctrl
+rerecord 200 (1, 'reset')
+after rerecord (1, 'episode')
+ep2 (2, 'episode')
+next 200
+{"codes": {"list|200": 76, "detail|200": 76, "tel|saving|404": 17, "tel|saved|200": 67}, "bad": [], "nbad": 0}
+rerec 3 [(0, 'saved', 120), (1, 'saved', 120), (2, 'saved', 30)]
+stop http 200 0.01 recording saving
+idle after 1.25
+{"codes": {"list|200": 80, "detail|200": 80, "tel|saving|404": 17, "tel|saved|200": 71}, "bad": [], "nbad": 0}
+stopper 3 True [(0, 'saved', 150), (1, 'saved', 150), (2, 'saved', 60)]
+stop@saving 200 0.01
+idle after 1.24
+stopsave 2 True [(0, 'saved', 60), (1, 'saved', 60)]
+== resume
+cnt3 before 3 after 5 True rows 5 ['saved'] idx ok True live snaps 12 bad live [(1795188840.0, 3, 4, 0), (1795188840.2, 3, 4, 0), (1795188841.8, 4, 5, 0), (1795188842.1, 4, 5, 0)] 0
+cnt11 before 11 after 23 True rows 23 ['saved'] idx ok True live snaps 68 bad live [(1795188846.1, 11, 12, 0), (1795188847.5, 12, 13, 0), (1795188847.7, 12, 13, 0), (1795188849.1, 13, 14, 0), (1795188849.4, 13, 14, 0)] 0
+cnt3 before 5 after 6 True rows 6 ['saved'] idx ok True live snaps 5 bad live [(1795188869.5, 5, 6, 0)] 0
+== q6
+q6 6 180 True
+q6/data/chunk-000/file-000.parquet
+q6/data/chunk-000/file-001.parquet
+q6/data/chunk-000/file-002.parquet
+q6/meta/episodes/chunk-000/file-000.parquet
+q6/meta/episodes/chunk-000/file-001.parquet
+q6/meta/episodes/chunk-000/file-002.parquet
+q6/meta/info.json
+q6/meta/stats.json
+q6/meta/tasks.parquet
+q6/videos/observation.images.front/chunk-000/file-000.mp4
+q6/videos/observation.images.front/chunk-000/file-001.mp4
+q6/videos/observation.images.front/chunk-000/file-002.mp4
+q6/videos/observation.images.wrist/chunk-000/file-000.mp4
+q6/videos/observation.images.wrist/chunk-000/file-001.mp4
+q6/videos/observation.images.wrist/chunk-000/file-002.mp4
+== crash
+killed at {'index': 3, 'of': 40, 'saved': 3, 'phase': 'episode', 'elapsed_s': 0.0, 'limit_s': 1.5}
+up 1998309
+killed at {'index': 12, 'of': 40, 'saved': 12, 'phase': 'episode', 'elapsed_s': 0.0, 'limit_s': 1.5}
+up 2009205
+crasha     append 409 dataset_not_finalized    identical=True | reasons=['data/chunk-000/file-000.parquet', 'meta/episodes missing'] | replay 409 dataset_unreadable
+crashb     append 409 dataset_not_finalized    identical=True | reasons=['meta/episodes/chunk-000/file-000.parquet', 'data/chunk-000/file-000.parquet'] | replay 409 dataset_unreadable
+CRASH-FILES-IDENTICAL 30 files
+crasha 200 3 False uuu ['meta/episodes/*.parquet missing', 'data/chunk-000/file-000.parquet not finalized (parquet footer missing)']
+  tel 200 videos (404, {'type': 'https://hibiscus.dev/problems/station/not_found', 'title': 'Not found', 'status': 404, 'code': 'not_found', 'detail': 'no episode 0 in crasha', 'request_id': '', 'params': {'episode': 0}})
+crashb 200 12 False uuuuuuuuuuuu ['meta/episodes/chunk-000/file-000.parquet not finalized (parquet footer missing)', 'data/chunk-000/file-000.parquet not finalized (parquet footer missing)']
+  tel 200 videos (404, {'type': 'https://hibiscus.dev/problems/station/not_found', 'title': 'Not found', 'status': 404, 'code': 'not_found', 'detail': 'no episode 0 in crashb', 'request_id': '', 'params': {'episode': 0}})
+== qh9
+src 6 180
+nodata removed /data/chunk-000/file-002.parquet
+novideo removed /videos/observation.images.front/chunk-000/file-000.mp4
+te0      list fin=False detail fin=False reasons=['no episodes saved yet']
+         append 409 dataset_unreadable identical=True | after: eps=0 fin=False rows=ssssss
+te1      list fin=False detail fin=False reasons=['inconsistent: meta/info.json counts 1 episodes, meta/episodes holds 6']
+         append 409 dataset_unreadable identical=True | after: eps=1 fin=False rows=ssssss
+te3      list fin=False detail fin=False reasons=['inconsistent: meta/info.json counts 3 episodes, meta/episodes holds 6']
+         append 409 dataset_unreadable identical=True | after: eps=3 fin=False rows=ssssss
+te8      list fin=False detail fin=False reasons=['inconsistent: meta/info.json counts 8 episodes, meta/episodes holds 6']
+         append 409 dataset_unreadable identical=True | after: eps=8 fin=False rows=ssssssu
+tfm1     list fin=False detail fin=False reasons=['inconsistent: meta/info.json counts 179 frames, the episodes hold 180']
+         append 409 dataset_unreadable identical=True | after: eps=6 fin=False rows=ssssss
+tfp1     list fin=False detail fin=False reasons=['inconsistent: meta/info.json counts 181 frames, the episodes hold 180']
+         append 409 dataset_unreadable identical=True | after: eps=6 fin=False rows=ssssss
+gap      list fin=False detail fin=False reasons=['inconsistent: the episode indexes are not 0..N-1 without gaps']
+         append 409 dataset_unreadable identical=True | after: eps=6 fin=False rows=sssssus
+nodata   list fin=False detail fin=False reasons=['inconsistent: missing files: data/chunk-000/file-002.parquet']
+         append 409 dataset_unreadable identical=True | after: eps=6 fin=False rows=ssssss
+novideo  list fin=False detail fin=False reasons=['inconsistent: missing files: videos/observation.images.front/chunk-000/file-000.']
+         append 409 dataset_unreadable identical=True | after: eps=6 fin=False rows=ssssss
+ok       list fin=True detail fin=True reasons=[]
+         append 200 None identical=False | after: eps=7 fin=True rows=sssssss
+tracebacks 0
+BATCH-A-DONE

@@ -1,0 +1,1457 @@
+{
+ "cust_word_cloud": {
+  "url": "https://word.cloud.microsoft/open/onedrive/?docId=0123456789ABCDEF%21s1a2b3c4d5e6f&driveId=0123456789ABCDEF",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "onedrive_cloud": {
+  "url": "https://onedrive.cloud.microsoft/?id=abc",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "officeapps": {
+  "url": "https://view.officeapps.live.com/op/view.aspx?src=x",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "onedrive_live": {
+  "url": "https://onedrive.live.com/?redeem=aHR0cHM6Ly8xZHJ2Lm1zL2YvcyFBbXBsZQ&id=ABC%21123&cid=0123456789ABCDEF",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "1drv": {
+  "url": "https://1drv.ms/w/s!AmplE123",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "sharepoint": {
+  "url": "https://contoso-my.sharepoint.com/:w:/g/personal/a_b/EabcD?e=xyz",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "gdocs": {
+  "url": "https://docs.google.com/document/d/1AbC/edit?usp=sharing",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "gdrive": {
+  "url": "https://drive.google.com/file/d/1AbC/view?usp=sharing",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "dropbox": {
+  "url": "https://www.dropbox.com/scl/fi/abc/file.pdf?rlkey=x&dl=0",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "ftp": {
+  "url": "ftp://x",
+  "status": 422,
+  "code": "server_url_invalid",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "noscheme": {
+  "url": "hibiscus.example.org",
+  "status": 422,
+  "code": "server_url_invalid",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "words": {
+  "url": "hibiscus server",
+  "status": 422,
+  "code": "server_url_invalid",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "javascript": {
+  "url": "javascript:alert(1)",
+  "status": 422,
+  "code": "server_url_invalid",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_empty": {
+  "url": "http://",
+  "status": 422,
+  "code": "server_url_invalid",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "cust_upper": {
+  "url": "HTTPS://WORD.CLOUD.MICROSOFT/open/onedrive/?docId=X&driveId=Y",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "cust_trailing_ws": {
+  "url": "  https://word.cloud.microsoft/open/onedrive/?docId=X&driveId=Y \n",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "cust_newline_inside": {
+  "url": "https://word.cloud.micro\nsoft/open/onedrive/?docId=X",
+  "status": 422,
+  "code": "server_url_invalid",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "m365_cloud": {
+  "url": "https://m365.cloud.microsoft/launch/onedrive",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "gdrive_usercontent": {
+  "url": "https://drive.usercontent.google.com/download?id=1AbC&export=download",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "google_redirect": {
+  "url": "https://www.google.com/url?q=https://docs.google.com/document/d/1AbC",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "gsites": {
+  "url": "https://sites.google.com/view/abc",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.2,
+  "proxy": [
+   "CONNECT sites.google.com:443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "outlook_safelinks": {
+  "url": "https://nam12.safelinks.protection.outlook.com/?url=https%3A%2F%2F1drv.ms%2Fw%2Fs%21Ample&data=05",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "teams_file": {
+  "url": "https://teams.microsoft.com/l/file/ABC?tenantId=x&fileType=docx&objectUrl=https%3A%2F%2Fcontoso.sharepoint.com%2Fx.docx",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "docs_live_net": {
+  "url": "https://d.docs.live.net/0123abcd/Documents",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "onedrive_photos": {
+  "url": "https://photos.onedrive.com/share/ABC",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "onedrive_com": {
+  "url": "https://onedrive.com/?id=x",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "dropbox_s": {
+  "url": "https://www.dropbox.com/s/abc/file?dl=0",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "dropbox_short": {
+  "url": "https://db.tt/abc",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "box": {
+  "url": "https://app.box.com/s/abc",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.1,
+  "proxy": [
+   "CONNECT app.box.com:443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "wetransfer": {
+  "url": "https://we.tl/t-AbC",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.1,
+  "proxy": [
+   "CONNECT we.tl:443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "icloud": {
+  "url": "https://www.icloud.com/iclouddrive/0abc",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.1,
+  "proxy": [
+   "CONNECT www.icloud.com:443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "mega": {
+  "url": "https://mega.nz/file/abc#key",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.1,
+  "proxy": [
+   "CONNECT mega.nz:443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "fshare_vn": {
+  "url": "https://www.fshare.vn/file/ABCDEF",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.1,
+  "proxy": [
+   "CONNECT www.fshare.vn:443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "terabox": {
+  "url": "https://www.terabox.com/s/1abc",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.1,
+  "proxy": [
+   "CONNECT www.terabox.com:443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "github_blob": {
+  "url": "https://github.com/org/repo/blob/main/README.md",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.1,
+  "proxy": [
+   "CONNECT github.com:443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "valid": {
+  "url": "https://hibiscus.example.org",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.1,
+  "proxy": [
+   "CONNECT hibiscus.example.org:443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "valid_port_path": {
+  "url": "https://x.y.z:8443/path",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.1,
+  "proxy": [
+   "CONNECT x.y.z:8443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "valid_ip_port": {
+  "url": "http://192.168.1.10:8000",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "HTTP 502",
+  "s": 0.1,
+  "proxy": [
+   "GET http://192.168.1.10:8000/api/v1/auth/config HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "valid_ip_slash": {
+  "url": "http://192.168.1.10:8000/",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "HTTP 502",
+  "s": 0.1,
+  "proxy": [
+   "GET http://192.168.1.10:8000/api/v1/auth/config HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "valid_ip_noport_slash": {
+  "url": "http://10.0.0.5/",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "HTTP 502",
+  "s": 0.1,
+  "proxy": [
+   "GET http://10.0.0.5/api/v1/auth/config HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "valid_query": {
+  "url": "https://hibiscus.example.org/?lang=vi",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.1,
+  "proxy": [
+   "CONNECT hibiscus.example.org:443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "valid_query_utm": {
+  "url": "https://hibiscus.example.org/?utm_source=email&ref=abc",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.1,
+  "proxy": [
+   "CONNECT hibiscus.example.org:443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "valid_query_cid": {
+  "url": "https://hibiscus.example.org/?cid=campaign1",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.1,
+  "proxy": [
+   "CONNECT hibiscus.example.org:443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "valid_query_id": {
+  "url": "https://hibiscus.example.org/login?next=/datasets&id=7",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.1,
+  "proxy": [
+   "CONNECT hibiscus.example.org:443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "valid_localhost": {
+  "url": "http://localhost:8000",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "answers text/html, not JSON",
+  "s": 0.1,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "valid_localhost_slash": {
+  "url": "http://localhost/",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "HTTP 404",
+  "s": 0.1,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "valid_127": {
+  "url": "http://127.0.0.1:8080",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ConnectError)",
+  "s": 0.1,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "valid_ipv6": {
+  "url": "http://[::1]:8000",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "HTTP 502",
+  "s": 0.1,
+  "proxy": [
+   "GET http://::1:8000/api/v1/auth/config HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "valid_trailing_spaces": {
+  "url": "https://hibiscus.example.org   ",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.1,
+  "proxy": [
+   "CONNECT hibiscus.example.org:443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "valid_uppercase": {
+  "url": "HTTPS://HIBISCUS.EXAMPLE.ORG",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.1,
+  "proxy": [
+   "CONNECT hibiscus.example.org:443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "valid_subdomain_office_word": {
+  "url": "https://hibiscus.office-robots.vn",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.1,
+  "proxy": [
+   "CONNECT hibiscus.office-robots.vn:443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "valid_box_sub": {
+  "url": "https://box.hibiscus.example.org",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.1,
+  "proxy": [
+   "CONNECT box.hibiscus.example.org:443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "valid_api_path": {
+  "url": "https://hibiscus.example.org/api/v1",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.1,
+  "proxy": [
+   "CONNECT hibiscus.example.org:443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "valid_path_txt": {
+  "url": "https://hibiscus.example.org/robots.txt",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.1,
+  "proxy": [
+   "CONNECT hibiscus.example.org:443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "valid_hash": {
+  "url": "https://hibiscus.example.org/#/datasets",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.1,
+  "proxy": [
+   "CONNECT hibiscus.example.org:443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "valid_userinfo": {
+  "url": "https://user@hibiscus.example.org",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.1,
+  "proxy": [
+   "CONNECT hibiscus.example.org:443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "valid_idn": {
+  "url": "https://hibiscus.v\u00ed-d\u1ee5.vn",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.1,
+  "proxy": [
+   "CONNECT hibiscus.xn--v-d-rma6749a.vn:443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "valid_live_com_sub": {
+  "url": "https://hibiscus.live.com",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.1,
+  "proxy": [
+   "CONNECT hibiscus.live.com:443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "valid_path_open": {
+  "url": "https://hibiscus.example.org/open/projects",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.1,
+  "proxy": [
+   "CONNECT hibiscus.example.org:443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "http_cust_word_cloud": {
+  "url": "http://word.cloud.microsoft/open/onedrive/?docId=0123456789ABCDEF%21s1a2b3c4d5e6f&driveId=0123456789ABCDEF",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_onedrive_cloud": {
+  "url": "http://onedrive.cloud.microsoft/?id=abc",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_officeapps": {
+  "url": "http://view.officeapps.live.com/op/view.aspx?src=x",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_onedrive_live": {
+  "url": "http://onedrive.live.com/?redeem=aHR0cHM6Ly8xZHJ2Lm1zL2YvcyFBbXBsZQ&id=ABC%21123&cid=0123456789ABCDEF",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_1drv": {
+  "url": "http://1drv.ms/w/s!AmplE123",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_sharepoint": {
+  "url": "http://contoso-my.sharepoint.com/:w:/g/personal/a_b/EabcD?e=xyz",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_gdocs": {
+  "url": "http://docs.google.com/document/d/1AbC/edit?usp=sharing",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_gdrive": {
+  "url": "http://drive.google.com/file/d/1AbC/view?usp=sharing",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_dropbox": {
+  "url": "http://www.dropbox.com/scl/fi/abc/file.pdf?rlkey=x&dl=0",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_cust_newline_inside": {
+  "url": "http://word.cloud.micro\nsoft/open/onedrive/?docId=X",
+  "status": 422,
+  "code": "server_url_invalid",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_m365_cloud": {
+  "url": "http://m365.cloud.microsoft/launch/onedrive",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_gdrive_usercontent": {
+  "url": "http://drive.usercontent.google.com/download?id=1AbC&export=download",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_google_redirect": {
+  "url": "http://www.google.com/url?q=https://docs.google.com/document/d/1AbC",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_gsites": {
+  "url": "http://sites.google.com/view/abc",
+  "status": 422,
+  "code": "server_url_insecure",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_outlook_safelinks": {
+  "url": "http://nam12.safelinks.protection.outlook.com/?url=https%3A%2F%2F1drv.ms%2Fw%2Fs%21Ample&data=05",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_teams_file": {
+  "url": "http://teams.microsoft.com/l/file/ABC?tenantId=x&fileType=docx&objectUrl=https%3A%2F%2Fcontoso.sharepoint.com%2Fx.docx",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_docs_live_net": {
+  "url": "http://d.docs.live.net/0123abcd/Documents",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_onedrive_photos": {
+  "url": "http://photos.onedrive.com/share/ABC",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_onedrive_com": {
+  "url": "http://onedrive.com/?id=x",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_dropbox_s": {
+  "url": "http://www.dropbox.com/s/abc/file?dl=0",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_dropbox_short": {
+  "url": "http://db.tt/abc",
+  "status": 422,
+  "code": "server_url_file_share",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_box": {
+  "url": "http://app.box.com/s/abc",
+  "status": 422,
+  "code": "server_url_insecure",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_wetransfer": {
+  "url": "http://we.tl/t-AbC",
+  "status": 422,
+  "code": "server_url_insecure",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_icloud": {
+  "url": "http://www.icloud.com/iclouddrive/0abc",
+  "status": 422,
+  "code": "server_url_insecure",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_mega": {
+  "url": "http://mega.nz/file/abc#key",
+  "status": 422,
+  "code": "server_url_insecure",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_fshare_vn": {
+  "url": "http://www.fshare.vn/file/ABCDEF",
+  "status": 422,
+  "code": "server_url_insecure",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "http_terabox": {
+  "url": "http://www.terabox.com/s/1abc",
+  "status": 422,
+  "code": "server_url_insecure",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "ins_prod_http": {
+  "url": "http://robot.bigkatoan.com",
+  "status": 422,
+  "code": "server_url_insecure",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "ins_prod_http_api": {
+  "url": "http://robot.bigkatoan.com/api/v1/",
+  "status": 422,
+  "code": "server_url_insecure",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "ins_public_ip": {
+  "url": "http://8.8.8.8:8000",
+  "status": 422,
+  "code": "server_url_insecure",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "ins_public_name": {
+  "url": "http://hibiscus.example.org",
+  "status": 422,
+  "code": "server_url_insecure",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "ins_172_32": {
+  "url": "http://172.32.0.1:8000",
+  "status": 422,
+  "code": "server_url_insecure",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "ins_localhost_evil": {
+  "url": "http://localhost.evil.com",
+  "status": 422,
+  "code": "server_url_insecure",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "ins_local_in_middle": {
+  "url": "http://evil.local.example.com",
+  "status": 422,
+  "code": "server_url_insecure",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "ins_decimal_public": {
+  "url": "http://134744072:8000",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "HTTP 502",
+  "s": 0.1,
+  "proxy": [
+   "GET http://134744072:8000/api/v1/auth/config HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "ins_hex_loopback": {
+  "url": "http://0x7f000001:8000",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "HTTP 502",
+  "s": 0.1,
+  "proxy": [
+   "GET http://0x7f000001:8000/api/v1/auth/config HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "ins_decimal_private": {
+  "url": "http://3232235777:8000",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "HTTP 502",
+  "s": 0.0,
+  "proxy": [
+   "GET http://3232235777:8000/api/v1/auth/config HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "ins_mapped_v6_private": {
+  "url": "http://[::ffff:192.168.1.1]:8000",
+  "status": 422,
+  "code": "server_url_insecure",
+  "reason": null,
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "lan_192": {
+  "url": "http://192.168.1.10:8000",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "HTTP 502",
+  "s": 0.1,
+  "proxy": [
+   "GET http://192.168.1.10:8000/api/v1/auth/config HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "lan_10": {
+  "url": "http://10.0.0.5",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "HTTP 502",
+  "s": 0.1,
+  "proxy": [
+   "GET http://10.0.0.5/api/v1/auth/config HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "lan_172_16": {
+  "url": "http://172.16.0.1:8000",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "HTTP 502",
+  "s": 0.1,
+  "proxy": [
+   "GET http://172.16.0.1:8000/api/v1/auth/config HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "lan_cgnat": {
+  "url": "http://100.64.1.1:8000",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "HTTP 502",
+  "s": 0.1,
+  "proxy": [
+   "GET http://100.64.1.1:8000/api/v1/auth/config HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "lan_ula": {
+  "url": "http://[fd00::1]:8000",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "HTTP 502",
+  "s": 0.1,
+  "proxy": [
+   "GET http://fd00::1:8000/api/v1/auth/config HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "lan_linklocal6": {
+  "url": "http://[fe80::1]:8000",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "HTTP 502",
+  "s": 0.1,
+  "proxy": [
+   "GET http://fe80::1:8000/api/v1/auth/config HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "lan_169": {
+  "url": "http://169.254.1.1:8000",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "HTTP 502",
+  "s": 0.1,
+  "proxy": [
+   "GET http://169.254.1.1:8000/api/v1/auth/config HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "lan_dotlocal": {
+  "url": "http://hibiscus.local:8000",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "HTTP 502",
+  "s": 0.1,
+  "proxy": [
+   "GET http://hibiscus.local:8000/api/v1/auth/config HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "lan_dotlocal_trailing": {
+  "url": "http://hibiscus.local.:8000",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "HTTP 502",
+  "s": 0.1,
+  "proxy": [
+   "GET http://hibiscus.local.:8000/api/v1/auth/config HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "lan_dotlan": {
+  "url": "http://nas.lan",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "HTTP 502",
+  "s": 0.1,
+  "proxy": [
+   "GET http://nas.lan/api/v1/auth/config HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "lan_single": {
+  "url": "http://hibiscus:8000",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "HTTP 502",
+  "s": 0.1,
+  "proxy": [
+   "GET http://hibiscus:8000/api/v1/auth/config HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "lan_localhost": {
+  "url": "http://localhost:8000",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "answers text/html, not JSON",
+  "s": 0.1,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "lan_localhost_sub": {
+  "url": "http://hibiscus.localhost:8000",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "HTTP 502",
+  "s": 0.1,
+  "proxy": [
+   "GET http://hibiscus.localhost:8000/api/v1/auth/config HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "lan_127": {
+  "url": "http://127.0.0.1:8080",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ConnectError)",
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": []
+ },
+ "lan_v6_loop": {
+  "url": "http://[::1]:8000",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "HTTP 502",
+  "s": 0.1,
+  "proxy": [
+   "GET http://::1:8000/api/v1/auth/config HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "https_public": {
+  "url": "https://robot.bigkatoan.com",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.0,
+  "proxy": [
+   "CONNECT robot.bigkatoan.com:443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "https_public_ip": {
+  "url": "https://8.8.8.8",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "cannot reach it (ProxyError)",
+  "s": 0.1,
+  "proxy": [
+   "CONNECT 8.8.8.8:443 HTTP/1.1"
+  ],
+  "fake_hits": []
+ },
+ "fake_hibiscus": {
+  "url": "http://127.0.0.1:18401",
+  "status": 422,
+  "code": "server_unauthorized",
+  "reason": null,
+  "s": 0.1,
+  "proxy": [],
+  "fake_hits": [
+   [
+    "hibiscus",
+    "/api/v1/auth/config",
+    false
+   ],
+   [
+    "hibiscus",
+    "/api/v1/auth/me",
+    true
+   ]
+  ]
+ },
+ "fake_html": {
+  "url": "http://127.0.0.1:18402",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "answers text/html, not JSON",
+  "s": 0.1,
+  "proxy": [],
+  "fake_hits": [
+   [
+    "html",
+    "/api/v1/auth/config",
+    false
+   ]
+  ]
+ },
+ "fake_other_json": {
+  "url": "http://127.0.0.1:18403",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "not a Hibiscus identity",
+  "s": 0.1,
+  "proxy": [],
+  "fake_hits": [
+   [
+    "other_json",
+    "/api/v1/auth/config",
+    false
+   ]
+  ]
+ },
+ "fake_wrong_ctype": {
+  "url": "http://127.0.0.1:18404",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "answers text/plain, not JSON",
+  "s": 0.1,
+  "proxy": [],
+  "fake_hits": [
+   [
+    "wrong_ctype",
+    "/api/v1/auth/config",
+    false
+   ]
+  ]
+ },
+ "fake_404": {
+  "url": "http://127.0.0.1:18405",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "HTTP 404",
+  "s": 0.0,
+  "proxy": [],
+  "fake_hits": [
+   [
+    "404",
+    "/api/v1/auth/config",
+    false
+   ]
+  ]
+ },
+ "fake_redirect_other": {
+  "url": "http://127.0.0.1:18406",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "redirects to http://127.0.0.1:18414/api/v1/auth/config",
+  "s": 0.1,
+  "proxy": [],
+  "fake_hits": [
+   [
+    "redirect_other",
+    "/api/v1/auth/config",
+    false
+   ]
+  ]
+ },
+ "fake_redirect_probe_only": {
+  "url": "http://127.0.0.1:18415",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "redirects to http://127.0.0.1:18414/api/v1/auth/config",
+  "s": 0.1,
+  "proxy": [],
+  "fake_hits": [
+   [
+    "redirect_probe_only",
+    "/api/v1/auth/config",
+    false
+   ]
+  ]
+ },
+ "fake_slow_headers": {
+  "url": "http://127.0.0.1:18407",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "no answer within 5 s",
+  "s": 5.0,
+  "proxy": [],
+  "fake_hits": [
+   [
+    "slow_headers",
+    "/api/v1/auth/config",
+    false
+   ]
+  ]
+ },
+ "fake_huge": {
+  "url": "http://127.0.0.1:18409",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "answer too large",
+  "s": 0.1,
+  "proxy": [],
+  "fake_hits": [
+   [
+    "huge",
+    "/api/v1/auth/config",
+    false
+   ]
+  ]
+ },
+ "fake_extra_fields": {
+  "url": "http://127.0.0.1:18410",
+  "status": 422,
+  "code": "token_missing_scope",
+  "reason": null,
+  "s": 0.1,
+  "proxy": [],
+  "fake_hits": [
+   [
+    "extra_fields",
+    "/api/v1/auth/config",
+    false
+   ],
+   [
+    "extra_fields",
+    "/api/v1/auth/me",
+    true
+   ]
+  ]
+ },
+ "fake_extra_locale": {
+  "url": "http://127.0.0.1:18411",
+  "status": 422,
+  "code": "token_missing_scope",
+  "reason": null,
+  "s": 0.1,
+  "proxy": [],
+  "fake_hits": [
+   [
+    "extra_locale",
+    "/api/v1/auth/config",
+    false
+   ],
+   [
+    "extra_locale",
+    "/api/v1/auth/me",
+    true
+   ]
+  ]
+ },
+ "fake_problem_json": {
+  "url": "http://127.0.0.1:18416",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "answers application/problem+json, not JSON",
+  "s": 0.1,
+  "proxy": [],
+  "fake_hits": [
+   [
+    "problem_json",
+    "/api/v1/auth/config",
+    false
+   ]
+  ]
+ },
+ "fake_drip": {
+  "url": "http://127.0.0.1:18408",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "no answer within 5 s",
+  "s": 5.0,
+  "proxy": [],
+  "fake_hits": [
+   [
+    "drip",
+    "/api/v1/auth/config",
+    false
+   ]
+  ]
+ },
+ "fake_drip_valid": {
+  "url": "http://127.0.0.1:18418",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "no answer within 5 s",
+  "s": 5.0,
+  "proxy": [],
+  "fake_hits": [
+   [
+    "drip_valid",
+    "/api/v1/auth/config",
+    false
+   ]
+  ]
+ },
+ "fake_hdr_drip": {
+  "url": "http://127.0.0.1:18419",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "no answer within 5 s",
+  "s": 5.0,
+  "proxy": [],
+  "fake_hits": [
+   [
+    "hdr_drip",
+    "/api/v1/auth/config",
+    false
+   ]
+  ]
+ },
+ "fake_loc_ja": {
+  "url": "http://127.0.0.1:18420",
+  "status": 422,
+  "code": "token_missing_scope",
+  "reason": null,
+  "s": 0.1,
+  "proxy": [],
+  "fake_hits": [
+   [
+    "loc_ja",
+    "/api/v1/auth/config",
+    false
+   ],
+   [
+    "loc_ja",
+    "/api/v1/auth/me",
+    true
+   ]
+  ]
+ },
+ "fake_loc_en": {
+  "url": "http://127.0.0.1:18421",
+  "status": 422,
+  "code": "token_missing_scope",
+  "reason": null,
+  "s": 0.1,
+  "proxy": [],
+  "fake_hits": [
+   [
+    "loc_en",
+    "/api/v1/auth/config",
+    false
+   ],
+   [
+    "loc_en",
+    "/api/v1/auth/me",
+    true
+   ]
+  ]
+ },
+ "fake_extra_nested": {
+  "url": "http://127.0.0.1:18424",
+  "status": 422,
+  "code": "token_missing_scope",
+  "reason": null,
+  "s": 0.2,
+  "proxy": [],
+  "fake_hits": [
+   [
+    "extra_nested",
+    "/api/v1/auth/config",
+    false
+   ],
+   [
+    "extra_nested",
+    "/api/v1/auth/me",
+    true
+   ]
+  ]
+ },
+ "fake_slow_ok_3s": {
+  "url": "http://127.0.0.1:18425",
+  "status": 422,
+  "code": "token_missing_scope",
+  "reason": null,
+  "s": 6.1,
+  "proxy": [],
+  "fake_hits": [
+   [
+    "slow_ok_3s",
+    "/api/v1/auth/config",
+    false
+   ],
+   [
+    "slow_ok_3s",
+    "/api/v1/auth/me",
+    true
+   ]
+  ]
+ },
+ "fake_loc_fr": {
+  "url": "http://127.0.0.1:18422",
+  "status": 422,
+  "code": "server_not_hibiscus",
+  "reason": "not a Hibiscus identity",
+  "s": 0.1,
+  "proxy": [],
+  "fake_hits": [
+   [
+    "loc_fr",
+    "/api/v1/auth/config",
+    false
+   ]
+  ]
+ }
+}

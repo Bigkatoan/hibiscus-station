@@ -1,0 +1,38 @@
+{
+ "en-1280-light": {
+  "cards": [
+   {
+    "text": "Demo SO-101 (mock) | SO-101 | DEMO | connected |  | Follower: mock://f",
+    "delete_btns": 1,
+    "enabled": false,
+    "hint": true
+   }
+  ],
+  "empty_msg": false,
+  "shell": {
+   "nav": true,
+   "unexpected": false,
+   "blank": false
+  },
+  "errors": [],
+  "5xx": []
+ },
+ "vi-390-dark": {
+  "cards": [
+   {
+    "text": "Demo SO-101 (mock) | SO-101 | TAY GIẢ LẬP | đã kết nối |  | Tay follow",
+    "delete_btns": 1,
+    "enabled": false,
+    "hint": true
+   }
+  ],
+  "empty_msg": false,
+  "shell": {
+   "nav": true,
+   "unexpected": false,
+   "blank": false
+  },
+  "errors": [],
+  "5xx": []
+ }
+}

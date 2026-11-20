@@ -1,0 +1,30 @@
+[
+ {
+  "gap_s": 0.2,
+  "note_back_after_s": 1.2
+ },
+ {
+  "gap_s": 0.05,
+  "note_back_after_s": 1.43
+ },
+ {
+  "gap_s": 0.2,
+  "note_back_after_s": 1.22
+ },
+ {
+  "gap_s": 0.0,
+  "note_back_after_s": 1.43
+ },
+ {
+  "gap_s": 0.2,
+  "note_back_after_s": 1.22
+ },
+ {
+  "gap_s": 1,
+  "note_back_after_s": 0.21
+ },
+ {
+  "gap_s": 3,
+  "note_back_after_s": 0.42
+ }
+]

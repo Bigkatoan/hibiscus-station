@@ -1,0 +1,3725 @@
+{
+  "report": {
+    "five/ep0/front/source": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          438
+        ],
+        [
+          438
+        ]
+      ],
+      "last": [
+        [
+          529
+        ],
+        [
+          529
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.966666666666667,
+      "container_dur": 3.0,
+      "codec": "libdav1d",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 0.06,
+      "bytes": 3892641,
+      "ctype": "video/mp4"
+    },
+    "five/ep0/front/h264": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          438
+        ],
+        [
+          438
+        ]
+      ],
+      "last": [
+        [
+          529
+        ],
+        [
+          529
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.966666666666667,
+      "container_dur": 3.0,
+      "codec": "h264",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 1.03,
+      "bytes": 3302926,
+      "ctype": "video/mp4"
+    },
+    "five/ep0/front/vp9": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          438
+        ],
+        [
+          438
+        ]
+      ],
+      "last": [
+        [
+          529
+        ],
+        [
+          529
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.967,
+      "container_dur": 3.0,
+      "codec": "vp9",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 1.27,
+      "bytes": 4393718,
+      "ctype": "video/webm"
+    },
+    "five/ep0/wrist/source": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          438
+        ],
+        [
+          438
+        ]
+      ],
+      "last": [
+        [
+          529
+        ],
+        [
+          529
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.966666666666667,
+      "container_dur": 3.0,
+      "codec": "libdav1d",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 0.04,
+      "bytes": 1004690,
+      "ctype": "video/mp4"
+    },
+    "five/ep0/wrist/h264": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          438
+        ],
+        [
+          438
+        ]
+      ],
+      "last": [
+        [
+          529
+        ],
+        [
+          529
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.966666666666667,
+      "container_dur": 3.0,
+      "codec": "h264",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 0.31,
+      "bytes": 856007,
+      "ctype": "video/mp4"
+    },
+    "five/ep0/wrist/vp9": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          438
+        ],
+        [
+          438
+        ]
+      ],
+      "last": [
+        [
+          529
+        ],
+        [
+          529
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.967,
+      "container_dur": 3.0,
+      "codec": "vp9",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 0.51,
+      "bytes": 1125947,
+      "ctype": "video/webm"
+    },
+    "five/ep1/front/source": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          625
+        ],
+        [
+          625
+        ]
+      ],
+      "last": [
+        [
+          715
+        ],
+        [
+          715
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.966666666666667,
+      "container_dur": 3.0,
+      "codec": "libdav1d",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 0.05,
+      "bytes": 3891097,
+      "ctype": "video/mp4"
+    },
+    "five/ep1/front/h264": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          625
+        ],
+        [
+          625
+        ]
+      ],
+      "last": [
+        [
+          715
+        ],
+        [
+          715
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.966666666666667,
+      "container_dur": 3.0,
+      "codec": "h264",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 1.06,
+      "bytes": 3297243,
+      "ctype": "video/mp4"
+    },
+    "five/ep1/front/vp9": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          625
+        ],
+        [
+          625
+        ]
+      ],
+      "last": [
+        [
+          715
+        ],
+        [
+          715
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.967,
+      "container_dur": 3.0,
+      "codec": "vp9",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 1.5,
+      "bytes": 4392272,
+      "ctype": "video/webm"
+    },
+    "five/ep1/wrist/source": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          625
+        ],
+        [
+          625
+        ]
+      ],
+      "last": [
+        [
+          715
+        ],
+        [
+          715
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.966666666666667,
+      "container_dur": 3.0,
+      "codec": "libdav1d",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 0.03,
+      "bytes": 1007846,
+      "ctype": "video/mp4"
+    },
+    "five/ep1/wrist/h264": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          625
+        ],
+        [
+          625
+        ]
+      ],
+      "last": [
+        [
+          715
+        ],
+        [
+          715
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.966666666666667,
+      "container_dur": 3.0,
+      "codec": "h264",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 0.33,
+      "bytes": 849097,
+      "ctype": "video/mp4"
+    },
+    "five/ep1/wrist/vp9": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          625
+        ],
+        [
+          625
+        ]
+      ],
+      "last": [
+        [
+          715
+        ],
+        [
+          715
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.967,
+      "container_dur": 3.0,
+      "codec": "vp9",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 0.61,
+      "bytes": 1128772,
+      "ctype": "video/webm"
+    },
+    "five/ep2/front/source": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          835
+        ],
+        [
+          835
+        ]
+      ],
+      "last": [
+        [
+          926
+        ],
+        [
+          926
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.966666666666667,
+      "container_dur": 3.0,
+      "codec": "libdav1d",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 0.06,
+      "bytes": 3893880,
+      "ctype": "video/mp4"
+    },
+    "five/ep2/front/h264": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          835
+        ],
+        [
+          835
+        ]
+      ],
+      "last": [
+        [
+          926
+        ],
+        [
+          926
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.966666666666667,
+      "container_dur": 3.0,
+      "codec": "h264",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 0.86,
+      "bytes": 3303790,
+      "ctype": "video/mp4"
+    },
+    "five/ep2/front/vp9": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          835
+        ],
+        [
+          835
+        ]
+      ],
+      "last": [
+        [
+          926
+        ],
+        [
+          926
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.967,
+      "container_dur": 3.0,
+      "codec": "vp9",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 1.1,
+      "bytes": 4395777,
+      "ctype": "video/webm"
+    },
+    "five/ep2/wrist/source": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          835
+        ],
+        [
+          835
+        ]
+      ],
+      "last": [
+        [
+          926
+        ],
+        [
+          926
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.966666666666667,
+      "container_dur": 3.0,
+      "codec": "libdav1d",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 0.03,
+      "bytes": 1004120,
+      "ctype": "video/mp4"
+    },
+    "five/ep2/wrist/h264": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          835
+        ],
+        [
+          835
+        ]
+      ],
+      "last": [
+        [
+          926
+        ],
+        [
+          926
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.966666666666667,
+      "container_dur": 3.0,
+      "codec": "h264",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 0.34,
+      "bytes": 852872,
+      "ctype": "video/mp4"
+    },
+    "five/ep2/wrist/vp9": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          835
+        ],
+        [
+          835
+        ]
+      ],
+      "last": [
+        [
+          926
+        ],
+        [
+          926
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.967,
+      "container_dur": 3.0,
+      "codec": "vp9",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 0.46,
+      "bytes": 1129064,
+      "ctype": "video/webm"
+    },
+    "five/ep3/front/source": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          1054
+        ],
+        [
+          1054
+        ]
+      ],
+      "last": [
+        [
+          1145
+        ],
+        [
+          1145
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.966666666666667,
+      "container_dur": 3.0,
+      "codec": "libdav1d",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 0.05,
+      "bytes": 3889733,
+      "ctype": "video/mp4"
+    },
+    "five/ep3/front/h264": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          1054
+        ],
+        [
+          1054
+        ]
+      ],
+      "last": [
+        [
+          1145
+        ],
+        [
+          1145
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.966666666666667,
+      "container_dur": 3.0,
+      "codec": "h264",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 0.95,
+      "bytes": 3299913,
+      "ctype": "video/mp4"
+    },
+    "five/ep3/front/vp9": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          1054
+        ],
+        [
+          1054
+        ]
+      ],
+      "last": [
+        [
+          1145
+        ],
+        [
+          1145
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.967,
+      "container_dur": 3.0,
+      "codec": "vp9",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 1.31,
+      "bytes": 4393550,
+      "ctype": "video/webm"
+    },
+    "five/ep3/wrist/source": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          1054
+        ],
+        [
+          1054
+        ]
+      ],
+      "last": [
+        [
+          1145
+        ],
+        [
+          1145
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.966666666666667,
+      "container_dur": 3.0,
+      "codec": "libdav1d",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 0.02,
+      "bytes": 1005001,
+      "ctype": "video/mp4"
+    },
+    "five/ep3/wrist/h264": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          1054
+        ],
+        [
+          1054
+        ]
+      ],
+      "last": [
+        [
+          1145
+        ],
+        [
+          1145
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.966666666666667,
+      "container_dur": 3.0,
+      "codec": "h264",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 0.32,
+      "bytes": 855939,
+      "ctype": "video/mp4"
+    },
+    "five/ep3/wrist/vp9": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          1054
+        ],
+        [
+          1054
+        ]
+      ],
+      "last": [
+        [
+          1145
+        ],
+        [
+          1145
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.967,
+      "container_dur": 3.0,
+      "codec": "vp9",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 0.57,
+      "bytes": 1127379,
+      "ctype": "video/webm"
+    },
+    "five/ep4/front/source": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          1273
+        ],
+        [
+          1273
+        ]
+      ],
+      "last": [
+        [
+          1363
+        ],
+        [
+          1363
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.966666666666667,
+      "container_dur": 3.0,
+      "codec": "libdav1d",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 0.04,
+      "bytes": 3892528,
+      "ctype": "video/mp4"
+    },
+    "five/ep4/front/h264": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          1273
+        ],
+        [
+          1273
+        ]
+      ],
+      "last": [
+        [
+          1363
+        ],
+        [
+          1363
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.966666666666667,
+      "container_dur": 3.0,
+      "codec": "h264",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 0.92,
+      "bytes": 3296244,
+      "ctype": "video/mp4"
+    },
+    "five/ep4/front/vp9": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          1273
+        ],
+        [
+          1273
+        ]
+      ],
+      "last": [
+        [
+          1363
+        ],
+        [
+          1363
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.967,
+      "container_dur": 3.0,
+      "codec": "vp9",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 1.13,
+      "bytes": 4396170,
+      "ctype": "video/webm"
+    },
+    "five/ep4/wrist/source": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          1273
+        ],
+        [
+          1273
+        ]
+      ],
+      "last": [
+        [
+          1363
+        ],
+        [
+          1363
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.966666666666667,
+      "container_dur": 3.0,
+      "codec": "libdav1d",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 0.04,
+      "bytes": 1005951,
+      "ctype": "video/mp4"
+    },
+    "five/ep4/wrist/h264": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          1273
+        ],
+        [
+          1273
+        ]
+      ],
+      "last": [
+        [
+          1363
+        ],
+        [
+          1363
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.966666666666667,
+      "container_dur": 3.0,
+      "codec": "h264",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 0.25,
+      "bytes": 849950,
+      "ctype": "video/mp4"
+    },
+    "five/ep4/wrist/vp9": {
+      "ok": true,
+      "n_clip": 90,
+      "n_truth": 90,
+      "first": [
+        [
+          1273
+        ],
+        [
+          1273
+        ]
+      ],
+      "last": [
+        [
+          1363
+        ],
+        [
+          1363
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 2.967,
+      "container_dur": 3.0,
+      "codec": "vp9",
+      "api_duration_s": 3.0,
+      "api_length_s": 3.0,
+      "expect_s": 3.0,
+      "secs": 0.51,
+      "bytes": 1129856,
+      "ctype": "video/webm"
+    },
+    "five/ep5/front/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          3334
+        ],
+        [
+          3334
+        ]
+      ],
+      "last": [
+        [
+          3394
+        ],
+        [
+          3394
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.04,
+      "bytes": 2589421,
+      "ctype": "video/mp4"
+    },
+    "five/ep5/front/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          3334
+        ],
+        [
+          3334
+        ]
+      ],
+      "last": [
+        [
+          3394
+        ],
+        [
+          3394
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.68,
+      "bytes": 2222640,
+      "ctype": "video/mp4"
+    },
+    "five/ep5/front/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          3334
+        ],
+        [
+          3334
+        ]
+      ],
+      "last": [
+        [
+          3394
+        ],
+        [
+          3394
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.76,
+      "bytes": 2926204,
+      "ctype": "video/webm"
+    },
+    "five/ep5/wrist/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          3334
+        ],
+        [
+          3334
+        ]
+      ],
+      "last": [
+        [
+          3394
+        ],
+        [
+          3394
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.03,
+      "bytes": 670402,
+      "ctype": "video/mp4"
+    },
+    "five/ep5/wrist/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          3334
+        ],
+        [
+          3334
+        ]
+      ],
+      "last": [
+        [
+          3394
+        ],
+        [
+          3394
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.17,
+      "bytes": 578020,
+      "ctype": "video/mp4"
+    },
+    "five/ep5/wrist/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          3334
+        ],
+        [
+          3334
+        ]
+      ],
+      "last": [
+        [
+          3394
+        ],
+        [
+          3394
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.37,
+      "bytes": 752104,
+      "ctype": "video/webm"
+    },
+    "five/ep6/front/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          3536
+        ],
+        [
+          3536
+        ]
+      ],
+      "last": [
+        [
+          3596
+        ],
+        [
+          3596
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.05,
+      "bytes": 2596795,
+      "ctype": "video/mp4"
+    },
+    "five/ep6/front/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          3536
+        ],
+        [
+          3536
+        ]
+      ],
+      "last": [
+        [
+          3596
+        ],
+        [
+          3596
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.79,
+      "bytes": 2229235,
+      "ctype": "video/mp4"
+    },
+    "five/ep6/front/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          3536
+        ],
+        [
+          3536
+        ]
+      ],
+      "last": [
+        [
+          3596
+        ],
+        [
+          3596
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.98,
+      "bytes": 2932900,
+      "ctype": "video/webm"
+    },
+    "five/ep6/wrist/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          3536
+        ],
+        [
+          3536
+        ]
+      ],
+      "last": [
+        [
+          3596
+        ],
+        [
+          3596
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.03,
+      "bytes": 668804,
+      "ctype": "video/mp4"
+    },
+    "five/ep6/wrist/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          3536
+        ],
+        [
+          3536
+        ]
+      ],
+      "last": [
+        [
+          3596
+        ],
+        [
+          3596
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.24,
+      "bytes": 572533,
+      "ctype": "video/mp4"
+    },
+    "five/ep6/wrist/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          3536
+        ],
+        [
+          3536
+        ]
+      ],
+      "last": [
+        [
+          3596
+        ],
+        [
+          3596
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.41,
+      "bytes": 752129,
+      "ctype": "video/webm"
+    },
+    "five/ep7/front/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          3687
+        ],
+        [
+          3687
+        ]
+      ],
+      "last": [
+        [
+          3747
+        ],
+        [
+          3747
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.04,
+      "bytes": 2600484,
+      "ctype": "video/mp4"
+    },
+    "five/ep7/front/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          3687
+        ],
+        [
+          3687
+        ]
+      ],
+      "last": [
+        [
+          3747
+        ],
+        [
+          3747
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.66,
+      "bytes": 2225103,
+      "ctype": "video/mp4"
+    },
+    "five/ep7/front/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          3687
+        ],
+        [
+          3687
+        ]
+      ],
+      "last": [
+        [
+          3747
+        ],
+        [
+          3747
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.98,
+      "bytes": 2935668,
+      "ctype": "video/webm"
+    },
+    "five/ep7/wrist/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          3687
+        ],
+        [
+          3687
+        ]
+      ],
+      "last": [
+        [
+          3747
+        ],
+        [
+          3747
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.04,
+      "bytes": 670774,
+      "ctype": "video/mp4"
+    },
+    "five/ep7/wrist/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          3687
+        ],
+        [
+          3687
+        ]
+      ],
+      "last": [
+        [
+          3747
+        ],
+        [
+          3747
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.29,
+      "bytes": 573644,
+      "ctype": "video/mp4"
+    },
+    "five/ep7/wrist/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          3687
+        ],
+        [
+          3687
+        ]
+      ],
+      "last": [
+        [
+          3747
+        ],
+        [
+          3747
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.38,
+      "bytes": 752743,
+      "ctype": "video/webm"
+    },
+    "twelve/ep0/front/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          1492
+        ],
+        [
+          1492
+        ]
+      ],
+      "last": [
+        [
+          1553
+        ],
+        [
+          1553
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.04,
+      "bytes": 2593409,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep0/front/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          1492
+        ],
+        [
+          1492
+        ]
+      ],
+      "last": [
+        [
+          1553
+        ],
+        [
+          1553
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.52,
+      "bytes": 2231499,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep0/front/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          1492
+        ],
+        [
+          1492
+        ]
+      ],
+      "last": [
+        [
+          1553
+        ],
+        [
+          1553
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.87,
+      "bytes": 2929016,
+      "ctype": "video/webm"
+    },
+    "twelve/ep0/wrist/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          1492
+        ],
+        [
+          1492
+        ]
+      ],
+      "last": [
+        [
+          1553
+        ],
+        [
+          1553
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.04,
+      "bytes": 668496,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep0/wrist/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          1492
+        ],
+        [
+          1492
+        ]
+      ],
+      "last": [
+        [
+          1553
+        ],
+        [
+          1553
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.25,
+      "bytes": 572737,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep0/wrist/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          1492
+        ],
+        [
+          1492
+        ]
+      ],
+      "last": [
+        [
+          1553
+        ],
+        [
+          1553
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.4,
+      "bytes": 750724,
+      "ctype": "video/webm"
+    },
+    "twelve/ep1/front/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          1646
+        ],
+        [
+          1646
+        ]
+      ],
+      "last": [
+        [
+          1706
+        ],
+        [
+          1706
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.05,
+      "bytes": 2590071,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep1/front/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          1646
+        ],
+        [
+          1646
+        ]
+      ],
+      "last": [
+        [
+          1706
+        ],
+        [
+          1706
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.71,
+      "bytes": 2218925,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep1/front/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          1646
+        ],
+        [
+          1646
+        ]
+      ],
+      "last": [
+        [
+          1706
+        ],
+        [
+          1706
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.97,
+      "bytes": 2923813,
+      "ctype": "video/webm"
+    },
+    "twelve/ep1/wrist/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          1646
+        ],
+        [
+          1646
+        ]
+      ],
+      "last": [
+        [
+          1706
+        ],
+        [
+          1706
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.03,
+      "bytes": 675449,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep1/wrist/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          1646
+        ],
+        [
+          1646
+        ]
+      ],
+      "last": [
+        [
+          1706
+        ],
+        [
+          1706
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.27,
+      "bytes": 581508,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep1/wrist/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          1646
+        ],
+        [
+          1646
+        ]
+      ],
+      "last": [
+        [
+          1706
+        ],
+        [
+          1706
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.42,
+      "bytes": 752188,
+      "ctype": "video/webm"
+    },
+    "twelve/ep2/front/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          1778
+        ],
+        [
+          1778
+        ]
+      ],
+      "last": [
+        [
+          1839
+        ],
+        [
+          1839
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.04,
+      "bytes": 2592728,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep2/front/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          1778
+        ],
+        [
+          1778
+        ]
+      ],
+      "last": [
+        [
+          1839
+        ],
+        [
+          1839
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.68,
+      "bytes": 2221382,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep2/front/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          1778
+        ],
+        [
+          1778
+        ]
+      ],
+      "last": [
+        [
+          1839
+        ],
+        [
+          1839
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.97,
+      "bytes": 2927769,
+      "ctype": "video/webm"
+    },
+    "twelve/ep2/wrist/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          1778
+        ],
+        [
+          1778
+        ]
+      ],
+      "last": [
+        [
+          1839
+        ],
+        [
+          1839
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.02,
+      "bytes": 670698,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep2/wrist/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          1778
+        ],
+        [
+          1778
+        ]
+      ],
+      "last": [
+        [
+          1839
+        ],
+        [
+          1839
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.27,
+      "bytes": 574045,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep2/wrist/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          1778
+        ],
+        [
+          1778
+        ]
+      ],
+      "last": [
+        [
+          1839
+        ],
+        [
+          1839
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.41,
+      "bytes": 751893,
+      "ctype": "video/webm"
+    },
+    "twelve/ep3/front/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          1927
+        ],
+        [
+          1927
+        ]
+      ],
+      "last": [
+        [
+          1987
+        ],
+        [
+          1987
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.05,
+      "bytes": 2594561,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep3/front/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          1927
+        ],
+        [
+          1927
+        ]
+      ],
+      "last": [
+        [
+          1987
+        ],
+        [
+          1987
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.62,
+      "bytes": 2221973,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep3/front/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          1927
+        ],
+        [
+          1927
+        ]
+      ],
+      "last": [
+        [
+          1987
+        ],
+        [
+          1987
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 1.03,
+      "bytes": 2928794,
+      "ctype": "video/webm"
+    },
+    "twelve/ep3/wrist/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          1927
+        ],
+        [
+          1927
+        ]
+      ],
+      "last": [
+        [
+          1987
+        ],
+        [
+          1987
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.02,
+      "bytes": 669352,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep3/wrist/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          1927
+        ],
+        [
+          1927
+        ]
+      ],
+      "last": [
+        [
+          1987
+        ],
+        [
+          1987
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.27,
+      "bytes": 577067,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep3/wrist/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          1927
+        ],
+        [
+          1927
+        ]
+      ],
+      "last": [
+        [
+          1987
+        ],
+        [
+          1987
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.42,
+      "bytes": 750693,
+      "ctype": "video/webm"
+    },
+    "twelve/ep4/front/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2081
+        ],
+        [
+          2081
+        ]
+      ],
+      "last": [
+        [
+          2141
+        ],
+        [
+          2141
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.05,
+      "bytes": 2595373,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep4/front/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2081
+        ],
+        [
+          2081
+        ]
+      ],
+      "last": [
+        [
+          2141
+        ],
+        [
+          2141
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.67,
+      "bytes": 2223136,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep4/front/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2081
+        ],
+        [
+          2081
+        ]
+      ],
+      "last": [
+        [
+          2141
+        ],
+        [
+          2141
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 1.12,
+      "bytes": 2930870,
+      "ctype": "video/webm"
+    },
+    "twelve/ep4/wrist/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2081
+        ],
+        [
+          2081
+        ]
+      ],
+      "last": [
+        [
+          2141
+        ],
+        [
+          2141
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.03,
+      "bytes": 673857,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep4/wrist/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2081
+        ],
+        [
+          2081
+        ]
+      ],
+      "last": [
+        [
+          2141
+        ],
+        [
+          2141
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.25,
+      "bytes": 580622,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep4/wrist/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2081
+        ],
+        [
+          2081
+        ]
+      ],
+      "last": [
+        [
+          2141
+        ],
+        [
+          2141
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.39,
+      "bytes": 753076,
+      "ctype": "video/webm"
+    },
+    "twelve/ep5/front/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2226
+        ],
+        [
+          2226
+        ]
+      ],
+      "last": [
+        [
+          2286
+        ],
+        [
+          2286
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.04,
+      "bytes": 2596979,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep5/front/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2226
+        ],
+        [
+          2226
+        ]
+      ],
+      "last": [
+        [
+          2286
+        ],
+        [
+          2286
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.71,
+      "bytes": 2230365,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep5/front/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2226
+        ],
+        [
+          2226
+        ]
+      ],
+      "last": [
+        [
+          2286
+        ],
+        [
+          2286
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 1.06,
+      "bytes": 2930409,
+      "ctype": "video/webm"
+    },
+    "twelve/ep5/wrist/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2226
+        ],
+        [
+          2226
+        ]
+      ],
+      "last": [
+        [
+          2286
+        ],
+        [
+          2286
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.03,
+      "bytes": 670310,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep5/wrist/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2226
+        ],
+        [
+          2226
+        ]
+      ],
+      "last": [
+        [
+          2286
+        ],
+        [
+          2286
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.28,
+      "bytes": 579386,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep5/wrist/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2226
+        ],
+        [
+          2226
+        ]
+      ],
+      "last": [
+        [
+          2286
+        ],
+        [
+          2286
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.4,
+      "bytes": 753283,
+      "ctype": "video/webm"
+    },
+    "twelve/ep6/front/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2389
+        ],
+        [
+          2389
+        ]
+      ],
+      "last": [
+        [
+          2450
+        ],
+        [
+          2450
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.05,
+      "bytes": 2593152,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep6/front/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2389
+        ],
+        [
+          2389
+        ]
+      ],
+      "last": [
+        [
+          2450
+        ],
+        [
+          2450
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.68,
+      "bytes": 2222712,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep6/front/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2389
+        ],
+        [
+          2389
+        ]
+      ],
+      "last": [
+        [
+          2450
+        ],
+        [
+          2450
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 1.11,
+      "bytes": 2927928,
+      "ctype": "video/webm"
+    },
+    "twelve/ep6/wrist/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2389
+        ],
+        [
+          2389
+        ]
+      ],
+      "last": [
+        [
+          2450
+        ],
+        [
+          2450
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.03,
+      "bytes": 674918,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep6/wrist/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2389
+        ],
+        [
+          2389
+        ]
+      ],
+      "last": [
+        [
+          2450
+        ],
+        [
+          2450
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.29,
+      "bytes": 573010,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep6/wrist/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2389
+        ],
+        [
+          2389
+        ]
+      ],
+      "last": [
+        [
+          2450
+        ],
+        [
+          2450
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.49,
+      "bytes": 752689,
+      "ctype": "video/webm"
+    },
+    "twelve/ep7/front/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2549
+        ],
+        [
+          2549
+        ]
+      ],
+      "last": [
+        [
+          2608
+        ],
+        [
+          2608
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.04,
+      "bytes": 2601929,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep7/front/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2549
+        ],
+        [
+          2549
+        ]
+      ],
+      "last": [
+        [
+          2608
+        ],
+        [
+          2608
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.73,
+      "bytes": 2232289,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep7/front/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2549
+        ],
+        [
+          2549
+        ]
+      ],
+      "last": [
+        [
+          2608
+        ],
+        [
+          2608
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 1.08,
+      "bytes": 2937174,
+      "ctype": "video/webm"
+    },
+    "twelve/ep7/wrist/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2549
+        ],
+        [
+          2549
+        ]
+      ],
+      "last": [
+        [
+          2609
+        ],
+        [
+          2609
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.03,
+      "bytes": 670080,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep7/wrist/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2549
+        ],
+        [
+          2549
+        ]
+      ],
+      "last": [
+        [
+          2609
+        ],
+        [
+          2609
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.23,
+      "bytes": 574633,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep7/wrist/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2549
+        ],
+        [
+          2549
+        ]
+      ],
+      "last": [
+        [
+          2609
+        ],
+        [
+          2609
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.44,
+      "bytes": 752997,
+      "ctype": "video/webm"
+    },
+    "twelve/ep8/front/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2693
+        ],
+        [
+          2693
+        ]
+      ],
+      "last": [
+        [
+          2753
+        ],
+        [
+          2753
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.04,
+      "bytes": 2603823,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep8/front/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2693
+        ],
+        [
+          2693
+        ]
+      ],
+      "last": [
+        [
+          2753
+        ],
+        [
+          2753
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.71,
+      "bytes": 2231827,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep8/front/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2693
+        ],
+        [
+          2693
+        ]
+      ],
+      "last": [
+        [
+          2753
+        ],
+        [
+          2753
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.94,
+      "bytes": 2936278,
+      "ctype": "video/webm"
+    },
+    "twelve/ep8/wrist/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2693
+        ],
+        [
+          2693
+        ]
+      ],
+      "last": [
+        [
+          2753
+        ],
+        [
+          2753
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.03,
+      "bytes": 672568,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep8/wrist/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2693
+        ],
+        [
+          2693
+        ]
+      ],
+      "last": [
+        [
+          2753
+        ],
+        [
+          2753
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.25,
+      "bytes": 572019,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep8/wrist/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2693
+        ],
+        [
+          2693
+        ]
+      ],
+      "last": [
+        [
+          2753
+        ],
+        [
+          2753
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.44,
+      "bytes": 755010,
+      "ctype": "video/webm"
+    },
+    "twelve/ep9/front/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2830
+        ],
+        [
+          2830
+        ]
+      ],
+      "last": [
+        [
+          2890
+        ],
+        [
+          2890
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.05,
+      "bytes": 2591509,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep9/front/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2830
+        ],
+        [
+          2830
+        ]
+      ],
+      "last": [
+        [
+          2890
+        ],
+        [
+          2890
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.71,
+      "bytes": 2224506,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep9/front/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2830
+        ],
+        [
+          2830
+        ]
+      ],
+      "last": [
+        [
+          2890
+        ],
+        [
+          2890
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 1.03,
+      "bytes": 2928598,
+      "ctype": "video/webm"
+    },
+    "twelve/ep9/wrist/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2830
+        ],
+        [
+          2830
+        ]
+      ],
+      "last": [
+        [
+          2890
+        ],
+        [
+          2890
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.03,
+      "bytes": 673338,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep9/wrist/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2830
+        ],
+        [
+          2830
+        ]
+      ],
+      "last": [
+        [
+          2890
+        ],
+        [
+          2890
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.26,
+      "bytes": 576099,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep9/wrist/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2830
+        ],
+        [
+          2830
+        ]
+      ],
+      "last": [
+        [
+          2890
+        ],
+        [
+          2890
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.47,
+      "bytes": 754502,
+      "ctype": "video/webm"
+    },
+    "twelve/ep10/front/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2999
+        ],
+        [
+          2999
+        ]
+      ],
+      "last": [
+        [
+          3060
+        ],
+        [
+          3060
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.05,
+      "bytes": 2593546,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep10/front/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2999
+        ],
+        [
+          2999
+        ]
+      ],
+      "last": [
+        [
+          3060
+        ],
+        [
+          3060
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.71,
+      "bytes": 2215543,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep10/front/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2999
+        ],
+        [
+          2999
+        ]
+      ],
+      "last": [
+        [
+          3060
+        ],
+        [
+          3060
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 1.0,
+      "bytes": 2929517,
+      "ctype": "video/webm"
+    },
+    "twelve/ep10/wrist/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2999
+        ],
+        [
+          2999
+        ]
+      ],
+      "last": [
+        [
+          3060
+        ],
+        [
+          3060
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.03,
+      "bytes": 670328,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep10/wrist/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2999
+        ],
+        [
+          2999
+        ]
+      ],
+      "last": [
+        [
+          3060
+        ],
+        [
+          3060
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.32,
+      "bytes": 574657,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep10/wrist/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          2999
+        ],
+        [
+          2999
+        ]
+      ],
+      "last": [
+        [
+          3060
+        ],
+        [
+          3060
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.44,
+      "bytes": 752278,
+      "ctype": "video/webm"
+    },
+    "twelve/ep11/front/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          3155
+        ],
+        [
+          3155
+        ]
+      ],
+      "last": [
+        [
+          3215
+        ],
+        [
+          3215
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.05,
+      "bytes": 2592098,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep11/front/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          3155
+        ],
+        [
+          3155
+        ]
+      ],
+      "last": [
+        [
+          3215
+        ],
+        [
+          3215
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.67,
+      "bytes": 2221334,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep11/front/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          3155
+        ],
+        [
+          3155
+        ]
+      ],
+      "last": [
+        [
+          3215
+        ],
+        [
+          3215
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 1.05,
+      "bytes": 2927286,
+      "ctype": "video/webm"
+    },
+    "twelve/ep11/wrist/source": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          3155
+        ],
+        [
+          3155
+        ]
+      ],
+      "last": [
+        [
+          3215
+        ],
+        [
+          3215
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "libdav1d",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.03,
+      "bytes": 672183,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep11/wrist/h264": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          3155
+        ],
+        [
+          3155
+        ]
+      ],
+      "last": [
+        [
+          3215
+        ],
+        [
+          3215
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.9666666666666666,
+      "container_dur": 2.0,
+      "codec": "h264",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.28,
+      "bytes": 572015,
+      "ctype": "video/mp4"
+    },
+    "twelve/ep11/wrist/vp9": {
+      "ok": true,
+      "n_clip": 60,
+      "n_truth": 60,
+      "first": [
+        [
+          3155
+        ],
+        [
+          3155
+        ]
+      ],
+      "last": [
+        [
+          3215
+        ],
+        [
+          3215
+        ]
+      ],
+      "pts0": 0.0,
+      "pts_last": 1.967,
+      "container_dur": 2.0,
+      "codec": "vp9",
+      "api_duration_s": 2.0,
+      "api_length_s": 2.0,
+      "expect_s": 2.0,
+      "secs": 0.38,
+      "bytes": 753015,
+      "ctype": "video/webm"
+    }
+  },
+  "fails": []
+}

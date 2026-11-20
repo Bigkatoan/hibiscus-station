@@ -1,0 +1,25 @@
+0 ('replay', 'completed') ('rest', 'completed')
+1 ('replay', 'completed') ('rest', 'completed')
+2 ('replay', 'completed') ('rest', 'ui_lost')
+3 ('replay', 'completed') ('rest', 'completed')
+4 ('replay', 'completed') ('rest', 'ui_lost')
+{"port": 18651, "version": "0.2.10", "replay": [["replay", "completed"], ["replay", "completed"], ["replay", "completed"], ["replay", "completed"], ["replay", "completed"]], "home": [["rest", "completed"], ["rest", "completed"], ["rest", "ui_lost"], ["rest", "completed"], ["rest", "ui_lost"]], "replay_trips": 0, "home_trips": 2}
+0 ('replay', 'completed') ('rest', 'completed')
+1 ('replay', 'completed') ('rest', 'completed')
+2 ('replay', 'completed') ('rest', 'completed')
+3 ('replay', 'completed') ('rest', 'completed')
+4 ('replay', 'ui_lost') ('rest', 'completed')
+{"port": 18652, "version": "1.0.0a1", "replay": [["replay", "completed"], ["replay", "completed"], ["replay", "completed"], ["replay", "completed"], ["replay", "ui_lost"]], "home": [["rest", "completed"], ["rest", "completed"], ["rest", "completed"], ["rest", "completed"], ["rest", "completed"]], "replay_trips": 1, "home_trips": 0}
+0 ('replay', 'ui_lost') ('rest', 'completed')
+1 ('replay', 'ui_lost') ('rest', 'completed')
+2 ('replay', 'ui_lost') ('rest', 'completed')
+3 ('replay', 'completed') ('rest', 'completed')
+4 ('replay', 'completed') ('rest', 'completed')
+{"port": 18651, "version": "0.2.10", "replay": [["replay", "ui_lost"], ["replay", "ui_lost"], ["replay", "ui_lost"], ["replay", "completed"], ["replay", "completed"]], "home": [["rest", "completed"], ["rest", "completed"], ["rest", "completed"], ["rest", "completed"], ["rest", "completed"]], "replay_trips": 3, "home_trips": 0}
+0 ('replay', 'completed') ('rest', 'completed')
+1 ('replay', 'completed') ('rest', 'ui_lost')
+2 ('replay', 'ui_lost') ('rest', 'completed')
+3 ('replay', 'completed') ('rest', 'completed')
+4 ('replay', 'completed') ('rest', 'completed')
+{"port": 18652, "version": "1.0.0a1", "replay": [["replay", "completed"], ["replay", "completed"], ["replay", "ui_lost"], ["replay", "completed"], ["replay", "completed"]], "home": [["rest", "completed"], ["rest", "ui_lost"], ["rest", "completed"], ["rest", "completed"], ["rest", "completed"]], "replay_trips": 1, "home_trips": 1}
+CMP-DONE

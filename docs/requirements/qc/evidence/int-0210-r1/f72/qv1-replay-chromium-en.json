@@ -1,0 +1,125 @@
+{
+  "browser": "chromium",
+  "lang": "en",
+  "checks": [
+    {
+      "name": "long30 #1: tiles ready while replaying (state=replaying)",
+      "ok": true,
+      "detail": "Episode 1: cameras\n\nEvery camera of the episode, in step with the temperature chart. Click the chart to jump there.\n\nfront\nAV1, as recorded\nwrist\nAV1, as recorded\n0.0 / 30.0 s"
+    },
+    {
+      "name": "long30 #1: no 'being recorded' sentence",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "long30 #1: plays (time advances)",
+      "ok": true,
+      "detail": [
+        1.374398,
+        1.379455
+      ]
+    },
+    {
+      "name": "five #3: tiles ready while replaying (state=estopped)",
+      "ok": false,
+      "detail": "Episode 3: cameras\n\nEvery camera of the episode, in step with the temperature chart. Click the chart to jump there.\n\nfront\nAV1, as recorded\nwrist\nAV1, as recorded\n0.0 / 3.0 s"
+    },
+    {
+      "name": "five #3 front: frame 0 of the episode",
+      "ok": true,
+      "detail": {
+        "cam": "front",
+        "counter": 835,
+        "t": 0,
+        "paused": true,
+        "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/2/videos/front?format=source",
+        "w": 640,
+        "h": 480,
+        "dur": 3
+      }
+    },
+    {
+      "name": "five #3 wrist: frame 0 of the episode",
+      "ok": true,
+      "detail": {
+        "cam": "wrist",
+        "counter": 835,
+        "t": 0,
+        "paused": true,
+        "src": "http://127.0.0.1:18621/api/v1/datasets/five/episodes/2/videos/wrist?format=source",
+        "w": 320,
+        "h": 240,
+        "dur": 3
+      }
+    },
+    {
+      "name": "five #3: no 'being recorded' sentence",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "five #3: plays (time advances)",
+      "ok": true,
+      "detail": [
+        1.273412,
+        1.276727
+      ]
+    },
+    {
+      "name": "API long30 ep0 front source during replay -> 200 (state=estopped)",
+      "ok": true,
+      "detail": [
+        200,
+        "\u0000\u0000\u0000 ftypisom\u0000\u0000\u0002\u0000isomav01iso2mp41\u0000\u0000\u0018\ufffdmoov\u0000\u0000\u0000lmvhd\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0003\ufffd\u0000\u0000u0\u0000\u0001\u0000\u0000\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000@\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0002\u0000\u0000\u0017\ufffdtrak\u0000\u0000\u0000\\tkhd\u0000\u0000\u0000\u0003\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0001\u0000\u0000\u0000\u0000\u0000\u0000u0\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000"
+      ]
+    },
+    {
+      "name": "API long30 ep0 front h264 during replay -> 200 (state=estopped)",
+      "ok": true,
+      "detail": [
+        200,
+        "\u0000\u0000\u0000 ftypisom\u0000\u0000\u0002\u0000isomiso2avc1mp41\u0000\u0000\u0018\ufffdmoov\u0000\u0000\u0000lmvhd\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0003\ufffd\u0000\u0000u0\u0000\u0001\u0000\u0000\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000@\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0002\u0000\u0000\u0017\ufffdtrak\u0000\u0000\u0000\\tkhd\u0000\u0000\u0000\u0003\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0001\u0000\u0000\u0000\u0000\u0000\u0000u0\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000"
+      ]
+    },
+    {
+      "name": "API long30 ep0 front vp9 during replay -> 200 (state=estopped)",
+      "ok": true,
+      "detail": [
+        200,
+        "\u001aE\u07e3\ufffdB\ufffd\ufffd\u0001B\ufffd\ufffd\u0001B\ufffd\u0004B\ufffd\bB\ufffd\ufffdwebmB\ufffd\ufffd\u0002B\ufffd\ufffd\u0002\u0018S\ufffdg\u0001\u0000\u0000\u0000\u0002\ufffd\ufffd\u0011M\ufffdt\ufffdM\ufffd\ufffdS\ufffd\ufffd\u0015I\ufffdfS\ufffd\ufffd\ufffdM\ufffd\ufffdS\ufffd\ufffd\u0016T\ufffdkS\ufffd\ufffd\ufffdM\ufffd\ufffdS\ufffd\ufffd\u0012T\ufffdgS\ufffd\ufffd\u0001\u001bM\ufffd\ufffdS\ufffd\ufffd\u001cS\ufffdkS\ufffd\ufffd\u0002\ufffd\ufffd\u0014\ufffd\u0001\u0000\u0000\u0000\u0000\u0000\u0000W\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000"
+      ]
+    },
+    {
+      "name": "API long30 ep0 /videos during replay -> 200",
+      "ok": true,
+      "detail": "{\"dataset\":\"long30\",\"episode\":0,\"fps\":30,\"length_s\":30.0,\"cameras\":[{\"camera\":\"front\",\"codec\":\"av1\",\"mime\":\"video/mp4; codecs=\\\"av01.0.05M.08\\\"\",\"duration_s\":30.0,\"error\":null,\"formats\":[\"source\",\"vp9"
+    },
+    {
+      "name": "replay session completed",
+      "ok": false,
+      "detail": {
+        "kind": "replay",
+        "outcome": "ui_lost",
+        "reason": "ui_lost",
+        "dataset": "long30"
+      }
+    },
+    {
+      "name": "no 5xx",
+      "ok": true,
+      "detail": []
+    }
+  ],
+  "replay_start": 200,
+  "status_during": {
+    "state": "replaying"
+  },
+  "replay_session": {
+    "kind": "replay",
+    "outcome": "ui_lost",
+    "reason": "ui_lost",
+    "dataset": "long30"
+  },
+  "5xx": []
+}

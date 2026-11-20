@@ -1,0 +1,119 @@
+{
+  "fresh-recording-ep0 /datasets/fresh/episodes/0/videos": [
+    409,
+    "application/problem+json",
+    "{\"type\":\"https://hibiscus.dev/problems/station/episode_saving\",\"title\":\"This dataset is still being recorded and saved\",\"status\":409,\"code\":\"episode_saving\",\"detail\":\"this dataset is being recorded: its videos open when the session ends\",\"request_id\""
+  ],
+  "fresh-recording-ep0 /datasets/fresh/episodes/0/videos/front?format=source": [
+    409,
+    "application/problem+json",
+    "{\"type\":\"https://hibiscus.dev/problems/station/episode_saving\",\"title\":\"This dataset is still being recorded and saved\",\"status\":409,\"code\":\"episode_saving\",\"detail\":\"this dataset is being recorded: its videos open when the session ends\",\"request_id\""
+  ],
+  "fresh-recording-ep0 /datasets/fresh/episodes/0/videos/front?format=h264": [
+    409,
+    "application/problem+json",
+    "{\"type\":\"https://hibiscus.dev/problems/station/episode_saving\",\"title\":\"This dataset is still being recorded and saved\",\"status\":409,\"code\":\"episode_saving\",\"detail\":\"this dataset is being recorded: its videos open when the session ends\",\"request_id\""
+  ],
+  "fresh-recording-ep0 /datasets/twelve/episodes/0/videos/front?format=source": [
+    200,
+    "video/mp4",
+    2593409
+  ],
+  "fresh-recording-ep1 /datasets/fresh/episodes/0/videos": [
+    409,
+    "application/problem+json",
+    "{\"type\":\"https://hibiscus.dev/problems/station/episode_saving\",\"title\":\"This dataset is still being recorded and saved\",\"status\":409,\"code\":\"episode_saving\",\"detail\":\"this dataset is being recorded: its videos open when the session ends\",\"request_id\""
+  ],
+  "fresh-recording-ep1 /datasets/fresh/episodes/0/videos/front?format=source": [
+    409,
+    "application/problem+json",
+    "{\"type\":\"https://hibiscus.dev/problems/station/episode_saving\",\"title\":\"This dataset is still being recorded and saved\",\"status\":409,\"code\":\"episode_saving\",\"detail\":\"this dataset is being recorded: its videos open when the session ends\",\"request_id\""
+  ],
+  "fresh-recording-ep1 /datasets/fresh/episodes/0/videos/front?format=h264": [
+    409,
+    "application/problem+json",
+    "{\"type\":\"https://hibiscus.dev/problems/station/episode_saving\",\"title\":\"This dataset is still being recorded and saved\",\"status\":409,\"code\":\"episode_saving\",\"detail\":\"this dataset is being recorded: its videos open when the session ends\",\"request_id\""
+  ],
+  "fresh-recording-ep1 /datasets/twelve/episodes/0/videos/front?format=source": [
+    200,
+    "video/mp4",
+    2593409
+  ],
+  "fresh stop->idle s": 4.65,
+  "fresh-after /datasets/fresh/episodes/0/videos": [
+    200,
+    "application/json",
+    351
+  ],
+  "fresh-after /datasets/fresh/episodes/0/videos/front?format=source": [
+    200,
+    "video/mp4",
+    5190691
+  ],
+  "fresh-after /datasets/fresh/episodes/0/videos/front?format=h264": [
+    200,
+    "video/mp4",
+    4378635
+  ],
+  "fresh-after /datasets/twelve/episodes/0/videos/front?format=source": [
+    200,
+    "video/mp4",
+    2593409
+  ],
+  "fresh detail": {
+    "episodes": 1,
+    "frames": 120,
+    "finalized": true
+  },
+  "twelve-recording-ep0 /datasets/twelve/episodes/0/videos": [
+    409,
+    "application/problem+json",
+    "{\"type\":\"https://hibiscus.dev/problems/station/episode_saving\",\"title\":\"This dataset is still being recorded and saved\",\"status\":409,\"code\":\"episode_saving\",\"detail\":\"this dataset is being recorded: its videos open when the session ends\",\"request_id\""
+  ],
+  "twelve-recording-ep0 /datasets/twelve/episodes/0/videos/front?format=source": [
+    409,
+    "application/problem+json",
+    "{\"type\":\"https://hibiscus.dev/problems/station/episode_saving\",\"title\":\"This dataset is still being recorded and saved\",\"status\":409,\"code\":\"episode_saving\",\"detail\":\"this dataset is being recorded: its videos open when the session ends\",\"request_id\""
+  ],
+  "twelve-recording-ep0 /datasets/twelve/episodes/0/videos/front?format=h264": [
+    409,
+    "application/problem+json",
+    "{\"type\":\"https://hibiscus.dev/problems/station/episode_saving\",\"title\":\"This dataset is still being recorded and saved\",\"status\":409,\"code\":\"episode_saving\",\"detail\":\"this dataset is being recorded: its videos open when the session ends\",\"request_id\""
+  ],
+  "twelve-recording-ep1 /datasets/twelve/episodes/0/videos": [
+    409,
+    "application/problem+json",
+    "{\"type\":\"https://hibiscus.dev/problems/station/episode_saving\",\"title\":\"This dataset is still being recorded and saved\",\"status\":409,\"code\":\"episode_saving\",\"detail\":\"this dataset is being recorded: its videos open when the session ends\",\"request_id\""
+  ],
+  "twelve-recording-ep1 /datasets/twelve/episodes/0/videos/front?format=source": [
+    409,
+    "application/problem+json",
+    "{\"type\":\"https://hibiscus.dev/problems/station/episode_saving\",\"title\":\"This dataset is still being recorded and saved\",\"status\":409,\"code\":\"episode_saving\",\"detail\":\"this dataset is being recorded: its videos open when the session ends\",\"request_id\""
+  ],
+  "twelve-recording-ep1 /datasets/twelve/episodes/0/videos/front?format=h264": [
+    409,
+    "application/problem+json",
+    "{\"type\":\"https://hibiscus.dev/problems/station/episode_saving\",\"title\":\"This dataset is still being recorded and saved\",\"status\":409,\"code\":\"episode_saving\",\"detail\":\"this dataset is being recorded: its videos open when the session ends\",\"request_id\""
+  ],
+  "twelve stop->idle s": 4.04,
+  "twelve-after /datasets/twelve/episodes/0/videos": [
+    200,
+    "application/json",
+    352
+  ],
+  "twelve-after /datasets/twelve/episodes/0/videos/front?format=source": [
+    200,
+    "video/mp4",
+    2593409
+  ],
+  "twelve-after /datasets/twelve/episodes/0/videos/front?format=h264": [
+    200,
+    "video/mp4",
+    2231499
+  ],
+  "twelve detail": {
+    "episodes": 13,
+    "frames": 840,
+    "finalized": true
+  }
+}

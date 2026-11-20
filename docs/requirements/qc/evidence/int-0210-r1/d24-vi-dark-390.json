@@ -1,0 +1,115 @@
+{
+ "far: notes": "GHI CHÚ\nTay sẽ đi chậm về điểm bắt đầu của chuyển động này (cách 52.7°). · đi tới tư thế start_p",
+ "far: notes box": {
+  "heading": null,
+  "tag": "SECTION",
+  "labelledby_text": " Ghi chú",
+  "border_left": "rgb(111, 183, 232) 8px",
+  "heading_color": null,
+  "icon_glyph": "M3 0h2v1h-2zM3 1h2v1h-2z"
+ },
+ "far: problems": [],
+ "far: warn icons on blocks": 0,
+ "disconnect: api call s": 0.04,
+ "disconnect: note gone at s": 0.3,
+ "disconnect +4s: notes": null,
+ "reconnect far: note back after s": 0.62,
+ "reconnect: notes": "GHI CHÚ\nTay sẽ đi chậm về điểm bắt đầu của chuyển động này (cách 52.7°). · đi tới tư thế start_p",
+ "near after reconnect: gone": true,
+ "stale joints: note gone after s": 2.74,
+ "dropped joint msgs": 14,
+ "stale + Check pressed: notes": "GHI CHÚ\nTay sẽ đi chậm về điểm bắt đầu của chuyển động này (cách 52.7°). · đi tới tư thế start_p",
+ "stale + arm moved: notes": "GHI CHÚ\nTay sẽ đi chậm về điểm bắt đầu của chuyển động này (cách 52.7°). · đi tới tư thế start_p",
+ "stream back: note back after s": 0.0,
+ "stream back: notes": "GHI CHÚ\nTay sẽ đi chậm về điểm bắt đầu của chuyển động này (cách 52.7°). · đi tới tư thế start_p",
+ "dry: dialogs": 0,
+ "after dry: notes": "GHI CHÚ\nTay sẽ đi chậm về điểm bắt đầu của chuyển động này (cách 52.7°). · đi tới tư thế start_p",
+ "robot: dialogs": 0,
+ "after robot run (arm at start): note gone": true,
+ "post-run far: notes": "GHI CHÚ\nTay sẽ đi chậm về điểm bắt đầu của chuyển động này (cách 61.5°). · đi tới tư thế start_p",
+ "warn_confirm: problems": [
+  {
+   "sev": "warning",
+   "badge": "warning",
+   "aria": "Cảnh báo",
+   "role": "img",
+   "glyph": "M3 0h2v1h-2zM2 1h1v1h-1z",
+   "fill": "rgb(255, 197, 49)",
+   "fg": "rgb(22, 26, 46)",
+   "border": "rgb(12, 14, 31)",
+   "surface": "rgb(34, 40, 66)",
+   "w": 22
+  },
+  {
+   "sev": "confirm",
+   "badge": "confirm",
+   "aria": "Cần bạn xác nhận",
+   "role": "img",
+   "glyph": "M2 0h4v1h-4zM1 1h2v1h-2z",
+   "fill": "rgb(201, 167, 255)",
+   "fg": "rgb(22, 26, 46)",
+   "border": "rgb(12, 14, 31)",
+   "surface": "rgb(34, 40, 66)",
+   "w": 22
+  }
+ ],
+ "warn_confirm: notes box": {
+  "heading": null,
+  "tag": "SECTION",
+  "labelledby_text": " Ghi chú",
+  "border_left": "rgb(111, 183, 232) 8px",
+  "heading_color": null,
+  "icon_glyph": "M3 0h2v1h-2zM3 1h2v1h-2z"
+ },
+ "warn_confirm: block icons": 2,
+ "mixed: problems": [
+  {
+   "sev": "warning",
+   "badge": "warning",
+   "aria": "Cảnh báo",
+   "role": "img",
+   "glyph": "M3 0h2v1h-2zM2 1h1v1h-1z",
+   "fill": "rgb(255, 197, 49)",
+   "fg": "rgb(22, 26, 46)",
+   "border": "rgb(12, 14, 31)",
+   "surface": "rgb(34, 40, 66)",
+   "w": 22
+  },
+  {
+   "sev": "confirm",
+   "badge": "confirm",
+   "aria": "Cần bạn xác nhận",
+   "role": "img",
+   "glyph": "M2 0h4v1h-4zM1 1h2v1h-2z",
+   "fill": "rgb(201, 167, 255)",
+   "fg": "rgb(22, 26, 46)",
+   "border": "rgb(12, 14, 31)",
+   "surface": "rgb(34, 40, 66)",
+   "w": 22
+  },
+  {
+   "sev": "error",
+   "badge": "error",
+   "aria": "Lỗi",
+   "role": "img",
+   "glyph": "M0 0h2v1h-2zM6 0h2v1h-2z",
+   "fill": "rgb(255, 158, 181)",
+   "fg": "rgb(22, 26, 46)",
+   "border": "rgb(12, 14, 31)",
+   "surface": "rgb(34, 40, 66)",
+   "w": 22
+  }
+ ],
+ "mixed: notes box": {
+  "heading": null,
+  "tag": "SECTION",
+  "labelledby_text": " Ghi chú",
+  "border_left": "rgb(111, 183, 232) 8px",
+  "heading_color": null,
+  "icon_glyph": "M3 0h2v1h-2zM3 1h2v1h-2z"
+ },
+ "mixed: block icons": 3,
+ "mixed dry run: dialog": null,
+ "mixed dry run: invalid msg": "Chạy\nChạy thử\nChạy trên robot\n\nChạy trên robot cần phiên bản này đã chạy thử thành công.\n\nChương trình có lỗi. Hãy sửa các khối được đánh dấu trước.\n\nBiến\n\nKhông có biến.\n\nGiá trị điều kiện gần nhất\n\nChưa đánh giá điều kiện nào.\n\nfront\n640×480 → 320×240\nwrist\n320×240 → 320×240\n\ntick trạng thái 194\n\n",
+ "page errors": []
+}

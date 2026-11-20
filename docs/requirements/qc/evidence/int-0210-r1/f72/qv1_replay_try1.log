@@ -1,0 +1,31 @@
+FAIL long30 #1: tiles ready while replaying (state=estopped) Episode 1: cameras
+
+Every camera of the episode, in step with the temperature chart. Click the chart to jump there.
+
+front
+AV1, as recorded
+wrist
+AV1, as recorded
+0.0 / 30.0 s
+PASS long30 #1: no 'being recorded' sentence 
+PASS long30 #1: plays (time advances) 
+FAIL five #3: tiles ready while replaying (state=estopped) Episode 3: cameras
+
+Every camera of the episode, in step with the temperature chart. Click the chart to jump there.
+
+front
+AV1, as recorded
+wrist
+AV1, as recorded
+0.0 / 3.0 s
+PASS five #3 front: frame 0 of the episode 
+PASS five #3 wrist: frame 0 of the episode 
+PASS five #3: no 'being recorded' sentence 
+PASS five #3: plays (time advances) 
+PASS API long30 ep0 front source during replay -> 200 (state=estopped) 
+PASS API long30 ep0 front h264 during replay -> 200 (state=estopped) 
+PASS API long30 ep0 front vp9 during replay -> 200 (state=estopped) 
+PASS API long30 ep0 /videos during replay -> 200 
+FAIL replay session completed {'kind': 'replay', 'outcome': 'ui_lost', 'reason': 'ui_lost', 'dataset': 'long30'}
+PASS no 5xx 
+FAILS 3

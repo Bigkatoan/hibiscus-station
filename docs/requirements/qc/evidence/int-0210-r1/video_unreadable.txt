@@ -1,0 +1,24 @@
+dmgi1 | 409 ('dataset_unreadable', ['meta/info.json is empty or not valid JSON']) | 409 ('dataset_unreadable', ['meta/info.json is empty or not valid JSON']) | 409 ('dataset_unreadable', ['meta/info.json is empty or not valid JSON']) | 409 ('dataset_unreadable', ['meta/info.json is empty or not valid JSON'])
+dmgi2 | 409 ('dataset_unreadable', ['meta/info.json is empty or not valid JSON']) | 409 ('dataset_unreadable', ['meta/info.json is empty or not valid JSON']) | 409 ('dataset_unreadable', ['meta/info.json is empty or not valid JSON']) | 409 ('dataset_unreadable', ['meta/info.json is empty or not valid JSON'])
+dmgi3 | 409 ('dataset_unreadable', ['meta/info.json is not a JSON object']) | 409 ('dataset_unreadable', ['meta/info.json is not a JSON object']) | 409 ('dataset_unreadable', ['meta/info.json is not a JSON object']) | 409 ('dataset_unreadable', ['meta/info.json is not a JSON object'])
+dmgi4 | 409 ('dataset_unreadable', ['meta/info.json: total_episodes is not a plausible count; meta/info.json: total_frames is not a plausible count; meta/info | 409 ('dataset_unreadable', ['meta/info.json: total_episodes is not a plausible count; meta/info.json: total_frames is not a plausible count; meta/info | 409 ('dataset_unreadable', ['meta/info.json: total_episodes is not a plausible count; meta/info.json: total_frames is not a plausible count; meta/info | 409 ('dataset_unreadable', ['meta/info.json: total_episodes is not a plausible count; meta/info.json: total_frames is not a plausible count; meta/info
+dmgx | 409 ('dataset_unreadable', ['meta/info.json is empty or not valid JSON']) | 409 ('dataset_unreadable', ['meta/info.json is empty or not valid JSON']) | 409 ('dataset_unreadable', ['meta/info.json is empty or not valid JSON']) | 409 ('dataset_unreadable', ['meta/info.json is empty or not valid JSON'])
+dmgv | 200 <application/json 330 B> | 404 ('video_missing', {'camera': 'front', 'episode': 0}) | 404 ('video_missing', {'camera': 'wrist', 'episode': 0}) | 404 ('video_missing', {'camera': 'front', 'episode': 0})
+dmgm | 404 ('not_found', {'episode': 0}) | 404 ('not_found', {'episode': 0}) | 404 ('not_found', {'episode': 0}) | 404 ('not_found', {'episode': 0})
+dmgp | 404 ('not_found', {'episode': 0}) | 404 ('not_found', {'episode': 0}) | 404 ('not_found', {'episode': 0}) | 404 ('not_found', {'episode': 0})
+dmgd | 200 <application/json 350 B> | 200 <video/mp4 56728 B> | 200 <video/mp4 52706 B> | 200 <video/webm 65571 B>
+dmgsj | 200 <application/json 351 B> | 200 <video/mp4 56728 B> | 200 <video/mp4 52706 B> | 200 <video/webm 65571 B>
+dmgt | 200 <application/json 350 B> | 200 <video/mp4 56728 B> | 200 <video/mp4 52706 B> | 200 <video/webm 65571 B>
+dmgsc | 200 <application/json 351 B> | 200 <video/mp4 56728 B> | 200 <video/mp4 52706 B> | 200 <video/webm 65571 B>
+crasha | 404 ('not_found', {'episode': 0}) | 404 ('not_found', {'episode': 0}) | 404 ('not_found', {'episode': 0}) | 404 ('not_found', {'episode': 0})
+crashb | 404 ('not_found', {'episode': 0}) | 404 ('not_found', {'episode': 0}) | 404 ('not_found', {'episode': 0}) | 404 ('not_found', {'episode': 0})
+te0 | 200 <application/json 349 B> | 200 <video/mp4 56724 B> | 200 <video/mp4 54257 B> | 200 <video/webm 66429 B>
+te1 | 200 <application/json 349 B> | 200 <video/mp4 56724 B> | 200 <video/mp4 54257 B> | 200 <video/webm 66429 B>
+te8 | 200 <application/json 349 B> | 200 <video/mp4 56724 B> | 200 <video/mp4 54257 B> | 200 <video/webm 66429 B>
+tfm1 | 200 <application/json 350 B> | 200 <video/mp4 56724 B> | 200 <video/mp4 54257 B> | 200 <video/webm 66429 B>
+gap | 200 <application/json 349 B> | 200 <video/mp4 56724 B> | 200 <video/mp4 54257 B> | 200 <video/webm 66429 B>
+nodata | 200 <application/json 352 B> | 200 <video/mp4 56724 B> | 200 <video/mp4 54257 B> | 200 <video/webm 66429 B>
+novideo | 200 <application/json 343 B> | 404 ('video_missing', {'camera': 'front', 'episode': 0}) | 200 <video/mp4 54257 B> | 404 ('video_missing', {'camera': 'front', 'episode': 0})
+ok | 200 <application/json 348 B> | 200 <video/mp4 56724 B> | 200 <video/mp4 54257 B> | 200 <video/webm 66429 B>
+cnt3 | 200 <application/json 350 B> | 200 <video/mp4 56728 B> | 200 <video/mp4 52706 B> | 200 <video/webm 65571 B>
+5xx: 0

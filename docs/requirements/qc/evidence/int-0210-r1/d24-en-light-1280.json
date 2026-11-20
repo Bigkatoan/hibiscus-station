@@ -1,0 +1,115 @@
+{
+ "far: notes": "NOTES\nThe arm will first move slowly to the start of this motion (52.7° away). · move to pose start_p",
+ "far: notes box": {
+  "heading": null,
+  "tag": "SECTION",
+  "labelledby_text": " Notes",
+  "border_left": "rgb(47, 111, 159) 8px",
+  "heading_color": null,
+  "icon_glyph": "M3 0h2v1h-2zM3 1h2v1h-2z"
+ },
+ "far: problems": [],
+ "far: warn icons on blocks": 0,
+ "disconnect: api call s": 0.03,
+ "disconnect: note gone at s": 0.3,
+ "disconnect +4s: notes": null,
+ "reconnect far: note back after s": 0.64,
+ "reconnect: notes": "NOTES\nThe arm will first move slowly to the start of this motion (52.7° away). · move to pose start_p",
+ "near after reconnect: gone": true,
+ "stale joints: note gone after s": 2.76,
+ "dropped joint msgs": 14,
+ "stale + Check pressed: notes": "NOTES\nThe arm will first move slowly to the start of this motion (52.7° away). · move to pose start_p",
+ "stale + arm moved: notes": "NOTES\nThe arm will first move slowly to the start of this motion (52.7° away). · move to pose start_p",
+ "stream back: note back after s": 0.0,
+ "stream back: notes": "NOTES\nThe arm will first move slowly to the start of this motion (52.7° away). · move to pose start_p",
+ "dry: dialogs": 0,
+ "after dry: notes": "NOTES\nThe arm will first move slowly to the start of this motion (52.7° away). · move to pose start_p",
+ "robot: dialogs": 0,
+ "after robot run (arm at start): note gone": true,
+ "post-run far: notes": "NOTES\nThe arm will first move slowly to the start of this motion (61.5° away). · move to pose start_p",
+ "warn_confirm: problems": [
+  {
+   "sev": "warning",
+   "badge": "warning",
+   "aria": "Warning",
+   "role": "img",
+   "glyph": "M3 0h2v1h-2zM2 1h1v1h-1z",
+   "fill": "rgb(255, 197, 49)",
+   "fg": "rgb(59, 32, 39)",
+   "border": "rgb(59, 32, 39)",
+   "surface": "rgb(255, 246, 220)",
+   "w": 22
+  },
+  {
+   "sev": "confirm",
+   "badge": "confirm",
+   "aria": "Needs your confirmation",
+   "role": "img",
+   "glyph": "M2 0h4v1h-4zM1 1h2v1h-2z",
+   "fill": "rgb(107, 63, 160)",
+   "fg": "rgb(255, 246, 220)",
+   "border": "rgb(59, 32, 39)",
+   "surface": "rgb(255, 246, 220)",
+   "w": 22
+  }
+ ],
+ "warn_confirm: notes box": {
+  "heading": null,
+  "tag": "SECTION",
+  "labelledby_text": " Notes",
+  "border_left": "rgb(47, 111, 159) 8px",
+  "heading_color": null,
+  "icon_glyph": "M3 0h2v1h-2zM3 1h2v1h-2z"
+ },
+ "warn_confirm: block icons": 2,
+ "mixed: problems": [
+  {
+   "sev": "warning",
+   "badge": "warning",
+   "aria": "Warning",
+   "role": "img",
+   "glyph": "M3 0h2v1h-2zM2 1h1v1h-1z",
+   "fill": "rgb(255, 197, 49)",
+   "fg": "rgb(59, 32, 39)",
+   "border": "rgb(59, 32, 39)",
+   "surface": "rgb(255, 246, 220)",
+   "w": 22
+  },
+  {
+   "sev": "confirm",
+   "badge": "confirm",
+   "aria": "Needs your confirmation",
+   "role": "img",
+   "glyph": "M2 0h4v1h-4zM1 1h2v1h-2z",
+   "fill": "rgb(107, 63, 160)",
+   "fg": "rgb(255, 246, 220)",
+   "border": "rgb(59, 32, 39)",
+   "surface": "rgb(255, 246, 220)",
+   "w": 22
+  },
+  {
+   "sev": "error",
+   "badge": "error",
+   "aria": "Error",
+   "role": "img",
+   "glyph": "M0 0h2v1h-2zM6 0h2v1h-2z",
+   "fill": "rgb(179, 18, 46)",
+   "fg": "rgb(255, 246, 220)",
+   "border": "rgb(59, 32, 39)",
+   "surface": "rgb(255, 246, 220)",
+   "w": 22
+  }
+ ],
+ "mixed: notes box": {
+  "heading": null,
+  "tag": "SECTION",
+  "labelledby_text": " Notes",
+  "border_left": "rgb(47, 111, 159) 8px",
+  "heading_color": null,
+  "icon_glyph": "M3 0h2v1h-2zM3 1h2v1h-2z"
+ },
+ "mixed: block icons": 3,
+ "mixed dry run: dialog": null,
+ "mixed dry run: invalid msg": "Run\nDry run\nRun on the robot\n\nA hardware run needs a passed dry run of this version.\n\nThe program has errors. Fix the marked blocks first.\n\nVariables\n\nNo variables.\n\nLast condition values\n\nNothing evaluated yet.\n\nfront\n640×480 → 320×240\nwrist\n320×240 → 320×240\n\nstate tick 200\n\nRobot 3D\nMock arm\nSet ",
+ "page errors": []
+}

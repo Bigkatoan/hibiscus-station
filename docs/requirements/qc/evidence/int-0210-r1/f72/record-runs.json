@@ -1,0 +1,44 @@
+{
+  "one-new": {
+    "secs": 9.5,
+    "episodes": 1,
+    "frames": 90,
+    "finalized": true,
+    "reasons": []
+  },
+  "five-new": {
+    "secs": 35.3,
+    "episodes": 5,
+    "frames": 450,
+    "finalized": true,
+    "reasons": []
+  },
+  "twelve-new": {
+    "secs": 61.3,
+    "episodes": 12,
+    "frames": 720,
+    "finalized": true,
+    "reasons": []
+  },
+  "five-append": {
+    "secs": 17.2,
+    "episodes": 8,
+    "frames": 630,
+    "finalized": true,
+    "reasons": []
+  },
+  "slow15-new": {
+    "secs": 24.2,
+    "episodes": 4,
+    "frames": 180,
+    "finalized": true,
+    "reasons": []
+  },
+  "long30-new": {
+    "secs": 56.4,
+    "episodes": 1,
+    "frames": 900,
+    "finalized": true,
+    "reasons": []
+  }
+}

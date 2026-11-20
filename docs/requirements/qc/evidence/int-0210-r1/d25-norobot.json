@@ -1,0 +1,638 @@
+{
+ "status": {
+  "state": "disconnected",
+  "server": {
+   "paired": false,
+   "url": null,
+   "workspace": null
+  }
+ },
+ "d25-norobot-en-light-1280": {
+  "rail": {
+   "1 Robot": {
+    "locked_style": false,
+    "icons": 1,
+    "title": null,
+    "sub": []
+   },
+   "2 Calibrate": {
+    "locked_style": true,
+    "icons": 1,
+    "title": "Connect a robot first.",
+    "sub": [
+     "Connect a robot first."
+    ]
+   },
+   "3 Cameras": {
+    "locked_style": true,
+    "icons": 1,
+    "title": "Connect a robot first.",
+    "sub": [
+     "Connect a robot first."
+    ]
+   },
+   "4 Teleop": {
+    "locked_style": true,
+    "icons": 1,
+    "title": "Connect a robot first.",
+    "sub": [
+     "Connect a robot first."
+    ]
+   },
+   "5 Record": {
+    "locked_style": true,
+    "icons": 1,
+    "title": "Connect a robot first.",
+    "sub": [
+     "Connect a robot first."
+    ]
+   },
+   "6 Upload": {
+    "locked_style": true,
+    "icons": 1,
+    "title": "Record a dataset first.",
+    "sub": [
+     "Record a dataset first."
+    ]
+   },
+   "7 Train": {
+    "locked_style": false,
+    "icons": 0,
+    "title": "Connect to a Hibiscus server to train (no robot needed).",
+    "sub": [
+     "Connect to a Hibiscus server to train (no robot needed)."
+    ]
+   },
+   "8 Run model": {
+    "locked_style": true,
+    "icons": 1,
+    "title": "Connect a robot first.",
+    "sub": [
+     "Connect a robot first."
+    ]
+   }
+  },
+  "lock_gate": 0,
+  "locked_title_text": 0,
+  "hint": "Connect to a Hibiscus server to train (no robot needed).",
+  "fieldset_disabled": null,
+  "hscroll": false,
+  "pair": {
+   "onedrive_word_cloud": {
+    "url": "https://word.cloud.microsoft/open/onedrive/?docId=0123456789ABCDEF%21s1a2b3c4d5e6f&driveId=0123456789ABCDEF",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "This is not a Hibiscus server address. P"
+    ],
+    "err_after_blur": [
+     "This is not a Hibiscus server address. P"
+    ],
+    "aria_invalid": "true"
+   },
+   "onedrive_live": {
+    "url": "https://onedrive.live.com/?redeem=aHR0cHM6Ly8xZHJ2Lm1zL2YvcyFBbXBsZQ&id=ABC%21123&cid=0123456789ABCDEF",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "This is not a Hibiscus server address. P"
+    ],
+    "err_after_blur": [
+     "This is not a Hibiscus server address. P"
+    ],
+    "aria_invalid": "true"
+   },
+   "onedrive_cloud": {
+    "url": "https://onedrive.cloud.microsoft/?id=abc",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "This is not a Hibiscus server address. P"
+    ],
+    "err_after_blur": [
+     "This is not a Hibiscus server address. P"
+    ],
+    "aria_invalid": "true"
+   },
+   "officeapps": {
+    "url": "https://view.officeapps.live.com/op/view.aspx?src=x",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "This is not a Hibiscus server address. P"
+    ],
+    "err_after_blur": [
+     "This is not a Hibiscus server address. P"
+    ],
+    "aria_invalid": "true"
+   },
+   "1drv": {
+    "url": "https://1drv.ms/w/s!AmplE123",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "This is not a Hibiscus server address. P"
+    ],
+    "err_after_blur": [
+     "This is not a Hibiscus server address. P"
+    ],
+    "aria_invalid": "true"
+   },
+   "sharepoint": {
+    "url": "https://contoso-my.sharepoint.com/:w:/g/personal/a_b/EabcD?e=xyz",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "This is not a Hibiscus server address. P"
+    ],
+    "err_after_blur": [
+     "This is not a Hibiscus server address. P"
+    ],
+    "aria_invalid": "true"
+   },
+   "gdocs": {
+    "url": "https://docs.google.com/document/d/1AbC/edit?usp=sharing",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "This is not a Hibiscus server address. P"
+    ],
+    "err_after_blur": [
+     "This is not a Hibiscus server address. P"
+    ],
+    "aria_invalid": "true"
+   },
+   "gdrive": {
+    "url": "https://drive.google.com/file/d/1AbC/view?usp=sharing",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "This is not a Hibiscus server address. P"
+    ],
+    "err_after_blur": [
+     "This is not a Hibiscus server address. P"
+    ],
+    "aria_invalid": "true"
+   },
+   "dropbox": {
+    "url": "https://www.dropbox.com/scl/fi/abc/file.pdf?rlkey=x&dl=0",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "This is not a Hibiscus server address. P"
+    ],
+    "err_after_blur": [
+     "This is not a Hibiscus server address. P"
+    ],
+    "aria_invalid": "true"
+   },
+   "ftp": {
+    "url": "ftp://x",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "Enter an address that starts with http:/"
+    ],
+    "err_after_blur": [
+     "Enter an address that starts with http:/"
+    ],
+    "aria_invalid": "true"
+   },
+   "noscheme": {
+    "url": "hibiscus.example.org",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "Enter an address that starts with http:/"
+    ],
+    "err_after_blur": [
+     "Enter an address that starts with http:/"
+    ],
+    "aria_invalid": "true"
+   },
+   "words": {
+    "url": "hibiscus server",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "Enter an address that starts with http:/"
+    ],
+    "err_after_blur": [
+     "Enter an address that starts with http:/"
+    ],
+    "aria_invalid": "true"
+   },
+   "valid": {
+    "url": "https://hibiscus.example.org",
+    "pair_enabled": true,
+    "err_while_typing": [],
+    "err_after_blur": [],
+    "aria_invalid": null
+   },
+   "valid_http_port": {
+    "url": "http://192.168.1.20:8000",
+    "pair_enabled": true,
+    "err_while_typing": [],
+    "err_after_blur": [],
+    "aria_invalid": null
+   },
+   "valid_trailing_spaces": {
+    "url": "https://hibiscus.example.org   ",
+    "pair_enabled": true,
+    "err_while_typing": [],
+    "err_after_blur": [],
+    "aria_invalid": null
+   },
+   "javascript": {
+    "url": "javascript:alert(1)",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "Enter an address that starts with http:/"
+    ],
+    "err_after_blur": [
+     "Enter an address that starts with http:/"
+    ],
+    "aria_invalid": "true"
+   },
+   "http_noh": {
+    "url": "http://",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "Enter an address that starts with http:/"
+    ],
+    "err_after_blur": [
+     "Enter an address that starts with http:/"
+    ],
+    "aria_invalid": "true"
+   },
+   "enter_on_invalid_posts": 0,
+   "valid_trailing_posted": [
+    "{\"url\":\"https://hibiscus.invalid\",\"token\":\"tok\"}"
+   ],
+   "after_submit_errors": [
+    "This is not a Hibiscus personal access token. Copy the whole token from the server (Account → Tokens); it starts with hbp_.\n\nTechnical details"
+   ]
+  },
+  "page_errors": []
+ },
+ "d25-norobot-en-dark-390": {
+  "rail": {
+   "1 Robot": {
+    "locked_style": false,
+    "icons": 1,
+    "title": null,
+    "sub": []
+   },
+   "2 Calibrate": {
+    "locked_style": true,
+    "icons": 1,
+    "title": "Connect a robot first.",
+    "sub": []
+   },
+   "3 Cameras": {
+    "locked_style": true,
+    "icons": 1,
+    "title": "Connect a robot first.",
+    "sub": []
+   },
+   "4 Teleop": {
+    "locked_style": true,
+    "icons": 1,
+    "title": "Connect a robot first.",
+    "sub": []
+   },
+   "5 Record": {
+    "locked_style": true,
+    "icons": 1,
+    "title": "Connect a robot first.",
+    "sub": []
+   },
+   "6 Upload": {
+    "locked_style": true,
+    "icons": 1,
+    "title": "Record a dataset first.",
+    "sub": []
+   },
+   "7 Train": {
+    "locked_style": false,
+    "icons": 0,
+    "title": "Connect to a Hibiscus server to train (no robot needed).",
+    "sub": []
+   },
+   "8 Run model": {
+    "locked_style": true,
+    "icons": 1,
+    "title": "Connect a robot first.",
+    "sub": []
+   }
+  },
+  "lock_gate": 0,
+  "locked_title_text": 0,
+  "hint": "Connect to a Hibiscus server to train (no robot needed).",
+  "fieldset_disabled": null,
+  "hscroll": false,
+  "page_errors": []
+ },
+ "d25-norobot-vi-light-390": {
+  "rail": {
+   "1 Robot": {
+    "locked_style": false,
+    "icons": 1,
+    "title": null,
+    "sub": []
+   },
+   "2 Hiệu chỉnh": {
+    "locked_style": true,
+    "icons": 1,
+    "title": "Hãy kết nối robot trước.",
+    "sub": []
+   },
+   "3 Camera": {
+    "locked_style": true,
+    "icons": 1,
+    "title": "Hãy kết nối robot trước.",
+    "sub": []
+   },
+   "4 Điều khiển tay": {
+    "locked_style": true,
+    "icons": 1,
+    "title": "Hãy kết nối robot trước.",
+    "sub": []
+   },
+   "5 Ghi dữ liệu": {
+    "locked_style": true,
+    "icons": 1,
+    "title": "Hãy kết nối robot trước.",
+    "sub": []
+   },
+   "6 Tải lên": {
+    "locked_style": true,
+    "icons": 1,
+    "title": "Hãy ghi một bộ dữ liệu trước.",
+    "sub": []
+   },
+   "7 Huấn luyện": {
+    "locked_style": false,
+    "icons": 0,
+    "title": "Kết nối máy chủ Hibiscus để huấn luyện (không cần robot).",
+    "sub": []
+   },
+   "8 Chạy model": {
+    "locked_style": true,
+    "icons": 1,
+    "title": "Hãy kết nối robot trước.",
+    "sub": []
+   }
+  },
+  "lock_gate": 0,
+  "locked_title_text": 0,
+  "hint": "Kết nối máy chủ Hibiscus để huấn luyện (không cần robot).",
+  "fieldset_disabled": null,
+  "hscroll": false,
+  "page_errors": []
+ },
+ "d25-norobot-vi-dark-1280": {
+  "rail": {
+   "1 Robot": {
+    "locked_style": false,
+    "icons": 1,
+    "title": null,
+    "sub": []
+   },
+   "2 Hiệu chỉnh": {
+    "locked_style": true,
+    "icons": 1,
+    "title": "Hãy kết nối robot trước.",
+    "sub": [
+     "Hãy kết nối robot trước."
+    ]
+   },
+   "3 Camera": {
+    "locked_style": true,
+    "icons": 1,
+    "title": "Hãy kết nối robot trước.",
+    "sub": [
+     "Hãy kết nối robot trước."
+    ]
+   },
+   "4 Điều khiển tay": {
+    "locked_style": true,
+    "icons": 1,
+    "title": "Hãy kết nối robot trước.",
+    "sub": [
+     "Hãy kết nối robot trước."
+    ]
+   },
+   "5 Ghi dữ liệu": {
+    "locked_style": true,
+    "icons": 1,
+    "title": "Hãy kết nối robot trước.",
+    "sub": [
+     "Hãy kết nối robot trước."
+    ]
+   },
+   "6 Tải lên": {
+    "locked_style": true,
+    "icons": 1,
+    "title": "Hãy ghi một bộ dữ liệu trước.",
+    "sub": [
+     "Hãy ghi một bộ dữ liệu trước."
+    ]
+   },
+   "7 Huấn luyện": {
+    "locked_style": false,
+    "icons": 0,
+    "title": "Kết nối máy chủ Hibiscus để huấn luyện (không cần robot).",
+    "sub": [
+     "Kết nối máy chủ Hibiscus để huấn luyện (không cần robot)."
+    ]
+   },
+   "8 Chạy model": {
+    "locked_style": true,
+    "icons": 1,
+    "title": "Hãy kết nối robot trước.",
+    "sub": [
+     "Hãy kết nối robot trước."
+    ]
+   }
+  },
+  "lock_gate": 0,
+  "locked_title_text": 0,
+  "hint": "Kết nối máy chủ Hibiscus để huấn luyện (không cần robot).",
+  "fieldset_disabled": null,
+  "hscroll": false,
+  "pair": {
+   "onedrive_word_cloud": {
+    "url": "https://word.cloud.microsoft/open/onedrive/?docId=0123456789ABCDEF%21s1a2b3c4d5e6f&driveId=0123456789ABCDEF",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "Đây không phải địa chỉ máy chủ Hibiscus."
+    ],
+    "err_after_blur": [
+     "Đây không phải địa chỉ máy chủ Hibiscus."
+    ],
+    "aria_invalid": "true"
+   },
+   "onedrive_live": {
+    "url": "https://onedrive.live.com/?redeem=aHR0cHM6Ly8xZHJ2Lm1zL2YvcyFBbXBsZQ&id=ABC%21123&cid=0123456789ABCDEF",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "Đây không phải địa chỉ máy chủ Hibiscus."
+    ],
+    "err_after_blur": [
+     "Đây không phải địa chỉ máy chủ Hibiscus."
+    ],
+    "aria_invalid": "true"
+   },
+   "onedrive_cloud": {
+    "url": "https://onedrive.cloud.microsoft/?id=abc",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "Đây không phải địa chỉ máy chủ Hibiscus."
+    ],
+    "err_after_blur": [
+     "Đây không phải địa chỉ máy chủ Hibiscus."
+    ],
+    "aria_invalid": "true"
+   },
+   "officeapps": {
+    "url": "https://view.officeapps.live.com/op/view.aspx?src=x",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "Đây không phải địa chỉ máy chủ Hibiscus."
+    ],
+    "err_after_blur": [
+     "Đây không phải địa chỉ máy chủ Hibiscus."
+    ],
+    "aria_invalid": "true"
+   },
+   "1drv": {
+    "url": "https://1drv.ms/w/s!AmplE123",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "Đây không phải địa chỉ máy chủ Hibiscus."
+    ],
+    "err_after_blur": [
+     "Đây không phải địa chỉ máy chủ Hibiscus."
+    ],
+    "aria_invalid": "true"
+   },
+   "sharepoint": {
+    "url": "https://contoso-my.sharepoint.com/:w:/g/personal/a_b/EabcD?e=xyz",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "Đây không phải địa chỉ máy chủ Hibiscus."
+    ],
+    "err_after_blur": [
+     "Đây không phải địa chỉ máy chủ Hibiscus."
+    ],
+    "aria_invalid": "true"
+   },
+   "gdocs": {
+    "url": "https://docs.google.com/document/d/1AbC/edit?usp=sharing",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "Đây không phải địa chỉ máy chủ Hibiscus."
+    ],
+    "err_after_blur": [
+     "Đây không phải địa chỉ máy chủ Hibiscus."
+    ],
+    "aria_invalid": "true"
+   },
+   "gdrive": {
+    "url": "https://drive.google.com/file/d/1AbC/view?usp=sharing",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "Đây không phải địa chỉ máy chủ Hibiscus."
+    ],
+    "err_after_blur": [
+     "Đây không phải địa chỉ máy chủ Hibiscus."
+    ],
+    "aria_invalid": "true"
+   },
+   "dropbox": {
+    "url": "https://www.dropbox.com/scl/fi/abc/file.pdf?rlkey=x&dl=0",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "Đây không phải địa chỉ máy chủ Hibiscus."
+    ],
+    "err_after_blur": [
+     "Đây không phải địa chỉ máy chủ Hibiscus."
+    ],
+    "aria_invalid": "true"
+   },
+   "ftp": {
+    "url": "ftp://x",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "Hãy nhập địa chỉ bắt đầu bằng http:// ho"
+    ],
+    "err_after_blur": [
+     "Hãy nhập địa chỉ bắt đầu bằng http:// ho"
+    ],
+    "aria_invalid": "true"
+   },
+   "noscheme": {
+    "url": "hibiscus.example.org",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "Hãy nhập địa chỉ bắt đầu bằng http:// ho"
+    ],
+    "err_after_blur": [
+     "Hãy nhập địa chỉ bắt đầu bằng http:// ho"
+    ],
+    "aria_invalid": "true"
+   },
+   "words": {
+    "url": "hibiscus server",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "Hãy nhập địa chỉ bắt đầu bằng http:// ho"
+    ],
+    "err_after_blur": [
+     "Hãy nhập địa chỉ bắt đầu bằng http:// ho"
+    ],
+    "aria_invalid": "true"
+   },
+   "valid": {
+    "url": "https://hibiscus.example.org",
+    "pair_enabled": true,
+    "err_while_typing": [],
+    "err_after_blur": [],
+    "aria_invalid": null
+   },
+   "valid_http_port": {
+    "url": "http://192.168.1.20:8000",
+    "pair_enabled": true,
+    "err_while_typing": [],
+    "err_after_blur": [],
+    "aria_invalid": null
+   },
+   "valid_trailing_spaces": {
+    "url": "https://hibiscus.example.org   ",
+    "pair_enabled": true,
+    "err_while_typing": [],
+    "err_after_blur": [],
+    "aria_invalid": null
+   },
+   "javascript": {
+    "url": "javascript:alert(1)",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "Hãy nhập địa chỉ bắt đầu bằng http:// ho"
+    ],
+    "err_after_blur": [
+     "Hãy nhập địa chỉ bắt đầu bằng http:// ho"
+    ],
+    "aria_invalid": "true"
+   },
+   "http_noh": {
+    "url": "http://",
+    "pair_enabled": false,
+    "err_while_typing": [
+     "Hãy nhập địa chỉ bắt đầu bằng http:// ho"
+    ],
+    "err_after_blur": [
+     "Hãy nhập địa chỉ bắt đầu bằng http:// ho"
+    ],
+    "aria_invalid": "true"
+   },
+   "enter_on_invalid_posts": 0,
+   "valid_trailing_posted": [
+    "{\"url\":\"https://hibiscus.invalid\",\"token\":\"tok\"}"
+   ],
+   "after_submit_errors": [
+    "Đây không phải token truy cập cá nhân của Hibiscus. Hãy chép đủ token trên máy chủ (Tài khoản → Token); token bắt đầu bằng hbp_.\n\nChi tiết kỹ thuật"
+   ]
+  },
+  "page_errors": []
+ }
+}

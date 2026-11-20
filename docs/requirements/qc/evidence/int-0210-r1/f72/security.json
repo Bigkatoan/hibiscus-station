@@ -1,0 +1,203 @@
+{
+  "auth": {
+    "nocookie /datasets/five/episodes/0/videos": 401,
+    "nocookie /datasets/five/episodes/0/videos/front?format=source": 401,
+    "nocookie /datasets/five/episodes/0/videos/front?format=vp9": 401,
+    "badcookie /datasets/five/episodes/0/videos": 401,
+    "badcookie /datasets/five/episodes/0/videos/front?format=source": 401,
+    "badcookie /datasets/five/episodes/0/videos/front?format=vp9": 401,
+    "badbearer /datasets/five/episodes/0/videos": 401,
+    "badbearer /datasets/five/episodes/0/videos/front?format=source": 401,
+    "badbearer /datasets/five/episodes/0/videos/front?format=vp9": 401
+  },
+  "traversal": {
+    "/datasets/../five/episodes/0/videos": [
+      404,
+      "{\"type\":\"https://hibiscus.dev/problems/station/not_found\",\"title\":\"Not found\",\"status\":404,\"code\":\"not_found\",\"detail\":\""
+    ],
+    "/datasets/..%2Ffive/episodes/0/videos": [
+      404,
+      "{\"type\":\"https://hibiscus.dev/problems/station/not_found\",\"title\":\"Not found\",\"status\":404,\"code\":\"not_found\",\"detail\":\""
+    ],
+    "/datasets/%2e%2e/episodes/0/videos": [
+      422,
+      "{\"type\":\"https://hibiscus.dev/problems/station/validation_failed\",\"title\":\"Validation failed\",\"status\":422,\"code\":\"valid"
+    ],
+    "/datasets/FIVE/episodes/0/videos": [
+      422,
+      "{\"type\":\"https://hibiscus.dev/problems/station/validation_failed\",\"title\":\"Validation failed\",\"status\":422,\"code\":\"valid"
+    ],
+    "/datasets/five.hibiscus/episodes/0/videos": [
+      422,
+      "{\"type\":\"https://hibiscus.dev/problems/station/validation_failed\",\"title\":\"Validation failed\",\"status\":422,\"code\":\"valid"
+    ],
+    "/datasets/five.hibiscus%2Fvideo-cache/episodes/0/videos": [
+      404,
+      "{\"type\":\"https://hibiscus.dev/problems/station/not_found\",\"title\":\"Not found\",\"status\":404,\"code\":\"not_found\",\"detail\":\""
+    ],
+    "/datasets/five/episodes/0/videos/..%2F..%2Fmeta%2Finfo.json?format=source": [
+      404,
+      "{\"type\":\"https://hibiscus.dev/problems/station/not_found\",\"title\":\"Not found\",\"status\":404,\"code\":\"not_found\",\"detail\":\""
+    ],
+    "/datasets/five/episodes/0/videos/%2e%2e?format=source": [
+      422,
+      "{\"type\":\"https://hibiscus.dev/problems/station/validation_failed\",\"title\":\"Validation failed\",\"status\":422,\"code\":\"valid"
+    ],
+    "/datasets/five/episodes/0/videos/FRONT?format=source": [
+      404,
+      "{\"type\":\"https://hibiscus.dev/problems/station/not_found\",\"title\":\"Not found\",\"status\":404,\"code\":\"not_found\",\"detail\":\""
+    ],
+    "/datasets/five/episodes/0/videos/front%00?format=source": [
+      422,
+      "{\"type\":\"https://hibiscus.dev/problems/station/validation_failed\",\"title\":\"Validation failed\",\"status\":422,\"code\":\"valid"
+    ],
+    "/datasets/five/episodes/0/videos/front.json?format=source": [
+      422,
+      "{\"type\":\"https://hibiscus.dev/problems/station/validation_failed\",\"title\":\"Validation failed\",\"status\":422,\"code\":\"valid"
+    ],
+    "/datasets/five/episodes/0/videos/front?format=../../x": [
+      422,
+      "{\"type\":\"https://hibiscus.dev/problems/station/validation_failed\",\"title\":\"Validation failed\",\"status\":422,\"code\":\"valid"
+    ],
+    "/datasets/five/episodes/0/videos/front?format=SOURCE": [
+      422,
+      "{\"type\":\"https://hibiscus.dev/problems/station/validation_failed\",\"title\":\"Validation failed\",\"status\":422,\"code\":\"valid"
+    ],
+    "/datasets/five/episodes/0/videos/front?format=source.json": [
+      422,
+      "{\"type\":\"https://hibiscus.dev/problems/station/validation_failed\",\"title\":\"Validation failed\",\"status\":422,\"code\":\"valid"
+    ],
+    "/datasets/five/episodes/0/videos/front?format=json": [
+      422,
+      "{\"type\":\"https://hibiscus.dev/problems/station/validation_failed\",\"title\":\"Validation failed\",\"status\":422,\"code\":\"valid"
+    ],
+    "/datasets/five/episodes/0/videos/front?format=source&format=../x": [
+      422,
+      "{\"type\":\"https://hibiscus.dev/problems/station/validation_failed\",\"title\":\"Validation failed\",\"status\":422,\"code\":\"valid"
+    ],
+    "/datasets/five/episodes/0/videos/front?format=mp4": [
+      422,
+      "{\"type\":\"https://hibiscus.dev/problems/station/validation_failed\",\"title\":\"Validation failed\",\"status\":422,\"code\":\"valid"
+    ],
+    "/datasets/five/episodes/-1/videos": [
+      422,
+      "{\"type\":\"https://hibiscus.dev/problems/station/validation_failed\",\"title\":\"Validation failed\",\"status\":422,\"code\":\"valid"
+    ],
+    "/datasets/five/episodes/99/videos/front?format=h264": [
+      404,
+      "{\"type\":\"https://hibiscus.dev/problems/station/not_found\",\"title\":\"Not found\",\"status\":404,\"code\":\"not_found\",\"detail\":\""
+    ],
+    "/datasets/five/episodes/abc/videos": [
+      422,
+      "{\"type\":\"https://hibiscus.dev/problems/station/validation_failed\",\"title\":\"Validation failed\",\"status\":422,\"code\":\"valid"
+    ],
+    "/datasets/five/episodes/99999999999999999999999/videos": [
+      404,
+      "{\"type\":\"https://hibiscus.dev/problems/station/not_found\",\"title\":\"Not found\",\"status\":404,\"code\":\"not_found\",\"detail\":\""
+    ],
+    "/datasets/five/episodes/0/videos/nocam?format=source": [
+      404,
+      "{\"type\":\"https://hibiscus.dev/problems/station/not_found\",\"title\":\"Not found\",\"status\":404,\"code\":\"not_found\",\"detail\":\""
+    ],
+    "/datasets/nope/episodes/0/videos/front?format=source": [
+      404,
+      "{\"type\":\"https://hibiscus.dev/problems/station/not_found\",\"title\":\"Not found\",\"status\":404,\"code\":\"not_found\",\"detail\":\""
+    ]
+  },
+  "tamper": {
+    "../slow15/videos/{video_key}/chunk-{chunk_index:03d}/file-{file_index:03d}.mp4": {
+      "list": 409,
+      "get": 409
+    },
+    "/etc/passwd": {
+      "list": 409,
+      "get": 409
+    },
+    "../../../../../../etc/passwd": {
+      "list": 409,
+      "get": 409
+    },
+    "videos/../../five/videos/{video_key}/chunk-000/file-000.mp4": {
+      "list": 409,
+      "get": 409
+    }
+  },
+  "symlink": {
+    "source mp4 -> /etc/passwd": 422,
+    "cache cut -> secret file": {
+      "status": 200,
+      "leak": false,
+      "secret_intact": true,
+      "cut_is_symlink": false
+    }
+  },
+  "range": {
+    "full 200 + accept-ranges + etag + no-cache": {
+      "date": "Fri, 20 Nov 2026 15:49:05 GMT",
+      "server": "uvicorn",
+      "cache-control": "private, no-cache",
+      "content-type": "video/mp4",
+      "accept-ranges": "bytes",
+      "content-length": "3893880",
+      "last-modified": "Fri, 20 Nov 2026 15:35:33 GMT",
+      "etag": "\"99f5d2a8d53e9e33736e5f5cce42c6f8\"",
+      "x-request-id": "e940538f178d2748",
+      "x-content-type-options": "nosniff",
+      "referrer-policy": "no-referrer"
+    },
+    "0-99": [
+      206,
+      "bytes 0-99/3893880"
+    ],
+    "-50": [
+      206,
+      "bytes 3893830-3893879/3893880"
+    ],
+    "last10 open": 206,
+    "beyond -> 416": [
+      416,
+      "bytes */3893880"
+    ],
+    "malformed bytes=50-10": 400,
+    "malformed bytes=abc": 400,
+    "multi": [
+      206,
+      "multipart/byteranges; boundary"
+    ],
+    "if-none-match": 200
+  },
+  "fails": [
+    [
+      "tamper",
+      "../slow15/videos/{video_key}/chunk-{chunk_index:03d}/file-{file_index:03d}.mp4",
+      {
+        "list": 409,
+        "get": 409
+      }
+    ],
+    [
+      "tamper",
+      "/etc/passwd",
+      {
+        "list": 409,
+        "get": 409
+      }
+    ],
+    [
+      "tamper",
+      "../../../../../../etc/passwd",
+      {
+        "list": 409,
+        "get": 409
+      }
+    ],
+    [
+      "tamper",
+      "videos/../../five/videos/{video_key}/chunk-000/file-000.mp4",
+      {
+        "list": 409,
+        "get": 409
+      }
+    ]
+  ]
+}
