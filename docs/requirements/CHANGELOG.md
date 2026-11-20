@@ -204,3 +204,40 @@ bỏ cách chặn theo danh sách, thay bằng bảo đảm theo thiết kế. K
 * **QD-43** (Low): kiểm danh tính theo trường và kiểu, nhận thêm ngôn ngữ.
 * **QD-45** (Low, bảo mật): `http://` chỉ trong mạng nội bộ; máy chủ công khai → `server_url_insecure`.
 * Tài liệu: [FEATURES-APPROVED.md](FEATURES-APPROVED.md), [REGRESSION.md](REGRESSION.md), `docs/spec/station.md` §4.8.
+
+## CR-1: xem video từng tập trong Bộ dữ liệu · v1.1 · 2026-11-19
+
+**Nguồn:** yêu cầu của khách hàng (2026-11-19): xem được video camera của từng tập đã ghi ngay trong Station. Đây là
+**tính năng mới** (không phải lỗi so với đường cơ sở v1.0), nên đi theo quy trình CR của
+[FEATURES-APPROVED.md](FEATURES-APPROVED.md): BA viết, Tech Lead / SA đánh giá, khách duyệt, danh sách lên v1.1.
+
+**Đề xuất gửi khách (BA + Tech Lead):** trong chi tiết bộ dữ liệu, bấm một tập → video của **mọi camera** phát cùng
+lúc, đồng bộ với biểu đồ theo khớp của tập (biểu đồ nhiệt độ từng khớp hiện có; con trỏ thời gian chung, bấm vào biểu đồ để nhảy tới đó); phát được trên
+Edge, Chrome và Firefox trên Windows. Ước lượng **khoảng 2 – 3 ngày công dev**, làm trong M1. Hai lựa chọn: thêm vào M1
+(Must) hoặc để sau v1.0 (Won't).
+
+**Lời của khách hàng (2026-11-19):** **"Có, thêm vào M1"**.
+
+**Quyết định đã chốt:**
+* **CR-1 → F-72** (Must, M1, effort M ≈ 2 – 3 ngày), FR-77, AT-99, REG-23, ADR-14. Phụ thuộc F-38, F-40.
+* Phát được trên Edge **của Windows 11 cài sẵn** (không cài thêm gì): Station ghi bằng AV1 (mặc định của LeRobot 0.7.1,
+  `libsvtav1`); Edge chỉ giải mã AV1 khi có "AV1 Video Extension" của Microsoft Store. Station không đổi cách ghi; khi
+  trình duyệt không phát được AV1, Station cắt tập đó và chuyển sang H.264 hoặc VP9 một lần, lưu tạm trong thư mục đi
+  kèm `<tên>.hibiscus/video-cache/` (ADR-14). Thư mục LeRobot giữ nguyên từng byte.
+* Trong lúc bộ dữ liệu đang được ghi, video của nó chưa mở (LeRobot chỉ ghi chỉ mục tập khi `finalize`): mã lỗi
+  `episode_saving` (409), câu "Bộ dữ liệu này đang được ghi. Video mở được khi phiên ghi kết thúc."
+
+**Chồng lấn đã biết:** nhóm hotfix 0.2.10 (`hotfix/0.2.10`) sửa lỗi "trang bộ dữ liệu báo lỗi / trống" của 0.2.9 và sẽ
+gộp vào `release/v1` sau. CR-1 không sửa lỗi đó: nó thêm hai endpoint riêng (`GET …/episodes/{i}/videos`,
+`GET …/episodes/{i}/videos/{camera}`), một trường tuỳ chọn `frame_index` của `TelemetrySeries`, và thay khung bên phải của
+trang chi tiết (`DatasetsPage.tsx`: `TelemetryChart`, `EpisodeReview` mới). Khi gộp, giữ cả hai: phần sửa của hotfix ở
+danh sách / tải trang chi tiết, phần CR-1 ở khung xem tập.
+
+**BA đã làm:**
+* [FEATURES.md](FEATURES.md), [FEATURES-APPROVED.md](FEATURES-APPROVED.md) lên **v1.1**: F-72 (Must, M1) trong nhóm G;
+  tổng 72 tính năng (45 Must / 22 Should / 5 Could); M1 = 47 tính năng (44 Must + 3 Should); ma trận truy vết BR-7.
+* [SRS.md](SRS.md): FR-77 (F-72) ở §3 G; §5.2 88 thao tác; §6 bộ đệm video.
+* [ACCEPTANCE.md](ACCEPTANCE.md): AT-99 (có bước Windows 11 Edge cài sẵn); Kế hoạch UAT-1 thêm bước 16.
+* [REGRESSION.md](REGRESSION.md): REG-23 (video AV1 không phát trên Edge Windows cài sẵn).
+* [ARCHITECTURE.md](ARCHITECTURE.md): ADR-14, §4.1 (bộ đệm video), §4.2 (88 thao tác).
+* Spec `docs/spec/station.md` §5.2 (hai endpoint, mã lỗi). Nhánh dev `m1/episode-video` (từ `release/v1` `b2ed862`).

@@ -1,4 +1,4 @@
-# Hibiscus Station: danh sách hồi quy v1.0 (2026-11-17) · trạng thái: **đã duyệt** (khách hàng duyệt ngày 2026-11-17, đường cơ sở)
+# Hibiscus Station: danh sách hồi quy v1.1 (2026-11-19) · trạng thái: **đã duyệt** (khách hàng duyệt ngày 2026-11-17, đường cơ sở; CR-1 duyệt ngày 2026-11-19)
 
 Mỗi mục REG-n là một lỗi hiện trường đã xảy ra (người dùng Windows của khách hàng với tay SO-101
 thật, bản 0.2.1 – 0.2.8) hoặc một lỗi đã sửa ghi trong `CHANGELOG.md` của sản phẩm. Theo chuẩn
@@ -38,6 +38,7 @@ không đạt là một lỗi mở và chặn phát hành của tính năng liê
 | REG-20 | Camera chọn "0" trên giao diện mở như tệp tên `0`; dò camera mở lại camera đang dùng (Windows từ chối) | 0.2.0 → 0.2.1 | F-21 | AT-28 |
 | REG-21 | (check_ver_2.9, 2026-11-18) Cảnh báo "Chuyển động đầu tiên bắt đầu xa tư thế hiện tại của tay" vẫn hiện trên khối sau khi chương trình đã chạy; không cập nhật khi tay di chuyển (D-24; khách: "Đổi thành thông tin, tự cập nhật") | 0.2.9 → M1 | F-56, F-58 | AT-70, AT-72 |
 | REG-22 | (check_ver_2.9, 2026-11-18) Bước Huấn luyện "Bước này đang bị khoá — Hãy ghép nối với máy chủ Hibiscus trước" khi form ghép nối vẫn dùng được; khách dán một liên kết OneDrive dài vào ô địa chỉ máy chủ (D-25; khách: "Không cần robot, nói rõ hơn") | 0.2.9 → M1 | F-7, F-41 | AT-10, AT-52 |
+| REG-23 | (CR-1, 2026-11-19; rủi ro biết trước, chưa phải báo cáo hiện trường) Video tập ghi bằng AV1 (mặc định LeRobot 0.7.1) không phát trên Edge của Windows 11 cài sẵn (không có "AV1 Video Extension"); khách: "phát được trên Edge, Chrome và Firefox trên Windows" | M1 (F-72 mới) | F-72 | AT-99 |
 
 ## Chi tiết từng mục (tái hiện → kỳ vọng)
 
@@ -208,6 +209,20 @@ không đạt là một lỗi mở và chặn phát hành của tính năng liê
 * **Test tự động:** `web/src/station/field029.screens.test.tsx` (D-25), `field028.screens.test.tsx` (Huấn luyện),
   `station.unit.test.ts` (`wizardSteps`, `serverUrlProblem` trên `tests/server_urls.json`), `tests/test_field_029.py`
   (`server_url_problem` trên cùng bộ ca, `POST /server/pair`). **Nền tảng:** [Vendor].
+
+### REG-23 — Video AV1 không phát trên Edge Windows cài sẵn (F-72, CR-1)
+* **Nguồn:** CR-1 (2026-11-19), yêu cầu của khách "phát được trên Edge, Chrome và Firefox trên Windows". Station ghi AV1
+  (`libsvtav1`, mặc định của LeRobot 0.7.1); Edge chỉ giải mã AV1 khi cài "AV1 Video Extension" từ Microsoft Store.
+  Windows bản "N" không có Media Foundation nên cũng không có H.264.
+* **Tái hiện:** Windows 11, Edge cài sẵn, kiểm ở Cài đặt → Ứng dụng rằng **không** có "AV1 Video Extension"; mở một tập
+  trong Bộ dữ liệu, Phát. Lặp lại trên Windows 11 N (nếu có) và với tiện ích đã cài.
+* **Kỳ vọng:** video phát mà không phải cài gì; ô camera ghi "đã chuyển sang H.264" (hoặc "đã chuyển sang VP9" trên bản N);
+  có tiện ích AV1 thì ghi "AV1, như lúc ghi". Không bao giờ chỉ là ô đen hoặc lỗi chung.
+* **Test tự động:** `web/src/station/episodeVideo.screens.test.tsx` (chọn định dạng theo `canPlayType`: Edge không AV1 →
+  H.264 → VP9; Windows N → VP9; định dạng lỗi → định dạng sau), `tests/test_episode_video.py` (ba định dạng giải mã ra
+  đúng khung của từng tập, Range, lỗi), e2e `tests/e2e/test_station_ui.py` bước 7 trên Microsoft Edge của CI
+  `windows-latest`. **Nền tảng:** [Vendor] CI Windows Edge; [UAT-KH] Edge cài sẵn trên PC Windows 11 của khách (AT-99
+  bước 8).
 
 ### REG-14 … REG-20 (từ CHANGELOG)
 | REG | Tái hiện | Kỳ vọng | Test tự động | Nền tảng |
