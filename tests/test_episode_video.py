@@ -173,7 +173,7 @@ def test_a_cut_is_made_once_and_remade_when_the_file_changes(
     url = f"{API}/datasets/multi/episodes/0/videos/front?format=h264"
     assert client.get(url).status_code == 200
     cache = station.paths.datasets / "multi.hibiscus" / "video-cache" / "front"
-    [cut] = list(cache.glob("episode_000000.h264.*"))
+    [cut] = list(cache.glob("episode_000000.h264.*.mp4"))
     stamp = cut.stat().st_mtime_ns
     time.sleep(0.02)
     assert client.get(url).status_code == 200
@@ -186,7 +186,9 @@ def test_a_cut_is_made_once_and_remade_when_the_file_changes(
 
     os.utime(src, ns=(stamp + 10**9, stamp + 10**9))
     assert client.get(url).status_code == 200
-    [again] = list(cache.glob("episode_000000.h264.*"))
+    [again] = list(cache.glob("episode_000000.h264.*.mp4"))
+    assert again.with_name(again.name + ".json").is_file()  # its stamp (QV-2), the old one is gone
+    assert len(list(cache.glob("episode_000000.h264.*.json"))) == 1
     assert again.name != cut.name  # a new key: the stale cut was replaced, not kept beside it
 
 
