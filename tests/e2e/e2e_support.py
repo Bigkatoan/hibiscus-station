@@ -159,6 +159,36 @@ def sweep(emu: Any) -> None:
     emu.hand = lambda i, t: 2048 + 400 * math.sin(2 * math.pi * 0.8 * t + i)
 
 
+def served_png_is_whole(url: str) -> bool:
+    """``url`` answers 200 with a complete, valid PNG: the length the server announced, the PNG
+    signature, every chunk's CRC right and the IEND chunk at the end."""
+    import struct
+    import urllib.request
+    import zlib
+
+    if not url.startswith("http://127.0.0.1:") or not url.endswith(".png"):
+        return False
+    try:
+        with urllib.request.urlopen(url, timeout=10) as r:  # noqa: S310 - the local Station
+            data = r.read()
+            if r.status != 200 or int(r.headers.get("content-length", -1)) != len(data):
+                return False
+    except OSError:
+        return False
+    if data[:8] != b"\x89PNG\r\n\x1a\n":
+        return False
+    i = 8
+    while i + 12 <= len(data):
+        n = struct.unpack(">I", data[i : i + 4])[0]
+        kind, body = data[i + 4 : i + 8], data[i + 8 : i + 8 + n]
+        if len(body) != n or zlib.crc32(kind + body) != struct.unpack(">I", data[i + 8 + n : i + 12 + n])[0]:
+            return False
+        if kind == b"IEND":
+            return i + 12 + n == len(data)
+        i += 12 + n
+    return False
+
+
 @dataclass
 class StationProc:
     """A running ``hibiscus-station`` and the controls of its (mock or emulated) leader hand."""
@@ -329,6 +359,10 @@ class Driver:
         # load resource"; other browsers do not)
         if msg.type == "error" and not msg.text.startswith("Failed to load resource"):
             url = str((msg.location or {}).get("url") or "")
+            if "Image corrupt or truncated." in msg.text and served_png_is_whole(url):
+                # Firefox logs this for a PNG whose download it cancelled itself (a pixel sprite
+                # swapped while it loaded); the same URL served whole is no broken asset
+                return
             self.problems.append(f"console error: {msg.text} ({url})")
 
     def _on_response(self, r: Any) -> None:
