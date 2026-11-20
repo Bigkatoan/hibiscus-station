@@ -8,6 +8,12 @@ Feetech packets the doctor sends (through pyserial: :mod:`hibiscus_station.hw.pr
 byte to the emulator's ``handle()`` and its answers come back as bytes, late answers included. On
 Linux the same tests also run through a real pseudo-terminal with pyserial's real serial port (a pty
 does not work there on macOS, "Not a typewriter", and Windows has none).
+
+On the loopback port time is **emulated** (:class:`EmulatedClock`): the probe's clock, the adapter's
+delays and the serial read timeouts all run on one clock that only moves when the probe waits for
+the wire or the emulated adapter takes its time. A slow CI runner (a macOS VM that stalls the test
+process for 100 ms) then cannot make a steady 50 ms adapter look like a stalled bus (QD-34): every
+verdict depends only on the delays the test gives the emulator.
 """
 
 from __future__ import annotations
@@ -29,6 +35,7 @@ import pytest
 from sts_emulator import STSEmulator, checksum, lelab_calibration, sm_decode, sm_encode
 
 from hibiscus_station import doctor
+from hibiscus_station.hw import probe as probe_mod
 from hibiscus_station.profiles import (
     CameraProfile,
     FollowerProfile,
@@ -45,6 +52,30 @@ TRANSPORTS = ["loop", "pty"] if LINUX else ["loop"]
 
 
 # ------------------------------------------------------------------------------- loopback port
+class EmulatedClock:
+    """The time of a loopback port: it moves only when the probe sleeps or waits on the wire (a
+    serial read timeout, cut short by the next answer's arrival) and when the emulated adapter takes
+    its time. Stands in for :mod:`time` in :mod:`hibiscus_station.hw.probe`."""
+
+    def __init__(self) -> None:
+        self.now = 1000.0
+        self.ports: list[LoopbackPort] = []
+
+    def perf_counter(self) -> float:
+        return self.now
+
+    monotonic = perf_counter
+
+    def sleep(self, seconds: float) -> None:
+        self.now += max(0.0, seconds)
+
+    def wait_for_bytes(self, seconds: float) -> None:
+        """A serial read's wait: until ``seconds`` have passed or a late answer reaches the host."""
+        end = self.now + max(0.0, seconds)
+        due = [p.pending[0][0] for p in self.ports if p.pending and p.pending[0][0] > self.now]
+        self.now = min([end, *due])
+
+
 class LoopSTS(STSEmulator):
     """The emulator without its pseudo-terminal: :class:`LoopbackPort` calls ``handle()`` itself."""
 
@@ -69,8 +100,10 @@ class LoopbackPort:
     """One USB serial port, wire level: complete Feetech packets go to the emulator, its answer
     bytes (with the emulator's timing) wait to be read. One owner at a time, as a real port."""
 
-    def __init__(self, emu: STSEmulator) -> None:
+    def __init__(self, emu: STSEmulator, clock: EmulatedClock) -> None:
         self.emu = emu
+        self.clock = clock
+        clock.ports.append(self)
         self.rx = bytearray()
         self._tx = bytearray()
         self.owner: object | None = None
@@ -106,7 +139,7 @@ class LoopbackPort:
 
     def release(self) -> None:
         """Late answers whose time has come reach the host."""
-        now = time.perf_counter()
+        now = self.clock.now
         while self.pending and self.pending[0][0] <= now:
             self._arrive(self.pending.pop(0)[1])
 
@@ -130,7 +163,7 @@ class LoopbackPort:
         e = self.emu
         e.transactions += 1
         if e.baud:
-            _sleep(e.usb_out_s + len(pkt) * 10 / e.baud)
+            self.clock.sleep(e.usb_out_s + len(pkt) * 10 / e.baud)
         out, timed = e.answers(pkt[2], pkt[4], pkt[5:-1])
         if not out:
             return
@@ -142,11 +175,11 @@ class LoopbackPort:
             delay += n * max(s.get(7, 1) for s in e.servos.values()) * 2e-6
         self.release()
         if timed or self.pending:  # behind a late answer: everything waits its turn
-            t = time.perf_counter() + delay
+            t = self.clock.now + delay
             for p, extra in timed or [(out, 0.0)]:
                 self.pending.append((max(t + extra, self.pending[-1][0] if self.pending else 0.0), p))
             return
-        _sleep(delay)
+        self.clock.sleep(delay)  # an adapter that blocks the write as long as its answer takes
         self._arrive(out)
 
     def status(self, motor_id: int) -> tuple[bytes, int] | None:
@@ -190,14 +223,6 @@ class LoopbackPort:
         return "Checksum error" if self.bad_checksum else "Operation timed out"
 
 
-def _sleep(seconds: float) -> None:
-    end = time.perf_counter() + seconds
-    if seconds > 0.0006:
-        time.sleep(seconds - 0.0005)
-    while time.perf_counter() < end:
-        pass
-
-
 def _packet(motor_id: int, instr: int, params: bytes = b"") -> bytes:
     body = bytes([motor_id, len(params) + 2, instr]) + params
     return b"\xff\xff" + body + bytes([checksum(body)])
@@ -229,7 +254,7 @@ class LoopSerial:
     def read(self, n: int = 1) -> bytes:
         self.port.release()
         if not self.port.rx:
-            time.sleep(self.timeout)
+            self.port.clock.wait_for_bytes(self.timeout)
             self.port.release()
         out = bytes(self.port.rx[:n])
         del self.port.rx[:n]
@@ -247,8 +272,12 @@ class Arms:
         self.tmp_path = tmp_path
         self.emus: list[STSEmulator] = []
         self.loops: dict[str, LoopbackPort] = {}
+        self.clock = EmulatedClock()
         if transport == "loop":
             import serial
+
+            # the probe runs on the loopback ports' emulated time (see the module doc)
+            monkeypatch.setattr(probe_mod, "time", self.clock)
 
             real_serial = serial.Serial
 
@@ -267,7 +296,7 @@ class Arms:
             path = self.tmp_path / f"ttyLOOP{len(self.loops)}"
             path.touch()
             emu = LoopSTS(str(path), **kwargs)
-            self.loops[str(path)] = LoopbackPort(emu)
+            self.loops[str(path)] = LoopbackPort(emu, self.clock)
         else:
             emu = STSEmulator(**kwargs)
         self.emus.append(emu)
@@ -1253,6 +1282,35 @@ def test_the_bus_speed_is_measured_only_from_answers_to_their_own_request(
     else:
         assert abs(ms - truth_ms) <= 0.2 * truth_ms, (ms, truth_ms, fol)
     assert "    calibration file vs motors: all 6 match" in fol.splitlines(), fol
+
+
+def test_a_steady_adapter_near_the_first_wait_is_a_slow_bus_not_loose_cables(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """QD-34: a clean bus with real wire timing (1 Mbaud bytes, 1 ms USB latency) behind an adapter
+    that delays every answer by 47.5 - 49.5 ms (pipelined, in order). The pings teach a wait just
+    shorter than the first sync read takes (its answers are longer), so that one read's answers
+    come late, matched to it: "unreliable bus: 1 of 20 reads failed (1 got their answers only
+    after the timeout) ... check the 3-pin cables" next to "slow bus". It is a slow bus, nothing
+    else. Every delay from 44 to 53 ms in 0.5 ms steps, on the loopback port's emulated time (the
+    pty would time it with the runner's clock, not the adapter's)."""
+    arms = Arms("loop", tmp_path, monkeypatch)
+    for step in range(19):
+        delay_s = (44 + step * 0.5) / 1000
+        f, ld = arms(seed=1, voltage_v=12.0).realistic(), arms(seed=2).realistic()
+        (tmp_path / str(step)).mkdir()
+        home = _calibrated_home(tmp_path / str(step), f, ld, monkeypatch)
+        f.adapter_delay_s = delay_s
+        text, _t = _run(home, tmp_path / str(step) / "out")
+        problems, fol = text.split("\n\n")[0], _section(text, "follower")
+        ctx = (delay_s, problems)
+        assert "unreliable bus" not in text and "3-pin cables" not in text, ctx
+        assert "now and then" not in text and "do not answer" not in text, ctx
+        assert "  ! arm follower on " in problems and ": slow bus (" in problems, ctx
+        ms = _ms_each(fol)
+        assert ms is not None and abs(ms - delay_s * 1000) <= 0.2 * delay_s * 1000, (ms, ctx)
+        assert "    calibration file vs motors: all 6 match" in fol.splitlines(), ctx
+    arms.close()
 
 
 # ------------------------------------------------------------------ invariants over a fault grid

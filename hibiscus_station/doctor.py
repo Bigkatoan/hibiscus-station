@@ -628,7 +628,8 @@ def bus_verdict(a: dict[str, Any]) -> dict[str, Any] | None:
     ===========  ===========================  ==============================  ======================
 
     Faults: "F of R reads failed (A got no answer, C got corrupted answers (checksum), ...)
-    [although every motor answers a ping]" (the last words only when every motor answered one),
+    [although every motor answers a ping]" (the last words only when every motor answered one; a
+    read whose answers all came late from an adapter slow every time is not counted, QD-34),
     "motor id(s) Y answer only now and then (no valid answer to 3 pings)", "motor id(s) Z answer
     only with corrupted packets (checksum)" (or malformed), "L answers came late (up to T ms after
     the request: the USB adapter or a hub stalled)" (a late answer is matched to its own request,
@@ -693,11 +694,20 @@ def bus_verdict(a: dict[str, Any]) -> dict[str, Any] | None:
                 f"({failures_text(counts)})"
             )
     elif failed and not too_slow:
-        every = not flaky and not corrupt
-        faults.append(
-            f"{failed} of {reads} reads failed ({failures_text(sr)})"
-            + (" although every motor answers a ping" if every else "")
-        )
+        # QD-34: a read whose answers all came late, from an adapter slow every time, is not a
+        # failure of the bus either (the first sync read of a steady ~50 ms adapter can end just
+        # after the wait the pings taught: its answers are matched to it, late, and the wait grows)
+        by_read = sr.get("failures_by_read")
+        slow_only = 0
+        if by_read is not None and not stalled:
+            slow_only = sum(1 for r in by_read if r and set(r.values()) == {"late"})
+        if failed > slow_only:
+            every = not flaky and not corrupt
+            counts = {**sr, "late": max(0, int(sr.get("late") or 0) - slow_only)}
+            faults.append(
+                f"{failed - slow_only} of {reads} reads failed ({failures_text(counts)})"
+                + (" although every motor answers a ping" if every else "")
+            )
     if flaky:
         faults.append(
             f"motor id(s) {', '.join(flaky)} answer only now and then (no valid answer to "
