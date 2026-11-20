@@ -236,9 +236,18 @@ function RecordSetup() {
   const can = nameOk && !nameError && form.task.trim() !== "" && status?.state === "idle";
   // Field report 0.2.10: a dataset the Station left unfinalized (closed mid-session) cannot be
   // continued; offer a new dataset with the same task and settings.
+  // M1-1: a dataset recorded with another robot setup gets the same offer
+  const offerKey: Record<string, string> = {
+    dataset_not_finalized: "record.unfinalized",
+    dataset_unreadable: "record.unreadable",
+    dataset_incompatible: "record.incompatible",
+  };
+  const offer =
+    start.error instanceof StationApiError && start.error.code in offerKey
+      ? offerKey[start.error.code]
+      : undefined;
   const unfinished =
-    start.error instanceof StationApiError &&
-    (start.error.code === "dataset_not_finalized" || start.error.code === "dataset_unreadable")
+    offer !== undefined && start.error instanceof StationApiError
       ? typeof start.error.params.dataset === "string"
         ? start.error.params.dataset
         : form.dataset
@@ -405,12 +414,7 @@ function RecordSetup() {
               data-testid="record-unfinalized"
             >
               <p className="min-w-[min(14rem,100%)] flex-1">
-                {t(
-                  start.error instanceof StationApiError && start.error.code === "dataset_unreadable"
-                    ? "record.unreadable"
-                    : "record.unfinalized",
-                  { dataset: unfinished },
-                )}
+                {t(offer ?? "record.unfinalized", { dataset: unfinished })}
               </p>
               <Button
                 type="button"

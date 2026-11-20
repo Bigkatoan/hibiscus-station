@@ -539,6 +539,7 @@
     "saved_episodes": "Các tập đã lưu",
     "unfinalized": "Bộ dữ liệu {{dataset}} chưa hoàn tất: Station đã đóng khi đang ghi, nên không thể ghi thêm tập vào đó. Các tệp của nó vẫn được giữ nguyên. Hãy ghi vào một bộ dữ liệu mới.",
     "new_instead": "Ghi vào bộ dữ liệu mới",
+    "incompatible": "Bộ dữ liệu {{dataset}} được ghi với cấu hình robot khác (fps, khớp hoặc camera), nên không thể ghi thêm tập vào đó với cấu hình này. Hãy ghi vào một bộ dữ liệu mới.",
     "unreadable": "Không đọc được bộ dữ liệu {{dataset}}: tệp bị hỏng hoặc không mở được, nên không thể ghi thêm tập vào đó. Các tệp vẫn được giữ nguyên. Hãy ghi vào một bộ dữ liệu mới.",
     "done_one": "Đã lưu {{count}} tập vào bộ dữ liệu {{name}}",
     "done_other": "Đã lưu {{count}} tập vào bộ dữ liệu {{name}}",

@@ -3,16 +3,20 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import shutil
 import time
 from pathlib import Path
 from typing import Any
 
+from hibiscus_station.data.info import MAX_FRAMES, info_problems, plausible_count, plausible_fps
 from hibiscus_station.data.sidecar import episode_file, max_temps, read_lines, sidecar_dir, to_series
 from hibiscus_station.errors import StationError
 from hibiscus_station.sessions.recorder import check_name, live_episodes
 from hibiscus_station.settings import write_private
+
+log = logging.getLogger(__name__)
 
 
 def _dir_size(p: Path) -> int:
@@ -28,9 +32,10 @@ def _dir_size(p: Path) -> int:
     return total
 
 
-def _read_info(path: Path, attempts: int = 5) -> dict[str, Any] | None:
-    """``meta/info.json``, or None when it is unreadable. lerobot rewrites it in place (truncate,
-    then write) on every saved episode, so a read in between sees an empty or half file: retried."""
+def _read_info(path: Path, attempts: int = 5) -> Any:
+    """``meta/info.json`` parsed (any JSON value), or None when it is unreadable. lerobot rewrites
+    it in place (truncate, then write) on every saved episode, so a read in between sees an empty
+    or half file: retried."""
     for i in range(attempts):
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
@@ -40,7 +45,7 @@ def _read_info(path: Path, attempts: int = 5) -> dict[str, Any] | None:
             if i < attempts - 1:
                 time.sleep(0.05)
             continue
-        return data if isinstance(data, dict) else None
+        return data
     return None
 
 
@@ -48,22 +53,11 @@ def _meta(datasets_root: Path, name: str) -> dict[str, Any]:
     path = sidecar_dir(datasets_root, name) / "dataset.json"
     if path.is_file():
         try:
-            data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
-            return data
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return data if isinstance(data, dict) else {}
         except (OSError, ValueError):
             return {}
     return {}
-
-
-#: More episodes or frames than any recording holds: the value in info.json is damaged (QC QH-1).
-_ABSURD = 10**9
-
-
-def _count(v: Any) -> int | None:
-    """A count from info.json, or None when it is not a plausible non-negative integer."""
-    if isinstance(v, bool) or not isinstance(v, int) or not 0 <= v < _ABSURD:
-        return None
-    return v
 
 
 def _sidecar_indexes(datasets_root: Path, name: str) -> set[int]:
@@ -81,47 +75,93 @@ def _sidecar_indexes(datasets_root: Path, name: str) -> set[int]:
 
 
 def summary(datasets_root: Path, name: str) -> dict[str, Any] | None:
-    from hibiscus.recording import check_recording
-
+    """The list entry of one dataset, or None when ``name`` holds no dataset. Never raises: a
+    dataset that cannot be summarised is listed as unreadable with the reason, and the others are
+    unaffected (QC 0.2.10 QH-7)."""
     root = datasets_root / name
     info_path = root / "meta" / "info.json"
     if not info_path.is_file():
         return None
-    info = _read_info(info_path) or {}
-    features: dict[str, Any] = info["features"] if isinstance(info.get("features"), dict) else {}
-    cams = [k.removeprefix("observation.images.") for k in features if k.startswith("observation.images.")]
-    meta = _meta(datasets_root, name)
-    st = check_recording(root)
-    uploads = [_upload(u) for u in meta.get("uploads", []) if isinstance(u, dict)]
-    fps = info.get("fps")
-    episodes, frames = _count(info.get("total_episodes")), _count(info.get("total_frames"))
-    reasons = list(st.reasons)
-    for key, val in (("total_episodes", episodes), ("total_frames", frames)):
-        if val is None and info:
-            reasons.append(f"meta/info.json: {key} is not a plausible count")
+    try:
+        return _summary(datasets_root, name, root, info_path)
+    except Exception as exc:  # isolate this dataset: never a 500 for the list or its page
+        log.exception("dataset %s cannot be summarised", name)
+        return _unreadable_summary(datasets_root, name, root, f"{type(exc).__name__}: {exc}"[:300])
+
+
+def _unreadable_summary(datasets_root: Path, name: str, root: Path, reason: str) -> dict[str, Any]:
+    try:
+        size = _dir_size(root)
+    except Exception:
+        size = 0
     return {
         "name": name,
         "root": str(root),
-        "episodes": episodes or 0,
-        "frames": frames or 0,
-        "fps": int(fps)
-        if isinstance(fps, (int, float)) and not isinstance(fps, bool) and 0 < fps < 1000
-        else None,
-        "robot_type": info.get("robot_type"),
+        "episodes": 0,
+        "frames": 0,
+        "fps": None,
+        "robot_type": None,
+        "cameras": [],
+        "video": False,
+        "size_bytes": size,
+        "finalized": False,
+        "finalize_reasons": [f"unreadable: {reason}"],
+        "task": None,
+        "uploads": [],
+        "uploaded": None,
+    }
+
+
+def _summary(datasets_root: Path, name: str, root: Path, info_path: Path) -> dict[str, Any]:
+    from hibiscus.recording import check_recording
+
+    raw = _read_info(info_path)
+    problems = info_problems(raw) if raw is not None else ["meta/info.json is empty or not valid JSON"]
+    info: dict[str, Any] = raw if isinstance(raw, dict) else {}
+    features: dict[str, Any] = info["features"] if isinstance(info.get("features"), dict) else {}
+    cams = [k.removeprefix("observation.images.") for k in features if k.startswith("observation.images.")]
+    meta = _meta(datasets_root, name)
+    try:
+        reasons = list(check_recording(root).reasons)
+    except Exception as exc:  # the checker reads info.json too (QH-7: AttributeError, Overflow)
+        reasons = [f"cannot check the recording: {type(exc).__name__}"]
+    complete = not reasons
+    reasons += [f"unreadable: {p}" for p in problems if f"unreadable: {p}" not in reasons]
+    uploads = [u for u in (_upload(x) for x in meta.get("uploads", []) if isinstance(x, dict)) if u]
+    fps = info.get("fps")
+    episodes, frames = info.get("total_episodes"), info.get("total_frames")
+    task = meta.get("task")
+    robot_type = info.get("robot_type")
+    return {
+        "name": name,
+        "root": str(root),
+        "episodes": episodes if plausible_count(episodes) else 0,
+        "frames": frames if plausible_count(frames, MAX_FRAMES) else 0,
+        "fps": int(fps) if plausible_fps(fps) else None,
+        "robot_type": robot_type if isinstance(robot_type, str) else None,
         "cameras": cams,
         "video": any(v.get("dtype") == "video" for v in features.values() if isinstance(v, dict)),
         "size_bytes": _dir_size(root),
-        "finalized": st.complete and reasons == st.reasons,
+        "finalized": complete and not problems,
         "finalize_reasons": reasons,
-        "task": meta.get("task"),
+        "task": task if isinstance(task, str) else None,
         "uploads": uploads,
         "uploaded": uploads[-1] if uploads else None,
     }
 
 
-def _upload(u: dict[str, Any]) -> dict[str, Any]:
-    keys = ("server", "dataset_id", "version_id", "version", "at", "server_url", "train_url")
-    return {k: u.get(k) for k in keys}
+def _upload(u: dict[str, Any]) -> dict[str, Any] | None:
+    """An upload record of the sidecar, or None when its fields have the wrong types."""
+    keys = ("server", "dataset_id", "version_id", "at", "server_url", "train_url")
+    out = {k: u.get(k) for k in (*keys, "version")}
+    if not all(out[k] is None or isinstance(out[k], str) for k in keys) or not isinstance(out["server"], str):
+        return None
+    if not isinstance(out["at"], str):
+        return None
+    v = out["version"]
+    if v is not None and (isinstance(v, bool) or not isinstance(v, int)):
+        return None
+    return out
 
 
 def list_datasets(datasets_root: Path) -> list[dict[str, Any]]:
@@ -207,7 +247,17 @@ def detail(datasets_root: Path, name: str) -> dict[str, Any]:
     s = summary(datasets_root, name)
     if s is None:
         raise StationError("not_found", f"no dataset {name}")
-    return {**s, "episode_list": episodes(datasets_root, name, s["fps"], s["episodes"])}
+    try:
+        rows = episodes(datasets_root, name, s["fps"], s["episodes"])
+    except Exception as exc:  # isolate: the page answers with the dataset marked unreadable
+        log.exception("dataset %s: episodes cannot be listed", name)
+        rows = []
+        s = {
+            **s,
+            "finalized": False,
+            "finalize_reasons": [*s["finalize_reasons"], f"unreadable: {exc!r}"[:300]],
+        }
+    return {**s, "episode_list": rows}
 
 
 def episode_series(datasets_root: Path, name: str, index: int) -> dict[str, Any]:

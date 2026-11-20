@@ -61,6 +61,23 @@ the episodes I recorded." Known defect D-2.
     opened (QH-3).
   - Replay of an episode of a dataset the Station left unfinished answers `dataset_unreadable`,
     not "still being saved; try again when the dataset is finalized" (QH-4).
+- **QC 0.2.10 round 2: one damaged dataset never breaks the Datasets page or Replay.**
+  - A single dataset whose `meta/info.json` had `features` that is not an object, a
+    `total_episodes` of `Infinity`, or a `robot_type` that is not text made the whole Datasets
+    list (and that dataset's page) answer "Internal error", and the Upload step locked (QH-7, also
+    in 0.2.9). Each dataset is now summarised on its own: one that cannot be read is listed as not
+    finalized with an "unreadable: …" reason, and every other dataset shows as usual.
+  - Replay answered "Internal error" for `fps` 0 or `Infinity` and for joint names that do not
+    match the actions, and started at absurd rates for `fps` 1e30 or -5 (QH-8, M1-2). It now
+    answers `409 dataset_unreadable`.
+  - One validator for `meta/info.json` is shared by the list, the dataset page, append and replay:
+    fps (a finite number from 1 to 1000), the counts, the codebase version, LeRobot's file
+    templates and chunk sizes, every feature (dtype, shape, names matching the shape) and the joint
+    names of the action. A dataset that fails it is unreadable, with the reasons (M1-2). A pytest
+    fuzz sets every key, feature and feature field to 14 hostile values (648 cases) and checks list,
+    detail, telemetry, append and replay: no 5xx, no file changed, other datasets unaffected.
+  - Appending to a dataset recorded with another robot setup (`422 dataset_incompatible`) also
+    offers "Record into a new dataset" (M1-1).
 - **D-26: robot profiles can be deleted** (approved feature F-8, "create / edit / delete"; customer
   report 2026-11-20: duplicate profiles such as "so-101-1" and "SO_101" on COM8/COM7 could not be
   removed). Each profile card on the Robot page has Delete / Xoá, with a confirmation that names

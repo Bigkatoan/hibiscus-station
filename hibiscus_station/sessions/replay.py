@@ -7,6 +7,7 @@ cameras as every other session. A smooth approach to the first action comes firs
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -28,14 +29,18 @@ def load_episode_actions(root: Path, episode: int) -> tuple[int, list[dict[str, 
         raise StationError("not_found", f"no dataset at {root}")
     from hibiscus.recording import parquet_closed
 
+    from hibiscus_station.data.info import info_problems
     from hibiscus_station.sessions.recorder import is_being_written, unreadable_error
 
     try:
         info = json.loads(info_path.read_text(encoding="utf-8"))
-        names = [str(n) for n in info["features"]["action"]["names"]]
-        fps = int(info["fps"])
-    except (OSError, ValueError, TypeError, KeyError) as exc:  # damaged meta/info.json: never a 500
+    except (OSError, ValueError) as exc:  # damaged meta/info.json: never a 500
         raise unreadable_error(root.name, f"meta/info.json: {type(exc).__name__}") from exc
+    problems = info_problems(info)  # fps finite 1..1000, action names match their shape (QH-8)
+    if problems:
+        raise unreadable_error(root.name, "; ".join(problems[:3]))
+    names: list[str] = list(info["features"]["action"]["names"])
+    fps = round(info["fps"])
 
     rows: list[tuple[int, list[float]]] = []
     being_written = False
@@ -45,14 +50,20 @@ def load_episode_actions(root: Path, episode: int) -> tuple[int, list[dict[str, 
             continue
         try:
             table = pq.read_table(f, columns=["episode_index", "frame_index", "action"])
-        except (OSError, ValueError) as exc:  # pyarrow errors are OSError / ValueError subclasses
+        except (OSError, ValueError, KeyError) as exc:  # pyarrow errors: OSError / ValueError
             raise unreadable_error(root.name, f"{f.relative_to(root)}: {type(exc).__name__}") from exc
-        eps = table.column("episode_index").to_pylist()
-        fis = table.column("frame_index").to_pylist()
-        acts = table.column("action").to_pylist()
-        for e, fi, a in zip(eps, fis, acts, strict=True):
-            if int(e) == episode:
-                rows.append((int(fi), [float(x) for x in a]))
+        try:
+            eps = table.column("episode_index").to_pylist()
+            fis = table.column("frame_index").to_pylist()
+            acts = table.column("action").to_pylist()
+            for e, fi, a in zip(eps, fis, acts, strict=True):
+                if int(e) == episode:
+                    act = [float(x) for x in a]
+                    if len(act) != len(names) or not all(math.isfinite(x) for x in act):
+                        raise ValueError(f"action of frame {fi} does not match the {len(names)} joint names")
+                    rows.append((int(fi), act))
+        except (KeyError, TypeError, ValueError) as exc:
+            raise unreadable_error(root.name, f"{f.relative_to(root)}: {exc}"[:300]) from exc
     if not rows and being_written:
         if is_being_written(root):
             raise StationError(

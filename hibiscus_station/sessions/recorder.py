@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from hibiscus_station.data.info import info_problems
 from hibiscus_station.data.sidecar import EpisodeBuffer, episode_file, sidecar_dir
 from hibiscus_station.errors import StationError
 from hibiscus_station.settings import write_private
@@ -185,7 +186,7 @@ class DatasetRecorder:
                 params={"dataset": self.name, "error": str(exc)[:300]},
             ) from exc
 
-    def _read_info_for_append(self) -> dict[str, Any]:
+    def _read_info_for_append(self) -> Any:
         """``meta/info.json`` checked before LeRobot sees it; anything unreadable or malformed is
         ``dataset_unreadable``. The file is only read."""
         info_path = self.root / "meta" / "info.json"
@@ -201,20 +202,9 @@ class DatasetRecorder:
             info = json.loads(raw)
         except ValueError as exc:
             raise unreadable_error(self.name, "meta/info.json is empty or not valid JSON") from exc
-        if not isinstance(info, dict):
-            raise unreadable_error(self.name, "meta/info.json is not a JSON object")
-        feats = info.get("features")
-        if not isinstance(feats, dict) or not all(isinstance(v, dict) for v in feats.values()):
-            raise unreadable_error(self.name, "meta/info.json: features is missing or malformed")
-        fps, total = info.get("fps"), info.get("total_episodes")
-        if isinstance(fps, bool) or not isinstance(fps, (int, float)) or not 0 < fps < 1000:
-            raise unreadable_error(self.name, "meta/info.json: fps is missing or malformed")
-        if isinstance(total, bool) or not isinstance(total, int) or not 0 <= total < 10**9:
-            raise unreadable_error(self.name, "meta/info.json: total_episodes is missing or malformed")
-        try:
-            _norm_features(feats)
-        except (TypeError, ValueError, AttributeError) as exc:
-            raise unreadable_error(self.name, f"meta/info.json: features are malformed ({exc})") from exc
+        problems = info_problems(info)  # the one validator of list, detail, append, replay
+        if problems:
+            raise unreadable_error(self.name, "; ".join(problems[:3]))
         return info
 
     def _open(self) -> None:

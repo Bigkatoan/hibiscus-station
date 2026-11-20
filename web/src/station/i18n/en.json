@@ -539,6 +539,7 @@
     "saved_episodes": "Saved episodes",
     "unfinalized": "{{dataset}} was not finished: the Station closed while it was being recorded, so no episode can be added to it. Its files are kept as they are. Record into a new dataset instead.",
     "new_instead": "Record into a new dataset",
+    "incompatible": "{{dataset}} was recorded with a different robot setup (fps, joints or cameras), so no episode can be added to it with this one. Record into a new dataset instead.",
     "unreadable": "{{dataset}} cannot be read: its files are damaged or cannot be opened, so no episode can be added to it. Its files are kept as they are. Record into a new dataset instead.",
     "done_one": "{{count}} episode saved in dataset {{name}}",
     "done_other": "{{count}} episodes saved in dataset {{name}}",

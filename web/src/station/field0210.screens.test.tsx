@@ -256,3 +256,40 @@ describe("QC 0.2.10 round 1", () => {
     expect(screen.getByLabelText(/^Dataset name/)).toHaveValue("cube_bad_2");
   });
 });
+
+describe("QC 0.2.10 round 2", () => {
+  it("M1-1: a dataset recorded with another robot setup also offers a new dataset", async () => {
+    const h = setupStation({ datasets: [{ ...fx.dataset("cube_other", 2), task: "Pick" }] });
+    const user = userEvent.setup();
+    server.use(
+      http.post(`${window.location.origin}/api/v1/sessions/record`, () =>
+        HttpResponse.json(
+          {
+            type: "https://hibiscus.dev/problems/station/dataset_incompatible",
+            title: "Dataset is not compatible",
+            status: 422,
+            code: "dataset_incompatible",
+            detail: "features (cameras / joints / video) differ from the current robot setup",
+            params: { dataset: "cube_other" },
+          },
+          { status: 422 },
+        ),
+      ),
+    );
+    renderStation("/record", h);
+    await settle();
+    await user.selectOptions(await screen.findByLabelText(/^Dataset$/), "append");
+    await user.selectOptions(screen.getByLabelText(/^Dataset name/), "cube_other");
+    await user.click(screen.getByRole("button", { name: "Start recording" }));
+    const card = await screen.findByTestId("record-unfinalized");
+    expect(card).toHaveTextContent("cube_other was recorded with a different robot setup");
+    await i18n.changeLanguage("vi");
+    await waitFor(() => {
+      expect(screen.getByTestId("record-unfinalized")).toHaveTextContent(
+        "Bộ dữ liệu cube_other được ghi với cấu hình robot khác",
+      );
+    });
+    await user.click(screen.getByRole("button", { name: "Ghi vào bộ dữ liệu mới" }));
+    expect(screen.getByLabelText(/^Tên bộ dữ liệu|^Dataset name/)).toHaveValue("cube_other_2");
+  });
+});
