@@ -210,14 +210,27 @@ class Station:
         return self.profiles.put(profile)
 
     def delete_robot(self, robot_id: str) -> None:
+        """Remove the profile from robots.yaml only: calibration files, datasets, models and
+        sessions stay (D-26). Refused while the robot is in use: connected, connecting, in a
+        session or waiting for a lost USB adapter (its profile is what reconnect uses)."""
+        o = self.owner
         if (
-            self.owner.profile is not None
-            and self.owner.profile.id == robot_id
-            and self.owner.follower is not None
+            o.profile is not None
+            and o.profile.id == robot_id
+            and (
+                o.follower is not None
+                or o.session is not None
+                or o.lost is not None
+                or o.state in ("connecting", "calibrating")
+            )
         ):
-            raise StationError("busy", "disconnect this robot first", params={"state": self.owner.state})
+            raise StationError(
+                "busy", "disconnect this robot first", params={"state": o.state, "robot": robot_id}
+            )
         if not self.profiles.delete(robot_id):
             raise StationError("not_found", f"no robot {robot_id}")
+        if not self.mock:
+            self._retire_demo_active()  # the next active profile is never a demo one on real arms
 
     def reconnect(
         self, timeout_s: float = 30.0, lister: Callable[[], list[dict[str, Any]]] | None = None

@@ -44,6 +44,15 @@ the episodes I recorded." Known defect D-2.
   not finished: the Station closed while it was being recorded… Its files are kept as they
   are.") and offers "Record into a new dataset" with the same task and settings. Not one file of
   the unfinished dataset is changed.
+- **D-26: robot profiles can be deleted** (approved feature F-8, "create / edit / delete"; customer
+  report 2026-11-20: duplicate profiles such as "so-101-1" and "SO_101" on COM8/COM7 could not be
+  removed). Each profile card on the Robot page has Delete / Xoá, with a confirmation that names
+  the profile and says that calibration files and datasets are not deleted (only the entry in
+  robots.yaml is removed). The connected profile says "Disconnect before deleting" / "Ngắt kết nối
+  trước khi xoá"; the Station also refuses (409 `busy`) while that robot is connecting,
+  calibrating, in a session or waiting for a lost USB adapter. Deleting the active profile on real
+  arms never makes the demo profile active; `--mock` creates the demo profile again only when no
+  profile is left, as before.
 
 ### Changed
 - API: each `episode_list` row of `GET /datasets/{name}` has a `state`: `saved`, `saving` or

@@ -585,6 +585,12 @@ export function RobotPage() {
     api.post<Status>(`/robots/${encodeURIComponent(id)}/connect`, {}),
   );
   const disconnect = useStationMutation(() => api.post<Status>("/robots/disconnect", {}));
+  // F-8 / D-26: delete a profile (robots.yaml only; calibration files and datasets stay)
+  const [deleting, setDeleting] = useState<RobotProfile | null>(null);
+  const del = useStationMutation(
+    (id: string) => api.del(`/robots/${encodeURIComponent(id)}`),
+    [qk.robots, qk.status],
+  );
   const list = robots.data?.robots ?? [];
   const ports = usePorts();
   const realPorts = (ports.data?.ports ?? []).filter((p) => p.vid_pid !== null);
@@ -658,10 +664,17 @@ export function RobotPage() {
           {t("robot.connecting")}
         </p>
       ) : null}
-      <StationError error={connect.error ?? disconnect.error} />
+      <StationError error={connect.error ?? disconnect.error ?? del.error} />
       <ul className="grid gap-3 md:grid-cols-2">
         {list.map((r) => {
           const isConn = r.id === connectedId;
+          // the Station refuses too (409 busy): connected, connecting, in a session, port lost
+          const inUse =
+            isConn ||
+            (status?.robot?.id === r.id &&
+              (status.state === "connecting" ||
+                status.state === "calibrating" ||
+                (status.state === "error" && status.reason === "device_lost")));
           return (
             <li key={r.id}>
               <Card>
@@ -719,6 +732,23 @@ export function RobotPage() {
                     >
                       {t("common.edit")}
                     </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={inUse || del.isPending}
+                      aria-describedby={inUse ? `delete-why-${r.id}` : undefined}
+                      onClick={() => {
+                        del.reset();
+                        setDeleting(r);
+                      }}
+                    >
+                      <PxIcon name="trash" /> {t("robot.delete")}
+                    </Button>
+                    {inUse ? (
+                      <span id={`delete-why-${r.id}`} className="self-center text-xs text-muted-foreground">
+                        {t("robot.delete_disconnect_first")}
+                      </span>
+                    ) : null}
                   </div>
                 </CardContent>
               </Card>
@@ -730,6 +760,47 @@ export function RobotPage() {
         <p className="text-sm text-muted-foreground">{t("robot.empty")}</p>
       ) : null}
       {connected ? <ConnectedPanel profile={connected} /> : null}
+      <Dialog
+        open={deleting !== null}
+        onOpenChange={(o) => {
+          if (!o) setDeleting(null);
+        }}
+      >
+        <DialogContent data-testid="delete-robot-dialog">
+          <DialogHeader>
+            <DialogTitle>{t("robot.delete_title", { name: deleting?.name ?? "" })}</DialogTitle>
+            <DialogDescription>{t("robot.delete_desc")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleting(null);
+              }}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={del.isPending}
+              onClick={() => {
+                const target = deleting;
+                if (!target) return;
+                del.mutate(target.id, {
+                  onSettled: () => {
+                    setDeleting(null);
+                  },
+                  onSuccess: () => {
+                    if (editing !== null && editing !== "new" && editing.id === target.id) setEditing(null);
+                  },
+                });
+              }}
+            >
+              <PxIcon name="trash" /> {t("robot.delete_confirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
