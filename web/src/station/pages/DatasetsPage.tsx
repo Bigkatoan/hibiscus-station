@@ -295,6 +295,8 @@ export function DatasetDetailPage() {
   );
   const del = useStationMutation(() => api.del(`/datasets/${encodeURIComponent(name)}`), [qk.datasets]);
   const d = detail.data;
+  const allUnreadable =
+    (d?.episode_list.length ?? 0) > 0 && (d?.episode_list ?? []).every((e) => e.state === "unreadable");
   if (detail.error instanceof StationApiError && detail.error.status === 404) {
     // QC 0.2.9 QD-12: a dataset that is gone (deleted, or a record session that kept no episode)
     // shows no stale numbers, no Delete / Upload and no raw server text.
@@ -388,10 +390,21 @@ export function DatasetDetailPage() {
                 <CardTitle>{t("datasets.episodes")}</CardTitle>
               </CardHeader>
               <CardContent>
+                {allUnreadable ? (
+                  <p
+                    className="mb-2 border-2 border-destructive p-2 text-sm"
+                    role="status"
+                    data-testid="dataset-unreadable"
+                  >
+                    {t("datasets.unreadable_all")}
+                  </p>
+                ) : null}
                 <ul className="flex flex-col gap-1">
                   {d.episode_list.map((e) => {
                     const max = peakTemp(e.max_temp_c);
                     const saved = e.state === "saved";
+                    // QC QH-3: the telemetry of an unreadable episode still opens when it exists
+                    const viewable = saved || (e.state === "unreadable" && e.telemetry_lines > 0);
                     return (
                       <li
                         key={e.index}
@@ -402,7 +415,7 @@ export function DatasetDetailPage() {
                           type="button"
                           className="font-extrabold text-base underline disabled:no-underline"
                           aria-pressed={episode === e.index}
-                          disabled={!saved}
+                          disabled={!viewable}
                           onClick={() => {
                             setEpisode(e.index);
                           }}
@@ -415,7 +428,7 @@ export function DatasetDetailPage() {
                           </Badge>
                         ) : e.state === "unreadable" ? (
                           <span className="basis-full text-xs text-destructive sm:basis-auto">
-                            {t("datasets.unreadable")}
+                            {t(allUnreadable ? "datasets.unreadable_short" : "datasets.unreadable")}
                           </span>
                         ) : (
                           <span className="tabular-nums">

@@ -194,3 +194,65 @@ describe("Record: appending to a dataset the Station left unfinalized (field rep
     expect(bodies.map((b) => b.mode)).toEqual(["append"]);
   });
 });
+
+describe("QC 0.2.10 round 1", () => {
+  it("QH-3: a crash-left dataset with every episode unreadable says so once, and their telemetry opens", async () => {
+    const d = fx.dataset("cube_crash", 2);
+    d.finalized = false;
+    d.episode_list = d.episode_list.map((e): Row => ({
+      ...e,
+      state: "unreadable",
+      frames: null,
+      length_s: null,
+      tasks: null,
+    }));
+    const h = setupStation({ datasets: [d] });
+    const user = userEvent.setup();
+    renderStation("/datasets/cube_crash", h);
+    await settle();
+    expect(await screen.findByTestId("dataset-unreadable")).toHaveTextContent(
+      "The Station closed while this dataset was being recorded, so the episodes of that recording cannot be read.",
+    );
+    expect(screen.queryByText(/The other episodes are fine/)).not.toBeInTheDocument();
+    expect(await row(1)).toHaveTextContent("Cannot be read.");
+    expect(within(await row(1)).getByRole("button", { name: "Replay" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "#1" }));
+    expect(await screen.findByTestId("episode-telemetry")).toBeInTheDocument();
+    await i18n.changeLanguage("vi");
+    await waitFor(() => {
+      expect(screen.getByTestId("dataset-unreadable")).toHaveTextContent(
+        "Station đã đóng khi đang ghi bộ dữ liệu này, nên các tập của lượt ghi đó không đọc được. Tệp vẫn được giữ nguyên.",
+      );
+    });
+    expect(screen.queryByText(/Các tập khác vẫn dùng được/)).not.toBeInTheDocument();
+  });
+
+  it("QH-2: appending to a dataset whose files cannot be read offers a new dataset", async () => {
+    const h = setupStation({ datasets: [{ ...fx.dataset("cube_bad", 0), task: "Pick" }] });
+    const user = userEvent.setup();
+    server.use(
+      http.post(`${window.location.origin}/api/v1/sessions/record`, () =>
+        HttpResponse.json(
+          {
+            type: "https://hibiscus.dev/problems/station/dataset_unreadable",
+            title: "Dataset cannot be read",
+            status: 409,
+            code: "dataset_unreadable",
+            detail: "dataset cube_bad cannot be read (meta/info.json is empty or not valid JSON)",
+            params: { dataset: "cube_bad", reasons: ["meta/info.json is empty or not valid JSON"] },
+          },
+          { status: 409 },
+        ),
+      ),
+    );
+    renderStation("/record", h);
+    await settle();
+    await user.selectOptions(await screen.findByLabelText(/^Dataset$/), "append");
+    await user.selectOptions(screen.getByLabelText(/^Dataset name/), "cube_bad");
+    await user.click(screen.getByRole("button", { name: "Start recording" }));
+    const card = await screen.findByTestId("record-unfinalized");
+    expect(card).toHaveTextContent("cube_bad cannot be read: its files are damaged or cannot be opened");
+    await user.click(within(card).getByRole("button", { name: "Record into a new dataset" }));
+    expect(screen.getByLabelText(/^Dataset name/)).toHaveValue("cube_bad_2");
+  });
+});

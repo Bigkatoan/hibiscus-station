@@ -380,3 +380,162 @@ def test_record_append_into_an_unfinalized_dataset_answers_409(
     assert body["code"] == "dataset_not_finalized" and body["params"]["dataset"] == "ds", body
     assert _tree(st.paths.datasets / "ds") == before
     assert st.owner.state == "idle"
+
+
+# --------------------------------------------------------------------------- QC 0.2.10 round 1
+def _finalized(datasets: Path, n: int = 2) -> Path:
+    rec = _recorder(datasets)
+    _save(rec, n)
+    rec.finalize()
+    return datasets / "ds" / "meta" / "info.json"
+
+
+def _set_info(info: Path, **kw: Any) -> None:
+    data = json.loads(info.read_text(encoding="utf-8"))
+    data.update(kw)
+    info.write_text(json.dumps(data), encoding="utf-8")
+
+
+@pytest.mark.parametrize("total", [10**9, 10**8, 2**62, -5, "3", True, 1.5, None])
+def test_a_damaged_episode_count_never_allocates_by_it(station: Station, client: Any, total: Any) -> None:
+    """QH-1: total_episodes 1e9 in info.json made the detail build set(range(1e9)): the Station
+    was OOM-killed. Rows are bounded by what is on disk; an absurd count is reported, not used."""
+    import tracemalloc
+
+    info = _finalized(station.paths.datasets)
+    _set_info(info, total_episodes=total)
+    tracemalloc.start()
+    t0 = time.monotonic()
+    try:
+        r = client.get("/api/v1/datasets/ds")
+        lst = client.get("/api/v1/datasets")
+        _, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+    assert time.monotonic() - t0 < 5
+    assert peak < 50 * 2**20, peak
+    assert r.status_code == 200 and lst.status_code == 200, (r.text, lst.text)
+    d = r.json()
+    assert len(d["episode_list"]) <= 3
+    assert [e["state"] for e in d["episode_list"][:2]] == ["saved", "saved"]
+    if not (isinstance(total, int) and not isinstance(total, bool) and 0 <= total < 10**9):
+        assert d["episodes"] == 0 and not d["finalized"]
+        assert any("total_episodes" in x for x in d["finalize_reasons"]), d["finalize_reasons"]
+
+
+def _append(datasets: Path) -> DatasetRecorder:
+    return DatasetRecorder(
+        datasets, "ds", fps=10, motor_keys=MOTORS, cam_shapes={"wrist": CAM}, mode="append", task="pick"
+    )
+
+
+BROKEN_INFO = {
+    "empty": "",
+    "cut_short": '{"codebase_version": "v3.0", "fps": 10, "feat',
+    "list": "[]",
+    "action_null": None,  # features.action: null
+    "features_list": None,  # features: []
+    "shape_text": None,  # features.action.shape: "abc"
+    "fps_text": None,  # fps: "fast"
+    "total_negative": None,  # total_episodes: -1
+}
+
+
+@pytest.mark.parametrize("case", list(BROKEN_INFO))
+def test_append_into_a_dataset_with_a_broken_info_json_is_a_clean_4xx(station: Station, case: str) -> None:
+    """QH-2: 500 (JSONDecodeError / AttributeError in open()) on 0.2.9 and 0.2.10. Now
+    dataset_unreadable (409), the Record page offers a new dataset, and no file changes."""
+    from hibiscus_station.errors import STATUS, StationError
+
+    info = _finalized(station.paths.datasets)
+    text = BROKEN_INFO[case]
+    if text is not None:
+        info.write_text(text, encoding="utf-8")
+    else:
+        data = json.loads(info.read_text(encoding="utf-8"))
+        if case == "action_null":
+            data["features"]["action"] = None
+        elif case == "features_list":
+            data["features"] = []
+        elif case == "shape_text":
+            data["features"]["action"]["shape"] = "abc"
+        elif case == "fps_text":
+            data["fps"] = "fast"
+        elif case == "total_negative":
+            data["total_episodes"] = -1
+        info.write_text(json.dumps(data), encoding="utf-8")
+    before = _tree(station.paths.datasets)
+    with pytest.raises(StationError) as ei:
+        _append(station.paths.datasets).open()
+    assert ei.value.code == "dataset_unreadable", repr(ei.value)
+    assert STATUS[ei.value.code] == 409 and ei.value.params["dataset"] == "ds"
+    assert _tree(station.paths.datasets) == before
+
+
+@pytest.mark.skipif(sys.platform == "win32" or os.geteuid() == 0, reason="POSIX permissions")
+def test_an_unreadable_info_json_is_a_dataset_error_not_a_motor_error(
+    connected: Station, client: Any
+) -> None:
+    """QH-5: chmod 000 meta/info.json, then append: 502 bus_error ("A motor did not answer")."""
+    st = connected
+    motors = [f"{m}.pos" for m in st.owner.follower.bus.motors]  # type: ignore[union-attr]
+    (shape,) = st.hub.shapes().values()
+    rec = _recorder(st.paths.datasets, motors=motors, fps=15, cam=shape)
+    _save(rec, 1)
+    rec.finalize()
+    info = st.paths.datasets / "ds" / "meta" / "info.json"
+    info.chmod(0)
+    try:
+        r = client.post(
+            "/api/v1/sessions/record",
+            json={"dataset": "ds", "mode": "append", "task": "pick", "fps": 15, "countdown_s": 0},
+        )
+    finally:
+        info.chmod(0o644)
+    assert r.status_code == 409 and r.json()["code"] == "dataset_unreadable", r.text
+    assert st.owner.state == "idle"
+
+
+@pytest.mark.skipif(sys.platform == "win32" or os.geteuid() == 0, reason="POSIX permissions")
+def test_a_datasets_folder_that_cannot_be_written_is_not_a_motor_error(
+    connected: Station, client: Any
+) -> None:
+    """QH-5, the same class on the "new dataset" path: a read-only datasets folder."""
+    st = connected
+    st.paths.datasets.mkdir(parents=True, exist_ok=True)
+    st.paths.datasets.chmod(0o500)
+    try:
+        r = client.post(
+            "/api/v1/sessions/record",
+            json={"dataset": "ro", "task": "pick", "fps": 15, "countdown_s": 0},
+        )
+    finally:
+        st.paths.datasets.chmod(0o755)
+    assert r.status_code == 409 and r.json()["code"] == "dataset_io_error", r.text
+    assert st.owner.state == "idle"
+
+
+def test_replay_of_a_crash_left_episode_says_unreadable_not_saving(station: Station, client: Any) -> None:
+    """QH-4: a crash-left dataset answered 409 busy "still being saved; try again when the dataset
+    is finalized", which never happens."""
+    from hibiscus_station.errors import StationError
+    from hibiscus_station.sessions.replay import load_episode_actions
+
+    _crash_record(station.paths.datasets, 3)
+    for ep in (0, 99):
+        with pytest.raises(StationError) as ei:
+            load_episode_actions(station.paths.datasets / "ds", ep)
+        assert ei.value.code == "dataset_unreadable", repr(ei.value)
+        assert "try again" not in str(ei.value)
+
+
+@pytest.mark.parametrize("text", ["", "[]", '{"features": {"action": null}, "fps": 10}'])
+def test_replay_with_a_broken_info_json_is_a_clean_4xx(station: Station, text: str) -> None:
+    from hibiscus_station.errors import StationError
+    from hibiscus_station.sessions.replay import load_episode_actions
+
+    info = _finalized(station.paths.datasets)
+    info.write_text(text, encoding="utf-8")
+    with pytest.raises(StationError) as ei:
+        load_episode_actions(station.paths.datasets / "ds", 0)
+    assert ei.value.code == "dataset_unreadable", repr(ei.value)

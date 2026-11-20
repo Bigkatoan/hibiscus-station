@@ -55,8 +55,29 @@ def _meta(datasets_root: Path, name: str) -> dict[str, Any]:
     return {}
 
 
-def _count(v: Any) -> int:
-    return int(v) if isinstance(v, (int, float)) and v >= 0 else 0
+#: More episodes or frames than any recording holds: the value in info.json is damaged (QC QH-1).
+_ABSURD = 10**9
+
+
+def _count(v: Any) -> int | None:
+    """A count from info.json, or None when it is not a plausible non-negative integer."""
+    if isinstance(v, bool) or not isinstance(v, int) or not 0 <= v < _ABSURD:
+        return None
+    return v
+
+
+def _sidecar_indexes(datasets_root: Path, name: str) -> set[int]:
+    """Episode indexes that have a telemetry sidecar (written right after each saved episode)."""
+    out: set[int] = set()
+    try:
+        with os.scandir(sidecar_dir(datasets_root, name) / "telemetry") as it:
+            for e in it:
+                stem = e.name.removesuffix(".jsonl.gz")
+                if stem.startswith("episode_") and stem[8:].isdigit():
+                    out.add(int(stem[8:]))
+    except OSError:
+        pass
+    return out
 
 
 def summary(datasets_root: Path, name: str) -> dict[str, Any] | None:
@@ -73,18 +94,25 @@ def summary(datasets_root: Path, name: str) -> dict[str, Any] | None:
     st = check_recording(root)
     uploads = [_upload(u) for u in meta.get("uploads", []) if isinstance(u, dict)]
     fps = info.get("fps")
+    episodes, frames = _count(info.get("total_episodes")), _count(info.get("total_frames"))
+    reasons = list(st.reasons)
+    for key, val in (("total_episodes", episodes), ("total_frames", frames)):
+        if val is None and info:
+            reasons.append(f"meta/info.json: {key} is not a plausible count")
     return {
         "name": name,
         "root": str(root),
-        "episodes": _count(info.get("total_episodes")),
-        "frames": _count(info.get("total_frames")),
-        "fps": int(fps) if isinstance(fps, (int, float)) else None,
+        "episodes": episodes or 0,
+        "frames": frames or 0,
+        "fps": int(fps)
+        if isinstance(fps, (int, float)) and not isinstance(fps, bool) and 0 < fps < 1000
+        else None,
         "robot_type": info.get("robot_type"),
         "cameras": cams,
         "video": any(v.get("dtype") == "video" for v in features.values() if isinstance(v, dict)),
         "size_bytes": _dir_size(root),
-        "finalized": st.complete,
-        "finalize_reasons": st.reasons,
+        "finalized": st.complete and reasons == st.reasons,
+        "finalize_reasons": reasons,
         "task": meta.get("task"),
         "uploads": uploads,
         "uploaded": uploads[-1] if uploads else None,
@@ -143,8 +171,13 @@ def episodes(datasets_root: Path, name: str, fps: int | None = None, total: int 
     root = datasets_root / name
     live = live_episodes(root)  # before the files: a finalize in between leaves its rows on disk
     written = _written_rows(root)
+    # Unwritten episodes are listed up to what the disk shows (rows, sidecars, a live recorder,
+    # plus the one counted just before its sidecar was written), never up to the count in
+    # info.json alone: a damaged count must not allocate (QC QH-1).
+    seen = set(written) | set(live) | _sidecar_indexes(datasets_root, name)
+    counted = range(min(total, max(seen, default=-1) + 2))
     out: list[dict[str, Any]] = []
-    for idx in sorted(set(range(total)) | set(written) | set(live)):
+    for idx in sorted(seen | set(counted)):
         tasks: list[str] | None = None
         if idx in written:
             frames, tasks = written[idx]

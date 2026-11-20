@@ -91,6 +91,21 @@ def _not_finalized(name: str, reasons: list[str]) -> StationError:
     )
 
 
+def unreadable_error(name: str, reason: str) -> StationError:
+    return StationError(
+        "dataset_unreadable",
+        f"dataset {name} cannot be read ({reason}), so it cannot be continued or replayed; record "
+        "into a new dataset. Nothing was changed.",
+        params={"dataset": name, "reasons": [reason]},
+    )
+
+
+def is_being_written(root: Path) -> bool:
+    """A recorder of this process still writes ``root`` (saving or finalizing in the background)."""
+    with _CLOSING_LOCK:
+        return bool(_LIVE.get(root)) or root in _CLOSING
+
+
 def check_name(name: str) -> str:
     if not NAME_RE.match(name):
         raise StationError("validation_failed", "dataset name must match [a-z0-9][a-z0-9_-]{0,63}")
@@ -155,32 +170,78 @@ class DatasetRecorder:
 
     # ------------------------------------------------------------------ open
     def open(self) -> None:
+        """Open or create the dataset. A dataset problem is always a dataset error (4xx), never
+        ``bus_error``: the owner reports a bare OSError from a command as a motor failure
+        (QC 0.2.10 QH-5), and a dataset that cannot be continued never gives a 500 (QH-2)."""
+        try:
+            self._open()
+        except StationError:
+            raise
+        except OSError as exc:  # create / sidecar write: permission, disk full, path too long
+            log.exception("dataset %s: file error", self.name)
+            raise StationError(
+                "dataset_io_error",
+                f"dataset {self.name}: {exc}",
+                params={"dataset": self.name, "error": str(exc)[:300]},
+            ) from exc
+
+    def _read_info_for_append(self) -> dict[str, Any]:
+        """``meta/info.json`` checked before LeRobot sees it; anything unreadable or malformed is
+        ``dataset_unreadable``. The file is only read."""
+        info_path = self.root / "meta" / "info.json"
+        try:
+            raw = info_path.read_text(encoding="utf-8")
+        except FileNotFoundError as exc:
+            raise StationError(
+                "not_found", f"dataset {self.name} does not exist", params={"dataset": self.name}
+            ) from exc
+        except OSError as exc:
+            raise unreadable_error(self.name, f"meta/info.json cannot be opened: {exc}") from exc
+        try:
+            info = json.loads(raw)
+        except ValueError as exc:
+            raise unreadable_error(self.name, "meta/info.json is empty or not valid JSON") from exc
+        if not isinstance(info, dict):
+            raise unreadable_error(self.name, "meta/info.json is not a JSON object")
+        feats = info.get("features")
+        if not isinstance(feats, dict) or not all(isinstance(v, dict) for v in feats.values()):
+            raise unreadable_error(self.name, "meta/info.json: features is missing or malformed")
+        fps, total = info.get("fps"), info.get("total_episodes")
+        if isinstance(fps, bool) or not isinstance(fps, (int, float)) or not 0 < fps < 1000:
+            raise unreadable_error(self.name, "meta/info.json: fps is missing or malformed")
+        if isinstance(total, bool) or not isinstance(total, int) or not 0 <= total < 10**9:
+            raise unreadable_error(self.name, "meta/info.json: total_episodes is missing or malformed")
+        try:
+            _norm_features(feats)
+        except (TypeError, ValueError, AttributeError) as exc:
+            raise unreadable_error(self.name, f"meta/info.json: features are malformed ({exc})") from exc
+        return info
+
+    def _open(self) -> None:
         from lerobot.datasets import LeRobotDataset
 
         repo_id = f"local/{self.name}"
         threads = 4 * max(1, len(self.cam_shapes))
         if self.mode == "append":
-            info_path = self.root / "meta" / "info.json"
-            if not info_path.is_file():
-                raise StationError(
-                    "not_found", f"dataset {self.name} does not exist", params={"dataset": self.name}
-                )
-            info = json.loads(info_path.read_text(encoding="utf-8"))
+            info = self._read_info_for_append()
             mismatch = []
-            if int(info.get("fps", 0)) != self.fps:
+            if int(info["fps"]) != self.fps:
                 mismatch.append(f"fps {info.get('fps')} != {self.fps}")
-            if _norm_features(info.get("features", {})) != _norm_features(self.features):
+            if _norm_features(info["features"]) != _norm_features(self.features):
                 mismatch.append("features (cameras / joints / video) differ from the current robot setup")
             if mismatch:
                 raise StationError("dataset_incompatible", "; ".join(mismatch), params={"dataset": self.name})
-            unfinished = unfinished_files(self.root, int(info.get("total_episodes") or 0))
+            unfinished = unfinished_files(self.root, int(info["total_episodes"]))
             if unfinished:
                 raise _not_finalized(self.name, unfinished)
             try:
                 self.dataset = LeRobotDataset.resume(repo_id, root=self.root, image_writer_threads=threads)
             except Exception as exc:  # never a 500; nothing on disk is changed or removed
                 log.exception("cannot resume dataset %s", self.name)
-                raise _not_finalized(self.name, [f"{type(exc).__name__}: {exc}"[:300]]) from exc
+                reason = f"{type(exc).__name__}: {exc}"[:300]
+                if isinstance(exc, OSError):
+                    raise unreadable_error(self.name, reason) from exc
+                raise _not_finalized(self.name, [reason]) from exc
         else:
             if self.root.exists():
                 raise StationError(

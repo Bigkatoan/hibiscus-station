@@ -26,9 +26,16 @@ def load_episode_actions(root: Path, episode: int) -> tuple[int, list[dict[str, 
     info_path = root / "meta" / "info.json"
     if not info_path.is_file():
         raise StationError("not_found", f"no dataset at {root}")
-    info = json.loads(info_path.read_text(encoding="utf-8"))
-    names = list(info["features"]["action"]["names"])
     from hibiscus.recording import parquet_closed
+
+    from hibiscus_station.sessions.recorder import is_being_written, unreadable_error
+
+    try:
+        info = json.loads(info_path.read_text(encoding="utf-8"))
+        names = [str(n) for n in info["features"]["action"]["names"]]
+        fps = int(info["fps"])
+    except (OSError, ValueError, TypeError, KeyError) as exc:  # damaged meta/info.json: never a 500
+        raise unreadable_error(root.name, f"meta/info.json: {type(exc).__name__}") from exc
 
     rows: list[tuple[int, list[float]]] = []
     being_written = False
@@ -36,7 +43,10 @@ def load_episode_actions(root: Path, episode: int) -> tuple[int, list[dict[str, 
         if not parquet_closed(f):  # lerobot's writer is still open (dataset not finalized)
             being_written = True
             continue
-        table = pq.read_table(f, columns=["episode_index", "frame_index", "action"])
+        try:
+            table = pq.read_table(f, columns=["episode_index", "frame_index", "action"])
+        except (OSError, ValueError) as exc:  # pyarrow errors are OSError / ValueError subclasses
+            raise unreadable_error(root.name, f"{f.relative_to(root)}: {type(exc).__name__}") from exc
         eps = table.column("episode_index").to_pylist()
         fis = table.column("frame_index").to_pylist()
         acts = table.column("action").to_pylist()
@@ -44,15 +54,18 @@ def load_episode_actions(root: Path, episode: int) -> tuple[int, list[dict[str, 
             if int(e) == episode:
                 rows.append((int(fi), [float(x) for x in a]))
     if not rows and being_written:
-        raise StationError(
-            "busy",
-            "this episode is still being saved; try again when the dataset is finalized",
-            params={"dataset": root.name, "state": "saving"},
-        )
+        if is_being_written(root):
+            raise StationError(
+                "busy",
+                "this episode is still being saved; try again when the dataset is finalized",
+                params={"dataset": root.name, "state": "saving"},
+            )
+        # nothing writes it: the Station closed mid-session and it will never be finalized (QH-4)
+        raise unreadable_error(root.name, "the Station closed while this dataset was being recorded")
     if not rows:
         raise StationError("not_found", f"episode {episode} not found", params={"episode": episode})
     rows.sort(key=lambda r: r[0])
-    return int(info["fps"]), [dict(zip(names, a, strict=True)) for _, a in rows]
+    return fps, [dict(zip(names, a, strict=True)) for _, a in rows]
 
 
 @dataclass

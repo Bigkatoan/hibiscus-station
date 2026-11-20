@@ -237,7 +237,8 @@ function RecordSetup() {
   // Field report 0.2.10: a dataset the Station left unfinalized (closed mid-session) cannot be
   // continued; offer a new dataset with the same task and settings.
   const unfinished =
-    start.error instanceof StationApiError && start.error.code === "dataset_not_finalized"
+    start.error instanceof StationApiError &&
+    (start.error.code === "dataset_not_finalized" || start.error.code === "dataset_unreadable")
       ? typeof start.error.params.dataset === "string"
         ? start.error.params.dataset
         : form.dataset
@@ -404,7 +405,12 @@ function RecordSetup() {
               data-testid="record-unfinalized"
             >
               <p className="min-w-[min(14rem,100%)] flex-1">
-                {t("record.unfinalized", { dataset: unfinished })}
+                {t(
+                  start.error instanceof StationApiError && start.error.code === "dataset_unreadable"
+                    ? "record.unreadable"
+                    : "record.unfinalized",
+                  { dataset: unfinished },
+                )}
               </p>
               <Button
                 type="button"

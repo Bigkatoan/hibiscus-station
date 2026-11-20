@@ -44,6 +44,23 @@ the episodes I recorded." Known defect D-2.
   not finished: the Station closed while it was being recorded… Its files are kept as they
   are.") and offers "Record into a new dataset" with the same task and settings. Not one file of
   the unfinished dataset is changed.
+- **QC 0.2.10 round 1.**
+  - A damaged episode count in a dataset's `meta/info.json` (e.g. 1 000 000 000) no longer makes
+    the dataset page use memory until the Station is killed (QH-1). Episode rows are listed from
+    what is on disk; an impossible count shows the dataset as not finalized with the reason.
+  - "Append to an existing dataset" whose `meta/info.json` is empty, cut short, not an object or
+    has malformed features answered "Internal error" (also in 0.2.9). It now answers
+    `409 dataset_unreadable` ("…cannot be read: its files are damaged or cannot be opened…"), offers
+    "Record into a new dataset" and changes no file (QH-2). Replay of such a dataset answers the
+    same.
+  - A dataset file that cannot be opened (no permission) or a datasets folder that cannot be
+    written was reported as "A motor did not answer on the serial bus" (`502 bus_error`). It is
+    now `dataset_unreadable` or `409 dataset_io_error`; `bus_error` stays for the serial bus (QH-5).
+  - When every episode of a dataset is unreadable, the page says once that the Station closed
+    while it was being recorded, without "The other episodes are fine"; their telemetry can be
+    opened (QH-3).
+  - Replay of an episode of a dataset the Station left unfinished answers `dataset_unreadable`,
+    not "still being saved; try again when the dataset is finalized" (QH-4).
 - **D-26: robot profiles can be deleted** (approved feature F-8, "create / edit / delete"; customer
   report 2026-11-20: duplicate profiles such as "so-101-1" and "SO_101" on COM8/COM7 could not be
   removed). Each profile card on the Robot page has Delete / Xoá, with a confirmation that names
@@ -58,7 +75,12 @@ the episodes I recorded." Known defect D-2.
 - API: each `episode_list` row of `GET /datasets/{name}` has a `state`: `saved`, `saving` or
   `unreadable` (openapi.json regenerated). `POST /sessions/record` with `mode: "append"` on a
   dataset that was never finalized answers `409 dataset_not_finalized` (`params.dataset`,
-  `params.reasons`).
+  `params.reasons`). New error codes `dataset_unreadable` (409) and `dataset_io_error` (409).
+
+### Known test issues
+- `tests/test_programs_safety.py::test_deadman_loss_while_the_program_waits` can exceed its 1.5 s
+  margin on the Windows CI runner (1.61 s once, QC QH-6); a rerun passes. The product is not
+  affected.
 
 ## [0.2.9] - 2026-11-17
 
