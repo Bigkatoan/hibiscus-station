@@ -180,6 +180,8 @@ class HardwareOwner:
         self._last_session_emit = 0.0
         self._last_cal_emit = 0.0
         self._last_joints_emit = 0.0
+        #: the fixed tick grid of the running session: (session, period, end of the last tick)
+        self._grid: tuple[object, float, float] | None = None
         self._camera_alerted: set[str] = set()
         self.ident: int | None = None
         self.lost: dict[str, Any] | None = None  # the serial device that went away (state error)
@@ -705,6 +707,23 @@ class HardwareOwner:
                 self._handle_read(r)
         self._wait_until(deadline)
 
+    def _tick_deadline(self, s: MotionSession, t_start: float, period: float) -> float:
+        """The end of the tick that starts at ``t_start``, on the session's fixed grid (NFR-2).
+
+        The loop sleeps until the end of each tick and the OS wakes it a little late (0.1 - 5 ms on
+        a loaded PC or a VM). Measured from the late start, every tick would be that much longer
+        than the period and the loop would run slow without a single overrun (30 Hz teleop at
+        26 - 29 Hz on CI runners). Ticks therefore end on the grid ``t0 + k * period``; a tick that
+        starts a whole period behind the grid (an overrun, a stalled host) starts a new grid
+        instead of running catch-up ticks back to back."""
+        grid = self._grid
+        if grid is not None and grid[0] is s and grid[1] == period and abs(t_start - grid[2]) < period:
+            deadline = grid[2] + period
+        else:
+            deadline = t_start + period
+        self._grid = (s, period, deadline)
+        return deadline
+
     def _motion_tick(self) -> None:
         s = self.session
         if s is None:
@@ -714,7 +733,7 @@ class HardwareOwner:
             return
         period = 1.0 / s.fps
         t_start = time.perf_counter()
-        deadline = t_start + period
+        deadline = self._tick_deadline(s, t_start, period)
         self._drain()
         if self.session is None:
             return
@@ -810,7 +829,7 @@ class HardwareOwner:
         path runs at the session fps."""
         period = 1.0 / s.fps
         t_start = time.perf_counter()
-        deadline = t_start + period
+        deadline = self._tick_deadline(s, t_start, period)
         self._drain()
         if self.session is None:
             return

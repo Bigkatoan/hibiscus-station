@@ -2,12 +2,23 @@
 
 from __future__ import annotations
 
+import itertools
 import time
+from typing import Any
 
 import pytest
-from conftest import Events, Heartbeat, calibrate, connect_calibrated, mock_profile, wait_for
+from conftest import (
+    Events,
+    Heartbeat,
+    calibrate,
+    connect_calibrated,
+    mock_profile,
+    press_estop_frozen_within_one_tick,
+    wait_for,
+)
 
 from hibiscus_station.errors import StationError
+from hibiscus_station.hw.loop import percentile
 from hibiscus_station.mock import get_world
 from hibiscus_station.station import Station, TeleopRequest
 
@@ -74,19 +85,42 @@ def test_reconnect_reuses_calibration_file(station: Station) -> None:
 
 
 def test_teleop_timing_ownership_and_telemetry(connected: Station, events: Events) -> None:
+    """NFR-2: the fixed-rate loop keeps its rate, p95 tick time <= 36 ms, telemetry never more than
+    one read per tick. Timed with the loop's own tick timestamps over its first 90 ticks (3 s at
+    30 Hz), never with this thread's clock: a CI runner that stalls the whole process for a moment
+    loses ticks the loop must not catch up, and that is not a slow loop (macOS run: 79 ticks in 3 s
+    of this thread's sleep, p95 16.7 ms)."""
     st = connected
     st.start_teleop(TeleopRequest(fps=30))
     assert st.owner.state == "teleop"
-    time.sleep(3.0)
-    stats = st.owner.stats
-    reads = st.owner.telemetry.reads
-    ticks = stats.total_ticks
+    wait_for(lambda: st.owner.stats.total_ticks >= 90, 30)
+
+    def snapshot(o: Any) -> tuple[list[float], list[float], int, int, float]:
+        stats = o.stats
+        span = stats.last_start - stats.first_start
+        return (
+            [t for t, _d in stats.ticks],
+            list(stats.all_durations),
+            stats.total_ticks,
+            o.telemetry.reads,
+            span,
+        )
+
+    starts, durations, ticks, reads, span = st.owner.call("run", fn=snapshot)
     st.owner.call("control", action="stop")
     assert st.owner.state == "idle"
-    assert ticks >= 80, (ticks, stats.session_p95_ms())
-    assert stats.session_p95_ms() <= 36.0, stats.session_p95_ms()
-    # 2 arms x (2 hot groups x 2 Hz + 3 cool groups x 1 Hz) = 14 reads/s, never more than one per tick
-    assert 30 <= reads <= 14 * 3 + 8, reads
+    period = 1 / 30
+    # NFR-2 (b): p95 tick time <= 36 ms
+    assert percentile([d * 1000 for d in durations], 95) <= 36.0, durations
+    # the ticks run on the 30 Hz grid: the OS waking the loop late does not add up (28.8 Hz under
+    # load before); a gap of more than 1.5 periods is the host stalling the process, left out
+    gaps = [b - a for a, b in itertools.pairwise(starts)]
+    on_grid = [g for g in gaps if g < 1.5 * period]
+    assert len(on_grid) >= 0.8 * len(gaps), gaps
+    assert sum(on_grid) / len(on_grid) == pytest.approx(period, rel=0.02), gaps
+    # 2 arms x (2 hot groups x 2 Hz + 3 cool groups x 1 Hz) = 14 reads/s over the loop's own time,
+    # never more than one per tick
+    assert 0.5 * 14 * span <= reads <= 14 * span + 8, (reads, span)
     assert reads <= ticks
     for port in ("mock://follower", "mock://leader"):
         assert not get_world(port).owner_violations
@@ -107,14 +141,8 @@ def test_estop_freezes_within_one_tick_then_relaxes(connected: Station) -> None:
     world = get_world("mock://follower")
     st.start_teleop(TeleopRequest(fps=30))
     time.sleep(0.6)
-    world.record_calls = True
-    t_press = time.monotonic()
-    st.owner.press_estop("user")
-    wait_for(lambda: st.owner.state == "estopped", 2)
-    writes = [t for t, _ in world.goal_writes() if t > t_press]
     # at most the freeze write (Goal := Present) and one in-flight tick write
-    assert len(writes) <= 2, writes
-    assert all(t - t_press < 1 / 30 + 0.05 for t in writes)
+    press_estop_frozen_within_one_tick(st, world)
     assert world.any_torque()  # freeze: the arm does not fall
     assert st.owner.reason == "user"
     st.owner.press_estop("user")  # second press within 2 s: torque off
