@@ -532,6 +532,8 @@
     "start": "Bắt đầu ghi",
     "controls": "Điều khiển tập",
     "saved_episodes": "Các tập đã lưu",
+    "unfinalized": "Bộ dữ liệu {{dataset}} chưa hoàn tất: Station đã đóng khi đang ghi, nên không thể ghi thêm tập vào đó. Các tệp của nó vẫn được giữ nguyên. Hãy ghi vào một bộ dữ liệu mới.",
+    "new_instead": "Ghi vào bộ dữ liệu mới",
     "done_one": "Đã lưu {{count}} tập vào bộ dữ liệu {{name}}",
     "done_other": "Đã lưu {{count}} tập vào bộ dữ liệu {{name}}",
     "path_show": "Nằm ở đâu trên máy này?",

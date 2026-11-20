@@ -38,9 +38,16 @@ MOTORS = [f"{m}.pos" for m in ("shoulder_pan", "shoulder_lift", "elbow_flex", "w
 CAM = (48, 64, 3)
 
 
-def _recorder(datasets: Path, name: str = "ds", mode: str = "new") -> DatasetRecorder:
+def _recorder(
+    datasets: Path,
+    name: str = "ds",
+    mode: str = "new",
+    motors: list[str] = MOTORS,
+    fps: int = 10,
+    cam: Any = CAM,
+) -> DatasetRecorder:
     rec = DatasetRecorder(
-        datasets, name, fps=10, motor_keys=MOTORS, cam_shapes={"wrist": CAM}, mode=mode, task="pick"
+        datasets, name, fps=fps, motor_keys=motors, cam_shapes={"wrist": tuple(cam)}, mode=mode, task="pick"
     )
     rec.open()
     return rec
@@ -48,9 +55,9 @@ def _recorder(datasets: Path, name: str = "ds", mode: str = "new") -> DatasetRec
 
 def _record_episode(rec: DatasetRecorder, frames: int = 6) -> None:
     for i in range(frames):
-        obs: dict[str, Any] = {m: float(i) for m in MOTORS}
-        obs["wrist"] = np.full(CAM, 10 * i, dtype=np.uint8)
-        rec.add(obs, {m: float(i) for m in MOTORS}, "pick")
+        obs: dict[str, Any] = {m: float(i) for m in rec.motor_keys}
+        obs["wrist"] = np.full(rec.cam_shapes["wrist"], 10 * i, dtype=np.uint8)
+        rec.add(obs, {m: float(i) for m in rec.motor_keys}, "pick")
         rec.buffer.add({"t": i / 10, "arm": "follower", "temp_c": {"elbow_flex": 30.0 + i}})
 
 
@@ -138,17 +145,19 @@ CRASH = """
 import os, sys
 from pathlib import Path
 sys.path.insert(0, sys.argv[3])
+import json
 from test_field_0210 import _recorder, _save
-rec = _recorder(Path(sys.argv[1]))
+kw = json.loads(sys.argv[4]) if len(sys.argv) > 4 else {}
+rec = _recorder(Path(sys.argv[1]), **kw)
 _save(rec, int(sys.argv[2]), frames=3)
 os._exit(0)  # the console window closed: no finalize, no flush
 """
 
 
-def _crash_record(datasets: Path, n: int) -> None:
+def _crash_record(datasets: Path, n: int, **kw: Any) -> None:
     env = {k: v for k, v in os.environ.items() if k not in ("PYTHONPATH", "AMENT_PREFIX_PATH")}
     subprocess.run(  # noqa: S603 - our own test helper
-        [sys.executable, "-c", CRASH, str(datasets), str(n), str(Path(__file__).parent)],
+        [sys.executable, "-c", CRASH, str(datasets), str(n), str(Path(__file__).parent), json.dumps(kw)],
         check=True,
         env=env,
         timeout=300,
@@ -325,3 +334,49 @@ def test_record_session_detail_during_and_after(connected: Station, client: Any)
     d = _detail(client, "live")
     assert d["episodes"] == 3 and [e["state"] for e in d["episode_list"]] == ["saved"] * 3
     assert json.dumps(d)
+
+
+def _tree(root: Path) -> dict[str, bytes]:
+    return {str(p.relative_to(root)): p.read_bytes() for p in sorted(root.rglob("*")) if p.is_file()}
+
+
+@pytest.mark.parametrize("n", [3, 12])
+def test_recording_more_into_a_dataset_a_crash_left_unfinalized(station: Station, n: int) -> None:
+    """LeRobotDataset.resume raised ArrowInvalid / FileNotFoundError (a 500). The episode rows were
+    in memory only and the data file has no footer: no safe repair. Refused with 409
+    dataset_not_finalized, and not one byte of the customer's dataset changes."""
+    from hibiscus_station.errors import StationError
+
+    _crash_record(station.paths.datasets, n)
+    before = _tree(station.paths.datasets)
+    rec = DatasetRecorder(
+        station.paths.datasets, "ds", fps=10, motor_keys=MOTORS, cam_shapes={"wrist": CAM}, mode="append"
+    )
+    with pytest.raises(StationError) as ei:
+        rec.open()
+    assert ei.value.code == "dataset_not_finalized", repr(ei.value)
+    assert ei.value.params["dataset"] == "ds" and ei.value.params["reasons"]
+    assert _tree(station.paths.datasets) == before
+
+
+@pytest.mark.parametrize("n", [2, 12])  # 0.2.9: 502 "bus_error" (resume asked the HF Hub), 500
+def test_record_append_into_an_unfinalized_dataset_answers_409(
+    connected: Station, client: Any, n: int
+) -> None:
+    """The customer's flow: the console closed mid-session, then Record → "Add to an existing
+    dataset" on the same robot (same joints and camera as the crashed dataset)."""
+    st = connected
+    assert st.owner.follower is not None
+    motors = [f"{m}.pos" for m in st.owner.follower.bus.motors]
+    (shape,) = st.hub.shapes().values()
+    _crash_record(st.paths.datasets, n, motors=motors, fps=15, cam=list(shape))
+    before = _tree(st.paths.datasets / "ds")
+    r = client.post(
+        "/api/v1/sessions/record",
+        json={"dataset": "ds", "mode": "append", "task": "pick", "fps": 15, "countdown_s": 0},
+    )
+    assert r.status_code == 409, r.text
+    body = r.json()
+    assert body["code"] == "dataset_not_finalized" and body["params"]["dataset"] == "ds", body
+    assert _tree(st.paths.datasets / "ds") == before
+    assert st.owner.state == "idle"

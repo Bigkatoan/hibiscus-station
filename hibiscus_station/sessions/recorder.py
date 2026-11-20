@@ -64,6 +64,33 @@ def wait_closed(root: Path, timeout: float) -> None:
         pass
 
 
+def unfinished_files(root: Path, total_episodes: int) -> list[str]:
+    """Why LeRobot cannot resume ``root``: parquet files without their footer (the writer was
+    never closed: the Station closed mid-session) or no episode metadata at all. Field report
+    0.2.10: LeRobotDataset.resume raised ArrowInvalid (a 500). Such a dataset cannot be repaired
+    safely: its episode rows were in memory only and its data file has no footer."""
+    from hibiscus.recording import parquet_closed
+
+    out = [
+        str(f.relative_to(root))
+        for d in ("meta/episodes", "data")
+        for f in sorted((root / d).rglob("*.parquet"))
+        if not parquet_closed(f)
+    ]
+    if total_episodes > 0 and not any((root / "meta" / "episodes").rglob("*.parquet")):
+        out.append("meta/episodes missing")
+    return out
+
+
+def _not_finalized(name: str, reasons: list[str]) -> StationError:
+    return StationError(
+        "dataset_not_finalized",
+        f"dataset {name} was never finalized (the Station closed while recording it), so it cannot "
+        "be continued; record into a new dataset. Nothing was changed: " + "; ".join(reasons[:5]),
+        params={"dataset": name, "reasons": reasons, "mode": "append"},
+    )
+
+
 def check_name(name: str) -> str:
     if not NAME_RE.match(name):
         raise StationError("validation_failed", "dataset name must match [a-z0-9][a-z0-9_-]{0,63}")
@@ -146,7 +173,14 @@ class DatasetRecorder:
                 mismatch.append("features (cameras / joints / video) differ from the current robot setup")
             if mismatch:
                 raise StationError("dataset_incompatible", "; ".join(mismatch), params={"dataset": self.name})
-            self.dataset = LeRobotDataset.resume(repo_id, root=self.root, image_writer_threads=threads)
+            unfinished = unfinished_files(self.root, int(info.get("total_episodes") or 0))
+            if unfinished:
+                raise _not_finalized(self.name, unfinished)
+            try:
+                self.dataset = LeRobotDataset.resume(repo_id, root=self.root, image_writer_threads=threads)
+            except Exception as exc:  # never a 500; nothing on disk is changed or removed
+                log.exception("cannot resume dataset %s", self.name)
+                raise _not_finalized(self.name, [f"{type(exc).__name__}: {exc}"[:300]]) from exc
         else:
             if self.root.exists():
                 raise StationError(

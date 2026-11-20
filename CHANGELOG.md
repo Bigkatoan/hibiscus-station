@@ -35,13 +35,21 @@ the episodes I recorded." Known defect D-2.
 - A dataset page that fails to display keeps the menu and says so, with Reload and All datasets,
   instead of a blank error page.
 
+- **Adding episodes to a dataset the Station left unfinished** (the console window closed in the
+  middle of a session, then "Append to an existing dataset") answered "Internal error" or, with
+  fewer than 10 episodes, "A motor did not answer on the serial bus" after LeRobot asked the
+  Hugging Face Hub for the dataset. Such a dataset cannot be repaired safely: LeRobot kept its
+  episode list in memory and its data file was never closed. Station now refuses with
+  `409 dataset_not_finalized` before LeRobot touches anything, says why on the Record page ("…was
+  not finished: the Station closed while it was being recorded… Its files are kept as they
+  are.") and offers "Record into a new dataset" with the same task and settings. Not one file of
+  the unfinished dataset is changed.
+
 ### Changed
 - API: each `episode_list` row of `GET /datasets/{name}` has a `state`: `saved`, `saving` or
-  `unreadable` (openapi.json regenerated).
-
-### Known issues
-- Recording more episodes into a dataset left unfinalized by a Station closed mid-session
-  (mode "append") still answers "Internal error"; record into a new dataset name instead.
+  `unreadable` (openapi.json regenerated). `POST /sessions/record` with `mode: "append"` on a
+  dataset that was never finalized answers `409 dataset_not_finalized` (`params.dataset`,
+  `params.reasons`).
 
 ## [0.2.9] - 2026-11-17
 

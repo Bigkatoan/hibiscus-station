@@ -532,6 +532,8 @@
     "start": "Start recording",
     "controls": "Episode controls",
     "saved_episodes": "Saved episodes",
+    "unfinalized": "{{dataset}} was not finished: the Station closed while it was being recorded, so no episode can be added to it. Its files are kept as they are. Record into a new dataset instead.",
+    "new_instead": "Record into a new dataset",
     "done_one": "{{count}} episode saved in dataset {{name}}",
     "done_other": "{{count}} episodes saved in dataset {{name}}",
     "path_show": "Where is it on this computer?",

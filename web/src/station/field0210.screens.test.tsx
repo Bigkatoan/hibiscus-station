@@ -145,3 +145,52 @@ describe("Record: the saved-episode strip (field report 0.2.10)", () => {
     expect(within(strip).getAllByRole("listitem")[2]).toHaveTextContent("Saving…");
   });
 });
+
+describe("Record: appending to a dataset the Station left unfinalized (field report 0.2.10)", () => {
+  it("says so in words, keeps the data, and offers a new dataset with the same task", async () => {
+    const crashed = { ...fx.dataset("cube_crash", 3), finalized: false, task: "Pick the cube" };
+    const h = setupStation({ datasets: [crashed] });
+    const user = userEvent.setup();
+    const bodies: Record<string, unknown>[] = [];
+    server.use(
+      http.post(`${window.location.origin}/api/v1/sessions/record`, async ({ request }) => {
+        const body = (await request.json()) as Record<string, unknown>;
+        bodies.push(body);
+        if (body.mode === "append")
+          return HttpResponse.json(
+            {
+              type: "https://hibiscus.dev/problems/station/dataset_not_finalized",
+              title: "Dataset is not finalized",
+              status: 409,
+              code: "dataset_not_finalized",
+              detail: "dataset cube_crash was never finalized",
+              params: { dataset: "cube_crash", reasons: ["meta/episodes missing"], mode: "append" },
+            },
+            { status: 409 },
+          );
+        return HttpResponse.json(h.sim.startSession("record", body));
+      }),
+    );
+    renderStation("/record", h);
+    await settle();
+    await user.selectOptions(await screen.findByLabelText(/^Dataset$/), "append");
+    await user.selectOptions(screen.getByLabelText(/^Dataset name/), "cube_crash");
+    await user.click(screen.getByRole("button", { name: "Start recording" }));
+    const card = await screen.findByTestId("record-unfinalized");
+    expect(card).toHaveTextContent(
+      "cube_crash was not finished: the Station closed while it was being recorded, so no episode can be added to it. Its files are kept as they are. Record into a new dataset instead.",
+    );
+    expect(screen.queryByText(/Internal error/)).not.toBeInTheDocument();
+    await i18n.changeLanguage("vi");
+    await waitFor(() => {
+      expect(screen.getByTestId("record-unfinalized")).toHaveTextContent(
+        "Bộ dữ liệu cube_crash chưa hoàn tất: Station đã đóng khi đang ghi",
+      );
+    });
+    await user.click(screen.getByRole("button", { name: "Ghi vào bộ dữ liệu mới" }));
+    expect(screen.queryByTestId("record-unfinalized")).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/^Tên bộ dữ liệu|^Dataset name/)).toHaveValue("cube_crash_2");
+    expect(h.sim.datasets.find((d) => d.name === "cube_crash")?.episodes).toBe(3);
+    expect(bodies.map((b) => b.mode)).toEqual(["append"]);
+  });
+});
