@@ -51,12 +51,15 @@ def _take(client: Any, st: Station, name: str, seconds: float) -> ps.Trajectory:
     get_world("mock://leader").hand = fast_hand(amplitude=120.0, hz=0.7)
     wait_for(lambda: _phase(st) == "capture", 6)
     time.sleep(seconds)
+    # the hand lets go of the leader before the take ends: a leader still moving after the stop
+    # (while this thread saves the take, slowly on a loaded host) was 34.5 deg from the follower
+    # when the next take started ("leader_far", 1 of 200 under stress)
+    get_world("mock://leader").hand = None
     r = client.post(f"{API}/trajectories/record/stop")
     assert r.status_code == 200, r.text
     tid = r.json()["id"]
     r = client.put(f"{API}/trajectories/{tid}", json={"save": True, "trim": {"start_s": 0, "end_s": 0}})
     assert r.status_code == 200, r.text
-    get_world("mock://leader").hand = None
     return ps.TrajectoryDetail.model_validate(r.json())
 
 
