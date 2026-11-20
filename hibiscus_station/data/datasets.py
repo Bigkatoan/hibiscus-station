@@ -10,7 +10,13 @@ import time
 from pathlib import Path
 from typing import Any
 
-from hibiscus_station.data.info import MAX_FRAMES, info_problems, plausible_count, plausible_fps
+from hibiscus_station.data.info import (
+    MAX_FRAMES,
+    consistency_problems,
+    info_problems,
+    plausible_count,
+    plausible_fps,
+)
 from hibiscus_station.data.sidecar import episode_file, max_temps, read_lines, sidecar_dir, to_series
 from hibiscus_station.errors import StationError
 from hibiscus_station.sessions.recorder import check_name, live_episodes
@@ -127,6 +133,8 @@ def _summary(datasets_root: Path, name: str, root: Path, info_path: Path) -> dic
         reasons = [f"cannot check the recording: {type(exc).__name__}"]
     complete = not reasons
     reasons += [f"unreadable: {p}" for p in problems if f"unreadable: {p}" not in reasons]
+    if complete and not problems:  # QH-9: counts and rows must agree to be finalized
+        reasons += [f"inconsistent: {p}" for p in consistency_problems(root, info)]
     uploads = [u for u in (_upload(x) for x in meta.get("uploads", []) if isinstance(x, dict)) if u]
     fps = info.get("fps")
     episodes, frames = info.get("total_episodes"), info.get("total_frames")
@@ -142,7 +150,7 @@ def _summary(datasets_root: Path, name: str, root: Path, info_path: Path) -> dic
         "cameras": cams,
         "video": any(v.get("dtype") == "video" for v in features.values() if isinstance(v, dict)),
         "size_bytes": _dir_size(root),
-        "finalized": complete and not problems,
+        "finalized": not reasons,
         "finalize_reasons": reasons,
         "task": task if isinstance(task, str) else None,
         "uploads": uploads,

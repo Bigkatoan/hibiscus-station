@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from hibiscus_station.data.info import info_problems
+from hibiscus_station.data.info import consistency_problems, info_problems
 from hibiscus_station.data.sidecar import EpisodeBuffer, episode_file, sidecar_dir
 from hibiscus_station.errors import StationError
 from hibiscus_station.settings import write_private
@@ -224,6 +224,14 @@ class DatasetRecorder:
             unfinished = unfinished_files(self.root, int(info["total_episodes"]))
             if unfinished:
                 raise _not_finalized(self.name, unfinished)
+            # QH-9: LeRobot continues from the counts in info.json; a count that disagrees with
+            # the rows on disk makes it overwrite earlier episodes. Append only to a dataset that
+            # is complete and consistent.
+            from hibiscus.recording import check_recording
+
+            reasons = [*check_recording(self.root).reasons, *consistency_problems(self.root, info)]
+            if reasons:
+                raise unreadable_error(self.name, "; ".join(reasons[:3]))
             try:
                 self.dataset = LeRobotDataset.resume(repo_id, root=self.root, image_writer_threads=threads)
             except Exception as exc:  # never a 500; nothing on disk is changed or removed

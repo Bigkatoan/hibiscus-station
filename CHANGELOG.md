@@ -78,6 +78,16 @@ the episodes I recorded." Known defect D-2.
     detail, telemetry, append and replay: no 5xx, no file changed, other datasets unaffected.
   - Appending to a dataset recorded with another robot setup (`422 dataset_incompatible`) also
     offers "Record into a new dataset" (M1-1).
+- **QC 0.2.10 round 3 (QH-9, data loss, also in 0.2.9): appending never overwrites earlier
+  episodes.** When a dataset's `meta/info.json` counted fewer episodes than its episode list holds
+  (for example `total_episodes: 0` with 9 on disk), "Append to an existing dataset" was accepted
+  and LeRobot overwrote `data/chunk-000/file-000.parquet`, destroying episodes; the dataset also
+  read as finalized. Append now needs a complete and consistent dataset: the recording check
+  passes, `total_episodes` equals the rows in `meta/episodes`, `total_frames` equals the sum of
+  their lengths, the indexes are 0..N-1 with contiguous frame ranges, and every data and video
+  file the rows name exists. Otherwise it answers `409 dataset_unreadable` with the reason and no
+  file changes; the list and the dataset page use the same check and show such a dataset as not
+  finalized ("inconsistent: …").
 - **D-26: robot profiles can be deleted** (approved feature F-8, "create / edit / delete"; customer
   report 2026-11-20: duplicate profiles such as "so-101-1" and "SO_101" on COM8/COM7 could not be
   removed). Each profile card on the Robot page has Delete / Xoá, with a confirmation that names

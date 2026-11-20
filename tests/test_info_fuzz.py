@@ -149,3 +149,73 @@ def test_hostile_info_json_never_gives_a_5xx(station: Station, client: Any, tmp_
     assert _tree(datasets / "ok") == ok_before
     print(f"{len(muts)} mutations; append opened for {len(opened)}: {opened[:40]}")
     assert not failures, f"{len(failures)} failures:\n" + "\n".join(failures[:80])
+
+
+def test_counts_that_disagree_with_the_rows_refuse_append(
+    station: Station, client: Any, tmp_path: Path
+) -> None:
+    """QC 0.2.10 QH-9 (data loss, also in 0.2.9): with total_episodes lower than the rows on disk,
+    append was accepted and LeRobot overwrote data/chunk-000/file-000.parquet, and the dataset
+    still read as finalized. Append now needs a complete, consistent dataset; the list and the
+    detail page use the same check."""
+    datasets = station.paths.datasets
+    rec = _recorder(datasets, "y")
+    _save(rec, 4, frames=3)
+    rec.finalize()
+    pristine = tmp_path / "pristine"
+    shutil.copytree(datasets / "y", pristine / "y")
+    base = json.loads((pristine / "y" / "meta" / "info.json").read_text(encoding="utf-8"))
+    assert base["total_episodes"] == 4 and base["total_frames"] == 12
+
+    def restore() -> None:
+        shutil.rmtree(datasets / "y", ignore_errors=True)
+        shutil.copytree(pristine / "y", datasets / "y")
+
+    def files_gone(*rels: str) -> Any:
+        def mut(root: Path) -> None:
+            for rel in rels:
+                for f in root.glob(rel):
+                    f.unlink()
+
+        return mut
+
+    def info_set(**kw: Any) -> Any:
+        def mut(root: Path) -> None:
+            (root / "meta" / "info.json").write_text(json.dumps({**base, **kw}), encoding="utf-8")
+
+        return mut
+
+    cases: dict[str, Any] = {
+        **{f"total_episodes={n}": info_set(total_episodes=n) for n in (0, 1, 3, 5)},
+        **{f"total_frames={n}": info_set(total_frames=n) for n in (0, 11, 13)},
+        "data file missing": files_gone("data/chunk-000/*.parquet"),
+        "video file missing": files_gone("videos/*/chunk-000/*.mp4"),
+    }
+    failures: list[str] = []
+    for label, mutate in cases.items():
+        restore()
+        mutate(datasets / "y")
+        before = _tree(datasets / "y")
+        try:
+            DatasetRecorder(
+                datasets, "y", fps=10, motor_keys=MOTORS, cam_shapes={"wrist": CAM}, mode="append"
+            ).open()
+        except StationError as exc:
+            if exc.code not in ("dataset_unreadable", "dataset_not_finalized"):
+                failures.append(f"append: {exc.code} {label}")
+        else:
+            failures.append(f"append accepted {label}")
+        for url in ("/api/v1/datasets/y", "/api/v1/datasets"):
+            r = client.get(url)
+            body = r.json()
+            d = body if "name" in body else next(x for x in body["datasets"] if x["name"] == "y")
+            if r.status_code != 200 or d["finalized"]:
+                failures.append(f"{url} {r.status_code} finalized={d.get('finalized')} {label}")
+        if _tree(datasets / "y") != before:
+            failures.append(f"files changed {label}")
+    restore()  # the consistent dataset itself still appends
+    rec = DatasetRecorder(datasets, "y", fps=10, motor_keys=MOTORS, cam_shapes={"wrist": CAM}, mode="append")
+    rec.open()
+    rec.dataset.writer.stop_image_writer()
+    assert client.get("/api/v1/datasets/y").json()["finalized"]
+    assert not failures, f"{len(failures)} failures:\n" + "\n".join(failures)
