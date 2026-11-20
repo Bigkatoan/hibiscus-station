@@ -9,8 +9,8 @@ Station runs on the computer the arms and cameras are plugged into. Supported ha
 | NVIDIA Jetson Orin Nano / NX / AGX | `jetson` | JetPack 6.x (L4T R36). See [first-boot-jetson.md](first-boot-jetson.md) |
 | Raspberry Pi 5 (4 or 8 GB) | `cpu` (arm64) | 64-bit Raspberry Pi OS (Bookworm). See [first-boot-pi5.md](first-boot-pi5.md) |
 
-Images: `ghcr.io/bigkatoan/hibiscus-station:<version>-<variant>`, e.g. `0.2.9-cpu` (multi-arch:
-linux/amd64 and linux/arm64), `0.2.9-cuda` (amd64), `0.2.9-jetson` (arm64). Each also has the
+Images: `ghcr.io/bigkatoan/hibiscus-station:<version>-<variant>`, e.g. `0.2.10-cpu` (multi-arch:
+linux/amd64 and linux/arm64), `0.2.10-cuda` (amd64), `0.2.10-jetson` (arm64). Each also has the
 floating tags `<major>.<minor>-<variant>` and `<variant>` (latest release).
 
 There are two ways to install on Linux: **Docker** (recommended, below) and the **Python wheel with a
@@ -102,7 +102,7 @@ pairing (`server.json`, `hibiscus-cli/` with the access token), and the lerobot 
 `--full` adds datasets, models and session logs. Files are mode 0600 in a 0700 folder; treat them
 like a password because of the access token.
 
-**Update** (`update 0.2.9-cpu`, or `update` alone to re-pull the current tag, e.g. a floating
+**Update** (`update 0.2.10-cpu`, or `update` alone to re-pull the current tag, e.g. a floating
 `0.2-cpu`):
 
 1. backup as above;
@@ -170,9 +170,9 @@ groups (install the udev rule above as well).
 
 ```bash
 # x86_64 with an NVIDIA GPU (CUDA wheels from PyPI):
-uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.9/hibiscus_station-0.2.9-py3-none-any.whl
+uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.10/hibiscus_station-0.2.10-py3-none-any.whl
 # CPU only (Raspberry Pi 5, PCs without NVIDIA, Jetson without the GPU): CPU PyTorch, much smaller
-uv tool install --torch-backend cpu https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.9/hibiscus_station-0.2.9-py3-none-any.whl
+uv tool install --torch-backend cpu https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.10/hibiscus_station-0.2.10-py3-none-any.whl
 
 hibiscus-station --mock          # try it; Ctrl+C to stop
 ```
@@ -187,7 +187,7 @@ The same wheel, installed with uv (x64 Windows 10/11, Apple silicon or Intel mac
 ```powershell
 # Windows, PowerShell; macOS: curl -LsSf https://astral.sh/uv/install.sh | sh
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-uv tool install --python 3.12 --torch-backend cpu https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.9/hibiscus_station-0.2.9-py3-none-any.whl
+uv tool install --python 3.12 --torch-backend cpu https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.10/hibiscus_station-0.2.10-py3-none-any.whl
 hibiscus-station --mock          # try it; Ctrl+C to stop
 ```
 

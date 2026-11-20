@@ -80,10 +80,10 @@ less install.sh && bash install.sh
 
 | Máy của bạn | `install.sh` chọn | Danh sách kiểm tra lần đầu |
 |---|---|---|
-| PC / mini PC x86_64 | `ghcr.io/bigkatoan/hibiscus-station:0.2.9-cpu` | - |
-| x86_64 + GPU NVIDIA | `…:0.2.9-cuda` (cần NVIDIA Container Toolkit) | - |
-| Jetson Orin, JetPack 6 | `…:0.2.9-jetson` (runtime NVIDIA) | [first-boot-jetson.md](docs/first-boot-jetson.md) |
-| Raspberry Pi 5 | `…:0.2.9-cpu` (arm64) | [first-boot-pi5.md](docs/first-boot-pi5.md) |
+| PC / mini PC x86_64 | `ghcr.io/bigkatoan/hibiscus-station:0.2.10-cpu` | - |
+| x86_64 + GPU NVIDIA | `…:0.2.10-cuda` (cần NVIDIA Container Toolkit) | - |
+| Jetson Orin, JetPack 6 | `…:0.2.10-jetson` (runtime NVIDIA) | [first-boot-jetson.md](docs/first-boot-jetson.md) |
+| Raspberry Pi 5 | `…:0.2.10-cpu` (arm64) | [first-boot-pi5.md](docs/first-boot-pi5.md) |
 
 Sau đó mở đường link được in ra trên chính máy đó (`hibiscus-station-ctl url` in lại link). Từ
 laptop: `ssh -N -L 18210:127.0.0.1:18210 ban@may-robot` rồi mở cùng link đó. Station chỉ nghe trên
@@ -92,7 +92,7 @@ laptop: `ssh -N -L 18210:127.0.0.1:18210 ban@may-robot` rồi mở cùng link đ
 Không dùng Docker (Python 3.12 qua [uv](https://docs.astral.sh/uv/)):
 
 ```bash
-uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.9/hibiscus_station-0.2.9-py3-none-any.whl
+uv tool install https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.10/hibiscus_station-0.2.10-py3-none-any.whl
 # không có GPU NVIDIA (Pi 5, đa số mini PC): thêm --torch-backend cpu
 hibiscus-station --mock          # thử khi chưa có robot
 hibiscus-station                 # khi đã cắm tay robot
@@ -106,7 +106,7 @@ Trong PowerShell (x64, không cần quyền admin):
 
 ```powershell
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"   # cài uv, một lần
-uv tool install --python 3.12 https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.9/hibiscus_station-0.2.9-py3-none-any.whl
+uv tool install --python 3.12 https://github.com/Bigkatoan/hibiscus-station/releases/download/v0.2.10/hibiscus_station-0.2.10-py3-none-any.whl
 # không có GPU NVIDIA: thêm --torch-backend cpu
 hibiscus-station --mock          # thử khi chưa có robot
 hibiscus-station                 # khi đã cắm tay robot; trình duyệt tự mở
@@ -131,7 +131,7 @@ Dùng hằng ngày với Docker:
 ```bash
 hibiscus-station-ctl status | logs -f | url | ports
 hibiscus-station-ctl backup                 # hồ sơ, hiệu chỉnh, quỹ đạo, chương trình, bộ nhận diện
-hibiscus-station-ctl update 0.2.9-cpu       # sao lưu, kéo image, khởi động lại, kiểm tra, tự quay lại nếu lỗi
+hibiscus-station-ctl update 0.2.10-cpu       # sao lưu, kéo image, khởi động lại, kiểm tra, tự quay lại nếu lỗi
 hibiscus-station-ctl rollback
 ```
 

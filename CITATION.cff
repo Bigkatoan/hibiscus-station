@@ -13,8 +13,8 @@ authors:
   - name: "The Hibiscus contributors"
 repository-code: "https://github.com/Bigkatoan/hibiscus-station"
 license: AGPL-3.0-or-later
-version: "0.2.9"
-date-released: "2026-11-17"
+version: "0.2.10"
+date-released: "2026-11-20"
 keywords:
   - robotics
   - imitation learning

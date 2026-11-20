@@ -11,6 +11,38 @@ repository (`station/`); 0.2.0 is the first release of this standalone repositor
 
 ## [Unreleased]
 
+## [0.2.10] - 2026-11-20
+
+Hotfix for the field report on 0.2.9 (Windows, SO-101, 2026-11-19): "I cannot see the video and
+the episodes I recorded." Known defect D-2.
+
+### Fixed
+- **The dataset page lists every recorded episode, also while the dataset is still being written.**
+  Since 0.2.9 episodes are saved in the background, and LeRobot only writes the episode list
+  (`meta/episodes`) when the dataset is finalized at the end of the session. Until then the page
+  (and the Record page's saved-episode strip) showed no episode at all. From the 11th episode of a
+  session, LeRobot's half-written episode file made the page answer "Internal error", and a Station
+  closed in the middle of a session left a dataset whose page and the Datasets list answered
+  "Internal error" for good. Now every episode shows as soon as it is saved; the episode being
+  saved shows "Saving…" and the page refreshes by itself until it is written; an episode the
+  Station never finished writing says so on its own row ("Cannot be read: the Station closed before
+  this episode was fully saved. The other episodes are fine.") and the rest of the page works.
+- **No more "Internal error" on the Datasets pages while an episode is saved.** Reading the dataset
+  size while the encoder deleted its temporary frames, reading `meta/info.json` while LeRobot
+  rewrote it, and a damaged telemetry file each failed the whole page.
+- **Replay of an episode that is still being written** answers "Station is busy (saving)" instead
+  of "Internal error"; its Replay button stays disabled until the episode is saved.
+- A dataset page that fails to display keeps the menu and says so, with Reload and All datasets,
+  instead of a blank error page.
+
+### Changed
+- API: each `episode_list` row of `GET /datasets/{name}` has a `state`: `saved`, `saving` or
+  `unreadable` (openapi.json regenerated).
+
+### Known issues
+- Recording more episodes into a dataset left unfinalized by a Station closed mid-session
+  (mode "append") still answers "Internal error"; record into a new dataset name instead.
+
 ## [0.2.9] - 2026-11-17
 
 Field report on 0.2.8 (Windows, real SO-101, 2026-11-17) and the customer's decisions CR-1 and CR-2.
