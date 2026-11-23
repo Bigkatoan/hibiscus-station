@@ -28,7 +28,7 @@ jobs:
           node-version: "${{ env.NODE_VERSION }}"
           cache: pnpm
           cache-dependency-path: web/pnpm-lock.yaml
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: astral-sh/setup-uv@v10.4.0
       - name: Build the UI, the sdist and the wheel
         run: |
           (cd web && pnpm install --frozen-lockfile && pnpm build)
