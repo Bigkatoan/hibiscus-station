@@ -38,8 +38,8 @@ dependencies = [
     # The Hibiscus CLI: Uploader, Puller, HibiscusApi and credentials are reused, not copied.
     "hibiscus @ git+https://github.com/Bigkatoan/Hibiscus.git@v0.1.1#subdirectory=cli",  # not on PyPI
     # station-programs.md §4: ONNX image classifiers (CPU) and the optional MQTT signal client.
-    "onnxruntime==1.31.1",
-    "paho-mqtt==2.1.0",
+    "onnxruntime==1.32.0",
+    "paho-mqtt==2.2.0",
 ]
 
 [project.optional-dependencies]
@@ -86,7 +86,7 @@ dev = [
     "respx>=0.21",
     "jsonschema>=4.23",
     # End-to-end UI test (tests/e2e, marker e2e; skipped when no browser is installed).
-    "playwright==1.63.0",
+    "playwright==1.65.2",
     # Builds the tiny classifier models the detector tests run through onnxruntime.
     "onnx==1.23.2",
 ]
